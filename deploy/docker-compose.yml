@@ -1,0 +1,79 @@
+name: mica
+
+services:
+  postgres:
+    image: postgres:16-alpine
+    container_name: mica-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB:-mica}
+      POSTGRES_USER: ${POSTGRES_USER:-mica}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-mica}
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-mica} -d ${POSTGRES_DB:-mica}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 20s
+    ports:
+      - "${POSTGRES_PORT:-5432}:5432"
+
+  migrate:
+    build:
+      context: ../backend
+      dockerfile: Dockerfile
+    image: mica-backend:${APP_VERSION:-0.0.1}
+    container_name: mica-migrate
+    restart: "no"
+    depends_on:
+      postgres:
+        condition: service_healthy
+    environment:
+      DATABASE_URL: postgresql+asyncpg://${POSTGRES_USER:-mica}:${POSTGRES_PASSWORD:-mica}@postgres:5432/${POSTGRES_DB:-mica}
+      SECRET_KEY: ${SECRET_KEY:-dev_secret_key_minimum_32_chars_required_for_skeleton_phase_only}
+      APP_ENV: ${APP_ENV:-development}
+    command: ["alembic", "upgrade", "head"]
+
+  backend:
+    image: mica-backend:${APP_VERSION:-0.0.1}
+    container_name: mica-backend
+    restart: unless-stopped
+    depends_on:
+      migrate:
+        condition: service_completed_successfully
+    environment:
+      DATABASE_URL: postgresql+asyncpg://${POSTGRES_USER:-mica}:${POSTGRES_PASSWORD:-mica}@postgres:5432/${POSTGRES_DB:-mica}
+      SECRET_KEY: ${SECRET_KEY:-dev_secret_key_minimum_32_chars_required_for_skeleton_phase_only}
+      APP_ENV: ${APP_ENV:-development}
+      AUTO_SEED_ON_STARTUP: "true"
+      CORS_ORIGINS: '["http://localhost","http://localhost:5173","http://localhost:8080"]'
+    ports:
+      - "${BACKEND_PORT:-8000}:8000"
+
+  frontend:
+    build:
+      context: ../frontend
+      dockerfile: Dockerfile
+    image: mica-frontend:${APP_VERSION:-0.0.1}
+    container_name: mica-frontend
+    restart: unless-stopped
+    depends_on:
+      - backend
+
+  nginx:
+    image: nginx:alpine
+    container_name: mica-nginx
+    restart: unless-stopped
+    depends_on:
+      - backend
+      - frontend
+    ports:
+      - "${HTTP_PORT:-80}:80"
+    volumes:
+      - ./nginx/conf.d:/etc/nginx/conf.d:ro
+
+volumes:
+  postgres_data:
+    name: mica_postgres_data

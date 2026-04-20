@@ -1,0 +1,123 @@
+{
+  "app": {
+    "name": "Mica",
+    "tagline": "觅采 · 企业内部采购管理系统",
+    "version": "版本"
+  },
+  "nav": {
+    "dashboard": "仪表盘",
+    "purchase_requisitions": "采购申请",
+    "purchase_orders": "采购订单",
+    "suppliers": "供应商",
+    "items": "物料",
+    "logout": "退出登录"
+  },
+  "button": {
+    "submit": "提交",
+    "save": "保存",
+    "cancel": "取消",
+    "confirm": "确认",
+    "delete": "删除",
+    "edit": "编辑",
+    "create": "新建",
+    "back": "返回",
+    "search": "搜索",
+    "reset": "重置",
+    "refresh": "刷新",
+    "approve": "批准",
+    "reject": "拒绝",
+    "return": "退回",
+    "submit_for_approval": "提交审批",
+    "convert_to_po": "生成采购订单",
+    "add_line": "添加明细",
+    "remove_line": "删除明细"
+  },
+  "field": {
+    "username": "用户名",
+    "password": "密码",
+    "email": "邮箱",
+    "display_name": "姓名",
+    "role": "角色",
+    "department": "部门",
+    "company": "公司",
+    "title": "标题",
+    "business_reason": "业务说明",
+    "currency": "币种",
+    "total_amount": "总金额",
+    "status": "状态",
+    "requester": "申请人",
+    "required_date": "需求日期",
+    "created_at": "创建时间",
+    "updated_at": "更新时间",
+    "submitted_at": "提交时间",
+    "decided_at": "审批时间",
+    "decision_comment": "审批意见",
+    "line_no": "行号",
+    "item_name": "物料名称",
+    "specification": "规格说明",
+    "supplier": "供应商",
+    "qty": "数量",
+    "uom": "单位",
+    "unit_price": "单价",
+    "amount": "金额",
+    "pr_number": "申请单号",
+    "po_number": "订单号"
+  },
+  "status": {
+    "draft": "草稿",
+    "submitted": "待审批",
+    "approved": "已批准",
+    "rejected": "已拒绝",
+    "returned": "已退回",
+    "cancelled": "已取消",
+    "converted": "已生成订单",
+    "confirmed": "已确认",
+    "closed": "已关闭"
+  },
+  "role": {
+    "admin": "管理员",
+    "it_buyer": "IT 采购员",
+    "dept_manager": "部门负责人",
+    "finance_auditor": "财务审核",
+    "procurement_mgr": "采购经理"
+  },
+  "message": {
+    "welcome": "欢迎，{{name}}",
+    "no_data": "暂无数据",
+    "loading": "加载中...",
+    "save_success": "保存成功",
+    "submit_success": "提交成功",
+    "approve_success": "审批通过",
+    "reject_success": "已拒绝",
+    "return_success": "已退回",
+    "convert_success": "已生成采购订单 {{po_number}}",
+    "confirm_submit": "确认提交审批？提交后将无法修改。",
+    "confirm_approve": "确认批准此申请？",
+    "confirm_reject": "确认拒绝此申请？",
+    "confirm_return": "确认退回此申请？",
+    "confirm_delete": "确认删除？"
+  },
+  "placeholder": {
+    "enter_username": "请输入用户名",
+    "enter_password": "请输入密码",
+    "enter_title": "请输入标题",
+    "enter_reason": "请输入业务说明",
+    "select_department": "请选择部门",
+    "select_supplier": "请选择供应商",
+    "select_item": "请选择物料",
+    "enter_qty": "数量",
+    "enter_price": "单价",
+    "enter_comment": "填写审批意见（可选）"
+  },
+  "error": {
+    "login_failed": "登录失败，请检查用户名和密码",
+    "network_error": "网络连接错误，请稍后重试",
+    "permission_denied": "权限不足",
+    "unexpected": "操作失败，请重试"
+  },
+  "language": {
+    "switch": "切换语言",
+    "zh-CN": "中文",
+    "en-US": "English"
+  }
+}

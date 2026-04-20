@@ -1,0 +1,58 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  backend:
+    name: Backend lint + build
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+      - name: Install deps
+        working-directory: backend
+        run: |
+          python -m pip install --upgrade pip
+          pip install -e ".[dev]"
+      - name: Ruff lint
+        working-directory: backend
+        run: ruff check app
+      - name: Ruff format check
+        working-directory: backend
+        run: ruff format --check app
+
+  frontend:
+    name: Frontend lint + build
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+      - name: Install
+        working-directory: frontend
+        run: npm install --no-audit --no-fund
+      - name: Type check
+        working-directory: frontend
+        run: npm run type-check
+      - name: Build
+        working-directory: frontend
+        run: npm run build
+
+  docker:
+    name: Docker compose build
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Build images
+        working-directory: deploy
+        run: |
+          cp .env.example .env
+          docker compose build

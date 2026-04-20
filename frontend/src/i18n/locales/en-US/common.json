@@ -1,0 +1,123 @@
+{
+  "app": {
+    "name": "Mica",
+    "tagline": "Mica · Internal Procurement Management System",
+    "version": "Version"
+  },
+  "nav": {
+    "dashboard": "Dashboard",
+    "purchase_requisitions": "Purchase Requisitions",
+    "purchase_orders": "Purchase Orders",
+    "suppliers": "Suppliers",
+    "items": "Items",
+    "logout": "Log out"
+  },
+  "button": {
+    "submit": "Submit",
+    "save": "Save",
+    "cancel": "Cancel",
+    "confirm": "Confirm",
+    "delete": "Delete",
+    "edit": "Edit",
+    "create": "Create",
+    "back": "Back",
+    "search": "Search",
+    "reset": "Reset",
+    "refresh": "Refresh",
+    "approve": "Approve",
+    "reject": "Reject",
+    "return": "Return",
+    "submit_for_approval": "Submit for Approval",
+    "convert_to_po": "Convert to PO",
+    "add_line": "Add Line",
+    "remove_line": "Remove Line"
+  },
+  "field": {
+    "username": "Username",
+    "password": "Password",
+    "email": "Email",
+    "display_name": "Display Name",
+    "role": "Role",
+    "department": "Department",
+    "company": "Company",
+    "title": "Title",
+    "business_reason": "Business Reason",
+    "currency": "Currency",
+    "total_amount": "Total Amount",
+    "status": "Status",
+    "requester": "Requester",
+    "required_date": "Required Date",
+    "created_at": "Created At",
+    "updated_at": "Updated At",
+    "submitted_at": "Submitted At",
+    "decided_at": "Decided At",
+    "decision_comment": "Decision Comment",
+    "line_no": "Line",
+    "item_name": "Item",
+    "specification": "Specification",
+    "supplier": "Supplier",
+    "qty": "Quantity",
+    "uom": "UoM",
+    "unit_price": "Unit Price",
+    "amount": "Amount",
+    "pr_number": "PR Number",
+    "po_number": "PO Number"
+  },
+  "status": {
+    "draft": "Draft",
+    "submitted": "Pending Approval",
+    "approved": "Approved",
+    "rejected": "Rejected",
+    "returned": "Returned",
+    "cancelled": "Cancelled",
+    "converted": "Converted to PO",
+    "confirmed": "Confirmed",
+    "closed": "Closed"
+  },
+  "role": {
+    "admin": "Administrator",
+    "it_buyer": "IT Buyer",
+    "dept_manager": "Department Manager",
+    "finance_auditor": "Finance Auditor",
+    "procurement_mgr": "Procurement Manager"
+  },
+  "message": {
+    "welcome": "Welcome, {{name}}",
+    "no_data": "No data",
+    "loading": "Loading...",
+    "save_success": "Saved successfully",
+    "submit_success": "Submitted successfully",
+    "approve_success": "Approved",
+    "reject_success": "Rejected",
+    "return_success": "Returned",
+    "convert_success": "Purchase order {{po_number}} has been created",
+    "confirm_submit": "Submit for approval? You cannot edit it afterwards.",
+    "confirm_approve": "Approve this requisition?",
+    "confirm_reject": "Reject this requisition?",
+    "confirm_return": "Return this requisition?",
+    "confirm_delete": "Are you sure?"
+  },
+  "placeholder": {
+    "enter_username": "Username",
+    "enter_password": "Password",
+    "enter_title": "Title",
+    "enter_reason": "Business reason",
+    "select_department": "Select a department",
+    "select_supplier": "Select a supplier",
+    "select_item": "Select an item",
+    "enter_qty": "Quantity",
+    "enter_price": "Unit price",
+    "enter_comment": "Decision comment (optional)"
+  },
+  "error": {
+    "login_failed": "Login failed. Check your username and password.",
+    "network_error": "Network error. Please try again later.",
+    "permission_denied": "Permission denied",
+    "unexpected": "Operation failed. Please try again."
+  },
+  "language": {
+    "switch": "Language",
+    "zh-CN": "中文",
+    "en-US": "English"
+  }
+}

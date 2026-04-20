@@ -1,0 +1,27 @@
+{
+  "auth": {
+    "invalid_credentials": "Invalid username or password",
+    "user_inactive": "Account is inactive",
+    "not_authenticated": "Authentication required",
+    "invalid_token": "Session expired, please log in again",
+    "insufficient_role": "Insufficient permissions"
+  },
+  "common": {
+    "not_found": "Resource not found",
+    "validation_error": "Validation failed",
+    "internal_error": "Internal server error",
+    "conflict": "Resource conflict"
+  },
+  "pr": {
+    "not_found": "Purchase requisition not found",
+    "cannot_edit_submitted": "Submitted requisition cannot be edited",
+    "cannot_submit_non_draft": "Only draft status can be submitted",
+    "cannot_decide_non_submitted": "Only submitted status can be reviewed",
+    "already_converted": "This requisition has already been converted to a PO",
+    "no_items": "Please add at least one line item",
+    "must_be_approved_to_convert": "Only approved requisitions can be converted to a PO"
+  },
+  "po": {
+    "not_found": "Purchase order not found"
+  }
+}

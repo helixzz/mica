@@ -63,17 +63,12 @@ mica/
 
 ## 开发与部署
 
-> 详细说明将随 M1 里程碑一同提供。
-
 ```bash
-# 本地开发（规划中）
 cd deploy
-cp .env.example .env
-docker compose up -d
-
-# 部署升级（规划中）
-./deploy/scripts/upgrade.sh --version X.Y.Z
+./scripts/dev-up.sh
 ```
+
+约 90 秒后浏览器访问 <http://localhost>。详见 [docs/QUICKSTART.md](docs/QUICKSTART.md) 与 [docs/DEVELOPMENT.md](docs/DEVELOPMENT.md)。
 
 ## 许可
 
