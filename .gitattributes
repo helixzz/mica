@@ -1,0 +1,77 @@
+# ==============================================================================
+# Mica 仓库属性配置
+# ==============================================================================
+
+# 默认行为：自动处理换行符，按仓库内 LF 存储，签出时按平台转换
+* text=auto eol=lf
+
+# ------------------------------------------------------------------------------
+# 明确指定为文本（LF）
+# ------------------------------------------------------------------------------
+*.py        text eol=lf
+*.pyi       text eol=lf
+*.ts        text eol=lf
+*.tsx       text eol=lf
+*.js        text eol=lf
+*.jsx       text eol=lf
+*.json      text eol=lf
+*.yml       text eol=lf
+*.yaml      text eol=lf
+*.toml      text eol=lf
+*.md        text eol=lf
+*.sh        text eol=lf
+*.bash      text eol=lf
+*.sql       text eol=lf
+*.html      text eol=lf
+*.css       text eol=lf
+*.scss      text eol=lf
+Dockerfile  text eol=lf
+*.conf      text eol=lf
+.gitignore  text eol=lf
+.env.example text eol=lf
+
+# Windows 批处理必须 CRLF
+*.bat       text eol=crlf
+*.cmd       text eol=crlf
+*.ps1       text eol=crlf
+
+# ------------------------------------------------------------------------------
+# 二进制（禁止 diff/merge）
+# ------------------------------------------------------------------------------
+*.png       binary
+*.jpg       binary
+*.jpeg      binary
+*.gif       binary
+*.ico       binary
+*.webp      binary
+*.svg       text eol=lf
+*.pdf       binary
+*.xlsx      binary
+*.xls       binary
+*.docx      binary
+*.doc       binary
+*.zip       binary
+*.gz        binary
+*.tar       binary
+*.7z        binary
+*.woff      binary
+*.woff2     binary
+*.ttf       binary
+*.otf       binary
+*.eot       binary
+
+# ------------------------------------------------------------------------------
+# Linguist 语言统计调整
+# ------------------------------------------------------------------------------
+# 文档/生成文件不计入语言统计
+docs/**               linguist-documentation
+*.md                  linguist-documentation
+backend/migrations/** linguist-generated
+
+# ------------------------------------------------------------------------------
+# 导出打包时排除（git archive）
+# ------------------------------------------------------------------------------
+.github/    export-ignore
+.gitignore  export-ignore
+.gitattributes export-ignore
+docs/adr/   export-ignore

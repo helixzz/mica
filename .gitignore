@@ -1,0 +1,286 @@
+# ==============================================================================
+# Mica 公开仓库 .gitignore
+# 覆盖：Python 后端 / Node 前端 / Docker 部署 / IDE / 操作系统 / 密钥
+# 策略：默认忽略一切敏感/构建产物，显式跟踪源码与模板
+# ==============================================================================
+
+# ------------------------------------------------------------------------------
+# 私密配置与密钥（零容忍 —— 任何 secret 绝不进入公开 repo）
+# ------------------------------------------------------------------------------
+.env
+.env.*
+!.env.example
+!.env.template
+*.pem
+*.key
+*.crt
+*.p12
+*.pfx
+*.jks
+*.keystore
+id_rsa*
+id_ed25519*
+*.gpg
+!*.gpg.pub
+
+# SAML / 证书
+saml/settings.json
+!saml/settings.example.json
+saml/**/*.crt
+saml/**/*.key
+deploy/**/certs/
+!deploy/**/certs/.gitkeep
+
+# 应用运行时密钥文件
+secrets/
+.secrets/
+credentials/
+*credentials*.json
+!*credentials*.template.json
+
+# 飞书 / LLM / 第三方 API 密钥
+feishu-app-secret*
+llm-api-keys*
+
+# ------------------------------------------------------------------------------
+# 同级私有资料目录（物理隔离，双保险）
+# ------------------------------------------------------------------------------
+# 虽然 mica-internal/ 与 mica/ 是同级独立目录，此处作为备份防御
+# 防止任何人误把私有资料软链/拷贝到公开 repo
+.private/
+private/
+internal/
+mica-internal/
+mica-private/
+*-internal/
+*-private/
+.internal/
+
+# ------------------------------------------------------------------------------
+# Python / FastAPI 后端
+# ------------------------------------------------------------------------------
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+*.egg
+*.egg-info/
+.eggs/
+develop-eggs/
+dist/
+build/
+sdist/
+wheels/
+*.whl
+MANIFEST
+pip-log.txt
+pip-delete-this-directory.txt
+
+# 虚拟环境
+.venv/
+venv/
+env/
+ENV/
+.python-version
+.pdm-python
+
+# 测试与覆盖率
+.pytest_cache/
+.coverage
+.coverage.*
+htmlcov/
+coverage.xml
+*.cover
+.hypothesis/
+.tox/
+.nox/
+nosetests.xml
+
+# 类型检查 / Lint 缓存
+.mypy_cache/
+.ruff_cache/
+.pyre/
+.pytype/
+.dmypy.json
+dmypy.json
+
+# Django/Flask/FastAPI 运行时
+*.sqlite3
+*.sqlite3-journal
+db.sqlite3
+local_settings.py
+instance/
+
+# Alembic 本地生成但未提交的迁移
+# （正式迁移 backend/migrations/versions/ 需提交，仅忽略临时产物）
+backend/migrations/versions/*_tmp.py
+backend/migrations/versions/*_local.py
+
+# uv / poetry / pdm lock 的临时文件
+.uv/
+.pdm-build/
+
+# ------------------------------------------------------------------------------
+# Node / React / Vite 前端
+# ------------------------------------------------------------------------------
+node_modules/
+.pnp.*
+.yarn/*
+!.yarn/patches
+!.yarn/plugins
+!.yarn/releases
+!.yarn/sdks
+!.yarn/versions
+
+# 构建产物
+frontend/dist/
+frontend/build/
+frontend/.vite/
+frontend/.next/
+frontend/.nuxt/
+frontend/.output/
+frontend/.turbo/
+frontend/.parcel-cache/
+frontend/storybook-static/
+
+# 测试
+frontend/coverage/
+frontend/.nyc_output/
+frontend/cypress/videos/
+frontend/cypress/screenshots/
+frontend/playwright-report/
+frontend/test-results/
+
+# 环境变量
+frontend/.env
+frontend/.env.local
+frontend/.env.*.local
+!frontend/.env.example
+
+# npm / pnpm / yarn 缓存日志
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+lerna-debug.log*
+.npm
+.pnpm-store/
+
+# ------------------------------------------------------------------------------
+# Docker / 部署产物
+# ------------------------------------------------------------------------------
+# 不提交任何本地镜像 tar
+*.tar
+*.tar.gz
+!deploy/scripts/*.tar.gz.example
+
+# Compose override（本地开发自定义，不入库）
+docker-compose.override.yml
+docker-compose.override.yaml
+docker-compose.local.yml
+
+# 数据卷（如果不小心绑定到 repo 内）
+deploy/data/
+deploy/volumes/
+deploy/backups/
+deploy/logs/
+
+# MinIO / Postgres / Redis 本地数据目录
+data/
+volumes/
+
+# ------------------------------------------------------------------------------
+# 日志
+# ------------------------------------------------------------------------------
+*.log
+logs/
+log/
+
+# ------------------------------------------------------------------------------
+# IDE / 编辑器
+# ------------------------------------------------------------------------------
+# VS Code —— 保留共享的 settings/extensions 推荐，忽略个人配置
+.vscode/*
+!.vscode/settings.json.example
+!.vscode/extensions.json
+!.vscode/launch.json.example
+.history/
+
+# JetBrains
+.idea/
+*.iml
+*.ipr
+*.iws
+out/
+
+# Vim / Emacs / Sublime / Helix
+*.swp
+*.swo
+*.swn
+*~
+\#*\#
+.\#*
+*.sublime-workspace
+*.sublime-project
+.helix/
+
+# Cursor / Zed / 其他 AI 编辑器
+.cursor/
+.zed/
+.aider*
+.continue/
+
+# ------------------------------------------------------------------------------
+# 操作系统
+# ------------------------------------------------------------------------------
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+Desktop.ini
+$RECYCLE.BIN/
+
+# ------------------------------------------------------------------------------
+# AI agents / 工作会话（避免泄露对话历史）
+# ------------------------------------------------------------------------------
+.claude/
+.opencode/
+.omo/
+CLAUDE.md
+.cursorrules
+.aiderignore
+.aider.chat.history*
+.aider.tags.cache*
+
+# ------------------------------------------------------------------------------
+# 生成/临时产物
+# ------------------------------------------------------------------------------
+tmp/
+temp/
+.tmp/
+.cache/
+*.bak
+*.orig
+*.rej
+
+# 测试用临时 PDF/Excel/图片产物
+backend/tests/generated/
+backend/tests/fixtures/output/
+
+# 用户上传占位（本地测试）
+uploads/
+
+# ------------------------------------------------------------------------------
+# CI 本地调试
+# ------------------------------------------------------------------------------
+.act/
+
+# ------------------------------------------------------------------------------
+# 文档构建产物
+# ------------------------------------------------------------------------------
+docs/_build/
+docs/.docusaurus/
+site/
