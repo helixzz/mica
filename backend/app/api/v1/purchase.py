@@ -7,6 +7,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.core.security import CurrentUser
 from app.db import get_db
 from app.schemas import (
+    POListOut,
     POOut,
     PRCreateIn,
     PRDecisionIn,
@@ -100,13 +101,13 @@ async def convert_pr_to_po(
     return POOut.model_validate(po)
 
 
-@router.get("/purchase-orders", response_model=list[POOut], tags=["purchase"])
+@router.get("/purchase-orders", response_model=list[POListOut], tags=["purchase"])
 async def list_pos(
     user: CurrentUser,
     db: Annotated[AsyncSession, Depends(get_db)],
 ):
     items = await svc.list_pos(db, user)
-    return [POOut.model_validate(i) for i in items]
+    return [POListOut.model_validate(i) for i in items]
 
 
 @router.get("/purchase-orders/{po_id}", response_model=POOut, tags=["purchase"])
