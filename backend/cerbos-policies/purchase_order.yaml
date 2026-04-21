@@ -1,0 +1,17 @@
+apiVersion: api.cerbos.dev/v1
+resourcePolicy:
+  version: default
+  resource: purchase_order
+  rules:
+    - actions: [read, list]
+      effect: EFFECT_ALLOW
+      roles: [it_buyer, dept_manager, procurement_mgr, finance_auditor]
+    - actions: [receive_goods, record_serial]
+      effect: EFFECT_ALLOW
+      roles: [it_buyer, procurement_mgr]
+    - actions: [record_payment]
+      effect: EFFECT_ALLOW
+      roles: [finance_auditor, procurement_mgr]
+    - actions: [record_invoice]
+      effect: EFFECT_ALLOW
+      roles: [finance_auditor, procurement_mgr, it_buyer]

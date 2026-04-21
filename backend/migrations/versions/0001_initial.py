@@ -1,4 +1,4 @@
-"""initial schema
+"""initial schema v0.4
 
 Revision ID: 0001_initial
 Revises:
@@ -29,9 +29,8 @@ def upgrade() -> None:
         sa.Column("is_active", sa.Boolean(), nullable=False, server_default=sa.text("true")),
         sa.Column("created_at", sa.DateTime(timezone=True), nullable=False),
         sa.Column("updated_at", sa.DateTime(timezone=True), nullable=False),
-        sa.UniqueConstraint("code", name=op.f("uq_companies_code")),
+        sa.UniqueConstraint("code"),
     )
-
     op.create_table(
         "departments",
         sa.Column("id", postgresql.UUID(as_uuid=True), primary_key=True),
@@ -42,10 +41,9 @@ def upgrade() -> None:
         sa.Column("is_active", sa.Boolean(), nullable=False, server_default=sa.text("true")),
         sa.Column("created_at", sa.DateTime(timezone=True), nullable=False),
         sa.Column("updated_at", sa.DateTime(timezone=True), nullable=False),
-        sa.ForeignKeyConstraint(["company_id"], ["companies.id"], name=op.f("fk_departments_company_id_companies")),
-        sa.UniqueConstraint("company_id", "code", name=op.f("uq_departments_company_id")),
+        sa.ForeignKeyConstraint(["company_id"], ["companies.id"]),
+        sa.UniqueConstraint("company_id", "code"),
     )
-
     op.create_table(
         "users",
         sa.Column("id", postgresql.UUID(as_uuid=True), primary_key=True),
@@ -60,19 +58,20 @@ def upgrade() -> None:
         sa.Column("is_active", sa.Boolean(), nullable=False, server_default=sa.text("true")),
         sa.Column("is_local_admin", sa.Boolean(), nullable=False, server_default=sa.text("false")),
         sa.Column("auth_provider", sa.String(32), nullable=False, server_default="local"),
+        sa.Column("sso_external_id", sa.String(255), nullable=True),
         sa.Column("last_login_at", sa.DateTime(timezone=True), nullable=True),
         sa.Column("created_at", sa.DateTime(timezone=True), nullable=False),
         sa.Column("updated_at", sa.DateTime(timezone=True), nullable=False),
-        sa.ForeignKeyConstraint(["company_id"], ["companies.id"], name=op.f("fk_users_company_id_companies")),
-        sa.ForeignKeyConstraint(["department_id"], ["departments.id"], name=op.f("fk_users_department_id_departments")),
-        sa.UniqueConstraint("username", name=op.f("uq_users_username")),
-        sa.UniqueConstraint("email", name=op.f("uq_users_email")),
+        sa.ForeignKeyConstraint(["company_id"], ["companies.id"]),
+        sa.ForeignKeyConstraint(["department_id"], ["departments.id"]),
+        sa.UniqueConstraint("username"),
+        sa.UniqueConstraint("email"),
+        sa.UniqueConstraint("sso_external_id"),
         sa.CheckConstraint(
             "role IN ('admin','it_buyer','dept_manager','finance_auditor','procurement_mgr')",
-            name=op.f("ck_users_valid_role"),
+            name="ck_users_valid_role",
         ),
     )
-
     op.create_table(
         "suppliers",
         sa.Column("id", postgresql.UUID(as_uuid=True), primary_key=True),
@@ -85,9 +84,8 @@ def upgrade() -> None:
         sa.Column("is_active", sa.Boolean(), nullable=False, server_default=sa.text("true")),
         sa.Column("created_at", sa.DateTime(timezone=True), nullable=False),
         sa.Column("updated_at", sa.DateTime(timezone=True), nullable=False),
-        sa.UniqueConstraint("code", name=op.f("uq_suppliers_code")),
+        sa.UniqueConstraint("code"),
     )
-
     op.create_table(
         "items",
         sa.Column("id", postgresql.UUID(as_uuid=True), primary_key=True),
@@ -96,12 +94,12 @@ def upgrade() -> None:
         sa.Column("category", sa.String(64), nullable=True),
         sa.Column("uom", sa.String(16), nullable=False, server_default="EA"),
         sa.Column("specification", sa.Text(), nullable=True),
+        sa.Column("requires_serial", sa.Boolean(), nullable=False, server_default=sa.text("false")),
         sa.Column("is_active", sa.Boolean(), nullable=False, server_default=sa.text("true")),
         sa.Column("created_at", sa.DateTime(timezone=True), nullable=False),
         sa.Column("updated_at", sa.DateTime(timezone=True), nullable=False),
-        sa.UniqueConstraint("code", name=op.f("uq_items_code")),
+        sa.UniqueConstraint("code"),
     )
-
     op.create_table(
         "purchase_requisitions",
         sa.Column("id", postgresql.UUID(as_uuid=True), primary_key=True),
@@ -121,13 +119,12 @@ def upgrade() -> None:
         sa.Column("decision_comment", sa.Text(), nullable=True),
         sa.Column("created_at", sa.DateTime(timezone=True), nullable=False),
         sa.Column("updated_at", sa.DateTime(timezone=True), nullable=False),
-        sa.ForeignKeyConstraint(["requester_id"], ["users.id"], name=op.f("fk_purchase_requisitions_requester_id_users")),
-        sa.ForeignKeyConstraint(["company_id"], ["companies.id"], name=op.f("fk_purchase_requisitions_company_id_companies")),
-        sa.ForeignKeyConstraint(["department_id"], ["departments.id"], name=op.f("fk_purchase_requisitions_department_id_departments")),
-        sa.ForeignKeyConstraint(["decided_by_id"], ["users.id"], name=op.f("fk_purchase_requisitions_decided_by_id_users")),
-        sa.UniqueConstraint("pr_number", name=op.f("uq_purchase_requisitions_pr_number")),
+        sa.ForeignKeyConstraint(["requester_id"], ["users.id"]),
+        sa.ForeignKeyConstraint(["company_id"], ["companies.id"]),
+        sa.ForeignKeyConstraint(["department_id"], ["departments.id"]),
+        sa.ForeignKeyConstraint(["decided_by_id"], ["users.id"]),
+        sa.UniqueConstraint("pr_number"),
     )
-
     op.create_table(
         "pr_items",
         sa.Column("id", postgresql.UUID(as_uuid=True), primary_key=True),
@@ -143,12 +140,11 @@ def upgrade() -> None:
         sa.Column("amount", sa.Numeric(18, 4), nullable=False, server_default="0"),
         sa.Column("created_at", sa.DateTime(timezone=True), nullable=False),
         sa.Column("updated_at", sa.DateTime(timezone=True), nullable=False),
-        sa.ForeignKeyConstraint(["pr_id"], ["purchase_requisitions.id"], ondelete="CASCADE", name=op.f("fk_pr_items_pr_id_purchase_requisitions")),
-        sa.ForeignKeyConstraint(["item_id"], ["items.id"], name=op.f("fk_pr_items_item_id_items")),
-        sa.ForeignKeyConstraint(["supplier_id"], ["suppliers.id"], name=op.f("fk_pr_items_supplier_id_suppliers")),
-        sa.UniqueConstraint("pr_id", "line_no", name=op.f("uq_pr_items_pr_id")),
+        sa.ForeignKeyConstraint(["pr_id"], ["purchase_requisitions.id"], ondelete="CASCADE"),
+        sa.ForeignKeyConstraint(["item_id"], ["items.id"]),
+        sa.ForeignKeyConstraint(["supplier_id"], ["suppliers.id"]),
+        sa.UniqueConstraint("pr_id", "line_no"),
     )
-
     op.create_table(
         "purchase_orders",
         sa.Column("id", postgresql.UUID(as_uuid=True), primary_key=True),
@@ -159,18 +155,20 @@ def upgrade() -> None:
         sa.Column("status", sa.String(32), nullable=False, server_default="confirmed"),
         sa.Column("currency", sa.String(3), nullable=False, server_default="CNY"),
         sa.Column("total_amount", sa.Numeric(18, 4), nullable=False, server_default="0"),
+        sa.Column("qty_received", sa.Numeric(18, 4), nullable=False, server_default="0"),
+        sa.Column("amount_paid", sa.Numeric(18, 4), nullable=False, server_default="0"),
+        sa.Column("amount_invoiced", sa.Numeric(18, 4), nullable=False, server_default="0"),
         sa.Column("source_type", sa.String(32), nullable=False, server_default="manual"),
         sa.Column("source_ref", sa.String(128), nullable=True),
         sa.Column("created_by_id", postgresql.UUID(as_uuid=True), nullable=False),
         sa.Column("created_at", sa.DateTime(timezone=True), nullable=False),
         sa.Column("updated_at", sa.DateTime(timezone=True), nullable=False),
-        sa.ForeignKeyConstraint(["pr_id"], ["purchase_requisitions.id"], name=op.f("fk_purchase_orders_pr_id_purchase_requisitions")),
-        sa.ForeignKeyConstraint(["supplier_id"], ["suppliers.id"], name=op.f("fk_purchase_orders_supplier_id_suppliers")),
-        sa.ForeignKeyConstraint(["company_id"], ["companies.id"], name=op.f("fk_purchase_orders_company_id_companies")),
-        sa.ForeignKeyConstraint(["created_by_id"], ["users.id"], name=op.f("fk_purchase_orders_created_by_id_users")),
-        sa.UniqueConstraint("po_number", name=op.f("uq_purchase_orders_po_number")),
+        sa.ForeignKeyConstraint(["pr_id"], ["purchase_requisitions.id"]),
+        sa.ForeignKeyConstraint(["supplier_id"], ["suppliers.id"]),
+        sa.ForeignKeyConstraint(["company_id"], ["companies.id"]),
+        sa.ForeignKeyConstraint(["created_by_id"], ["users.id"]),
+        sa.UniqueConstraint("po_number"),
     )
-
     op.create_table(
         "po_items",
         sa.Column("id", postgresql.UUID(as_uuid=True), primary_key=True),
@@ -181,17 +179,235 @@ def upgrade() -> None:
         sa.Column("item_name", sa.String(255), nullable=False),
         sa.Column("specification", sa.Text(), nullable=True),
         sa.Column("qty", sa.Numeric(18, 4), nullable=False),
+        sa.Column("qty_received", sa.Numeric(18, 4), nullable=False, server_default="0"),
+        sa.Column("qty_invoiced", sa.Numeric(18, 4), nullable=False, server_default="0"),
         sa.Column("uom", sa.String(16), nullable=False, server_default="EA"),
         sa.Column("unit_price", sa.Numeric(18, 4), nullable=False),
         sa.Column("amount", sa.Numeric(18, 4), nullable=False),
         sa.Column("created_at", sa.DateTime(timezone=True), nullable=False),
         sa.Column("updated_at", sa.DateTime(timezone=True), nullable=False),
-        sa.ForeignKeyConstraint(["po_id"], ["purchase_orders.id"], ondelete="CASCADE", name=op.f("fk_po_items_po_id_purchase_orders")),
-        sa.ForeignKeyConstraint(["pr_item_id"], ["pr_items.id"], name=op.f("fk_po_items_pr_item_id_pr_items")),
-        sa.ForeignKeyConstraint(["item_id"], ["items.id"], name=op.f("fk_po_items_item_id_items")),
-        sa.UniqueConstraint("po_id", "line_no", name=op.f("uq_po_items_po_id")),
+        sa.ForeignKeyConstraint(["po_id"], ["purchase_orders.id"], ondelete="CASCADE"),
+        sa.ForeignKeyConstraint(["pr_item_id"], ["pr_items.id"]),
+        sa.ForeignKeyConstraint(["item_id"], ["items.id"]),
+        sa.UniqueConstraint("po_id", "line_no"),
     )
-
+    op.create_table(
+        "contracts",
+        sa.Column("id", postgresql.UUID(as_uuid=True), primary_key=True),
+        sa.Column("contract_number", sa.String(32), nullable=False),
+        sa.Column("po_id", postgresql.UUID(as_uuid=True), nullable=False),
+        sa.Column("supplier_id", postgresql.UUID(as_uuid=True), nullable=False),
+        sa.Column("title", sa.String(255), nullable=False),
+        sa.Column("current_version", sa.Integer(), nullable=False, server_default="1"),
+        sa.Column("status", sa.String(32), nullable=False, server_default="active"),
+        sa.Column("currency", sa.String(3), nullable=False, server_default="CNY"),
+        sa.Column("total_amount", sa.Numeric(18, 4), nullable=False),
+        sa.Column("signed_date", sa.Date(), nullable=True),
+        sa.Column("effective_date", sa.Date(), nullable=True),
+        sa.Column("expiry_date", sa.Date(), nullable=True),
+        sa.Column("notes", sa.Text(), nullable=True),
+        sa.Column("created_at", sa.DateTime(timezone=True), nullable=False),
+        sa.Column("updated_at", sa.DateTime(timezone=True), nullable=False),
+        sa.ForeignKeyConstraint(["po_id"], ["purchase_orders.id"]),
+        sa.ForeignKeyConstraint(["supplier_id"], ["suppliers.id"]),
+        sa.UniqueConstraint("contract_number"),
+    )
+    op.create_table(
+        "shipments",
+        sa.Column("id", postgresql.UUID(as_uuid=True), primary_key=True),
+        sa.Column("shipment_number", sa.String(32), nullable=False),
+        sa.Column("po_id", postgresql.UUID(as_uuid=True), nullable=False),
+        sa.Column("batch_no", sa.Integer(), nullable=False, server_default="1"),
+        sa.Column("is_default", sa.Boolean(), nullable=False, server_default=sa.text("false")),
+        sa.Column("status", sa.String(32), nullable=False, server_default="pending"),
+        sa.Column("carrier", sa.String(128), nullable=True),
+        sa.Column("tracking_number", sa.String(128), nullable=True),
+        sa.Column("expected_date", sa.Date(), nullable=True),
+        sa.Column("actual_date", sa.Date(), nullable=True),
+        sa.Column("received_by_id", postgresql.UUID(as_uuid=True), nullable=True),
+        sa.Column("notes", sa.Text(), nullable=True),
+        sa.Column("created_at", sa.DateTime(timezone=True), nullable=False),
+        sa.Column("updated_at", sa.DateTime(timezone=True), nullable=False),
+        sa.ForeignKeyConstraint(["po_id"], ["purchase_orders.id"]),
+        sa.ForeignKeyConstraint(["received_by_id"], ["users.id"]),
+        sa.UniqueConstraint("shipment_number"),
+        sa.UniqueConstraint("po_id", "batch_no"),
+    )
+    op.create_table(
+        "shipment_items",
+        sa.Column("id", postgresql.UUID(as_uuid=True), primary_key=True),
+        sa.Column("shipment_id", postgresql.UUID(as_uuid=True), nullable=False),
+        sa.Column("po_item_id", postgresql.UUID(as_uuid=True), nullable=False),
+        sa.Column("line_no", sa.Integer(), nullable=False),
+        sa.Column("item_name", sa.String(255), nullable=False),
+        sa.Column("qty_shipped", sa.Numeric(18, 4), nullable=False),
+        sa.Column("qty_received", sa.Numeric(18, 4), nullable=False, server_default="0"),
+        sa.Column("unit_price", sa.Numeric(18, 4), nullable=False),
+        sa.Column("created_at", sa.DateTime(timezone=True), nullable=False),
+        sa.Column("updated_at", sa.DateTime(timezone=True), nullable=False),
+        sa.ForeignKeyConstraint(["shipment_id"], ["shipments.id"], ondelete="CASCADE"),
+        sa.ForeignKeyConstraint(["po_item_id"], ["po_items.id"]),
+    )
+    op.create_table(
+        "serial_number_entries",
+        sa.Column("id", postgresql.UUID(as_uuid=True), primary_key=True),
+        sa.Column("shipment_item_id", postgresql.UUID(as_uuid=True), nullable=False),
+        sa.Column("serial_number", sa.String(128), nullable=False),
+        sa.Column("manufacturer", sa.String(128), nullable=True),
+        sa.Column("model_number", sa.String(128), nullable=True),
+        sa.Column("warranty_expiry", sa.Date(), nullable=True),
+        sa.Column("asset_id", sa.String(64), nullable=True),
+        sa.Column("asset_system", sa.String(32), nullable=True),
+        sa.Column("created_at", sa.DateTime(timezone=True), nullable=False),
+        sa.Column("updated_at", sa.DateTime(timezone=True), nullable=False),
+        sa.ForeignKeyConstraint(["shipment_item_id"], ["shipment_items.id"], ondelete="CASCADE"),
+        sa.UniqueConstraint("serial_number"),
+    )
+    op.create_table(
+        "payment_records",
+        sa.Column("id", postgresql.UUID(as_uuid=True), primary_key=True),
+        sa.Column("payment_number", sa.String(32), nullable=False),
+        sa.Column("po_id", postgresql.UUID(as_uuid=True), nullable=False),
+        sa.Column("installment_no", sa.Integer(), nullable=False, server_default="1"),
+        sa.Column("amount", sa.Numeric(18, 4), nullable=False),
+        sa.Column("currency", sa.String(3), nullable=False, server_default="CNY"),
+        sa.Column("due_date", sa.Date(), nullable=True),
+        sa.Column("payment_date", sa.Date(), nullable=True),
+        sa.Column("payment_method", sa.String(32), nullable=False, server_default="bank_transfer"),
+        sa.Column("transaction_ref", sa.String(128), nullable=True),
+        sa.Column("status", sa.String(32), nullable=False, server_default="pending"),
+        sa.Column("notes", sa.Text(), nullable=True),
+        sa.Column("created_at", sa.DateTime(timezone=True), nullable=False),
+        sa.Column("updated_at", sa.DateTime(timezone=True), nullable=False),
+        sa.ForeignKeyConstraint(["po_id"], ["purchase_orders.id"]),
+        sa.UniqueConstraint("payment_number"),
+    )
+    op.create_table(
+        "invoices",
+        sa.Column("id", postgresql.UUID(as_uuid=True), primary_key=True),
+        sa.Column("internal_number", sa.String(32), nullable=False),
+        sa.Column("invoice_number", sa.String(64), nullable=False),
+        sa.Column("po_id", postgresql.UUID(as_uuid=True), nullable=False),
+        sa.Column("supplier_id", postgresql.UUID(as_uuid=True), nullable=False),
+        sa.Column("invoice_date", sa.Date(), nullable=False),
+        sa.Column("received_date", sa.Date(), nullable=True),
+        sa.Column("due_date", sa.Date(), nullable=True),
+        sa.Column("subtotal", sa.Numeric(18, 4), nullable=False),
+        sa.Column("tax_amount", sa.Numeric(18, 4), nullable=False, server_default="0"),
+        sa.Column("total_amount", sa.Numeric(18, 4), nullable=False),
+        sa.Column("currency", sa.String(3), nullable=False, server_default="CNY"),
+        sa.Column("tax_number", sa.String(32), nullable=True),
+        sa.Column("status", sa.String(32), nullable=False, server_default="draft"),
+        sa.Column("notes", sa.Text(), nullable=True),
+        sa.Column("created_at", sa.DateTime(timezone=True), nullable=False),
+        sa.Column("updated_at", sa.DateTime(timezone=True), nullable=False),
+        sa.ForeignKeyConstraint(["po_id"], ["purchase_orders.id"]),
+        sa.ForeignKeyConstraint(["supplier_id"], ["suppliers.id"]),
+        sa.UniqueConstraint("internal_number"),
+    )
+    op.create_table(
+        "invoice_lines",
+        sa.Column("id", postgresql.UUID(as_uuid=True), primary_key=True),
+        sa.Column("invoice_id", postgresql.UUID(as_uuid=True), nullable=False),
+        sa.Column("po_item_id", postgresql.UUID(as_uuid=True), nullable=True),
+        sa.Column("line_no", sa.Integer(), nullable=False),
+        sa.Column("item_name", sa.String(255), nullable=False),
+        sa.Column("qty", sa.Numeric(18, 4), nullable=False),
+        sa.Column("unit_price", sa.Numeric(18, 4), nullable=False),
+        sa.Column("amount", sa.Numeric(18, 4), nullable=False),
+        sa.Column("created_at", sa.DateTime(timezone=True), nullable=False),
+        sa.Column("updated_at", sa.DateTime(timezone=True), nullable=False),
+        sa.ForeignKeyConstraint(["invoice_id"], ["invoices.id"], ondelete="CASCADE"),
+        sa.ForeignKeyConstraint(["po_item_id"], ["po_items.id"]),
+    )
+    op.create_table(
+        "approval_instances",
+        sa.Column("id", postgresql.UUID(as_uuid=True), primary_key=True),
+        sa.Column("biz_type", sa.String(50), nullable=False),
+        sa.Column("biz_id", postgresql.UUID(as_uuid=True), nullable=False),
+        sa.Column("biz_number", sa.String(100), nullable=True),
+        sa.Column("title", sa.String(255), nullable=False),
+        sa.Column("status", sa.String(20), nullable=False, server_default="pending"),
+        sa.Column("current_stage", sa.Integer(), nullable=False, server_default="1"),
+        sa.Column("total_stages", sa.Integer(), nullable=False, server_default="1"),
+        sa.Column("submitter_id", postgresql.UUID(as_uuid=True), nullable=False),
+        sa.Column("company_id", postgresql.UUID(as_uuid=True), nullable=False),
+        sa.Column("amount", sa.Numeric(18, 4), nullable=True),
+        sa.Column("submitted_at", sa.DateTime(timezone=True), nullable=True),
+        sa.Column("completed_at", sa.DateTime(timezone=True), nullable=True),
+        sa.Column("created_at", sa.DateTime(timezone=True), nullable=False),
+        sa.Column("updated_at", sa.DateTime(timezone=True), nullable=False),
+        sa.ForeignKeyConstraint(["submitter_id"], ["users.id"]),
+        sa.ForeignKeyConstraint(["company_id"], ["companies.id"]),
+    )
+    op.create_index("ix_approval_instances_biz", "approval_instances", ["biz_type", "biz_id"])
+    op.create_index("ix_approval_instances_status", "approval_instances", ["status"])
+    op.create_table(
+        "approval_tasks",
+        sa.Column("id", postgresql.UUID(as_uuid=True), primary_key=True),
+        sa.Column("instance_id", postgresql.UUID(as_uuid=True), nullable=False),
+        sa.Column("stage_order", sa.Integer(), nullable=False),
+        sa.Column("stage_name", sa.String(100), nullable=False),
+        sa.Column("assignee_id", postgresql.UUID(as_uuid=True), nullable=False),
+        sa.Column("assignee_role", sa.String(100), nullable=True),
+        sa.Column("status", sa.String(20), nullable=False, server_default="pending"),
+        sa.Column("action", sa.String(20), nullable=True),
+        sa.Column("comment", sa.Text(), nullable=True),
+        sa.Column("assigned_at", sa.DateTime(timezone=True), nullable=False),
+        sa.Column("acted_at", sa.DateTime(timezone=True), nullable=True),
+        sa.Column("created_at", sa.DateTime(timezone=True), nullable=False),
+        sa.Column("updated_at", sa.DateTime(timezone=True), nullable=False),
+        sa.ForeignKeyConstraint(["instance_id"], ["approval_instances.id"], ondelete="CASCADE"),
+        sa.ForeignKeyConstraint(["assignee_id"], ["users.id"]),
+    )
+    op.create_table(
+        "ai_models",
+        sa.Column("id", postgresql.UUID(as_uuid=True), primary_key=True),
+        sa.Column("name", sa.String(64), nullable=False),
+        sa.Column("provider", sa.String(32), nullable=False),
+        sa.Column("model_string", sa.String(128), nullable=False),
+        sa.Column("modality", sa.String(16), nullable=False, server_default="text"),
+        sa.Column("api_key_encrypted", sa.Text(), nullable=True),
+        sa.Column("api_base", sa.String(255), nullable=True),
+        sa.Column("timeout_s", sa.Integer(), nullable=False, server_default="60"),
+        sa.Column("is_active", sa.Boolean(), nullable=False, server_default=sa.text("true")),
+        sa.Column("priority", sa.Integer(), nullable=False, server_default="100"),
+        sa.Column("capabilities", postgresql.JSONB(astext_type=sa.Text()), nullable=True),
+        sa.Column("created_at", sa.DateTime(timezone=True), nullable=False),
+        sa.Column("updated_at", sa.DateTime(timezone=True), nullable=False),
+        sa.UniqueConstraint("name"),
+    )
+    op.create_table(
+        "ai_feature_routing",
+        sa.Column("id", postgresql.UUID(as_uuid=True), primary_key=True),
+        sa.Column("feature_code", sa.String(64), nullable=False),
+        sa.Column("primary_model_id", postgresql.UUID(as_uuid=True), nullable=True),
+        sa.Column("fallback_model_ids", postgresql.JSONB(astext_type=sa.Text()), nullable=True),
+        sa.Column("prompt_template", sa.Text(), nullable=True),
+        sa.Column("temperature", sa.Numeric(3, 2), nullable=False, server_default="0.3"),
+        sa.Column("max_tokens", sa.Integer(), nullable=False, server_default="1024"),
+        sa.Column("enabled", sa.Boolean(), nullable=False, server_default=sa.text("true")),
+        sa.Column("created_at", sa.DateTime(timezone=True), nullable=False),
+        sa.Column("updated_at", sa.DateTime(timezone=True), nullable=False),
+        sa.ForeignKeyConstraint(["primary_model_id"], ["ai_models.id"]),
+        sa.UniqueConstraint("feature_code"),
+    )
+    op.create_table(
+        "ai_call_logs",
+        sa.Column("id", postgresql.UUID(as_uuid=True), primary_key=True),
+        sa.Column("occurred_at", sa.DateTime(timezone=True), nullable=False),
+        sa.Column("feature_code", sa.String(64), nullable=False),
+        sa.Column("user_id", postgresql.UUID(as_uuid=True), nullable=True),
+        sa.Column("model_name", sa.String(64), nullable=True),
+        sa.Column("provider", sa.String(32), nullable=True),
+        sa.Column("prompt_tokens", sa.Integer(), nullable=False, server_default="0"),
+        sa.Column("completion_tokens", sa.Integer(), nullable=False, server_default="0"),
+        sa.Column("latency_ms", sa.Integer(), nullable=False, server_default="0"),
+        sa.Column("status", sa.String(16), nullable=False, server_default="success"),
+        sa.Column("error", sa.Text(), nullable=True),
+        sa.ForeignKeyConstraint(["user_id"], ["users.id"]),
+    )
+    op.create_index("ix_ai_call_logs_feature_time", "ai_call_logs", ["feature_code", "occurred_at"])
     op.create_table(
         "audit_logs",
         sa.Column("id", postgresql.UUID(as_uuid=True), primary_key=True),
@@ -203,22 +419,23 @@ def upgrade() -> None:
         sa.Column("resource_id", sa.String(64), nullable=True),
         sa.Column("metadata_json", postgresql.JSONB(astext_type=sa.Text()), nullable=True),
         sa.Column("comment", sa.Text(), nullable=True),
-        sa.ForeignKeyConstraint(["actor_id"], ["users.id"], name=op.f("fk_audit_logs_actor_id_users")),
+        sa.ForeignKeyConstraint(["actor_id"], ["users.id"]),
     )
     op.create_index("ix_audit_logs_occurred_at", "audit_logs", ["occurred_at"])
     op.create_index("ix_audit_logs_event_type", "audit_logs", ["event_type"])
 
 
 def downgrade() -> None:
-    op.drop_index("ix_audit_logs_event_type", table_name="audit_logs")
-    op.drop_index("ix_audit_logs_occurred_at", table_name="audit_logs")
-    op.drop_table("audit_logs")
-    op.drop_table("po_items")
-    op.drop_table("purchase_orders")
-    op.drop_table("pr_items")
-    op.drop_table("purchase_requisitions")
-    op.drop_table("items")
-    op.drop_table("suppliers")
-    op.drop_table("users")
-    op.drop_table("departments")
-    op.drop_table("companies")
+    for tbl in [
+        "audit_logs", "ai_call_logs", "ai_feature_routing", "ai_models",
+        "approval_tasks", "approval_instances",
+        "invoice_lines", "invoices",
+        "payment_records",
+        "serial_number_entries", "shipment_items", "shipments",
+        "contracts",
+        "po_items", "purchase_orders",
+        "pr_items", "purchase_requisitions",
+        "items", "suppliers",
+        "users", "departments", "companies",
+    ]:
+        op.drop_table(tbl)

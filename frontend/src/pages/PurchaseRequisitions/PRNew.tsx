@@ -21,6 +21,7 @@ import { useNavigate } from 'react-router-dom'
 
 import { api, type Item, type PRItem, type Supplier } from '@/api'
 import { extractError } from '@/api/client'
+import { AIStreamButton } from '@/components/AIStreamButton'
 
 interface LineForm {
   key: number
@@ -256,8 +257,23 @@ export function PRNewPage() {
             </Col>
           </Row>
           <Form.Item label={t('field.business_reason')} name="business_reason">
-            <Input.TextArea rows={2} placeholder={t('placeholder.enter_reason')} />
+            <Input.TextArea rows={3} placeholder={t('placeholder.enter_reason')} />
           </Form.Item>
+          <Space>
+            <AIStreamButton
+              feature="pr_description_polish"
+              body={{ draft: Form.useWatch('business_reason', form) || '' }}
+              onChunk={(chunk) => {
+                const current = form.getFieldValue('business_reason') || ''
+                form.setFieldValue('business_reason', current + chunk)
+              }}
+              disabled={!Form.useWatch('business_reason', form)}
+              label={t('button.ai_polish')}
+            />
+            <Typography.Text type="secondary" style={{ fontSize: 12 }}>
+              {t('message.ai_demo_mode')}
+            </Typography.Text>
+          </Space>
         </Form>
       </Card>
 

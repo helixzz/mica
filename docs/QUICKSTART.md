@@ -4,7 +4,7 @@
 
 - Docker 24+
 - Docker Compose v2
-- 可访问的端口 80, 5432, 8000
+- 可访问的端口 80, 8000（若与本机其它服务冲突，改 `deploy/.env`）
 
 ## 启动
 
@@ -13,16 +13,19 @@ cd deploy
 ./scripts/dev-up.sh
 ```
 
-等待约 60-90 秒（首次启动需构建镜像 + 运行迁移 + 种子数据）。
+等待约 60-120 秒（首次启动需构建镜像 + 运行迁移 + 种子数据）。脚本结束后会列出本地与局域网访问 URL。
 
 ## 访问
 
 | 入口 | URL |
 |---|---|
-| 前端应用 | <http://localhost> |
-| API 文档（Swagger） | <http://localhost/api/docs> |
-| API 文档（ReDoc） | <http://localhost/api/redoc> |
-| 健康检查 | <http://localhost/health> |
+| 前端（本机） | <http://localhost> |
+| 前端（局域网） | `http://<LAN-IP>`（同网段设备直接访问，无头服务器首选） |
+| API 文档（Swagger） | `http://<HOST>/api/docs` |
+| API 文档（ReDoc） | `http://<HOST>/api/redoc` |
+| 健康检查 | `http://<HOST>/health` |
+
+> **LAN 绑定说明**：`deploy/.env` 默认 `HTTP_BIND=0.0.0.0`、`BACKEND_BIND=0.0.0.0`，端口对整个网段开放；`POSTGRES_BIND=127.0.0.1` 仅本机，避免数据库对外暴露。CORS 默认 `CORS_ALLOW_ALL=true`（仅 dev）。生产前收紧。
 
 ## 测试账号
 
@@ -73,14 +76,10 @@ docker compose logs -f postgres     # 仅数据库
 - **数据库迁移失败**：`docker compose logs migrate`
 - **前端白屏**：打开浏览器开发者工具 → Network，检查 `/api/v1/auth/me` 是否 200
 
-## 已知限制（Walking Skeleton 阶段）
+## 已知限制（v0.4）
 
-- 仅本地密码登录，无 SSO
-- 仅单级审批（部门经理→通过/拒绝/退回）
-- PR → PO 转换仅支持单一供应商的情况
-- 无邮件 / 飞书通知
-- 无 OCR / 文档生成 / LLM 能力
-- 无字段级权限（行级已最小实现）
-- 无多批次交货 / 付款 / 发票
-
-这些能力按路线图逐步引入。见 [../../mica-internal/design/skeleton-scope-v0.0.1.md]（内部文档）。
+- ADFS SAML 仅有骨架，Dev 仍用本地密码登录
+- LLM 默认 mock 模式（无真实密钥时返回演示文本）；管理员可在后台配置真实模型
+- 审批引擎单级，复杂 DSL 路由在 v0.5+
+- 合同仅记录元数据，未引入扫描件归档（v0.5+）
+- 无 OCR / PDF/Excel 生成 / 飞书集成 / SKU 行情库（按路线图逐步引入）

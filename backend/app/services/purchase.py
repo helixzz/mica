@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from datetime import date, datetime, timezone
+from datetime import datetime, timezone
 from decimal import Decimal
 from uuid import UUID
 
@@ -20,7 +20,8 @@ from app.models import (
     User,
     UserRole,
 )
-from app.schemas import PRCreateIn, PRDecisionIn, PRItemIn, PRUpdateIn
+from app.schemas import PRCreateIn, PRDecisionIn, PRUpdateIn
+from app.services import approval as approval_svc
 
 
 def _as_decimal(v) -> Decimal:
@@ -183,6 +184,16 @@ async def submit_pr(db: AsyncSession, actor: User, pr_id: UUID) -> PurchaseRequi
 
     pr.status = PRStatus.SUBMITTED.value
     pr.submitted_at = datetime.now(timezone.utc)
+
+    await approval_svc.create_instance_for_pr(
+        db,
+        submitter=actor,
+        biz_type="purchase_requisition",
+        biz_id=pr.id,
+        biz_number=pr.pr_number,
+        title=pr.title,
+        amount=pr.total_amount,
+    )
     await _audit(db, actor, "pr.submitted", "purchase_requisition", str(pr.id))
     await db.commit()
     return await _load_pr(db, pr.id)
@@ -191,14 +202,16 @@ async def submit_pr(db: AsyncSession, actor: User, pr_id: UUID) -> PurchaseRequi
 async def decide_pr(
     db: AsyncSession, actor: User, pr_id: UUID, payload: PRDecisionIn
 ) -> PurchaseRequisition:
-    if actor.role not in {UserRole.DEPT_MANAGER.value, UserRole.ADMIN.value}:
-        raise HTTPException(403, "insufficient_role")
-
     pr = await _load_pr(db, pr_id)
     if pr is None:
         raise HTTPException(404, "pr.not_found")
     if pr.status != PRStatus.SUBMITTED.value:
         raise HTTPException(409, "pr.cannot_decide_non_submitted")
+
+    instance = await approval_svc.get_instance_for_biz(db, "purchase_requisition", pr.id)
+    if instance is None:
+        raise HTTPException(404, "pr.approval_not_found")
+    await approval_svc.act_on_task(db, actor, instance.id, payload.action, payload.comment)
 
     if payload.action == "approve":
         pr.status = PRStatus.APPROVED.value
@@ -206,7 +219,6 @@ async def decide_pr(
         pr.status = PRStatus.REJECTED.value
     else:
         pr.status = PRStatus.RETURNED.value
-
     pr.decided_at = datetime.now(timezone.utc)
     pr.decided_by_id = actor.id
     pr.decision_comment = payload.comment
@@ -227,10 +239,7 @@ async def convert_pr_to_po(db: AsyncSession, actor: User, pr_id: UUID) -> Purcha
 
     supplier_ids = {i.supplier_id for i in pr.items if i.supplier_id}
     if len(supplier_ids) != 1:
-        raise HTTPException(
-            422,
-            "pr.multiple_suppliers_not_supported_in_skeleton",
-        )
+        raise HTTPException(422, "pr.multiple_suppliers_not_supported_in_skeleton")
     (supplier_id,) = supplier_ids
 
     po_number = await _next_po_number(db)

@@ -22,12 +22,18 @@ class Settings(BaseSettings):
     # ── Application ──
     app_name: str = "Mica"
     app_env: Literal["development", "staging", "production"] = "development"
-    app_version: str = "0.0.1"
+    app_version: str = "0.4.0"
     debug: bool = False
 
     # ── API ──
     api_prefix: str = "/api"
-    cors_origins: list[str] = Field(default_factory=lambda: ["http://localhost", "http://localhost:5173"])
+    cors_origins: list[str] = Field(
+        default_factory=lambda: [
+            "http://localhost",
+            "http://localhost:5173",
+        ]
+    )
+    cors_allow_all: bool = False
 
     # ── Database ──
     database_url: PostgresDsn = Field(

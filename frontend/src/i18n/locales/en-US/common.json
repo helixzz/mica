@@ -8,6 +8,11 @@
     "dashboard": "Dashboard",
     "purchase_requisitions": "Purchase Requisitions",
     "purchase_orders": "Purchase Orders",
+    "contracts": "Contracts",
+    "shipments": "Shipments",
+    "payments": "Payments",
+    "invoices": "Invoices",
+    "approvals": "My Approvals",
     "suppliers": "Suppliers",
     "items": "Items",
     "logout": "Log out"
@@ -30,7 +35,13 @@
     "submit_for_approval": "Submit for Approval",
     "convert_to_po": "Convert to PO",
     "add_line": "Add Line",
-    "remove_line": "Remove Line"
+    "remove_line": "Remove Line",
+    "ai_polish": "AI Polish",
+    "ai_suggest": "AI Suggest",
+    "mark_paid": "Mark Paid",
+    "record_shipment": "Record Shipment",
+    "record_payment": "Record Payment",
+    "record_invoice": "Record Invoice"
   },
   "field": {
     "username": "Username",
@@ -57,11 +68,41 @@
     "specification": "Specification",
     "supplier": "Supplier",
     "qty": "Quantity",
+    "qty_shipped": "Qty Shipped",
+    "qty_received": "Qty Received",
+    "qty_invoiced": "Qty Invoiced",
     "uom": "UoM",
     "unit_price": "Unit Price",
     "amount": "Amount",
     "pr_number": "PR Number",
-    "po_number": "PO Number"
+    "po_number": "PO Number",
+    "contract_number": "Contract No.",
+    "shipment_number": "Shipment No.",
+    "payment_number": "Payment No.",
+    "invoice_number": "Invoice No.",
+    "internal_number": "Internal No.",
+    "carrier": "Carrier",
+    "tracking_number": "Tracking No.",
+    "expected_date": "Expected Date",
+    "actual_date": "Actual Date",
+    "due_date": "Due Date",
+    "payment_date": "Payment Date",
+    "payment_method": "Payment Method",
+    "transaction_ref": "Transaction Ref",
+    "installment_no": "Installment",
+    "invoice_date": "Invoice Date",
+    "tax_number": "Tax ID",
+    "tax_amount": "Tax",
+    "subtotal": "Subtotal",
+    "notes": "Notes",
+    "signed_date": "Signed",
+    "effective_date": "Effective",
+    "expiry_date": "Expires",
+    "amount_paid": "Paid",
+    "amount_invoiced": "Invoiced",
+    "pct_received": "Received %",
+    "pct_paid": "Paid %",
+    "pct_invoiced": "Invoiced %"
   },
   "status": {
     "draft": "Draft",
@@ -72,7 +113,20 @@
     "cancelled": "Cancelled",
     "converted": "Converted to PO",
     "confirmed": "Confirmed",
-    "closed": "Closed"
+    "closed": "Closed",
+    "pending": "Pending",
+    "in_transit": "In Transit",
+    "arrived": "Arrived",
+    "accepted": "Accepted",
+    "partially_accepted": "Partially Accepted",
+    "partially_received": "Partially Received",
+    "fully_received": "Fully Received",
+    "verified": "Verified",
+    "paid": "Paid",
+    "active": "Active",
+    "superseded": "Superseded",
+    "terminated": "Terminated",
+    "expired": "Expired"
   },
   "role": {
     "admin": "Administrator",
@@ -95,7 +149,13 @@
     "confirm_approve": "Approve this requisition?",
     "confirm_reject": "Reject this requisition?",
     "confirm_return": "Return this requisition?",
-    "confirm_delete": "Are you sure?"
+    "confirm_delete": "Are you sure?",
+    "ai_thinking": "AI thinking...",
+    "ai_demo_mode": "AI is running in demo mode. Admins can configure real LLM models.",
+    "no_pending_tasks": "No pending approval tasks",
+    "shipment_recorded": "Shipment recorded",
+    "payment_recorded": "Payment recorded",
+    "invoice_recorded": "Invoice recorded"
   },
   "placeholder": {
     "enter_username": "Username",
@@ -107,7 +167,8 @@
     "select_item": "Select an item",
     "enter_qty": "Quantity",
     "enter_price": "Unit price",
-    "enter_comment": "Decision comment (optional)"
+    "enter_comment": "Decision comment (optional)",
+    "enter_invoice_number": "Supplier-issued invoice number"
   },
   "error": {
     "login_failed": "Login failed. Check your username and password.",
@@ -119,5 +180,11 @@
     "switch": "Language",
     "zh-CN": "中文",
     "en-US": "English"
+  },
+  "progress": {
+    "title": "Order Progress",
+    "received": "Received",
+    "invoiced": "Invoiced",
+    "paid": "Paid"
   }
 }

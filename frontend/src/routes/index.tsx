@@ -3,13 +3,18 @@ import { useEffect } from 'react'
 import { Navigate, Route, Routes, useLocation } from 'react-router-dom'
 
 import { AppLayout } from '@/components/Layout/AppLayout'
+import { ApprovalsPage } from '@/pages/Approvals'
+import { ContractsPage } from '@/pages/Contracts'
 import { DashboardPage } from '@/pages/Dashboard'
+import { InvoicesPage } from '@/pages/Invoices'
 import { LoginPage } from '@/pages/Login'
+import { PaymentsPage } from '@/pages/Payments'
 import { PODetailPage } from '@/pages/PurchaseOrders/PODetail'
 import { POListPage } from '@/pages/PurchaseOrders/POList'
 import { PRDetailPage } from '@/pages/PurchaseRequisitions/PRDetail'
 import { PRListPage } from '@/pages/PurchaseRequisitions/PRList'
 import { PRNewPage } from '@/pages/PurchaseRequisitions/PRNew'
+import { ShipmentsPage } from '@/pages/Shipments'
 import { useAuth } from '@/auth/useAuth'
 import { getToken } from '@/api/client'
 
@@ -46,11 +51,16 @@ export function AppRoutes() {
       >
         <Route path="/" element={<Navigate to="/dashboard" replace />} />
         <Route path="/dashboard" element={<DashboardPage />} />
+        <Route path="/approvals" element={<ApprovalsPage />} />
         <Route path="/purchase-requisitions" element={<PRListPage />} />
         <Route path="/purchase-requisitions/new" element={<PRNewPage />} />
         <Route path="/purchase-requisitions/:id" element={<PRDetailPage />} />
         <Route path="/purchase-orders" element={<POListPage />} />
         <Route path="/purchase-orders/:id" element={<PODetailPage />} />
+        <Route path="/contracts" element={<ContractsPage />} />
+        <Route path="/shipments" element={<ShipmentsPage />} />
+        <Route path="/payments" element={<PaymentsPage />} />
+        <Route path="/invoices" element={<InvoicesPage />} />
       </Route>
       <Route path="*" element={<Navigate to="/" replace />} />
     </Routes>

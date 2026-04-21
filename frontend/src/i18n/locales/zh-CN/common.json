@@ -8,6 +8,11 @@
     "dashboard": "仪表盘",
     "purchase_requisitions": "采购申请",
     "purchase_orders": "采购订单",
+    "contracts": "合同",
+    "shipments": "交货批次",
+    "payments": "付款记录",
+    "invoices": "发票",
+    "approvals": "待办审批",
     "suppliers": "供应商",
     "items": "物料",
     "logout": "退出登录"
@@ -30,7 +35,13 @@
     "submit_for_approval": "提交审批",
     "convert_to_po": "生成采购订单",
     "add_line": "添加明细",
-    "remove_line": "删除明细"
+    "remove_line": "删除明细",
+    "ai_polish": "AI 润色",
+    "ai_suggest": "AI 推荐",
+    "mark_paid": "标记已付款",
+    "record_shipment": "登记交货",
+    "record_payment": "登记付款",
+    "record_invoice": "登记发票"
   },
   "field": {
     "username": "用户名",
@@ -57,11 +68,41 @@
     "specification": "规格说明",
     "supplier": "供应商",
     "qty": "数量",
+    "qty_shipped": "发货数量",
+    "qty_received": "到货数量",
+    "qty_invoiced": "已开票数量",
     "uom": "单位",
     "unit_price": "单价",
     "amount": "金额",
     "pr_number": "申请单号",
-    "po_number": "订单号"
+    "po_number": "订单号",
+    "contract_number": "合同号",
+    "shipment_number": "批次号",
+    "payment_number": "付款编号",
+    "invoice_number": "发票号码",
+    "internal_number": "内部编号",
+    "carrier": "承运商",
+    "tracking_number": "运单号",
+    "expected_date": "预计到货日",
+    "actual_date": "实际到货日",
+    "due_date": "到期日",
+    "payment_date": "付款日",
+    "payment_method": "付款方式",
+    "transaction_ref": "银行流水号",
+    "installment_no": "期次",
+    "invoice_date": "发票日期",
+    "tax_number": "税号",
+    "tax_amount": "税额",
+    "subtotal": "金额（不含税）",
+    "notes": "备注",
+    "signed_date": "签署日",
+    "effective_date": "生效日",
+    "expiry_date": "到期日",
+    "amount_paid": "已付金额",
+    "amount_invoiced": "已开票金额",
+    "pct_received": "到货进度",
+    "pct_paid": "付款进度",
+    "pct_invoiced": "开票进度"
   },
   "status": {
     "draft": "草稿",
@@ -72,7 +113,20 @@
     "cancelled": "已取消",
     "converted": "已生成订单",
     "confirmed": "已确认",
-    "closed": "已关闭"
+    "closed": "已关闭",
+    "pending": "待处理",
+    "in_transit": "在途",
+    "arrived": "已到货",
+    "accepted": "已验收",
+    "partially_accepted": "部分验收",
+    "partially_received": "部分到货",
+    "fully_received": "完全到货",
+    "verified": "已核对",
+    "paid": "已支付",
+    "active": "有效",
+    "superseded": "已替代",
+    "terminated": "已终止",
+    "expired": "已过期"
   },
   "role": {
     "admin": "管理员",
@@ -95,7 +149,13 @@
     "confirm_approve": "确认批准此申请？",
     "confirm_reject": "确认拒绝此申请？",
     "confirm_return": "确认退回此申请？",
-    "confirm_delete": "确认删除？"
+    "confirm_delete": "确认删除？",
+    "ai_thinking": "AI 思考中...",
+    "ai_demo_mode": "当前为 AI 演示模式。管理员可在后台配置真实 LLM 模型。",
+    "no_pending_tasks": "没有待办的审批任务",
+    "shipment_recorded": "交货批次已登记",
+    "payment_recorded": "付款记录已创建",
+    "invoice_recorded": "发票已登记"
   },
   "placeholder": {
     "enter_username": "请输入用户名",
@@ -107,7 +167,8 @@
     "select_item": "请选择物料",
     "enter_qty": "数量",
     "enter_price": "单价",
-    "enter_comment": "填写审批意见（可选）"
+    "enter_comment": "填写审批意见（可选）",
+    "enter_invoice_number": "供应商开具的发票号"
   },
   "error": {
     "login_failed": "登录失败，请检查用户名和密码",
@@ -119,5 +180,11 @@
     "switch": "切换语言",
     "zh-CN": "中文",
     "en-US": "English"
+  },
+  "progress": {
+    "title": "订单进度",
+    "received": "到货",
+    "invoiced": "开票",
+    "paid": "付款"
   }
 }

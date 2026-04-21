@@ -1,6 +1,6 @@
 [project]
 name = "mica-backend"
-version = "0.0.1"
+version = "0.4.0"
 description = "Mica | 觅采 — Internal procurement management system backend"
 readme = "README.md"
 requires-python = ">=3.12"
@@ -10,25 +10,23 @@ authors = [
 ]
 
 dependencies = [
-    # Web framework
     "fastapi>=0.115.0",
     "uvicorn[standard]>=0.32.0",
     "gunicorn>=23.0.0",
-    # Database
     "sqlalchemy[asyncio]>=2.0.35",
     "asyncpg>=0.30.0",
     "alembic>=1.14.0",
-    # Validation & settings
     "pydantic>=2.9.0",
     "pydantic-settings>=2.6.0",
     "email-validator>=2.2.0",
-    # Auth & security
     "passlib[bcrypt]>=1.7.4",
     "python-jose[cryptography]>=3.3.0",
     "python-multipart>=0.0.17",
-    # Utilities
+    "cryptography>=43.0.0",
     "python-dateutil>=2.9.0",
     "httpx>=0.27.0",
+    "pyyaml>=6.0.2",
+    "litellm>=1.52.0",
 ]
 
 [project.optional-dependencies]

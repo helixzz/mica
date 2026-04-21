@@ -1,9 +1,19 @@
-import { LogoutOutlined } from '@ant-design/icons'
-import { Avatar, Button, Dropdown, Layout, Menu, Space, Tag, Typography } from 'antd'
+import {
+  ApartmentOutlined,
+  AuditOutlined,
+  BankOutlined,
+  CarOutlined,
+  DashboardOutlined,
+  DollarOutlined,
+  FileTextOutlined,
+  LogoutOutlined,
+  SolutionOutlined,
+} from '@ant-design/icons'
+import { Avatar, Dropdown, Layout, Menu, Space, Tag, Typography } from 'antd'
 import { useTranslation } from 'react-i18next'
 import { Link, Outlet, useLocation, useNavigate } from 'react-router-dom'
 
-import { LanguageSwitcher } from './LanguageSwitcher'
+import { LanguageSwitcher } from '../LanguageSwitcher'
 import { useAuth } from '@/auth/useAuth'
 
 const { Header, Sider, Content } = Layout
@@ -20,18 +30,18 @@ export function AppLayout() {
   }
 
   const menu = [
-    { key: '/dashboard', label: <Link to="/dashboard">{t('nav.dashboard')}</Link> },
-    {
-      key: '/purchase-requisitions',
-      label: <Link to="/purchase-requisitions">{t('nav.purchase_requisitions')}</Link>,
-    },
-    {
-      key: '/purchase-orders',
-      label: <Link to="/purchase-orders">{t('nav.purchase_orders')}</Link>,
-    },
+    { key: '/dashboard', icon: <DashboardOutlined />, label: <Link to="/dashboard">{t('nav.dashboard')}</Link> },
+    { key: '/approvals', icon: <AuditOutlined />, label: <Link to="/approvals">{t('nav.approvals')}</Link> },
+    { key: '/purchase-requisitions', icon: <SolutionOutlined />, label: <Link to="/purchase-requisitions">{t('nav.purchase_requisitions')}</Link> },
+    { key: '/purchase-orders', icon: <FileTextOutlined />, label: <Link to="/purchase-orders">{t('nav.purchase_orders')}</Link> },
+    { key: '/contracts', icon: <ApartmentOutlined />, label: <Link to="/contracts">{t('nav.contracts')}</Link> },
+    { key: '/shipments', icon: <CarOutlined />, label: <Link to="/shipments">{t('nav.shipments')}</Link> },
+    { key: '/payments', icon: <BankOutlined />, label: <Link to="/payments">{t('nav.payments')}</Link> },
+    { key: '/invoices', icon: <DollarOutlined />, label: <Link to="/invoices">{t('nav.invoices')}</Link> },
   ]
 
   const roleTag = user ? t(`role.${user.role}` as 'role.admin') : ''
+  const currentKey = '/' + (location.pathname.split('/')[1] || 'dashboard')
 
   return (
     <Layout style={{ minHeight: '100vh' }}>
@@ -79,12 +89,7 @@ export function AppLayout() {
       </Header>
       <Layout>
         <Sider width={220} theme="light">
-          <Menu
-            mode="inline"
-            selectedKeys={[location.pathname]}
-            style={{ height: '100%', borderRight: 0 }}
-            items={menu}
-          />
+          <Menu mode="inline" selectedKeys={[currentKey]} style={{ height: '100%', borderRight: 0 }} items={menu} />
         </Sider>
         <Content style={{ padding: 24 }}>
           <Outlet />
@@ -93,5 +98,3 @@ export function AppLayout() {
     </Layout>
   )
 }
-
-void Button

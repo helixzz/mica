@@ -20,9 +20,16 @@ echo ""
 echo "=========================================================="
 echo "  Mica | 觅采 is starting up..."
 echo ""
-echo "  Frontend:  http://localhost"
+
+LAN_IPS=$(ip -4 addr show 2>/dev/null | grep -oP '(?<=inet\s)\d+(\.\d+){3}' | grep -vE '^(127\.|172\.(17|18|19|20)\.)' || hostname -I | tr ' ' '\n' | grep -v ':')
+
+echo "  Local:     http://localhost"
+if [[ -n "$LAN_IPS" ]]; then
+    for ip in $LAN_IPS; do
+        echo "  LAN:       http://$ip"
+    done
+fi
 echo "  API docs:  http://localhost/api/docs"
-echo "  Postgres:  localhost:5432"
 echo ""
 echo "  Test users (password: MicaDev2026!):"
 echo "    alice  — IT Buyer"

@@ -5,7 +5,7 @@
 - **中文名**：觅采
 - **英文名**：Mica
 - **定位**：企业内部采购管理系统（Internal Procurement Management System）
-- **状态**：🚧 设计阶段（M0）
+- **状态**：🚧 开发中 (v0.4)
 
 ---
 
@@ -68,7 +68,7 @@ cd deploy
 ./scripts/dev-up.sh
 ```
 
-约 90 秒后浏览器访问 <http://localhost>。详见 [docs/QUICKSTART.md](docs/QUICKSTART.md) 与 [docs/DEVELOPMENT.md](docs/DEVELOPMENT.md)。
+约 90 秒后访问 <http://localhost>（本机）或 `http://<LAN-IP>`（同网段其它设备）。详见 [docs/QUICKSTART.md](docs/QUICKSTART.md) 与 [docs/DEVELOPMENT.md](docs/DEVELOPMENT.md)。
 
 ## 许可
 

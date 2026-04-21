@@ -18,7 +18,7 @@ services:
       retries: 5
       start_period: 20s
     ports:
-      - "${POSTGRES_PORT:-5432}:5432"
+      - "${POSTGRES_BIND:-127.0.0.1}:${POSTGRES_PORT:-5432}:5432"
 
   migrate:
     build:
@@ -48,9 +48,9 @@ services:
       SECRET_KEY: ${SECRET_KEY:-dev_secret_key_minimum_32_chars_required_for_skeleton_phase_only}
       APP_ENV: ${APP_ENV:-development}
       AUTO_SEED_ON_STARTUP: "true"
-      CORS_ORIGINS: '["http://localhost","http://localhost:5173","http://localhost:8080"]'
+      CORS_ALLOW_ALL: ${CORS_ALLOW_ALL:-true}
     ports:
-      - "${BACKEND_PORT:-8000}:8000"
+      - "${BACKEND_BIND:-0.0.0.0}:${BACKEND_PORT:-8000}:8000"
 
   frontend:
     build:
@@ -70,7 +70,7 @@ services:
       - backend
       - frontend
     ports:
-      - "${HTTP_PORT:-80}:80"
+      - "${HTTP_BIND:-0.0.0.0}:${HTTP_PORT:-80}:80"
     volumes:
       - ./nginx/conf.d:/etc/nginx/conf.d:ro
 
