@@ -3,6 +3,7 @@ import { useEffect } from 'react'
 import { Navigate, Route, Routes, useLocation } from 'react-router-dom'
 
 import { AppLayout } from '@/components/Layout/AppLayout'
+import { AdminPage } from '@/pages/Admin'
 import { ApprovalsPage } from '@/pages/Approvals'
 import { ContractsPage } from '@/pages/Contracts'
 import { DashboardPage } from '@/pages/Dashboard'
@@ -61,6 +62,7 @@ export function AppRoutes() {
         <Route path="/shipments" element={<ShipmentsPage />} />
         <Route path="/payments" element={<PaymentsPage />} />
         <Route path="/invoices" element={<InvoicesPage />} />
+        <Route path="/admin" element={<AdminPage />} />
       </Route>
       <Route path="*" element={<Navigate to="/" replace />} />
     </Routes>

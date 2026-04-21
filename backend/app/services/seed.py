@@ -127,6 +127,20 @@ async def _seed_ai_if_missing(db: AsyncSession) -> None:
     db.add(demo_model)
     await db.flush()
 
+    vision_placeholder = AIModel(
+        name="demo-vision-placeholder",
+        provider="mock",
+        model_string="mock/vision",
+        modality="vision",
+        api_base=None,
+        api_key_encrypted=None,
+        is_active=False,
+        priority=100,
+        capabilities={"streaming": True, "json_mode": True, "vision": True},
+    )
+    db.add(vision_placeholder)
+    await db.flush()
+
     db.add_all([
         AIFeatureRouting(
             feature_code="pr_description_polish",
@@ -140,6 +154,13 @@ async def _seed_ai_if_missing(db: AsyncSession) -> None:
             primary_model_id=demo_model.id,
             temperature=Decimal("0.20"),
             max_tokens=400,
+            enabled=True,
+        ),
+        AIFeatureRouting(
+            feature_code="invoice_extract",
+            primary_model_id=vision_placeholder.id,
+            temperature=Decimal("0.10"),
+            max_tokens=1500,
             enabled=True,
         ),
     ])

@@ -140,9 +140,22 @@ async def create_invoice(
         tax_number=payload.tax_number,
         due_date=payload.due_date,
         notes=payload.notes,
+        attachment_document_ids=payload.attachment_document_ids,
     )
+    inv_dict = InvoiceOut.model_validate(inv).model_dump(mode="json")
+    inv_dict["attachments"] = [
+        {
+            "document_id": str(a.document_id),
+            "role": a.role,
+            "display_order": a.display_order,
+            "original_filename": a.document.original_filename,
+            "content_type": a.document.content_type,
+            "file_size": a.document.file_size,
+        }
+        for a in inv.attachments
+    ]
     return {
-        "invoice": InvoiceOut.model_validate(inv).model_dump(mode="json"),
+        "invoice": inv_dict,
         "validations": [
             {**v, "invoiced_subtotal": str(v["invoiced_subtotal"]),
              "po_remaining": str(v["po_remaining"]) if v["po_remaining"] is not None else None,
@@ -166,7 +179,7 @@ async def list_invoices(
     return [InvoiceListOut.model_validate(i) for i in rows]
 
 
-@router.get("/invoices/{invoice_id}", response_model=InvoiceOut, tags=["flow"])
+@router.get("/invoices/{invoice_id}", tags=["flow"])
 async def get_invoice(
     invoice_id: UUID,
     user: CurrentUser,
@@ -174,16 +187,36 @@ async def get_invoice(
 ):
     from sqlalchemy import select
     from sqlalchemy.orm import selectinload
-    from app.models import Invoice
+
+    from app.models import Invoice, InvoiceDocument
+
     inv = (
         await db.execute(
-            select(Invoice).where(Invoice.id == invoice_id).options(selectinload(Invoice.lines))
+            select(Invoice)
+            .where(Invoice.id == invoice_id)
+            .options(
+                selectinload(Invoice.lines),
+                selectinload(Invoice.attachments).selectinload(InvoiceDocument.document),
+            )
         )
     ).scalar_one_or_none()
     if inv is None:
         from fastapi import HTTPException
+
         raise HTTPException(404, "invoice.not_found")
-    return InvoiceOut.model_validate(inv)
+    inv_dict = InvoiceOut.model_validate(inv).model_dump(mode="json")
+    inv_dict["attachments"] = [
+        {
+            "document_id": str(a.document_id),
+            "role": a.role,
+            "display_order": a.display_order,
+            "original_filename": a.document.original_filename,
+            "content_type": a.document.content_type,
+            "file_size": a.document.file_size,
+        }
+        for a in inv.attachments
+    ]
+    return inv_dict
 
 
 @router.get("/purchase-orders/{po_id}/progress", response_model=POProgressOut, tags=["flow"])

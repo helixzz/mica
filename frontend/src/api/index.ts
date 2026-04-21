@@ -205,6 +205,15 @@ export interface InvoiceLine {
   tax_amount: string
 }
 
+export interface InvoiceAttachment {
+  document_id: string
+  role: string
+  display_order: number
+  original_filename: string
+  content_type: string
+  file_size: number
+}
+
 export interface Invoice {
   id: string
   internal_number: string
@@ -222,6 +231,7 @@ export interface Invoice {
   notes: string | null
   created_at: string
   lines: InvoiceLine[]
+  attachments: InvoiceAttachment[]
 }
 
 export interface InvoiceListRow {
@@ -286,6 +296,42 @@ export interface FieldManifest {
   resource: string
   role: string
   fields: Record<string, boolean>
+}
+
+export interface DocumentOut {
+  id: string
+  original_filename: string
+  content_type: string
+  file_size: number
+  content_hash: string
+  doc_category: string
+  created_at: string
+}
+
+export interface InvoiceExtractResult {
+  invoice_number: string | null
+  invoice_code: string | null
+  invoice_date: string | null
+  seller_name: string | null
+  seller_tax_id: string | null
+  buyer_name: string | null
+  buyer_tax_id: string | null
+  subtotal: string | null
+  tax_amount: string | null
+  total_amount: string | null
+  currency: string
+  lines: {
+    item_name: string | null
+    spec: string | null
+    qty: string | null
+    unit_price: string | null
+    tax_rate: string | null
+    tax_amount: string | null
+    subtotal: string | null
+  }[]
+  raw_extract_source: string
+  confidence: number
+  error: string | null
 }
 
 export const api = {
@@ -432,6 +478,7 @@ export const api = {
     tax_number?: string | null
     due_date?: string | null
     notes?: string | null
+    attachment_document_ids: string[]
     lines: {
       po_item_id?: string | null
       line_type?: 'product' | 'freight' | 'adjustment' | 'tax_surcharge' | 'note'
@@ -451,6 +498,74 @@ export const api = {
   async fieldManifest(resource: string): Promise<FieldManifest> {
     const { data } = await client.get<FieldManifest>(`/authz/field-manifest/${resource}`)
     return data
+  },
+  async uploadDocument(file: File, category = 'invoice'): Promise<DocumentOut> {
+    const fd = new FormData()
+    fd.append('file', file)
+    fd.append('category', category)
+    const { data } = await client.post<DocumentOut>('/documents/upload', fd, {
+      headers: { 'Content-Type': 'multipart/form-data' },
+    })
+    return data
+  },
+  async getDocumentDownloadUrl(document_id: string): Promise<{ download_url: string; expires_in: number }> {
+    const { data } = await client.get<{ download_url: string; expires_in: number }>(
+      `/documents/${document_id}/token`
+    )
+    return data
+  },
+  async extractInvoice(document_id: string): Promise<InvoiceExtractResult> {
+    const { data } = await client.post<InvoiceExtractResult>(
+      `/ai/invoice-extract?document_id=${document_id}`
+    )
+    return data
+  },
+  async adminSystemInfo(): Promise<Record<string, unknown>> {
+    const { data } = await client.get('/admin/system')
+    return data as Record<string, unknown>
+  },
+  async adminListAIModels(): Promise<Record<string, unknown>[]> {
+    const { data } = await client.get('/admin/ai-models')
+    return data as Record<string, unknown>[]
+  },
+  async adminCreateAIModel(body: Record<string, unknown>): Promise<Record<string, unknown>> {
+    const { data } = await client.post('/admin/ai-models', body)
+    return data as Record<string, unknown>
+  },
+  async adminUpdateAIModel(id: string, body: Record<string, unknown>): Promise<Record<string, unknown>> {
+    const { data } = await client.patch(`/admin/ai-models/${id}`, body)
+    return data as Record<string, unknown>
+  },
+  async adminDeleteAIModel(id: string): Promise<void> {
+    await client.delete(`/admin/ai-models/${id}`)
+  },
+  async adminTestAIModel(id: string): Promise<{ success: boolean; model_response?: string; latency_ms: number; error?: string }> {
+    const { data } = await client.post(`/admin/ai-models/${id}/test-connection`)
+    return data as { success: boolean; model_response?: string; latency_ms: number; error?: string }
+  },
+  async adminListRoutings(): Promise<Record<string, unknown>[]> {
+    const { data } = await client.get('/admin/ai-routings')
+    return data as Record<string, unknown>[]
+  },
+  async adminUpsertRouting(feature_code: string, body: Record<string, unknown>): Promise<Record<string, unknown>> {
+    const { data } = await client.put(`/admin/ai-routings/${feature_code}`, body)
+    return data as Record<string, unknown>
+  },
+  async adminListUsers(): Promise<Record<string, unknown>[]> {
+    const { data } = await client.get('/admin/users')
+    return data as Record<string, unknown>[]
+  },
+  async adminAuditLogs(params: { since_days?: number; event_type_prefix?: string } = {}): Promise<Record<string, unknown>[]> {
+    const { data } = await client.get('/admin/audit-logs', { params })
+    return data as Record<string, unknown>[]
+  },
+  async adminAICallLogs(params: { since_days?: number; feature_code?: string } = {}): Promise<Record<string, unknown>[]> {
+    const { data } = await client.get('/admin/ai-call-logs', { params })
+    return data as Record<string, unknown>[]
+  },
+  async adminAICallStats(since_days = 7): Promise<Record<string, unknown>[]> {
+    const { data } = await client.get('/admin/ai-call-stats', { params: { since_days } })
+    return data as Record<string, unknown>[]
   },
   async aiStream(
     feature_code: 'pr_description_polish' | 'sku_suggest',

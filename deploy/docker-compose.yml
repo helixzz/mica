@@ -34,6 +34,9 @@ services:
       DATABASE_URL: postgresql+asyncpg://${POSTGRES_USER:-mica}:${POSTGRES_PASSWORD:-mica}@postgres:5432/${POSTGRES_DB:-mica}
       SECRET_KEY: ${SECRET_KEY:-dev_secret_key_minimum_32_chars_required_for_skeleton_phase_only}
       APP_ENV: ${APP_ENV:-development}
+      MEDIA_ROOT: /app/media
+    volumes:
+      - mica_media:/app/media
     command: ["alembic", "upgrade", "head"]
 
   backend:
@@ -49,6 +52,9 @@ services:
       APP_ENV: ${APP_ENV:-development}
       AUTO_SEED_ON_STARTUP: "true"
       CORS_ALLOW_ALL: ${CORS_ALLOW_ALL:-true}
+      MEDIA_ROOT: /app/media
+    volumes:
+      - mica_media:/app/media
     ports:
       - "${BACKEND_BIND:-0.0.0.0}:${BACKEND_PORT:-8000}:8000"
 
@@ -77,3 +83,5 @@ services:
 volumes:
   postgres_data:
     name: mica_postgres_data
+  mica_media:
+    name: mica_media

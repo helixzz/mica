@@ -7,6 +7,7 @@ import {
   DollarOutlined,
   FileTextOutlined,
   LogoutOutlined,
+  SettingOutlined,
   SolutionOutlined,
 } from '@ant-design/icons'
 import { Avatar, Dropdown, Layout, Menu, Space, Tag, Typography } from 'antd'
@@ -38,6 +39,9 @@ export function AppLayout() {
     { key: '/shipments', icon: <CarOutlined />, label: <Link to="/shipments">{t('nav.shipments')}</Link> },
     { key: '/payments', icon: <BankOutlined />, label: <Link to="/payments">{t('nav.payments')}</Link> },
     { key: '/invoices', icon: <DollarOutlined />, label: <Link to="/invoices">{t('nav.invoices')}</Link> },
+    ...(user?.role === 'admin'
+      ? [{ key: '/admin', icon: <SettingOutlined />, label: <Link to="/admin">系统管理</Link> }]
+      : []),
   ]
 
   const roleTag = user ? t(`role.${user.role}` as 'role.admin') : ''

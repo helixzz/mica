@@ -325,6 +325,7 @@ class InvoiceCreateIn(BaseModel):
     due_date: date | None = None
     notes: str | None = None
     lines: list[InvoiceLineIn] = Field(..., min_length=1)
+    attachment_document_ids: list[UUID] = Field(..., min_length=1)
 
 
 class InvoiceLineOut(BaseModel):
@@ -338,6 +339,16 @@ class InvoiceLineOut(BaseModel):
     unit_price: Decimal
     subtotal: Decimal
     tax_amount: Decimal
+
+
+class InvoiceAttachmentOut(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+    document_id: UUID
+    role: str
+    display_order: int
+    original_filename: str
+    content_type: str
+    file_size: int
 
 
 class InvoiceOut(BaseModel):
@@ -464,3 +475,47 @@ class FieldManifestOut(BaseModel):
     resource: str
     role: str
     fields: dict[str, bool]
+
+
+class DocumentOut(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+    id: UUID
+    original_filename: str
+    content_type: str
+    file_size: int
+    content_hash: str
+    doc_category: str
+    created_at: datetime
+
+
+class DownloadTokenOut(BaseModel):
+    download_url: str
+    expires_in: int
+
+
+class InvoiceExtractLine(BaseModel):
+    item_name: str | None = None
+    spec: str | None = None
+    qty: str | None = None
+    unit_price: str | None = None
+    tax_rate: str | None = None
+    tax_amount: str | None = None
+    subtotal: str | None = None
+
+
+class InvoiceExtractOut(BaseModel):
+    invoice_number: str | None = None
+    invoice_code: str | None = None
+    invoice_date: str | None = None
+    seller_name: str | None = None
+    seller_tax_id: str | None = None
+    buyer_name: str | None = None
+    buyer_tax_id: str | None = None
+    subtotal: str | None = None
+    tax_amount: str | None = None
+    total_amount: str | None = None
+    currency: str = "CNY"
+    lines: list[InvoiceExtractLine] = []
+    raw_extract_source: str
+    confidence: float
+    error: str | None = None

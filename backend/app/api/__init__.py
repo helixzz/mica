@@ -1,6 +1,6 @@
 from fastapi import APIRouter
 
-from app.api.v1 import ai, approval, auth, authz, flow, master_data, purchase, saml
+from app.api.v1 import admin, ai, approval, auth, authz, documents, flow, master_data, purchase, saml
 
 api_router = APIRouter(prefix="/v1")
 api_router.include_router(auth.router)
@@ -11,3 +11,5 @@ api_router.include_router(flow.router)
 api_router.include_router(approval.router)
 api_router.include_router(authz.router)
 api_router.include_router(ai.router)
+api_router.include_router(documents.router)
+api_router.include_router(admin.router)

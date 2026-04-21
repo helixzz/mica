@@ -12,7 +12,9 @@ from sqlalchemy.orm import selectinload
 from app.models import (
     AuditLog,
     Contract,
+    Document,
     Invoice,
+    InvoiceDocument,
     InvoiceLine,
     InvoiceStatus,
     POItem,
@@ -308,7 +310,17 @@ async def create_invoice(
     tax_number: str | None = None,
     due_date=None,
     notes: str | None = None,
+    attachment_document_ids: list[UUID] | None = None,
 ) -> tuple[Invoice, list[dict]]:
+    if not attachment_document_ids:
+        raise HTTPException(422, "invoice.attachments_required")
+
+    attach_rows = (
+        await db.execute(select(Document).where(Document.id.in_(attachment_document_ids)))
+    ).scalars().all()
+    if len(attach_rows) != len(set(attachment_document_ids)):
+        raise HTTPException(404, "invoice.attachment_document_not_found")
+
     supplier = (
         await db.execute(select(Supplier).where(Supplier.id == supplier_id))
     ).scalar_one_or_none()
@@ -384,6 +396,14 @@ async def create_invoice(
 
     total = subtotal + total_tax
 
+    is_matched = all(
+        v["severity"] == "ok" for v in validations
+        if v.get("po_item_id") or lines_in[v["line_no"] - 1].get("line_type", "product") == "product"
+    )
+    initial_status = (
+        InvoiceStatus.MATCHED.value if is_matched else InvoiceStatus.PENDING_MATCH.value
+    )
+
     invoice = Invoice(
         internal_number=internal_number,
         invoice_number=invoice_number,
@@ -395,12 +415,9 @@ async def create_invoice(
         total_amount=total,
         currency=currency,
         tax_number=tax_number,
-        status=InvoiceStatus.VERIFIED.value,
+        status=initial_status,
         notes=notes,
-        is_fully_matched=all(
-            v["severity"] == "ok" for v in validations
-            if v.get("po_item_id") or lines_in[v["line_no"] - 1].get("line_type", "product") == "product"
-        ),
+        is_fully_matched=is_matched,
     )
     db.add(invoice)
     await db.flush()
@@ -432,6 +449,16 @@ async def create_invoice(
             po_item.qty_invoiced = (po_item.qty_invoiced or Decimal("0")) + qty
             touched_po_ids.add(po_item.po_id)
 
+    for idx, doc_id in enumerate(attachment_document_ids):
+        db.add(
+            InvoiceDocument(
+                invoice_id=invoice.id,
+                document_id=doc_id,
+                role="original" if idx == 0 else "attachment",
+                display_order=idx,
+            )
+        )
+
     for po_id in touched_po_ids:
         po = (
             await db.execute(
@@ -459,7 +486,12 @@ async def create_invoice(
 
     loaded = (
         await db.execute(
-            select(Invoice).where(Invoice.id == invoice.id).options(selectinload(Invoice.lines))
+            select(Invoice)
+            .where(Invoice.id == invoice.id)
+            .options(
+                selectinload(Invoice.lines),
+                selectinload(Invoice.attachments).selectinload(InvoiceDocument.document),
+            )
         )
     ).scalar_one()
     return loaded, validations
