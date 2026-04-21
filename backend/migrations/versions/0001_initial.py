@@ -425,9 +425,56 @@ def upgrade() -> None:
     op.create_index("ix_audit_logs_occurred_at", "audit_logs", ["occurred_at"])
     op.create_index("ix_audit_logs_event_type", "audit_logs", ["event_type"])
 
+    op.create_table(
+        "documents",
+        sa.Column("id", postgresql.UUID(as_uuid=True), primary_key=True),
+        sa.Column("storage_key", sa.Text(), nullable=False),
+        sa.Column("storage_backend", sa.String(20), nullable=False, server_default="local"),
+        sa.Column("original_filename", sa.Text(), nullable=False),
+        sa.Column("content_type", sa.String(128), nullable=False),
+        sa.Column("file_size", sa.Integer(), nullable=False),
+        sa.Column("content_hash", sa.String(64), nullable=False),
+        sa.Column("doc_category", sa.String(32), nullable=False),
+        sa.Column("is_private", sa.Boolean(), nullable=False, server_default=sa.text("true")),
+        sa.Column("uploaded_by_id", postgresql.UUID(as_uuid=True), nullable=False),
+        sa.Column("created_at", sa.DateTime(timezone=True), nullable=False),
+        sa.Column("deleted_at", sa.DateTime(timezone=True), nullable=True),
+        sa.ForeignKeyConstraint(["uploaded_by_id"], ["users.id"]),
+        sa.UniqueConstraint("storage_key"),
+        sa.UniqueConstraint("content_hash", "storage_backend"),
+    )
+    op.create_index("ix_documents_content_hash", "documents", ["content_hash"])
+    op.create_index("ix_documents_doc_category", "documents", ["doc_category"])
+
+    op.create_table(
+        "invoice_documents",
+        sa.Column("invoice_id", postgresql.UUID(as_uuid=True), nullable=False),
+        sa.Column("document_id", postgresql.UUID(as_uuid=True), nullable=False),
+        sa.Column("role", sa.String(32), nullable=False, server_default="attachment"),
+        sa.Column("display_order", sa.Integer(), nullable=False, server_default="0"),
+        sa.Column("created_at", sa.DateTime(timezone=True), nullable=False),
+        sa.ForeignKeyConstraint(["invoice_id"], ["invoices.id"], ondelete="CASCADE"),
+        sa.ForeignKeyConstraint(["document_id"], ["documents.id"], ondelete="RESTRICT"),
+        sa.PrimaryKeyConstraint("invoice_id", "document_id"),
+    )
+
+    op.create_table(
+        "document_download_tokens",
+        sa.Column("token", sa.String(64), primary_key=True),
+        sa.Column("document_id", postgresql.UUID(as_uuid=True), nullable=False),
+        sa.Column("created_by_id", postgresql.UUID(as_uuid=True), nullable=False),
+        sa.Column("expires_at", sa.DateTime(timezone=True), nullable=False),
+        sa.Column("used_at", sa.DateTime(timezone=True), nullable=True),
+        sa.Column("created_at", sa.DateTime(timezone=True), nullable=False),
+        sa.ForeignKeyConstraint(["document_id"], ["documents.id"], ondelete="CASCADE"),
+        sa.ForeignKeyConstraint(["created_by_id"], ["users.id"]),
+    )
+    op.create_index("ix_document_download_tokens_expires", "document_download_tokens", ["expires_at"])
+
 
 def downgrade() -> None:
     for tbl in [
+        "document_download_tokens", "invoice_documents", "documents",
         "audit_logs", "ai_call_logs", "ai_feature_routing", "ai_models",
         "approval_tasks", "approval_instances",
         "invoice_lines", "invoices",

@@ -75,7 +75,9 @@ class PaymentStatus(StrEnum):
 
 class InvoiceStatus(StrEnum):
     DRAFT = "draft"
-    VERIFIED = "verified"
+    PENDING_MATCH = "pending_match"
+    MATCHED = "matched"
+    MISMATCHED = "mismatched"
     APPROVED = "approved"
     PAID = "paid"
     CANCELLED = "cancelled"
@@ -445,6 +447,68 @@ class Invoice(Base, TimestampMixin):
     supplier: Mapped[Supplier] = relationship()
     lines: Mapped[list[InvoiceLine]] = relationship(
         back_populates="invoice", cascade="all, delete-orphan", order_by="InvoiceLine.line_no"
+    )
+    attachments: Mapped[list[InvoiceDocument]] = relationship(
+        back_populates="invoice", cascade="all, delete-orphan"
+    )
+
+
+class Document(Base):
+    __tablename__ = "documents"
+
+    id: Mapped[UUID] = mapped_column(PGUUID(as_uuid=True), primary_key=True, default=new_uuid)
+    storage_key: Mapped[str] = mapped_column(Text, unique=True, nullable=False)
+    storage_backend: Mapped[str] = mapped_column(String(20), default="local", nullable=False)
+    original_filename: Mapped[str] = mapped_column(Text, nullable=False)
+    content_type: Mapped[str] = mapped_column(String(128), nullable=False)
+    file_size: Mapped[int] = mapped_column(Integer, nullable=False)
+    content_hash: Mapped[str] = mapped_column(String(64), nullable=False, index=True)
+    doc_category: Mapped[str] = mapped_column(String(32), nullable=False, index=True)
+    is_private: Mapped[bool] = mapped_column(default=True, nullable=False)
+    uploaded_by_id: Mapped[UUID] = mapped_column(
+        PGUUID(as_uuid=True), ForeignKey("users.id"), nullable=False
+    )
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), default=lambda: datetime.utcnow(), nullable=False
+    )
+    deleted_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+
+    __table_args__ = (UniqueConstraint("content_hash", "storage_backend"),)
+
+
+class InvoiceDocument(Base):
+    __tablename__ = "invoice_documents"
+
+    invoice_id: Mapped[UUID] = mapped_column(
+        PGUUID(as_uuid=True), ForeignKey("invoices.id", ondelete="CASCADE"), primary_key=True
+    )
+    document_id: Mapped[UUID] = mapped_column(
+        PGUUID(as_uuid=True), ForeignKey("documents.id", ondelete="RESTRICT"), primary_key=True
+    )
+    role: Mapped[str] = mapped_column(String(32), default="attachment", nullable=False)
+    display_order: Mapped[int] = mapped_column(Integer, default=0, nullable=False)
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), default=lambda: datetime.utcnow(), nullable=False
+    )
+
+    invoice: Mapped[Invoice] = relationship(back_populates="attachments")
+    document: Mapped[Document] = relationship()
+
+
+class DocumentDownloadToken(Base):
+    __tablename__ = "document_download_tokens"
+
+    token: Mapped[str] = mapped_column(String(64), primary_key=True)
+    document_id: Mapped[UUID] = mapped_column(
+        PGUUID(as_uuid=True), ForeignKey("documents.id", ondelete="CASCADE"), nullable=False
+    )
+    created_by_id: Mapped[UUID] = mapped_column(
+        PGUUID(as_uuid=True), ForeignKey("users.id"), nullable=False
+    )
+    expires_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False, index=True)
+    used_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), default=lambda: datetime.utcnow(), nullable=False
     )
 
 

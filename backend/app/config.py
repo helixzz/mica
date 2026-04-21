@@ -57,7 +57,10 @@ class Settings(BaseSettings):
 
     # ── Seed data ──
     seed_default_password: str = "MicaDev2026!"
-    auto_seed_on_startup: bool = True  # Dev convenience
+    auto_seed_on_startup: bool = True
+
+    media_root: str = "/app/media"
+    download_token_ttl_seconds: int = 3600
 
     @field_validator("secret_key")
     @classmethod
