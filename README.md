@@ -68,7 +68,7 @@ cd deploy
 ./scripts/dev-up.sh
 ```
 
-约 90 秒后访问 <http://localhost>（本机）或 `http://<LAN-IP>`（同网段其它设备）。详见 [docs/QUICKSTART.md](docs/QUICKSTART.md) 与 [docs/DEVELOPMENT.md](docs/DEVELOPMENT.md)。
+约 90 秒后访问 <http://localhost:8900>（本机）或 `http://<LAN-IP>:8900`（同网段其它设备）。端口可在 `deploy/.env` 中修改（`HTTP_PORT`）。详见 [docs/QUICKSTART.md](docs/QUICKSTART.md) 与 [docs/DEVELOPMENT.md](docs/DEVELOPMENT.md)。
 
 ## 许可
 

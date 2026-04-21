@@ -4,7 +4,7 @@
 
 - Docker 24+
 - Docker Compose v2
-- 可访问的端口 80, 8000（若与本机其它服务冲突，改 `deploy/.env`）
+- 端口 `8900`（前端入口）+ `8901`（backend 直连，可关）可用。若与本机其它服务冲突，改 `deploy/.env` 中的 `HTTP_PORT` / `BACKEND_PORT`。
 
 ## 启动
 
@@ -19,13 +19,15 @@ cd deploy
 
 | 入口 | URL |
 |---|---|
-| 前端（本机） | <http://localhost> |
-| 前端（局域网） | `http://<LAN-IP>`（同网段设备直接访问，无头服务器首选） |
-| API 文档（Swagger） | `http://<HOST>/api/docs` |
-| API 文档（ReDoc） | `http://<HOST>/api/redoc` |
-| 健康检查 | `http://<HOST>/health` |
+| 前端（本机） | <http://localhost:8900> |
+| 前端（局域网） | `http://<LAN-IP>:8900`（同网段设备直接访问，无头服务器首选） |
+| API 文档（Swagger） | `http://<HOST>:8900/api/docs` |
+| API 文档（ReDoc） | `http://<HOST>:8900/api/redoc` |
+| 健康检查 | `http://<HOST>:8900/health` |
 
-> **LAN 绑定说明**：`deploy/.env` 默认 `HTTP_BIND=0.0.0.0`、`BACKEND_BIND=0.0.0.0`，端口对整个网段开放；`POSTGRES_BIND=127.0.0.1` 仅本机，避免数据库对外暴露。CORS 默认 `CORS_ALLOW_ALL=true`（仅 dev）。生产前收紧。
+> **端口说明**：默认 8900（避开 80/443 的已有生产站点）。通过 nginx 容器反代到后端 FastAPI。若主机 80 可用，把 `deploy/.env` 的 `HTTP_PORT=80` 即可。
+>
+> **绑定分层**：`HTTP_BIND=0.0.0.0`（LAN 可访问）、`BACKEND_BIND=0.0.0.0`（LAN 直连 debug）、`POSTGRES_BIND=127.0.0.1`（数据库不对外）。生产部署请把所有 BIND 收紧到 `127.0.0.1` 并由外层反代/防火墙控制。CORS 默认 `CORS_ALLOW_ALL=true`（仅 dev）。
 
 ## 测试账号
 

@@ -23,13 +23,14 @@ echo ""
 
 LAN_IPS=$(ip -4 addr show 2>/dev/null | grep -oP '(?<=inet\s)\d+(\.\d+){3}' | grep -vE '^(127\.|172\.(17|18|19|20)\.)' || hostname -I | tr ' ' '\n' | grep -v ':')
 
-echo "  Local:     http://localhost"
+HTTP_PORT_EFFECTIVE="${HTTP_PORT:-8900}"
+echo "  Local:     http://localhost:${HTTP_PORT_EFFECTIVE}"
 if [[ -n "$LAN_IPS" ]]; then
     for ip in $LAN_IPS; do
-        echo "  LAN:       http://$ip"
+        echo "  LAN:       http://$ip:${HTTP_PORT_EFFECTIVE}"
     done
 fi
-echo "  API docs:  http://localhost/api/docs"
+echo "  API docs:  http://localhost:${HTTP_PORT_EFFECTIVE}/api/docs"
 echo ""
 echo "  Test users (password: MicaDev2026!):"
 echo "    alice  — IT Buyer"
