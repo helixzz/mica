@@ -12,7 +12,7 @@ interface AuthState {
   loadMe: () => Promise<void>
 }
 
-export const useAuth = create<AuthState>((set, get) => ({
+export const useAuth = create<AuthState>((set) => ({
   user: null,
   loading: false,
   initialized: false,
@@ -41,5 +41,3 @@ export const useAuth = create<AuthState>((set, get) => ({
     }
   },
 }))
-
-void get

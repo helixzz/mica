@@ -2,9 +2,8 @@
 name = "mica-backend"
 version = "0.4.0"
 description = "Mica | 觅采 — Internal procurement management system backend"
-readme = "README.md"
 requires-python = ">=3.12"
-license = { file = "../LICENSE" }
+license = "Apache-2.0"
 authors = [
     { name = "Mica Contributors" }
 ]
@@ -20,6 +19,7 @@ dependencies = [
     "pydantic-settings>=2.6.0",
     "email-validator>=2.2.0",
     "passlib[bcrypt]>=1.7.4",
+    "bcrypt<5",
     "python-jose[cryptography]>=3.3.0",
     "python-multipart>=0.0.17",
     "cryptography>=43.0.0",
