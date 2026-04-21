@@ -2,6 +2,7 @@ import {
   ApartmentOutlined,
   AuditOutlined,
   BankOutlined,
+  BarChartOutlined,
   CarOutlined,
   DashboardOutlined,
   DollarOutlined,
@@ -39,6 +40,7 @@ export function AppLayout() {
     { key: '/shipments', icon: <CarOutlined />, label: <Link to="/shipments">{t('nav.shipments')}</Link> },
     { key: '/payments', icon: <BankOutlined />, label: <Link to="/payments">{t('nav.payments')}</Link> },
     { key: '/invoices', icon: <DollarOutlined />, label: <Link to="/invoices">{t('nav.invoices')}</Link> },
+    { key: '/sku', icon: <BarChartOutlined />, label: <Link to="/sku">{t('nav.sku')}</Link> },
     ...(user?.role === 'admin'
       ? [{ key: '/admin', icon: <SettingOutlined />, label: <Link to="/admin">系统管理</Link> }]
       : []),
@@ -61,9 +63,11 @@ export function AppLayout() {
         <Typography.Title level={3} style={{ color: '#E8833A', margin: 0 }}>
           Mica
         </Typography.Title>
-        <Typography.Text style={{ color: 'rgba(255,255,255,0.85)' }}>
-          {t('app.tagline')}
-        </Typography.Text>
+        {t('app.tagline') && (
+          <Typography.Text style={{ color: 'rgba(255,255,255,0.85)' }}>
+            {t('app.tagline')}
+          </Typography.Text>
+        )}
         <div style={{ flex: 1 }} />
         <Space size="middle">
           <LanguageSwitcher />

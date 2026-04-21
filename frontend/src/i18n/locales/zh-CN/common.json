@@ -1,7 +1,7 @@
 {
   "app": {
     "name": "Mica",
-    "tagline": "觅采 · 企业内部采购管理系统",
+    "tagline": "觅采",
     "version": "版本"
   },
   "nav": {
@@ -12,6 +12,7 @@
     "shipments": "交货批次",
     "payments": "付款记录",
     "invoices": "发票",
+    "sku": "SKU 行情",
     "approvals": "待办审批",
     "suppliers": "供应商",
     "items": "物料",

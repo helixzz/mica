@@ -512,6 +512,86 @@ class DocumentDownloadToken(Base):
     )
 
 
+class SKUPriceRecord(Base, TimestampMixin):
+    __tablename__ = "sku_price_records"
+
+    id: Mapped[UUID] = mapped_column(PGUUID(as_uuid=True), primary_key=True, default=new_uuid)
+    item_id: Mapped[UUID] = mapped_column(
+        PGUUID(as_uuid=True), ForeignKey("items.id", ondelete="CASCADE"), nullable=False, index=True
+    )
+    supplier_id: Mapped[UUID | None] = mapped_column(
+        PGUUID(as_uuid=True), ForeignKey("suppliers.id")
+    )
+    price: Mapped[Decimal] = mapped_column(Numeric(18, 4), nullable=False)
+    currency: Mapped[str] = mapped_column(String(3), default="CNY", nullable=False)
+    quotation_date: Mapped[date] = mapped_column(Date, nullable=False, index=True)
+    source_type: Mapped[str] = mapped_column(String(32), default="manual", nullable=False)
+    source_ref: Mapped[str | None] = mapped_column(String(128))
+    entered_by_id: Mapped[UUID | None] = mapped_column(PGUUID(as_uuid=True), ForeignKey("users.id"))
+    notes: Mapped[str | None] = mapped_column(Text)
+
+    item: Mapped[Item] = relationship()
+    supplier: Mapped[Supplier | None] = relationship()
+
+
+class SKUPriceBenchmark(Base, TimestampMixin):
+    __tablename__ = "sku_price_benchmarks"
+
+    id: Mapped[UUID] = mapped_column(PGUUID(as_uuid=True), primary_key=True, default=new_uuid)
+    item_id: Mapped[UUID] = mapped_column(
+        PGUUID(as_uuid=True), ForeignKey("items.id", ondelete="CASCADE"), nullable=False
+    )
+    window_days: Mapped[int] = mapped_column(Integer, nullable=False)
+    avg_price: Mapped[Decimal] = mapped_column(Numeric(18, 4), nullable=False)
+    median_price: Mapped[Decimal] = mapped_column(Numeric(18, 4), nullable=False)
+    stddev: Mapped[Decimal] = mapped_column(Numeric(18, 4), default=Decimal("0"), nullable=False)
+    min_price: Mapped[Decimal] = mapped_column(Numeric(18, 4), nullable=False)
+    max_price: Mapped[Decimal] = mapped_column(Numeric(18, 4), nullable=False)
+    sample_size: Mapped[int] = mapped_column(Integer, nullable=False)
+    last_refreshed_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), default=lambda: datetime.utcnow(), nullable=False
+    )
+
+    __table_args__ = (UniqueConstraint("item_id", "window_days"),)
+
+
+class SKUPriceAnomaly(Base, TimestampMixin):
+    __tablename__ = "sku_price_anomalies"
+
+    id: Mapped[UUID] = mapped_column(PGUUID(as_uuid=True), primary_key=True, default=new_uuid)
+    item_id: Mapped[UUID] = mapped_column(
+        PGUUID(as_uuid=True), ForeignKey("items.id", ondelete="CASCADE"), nullable=False, index=True
+    )
+    price_record_id: Mapped[UUID | None] = mapped_column(
+        PGUUID(as_uuid=True), ForeignKey("sku_price_records.id", ondelete="SET NULL")
+    )
+    baseline_avg_price: Mapped[Decimal] = mapped_column(Numeric(18, 4), nullable=False)
+    observed_price: Mapped[Decimal] = mapped_column(Numeric(18, 4), nullable=False)
+    deviation_pct: Mapped[Decimal] = mapped_column(Numeric(9, 4), nullable=False)
+    severity: Mapped[str] = mapped_column(String(16), default="warning", nullable=False)
+    status: Mapped[str] = mapped_column(String(16), default="new", nullable=False)
+    notes: Mapped[str | None] = mapped_column(Text)
+    acknowledged_by_id: Mapped[UUID | None] = mapped_column(PGUUID(as_uuid=True), ForeignKey("users.id"))
+    acknowledged_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+
+
+class ContractDocument(Base):
+    __tablename__ = "contract_documents"
+
+    contract_id: Mapped[UUID] = mapped_column(
+        PGUUID(as_uuid=True), ForeignKey("contracts.id", ondelete="CASCADE"), primary_key=True
+    )
+    document_id: Mapped[UUID] = mapped_column(
+        PGUUID(as_uuid=True), ForeignKey("documents.id", ondelete="RESTRICT"), primary_key=True
+    )
+    role: Mapped[str] = mapped_column(String(32), default="scan", nullable=False)
+    ocr_text: Mapped[str | None] = mapped_column(Text)
+    display_order: Mapped[int] = mapped_column(Integer, default=0, nullable=False)
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), default=lambda: datetime.utcnow(), nullable=False
+    )
+
+
 class InvoiceLine(Base, TimestampMixin):
     __tablename__ = "invoice_lines"
 

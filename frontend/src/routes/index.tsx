@@ -5,8 +5,10 @@ import { Navigate, Route, Routes, useLocation } from 'react-router-dom'
 import { AppLayout } from '@/components/Layout/AppLayout'
 import { AdminPage } from '@/pages/Admin'
 import { ApprovalsPage } from '@/pages/Approvals'
+import { ContractDetailPage } from '@/pages/ContractDetail'
 import { ContractsPage } from '@/pages/Contracts'
 import { DashboardPage } from '@/pages/Dashboard'
+import { InvoiceDetailPage } from '@/pages/InvoiceDetail'
 import { InvoicesPage } from '@/pages/Invoices'
 import { LoginPage } from '@/pages/Login'
 import { PaymentsPage } from '@/pages/Payments'
@@ -16,6 +18,7 @@ import { PRDetailPage } from '@/pages/PurchaseRequisitions/PRDetail'
 import { PRListPage } from '@/pages/PurchaseRequisitions/PRList'
 import { PRNewPage } from '@/pages/PurchaseRequisitions/PRNew'
 import { ShipmentsPage } from '@/pages/Shipments'
+import { SKUPage } from '@/pages/SKU'
 import { useAuth } from '@/auth/useAuth'
 import { getToken } from '@/api/client'
 
@@ -59,9 +62,12 @@ export function AppRoutes() {
         <Route path="/purchase-orders" element={<POListPage />} />
         <Route path="/purchase-orders/:id" element={<PODetailPage />} />
         <Route path="/contracts" element={<ContractsPage />} />
+        <Route path="/contracts/:id" element={<ContractDetailPage />} />
         <Route path="/shipments" element={<ShipmentsPage />} />
         <Route path="/payments" element={<PaymentsPage />} />
         <Route path="/invoices" element={<InvoicesPage />} />
+        <Route path="/invoices/:id" element={<InvoiceDetailPage />} />
+        <Route path="/sku" element={<SKUPage />} />
         <Route path="/admin" element={<AdminPage />} />
       </Route>
       <Route path="*" element={<Navigate to="/" replace />} />

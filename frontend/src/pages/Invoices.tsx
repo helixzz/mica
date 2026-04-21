@@ -3,6 +3,7 @@ import { Space, Table, Tag, Typography } from 'antd'
 import type { ColumnsType } from 'antd/es/table'
 import { useEffect, useState } from 'react'
 import { useTranslation } from 'react-i18next'
+import { Link } from 'react-router-dom'
 
 import { api, type InvoiceListRow } from '@/api'
 
@@ -17,7 +18,11 @@ export function InvoicesPage() {
   }, [])
 
   const columns: ColumnsType<InvoiceListRow> = [
-    { title: t('field.internal_number'), dataIndex: 'internal_number' },
+    {
+      title: t('field.internal_number'),
+      dataIndex: 'internal_number',
+      render: (v, r) => <Link to={`/invoices/${r.id}`}>{v}</Link>,
+    },
     { title: t('field.invoice_number'), dataIndex: 'invoice_number' },
     { title: t('field.invoice_date'), dataIndex: 'invoice_date' },
     { title: t('field.subtotal'), dataIndex: 'subtotal', align: 'right' },

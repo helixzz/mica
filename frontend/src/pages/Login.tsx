@@ -45,7 +45,9 @@ export function LoginPage() {
             <Typography.Title level={2} style={{ margin: 0, color: '#2E5266' }}>
               Mica
             </Typography.Title>
-            <Typography.Text type="secondary">{t('app.tagline')}</Typography.Text>
+            {t('app.tagline') && (
+              <Typography.Text type="secondary">{t('app.tagline')}</Typography.Text>
+            )}
           </div>
           {error && <Alert type="error" message={error} showIcon />}
           <Form layout="vertical" onFinish={onFinish} autoComplete="on">

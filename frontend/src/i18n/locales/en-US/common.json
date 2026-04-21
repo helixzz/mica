@@ -1,7 +1,7 @@
 {
   "app": {
     "name": "Mica",
-    "tagline": "Mica · Internal Procurement Management System",
+    "tagline": "",
     "version": "Version"
   },
   "nav": {
@@ -12,6 +12,7 @@
     "shipments": "Shipments",
     "payments": "Payments",
     "invoices": "Invoices",
+    "sku": "SKU Pricing",
     "approvals": "My Approvals",
     "suppliers": "Suppliers",
     "items": "Items",

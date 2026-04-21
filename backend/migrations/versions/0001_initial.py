@@ -471,6 +471,79 @@ def upgrade() -> None:
     )
     op.create_index("ix_document_download_tokens_expires", "document_download_tokens", ["expires_at"])
 
+    op.create_table(
+        "sku_price_records",
+        sa.Column("id", postgresql.UUID(as_uuid=True), primary_key=True),
+        sa.Column("item_id", postgresql.UUID(as_uuid=True), nullable=False),
+        sa.Column("supplier_id", postgresql.UUID(as_uuid=True), nullable=True),
+        sa.Column("price", sa.Numeric(18, 4), nullable=False),
+        sa.Column("currency", sa.String(3), nullable=False, server_default="CNY"),
+        sa.Column("quotation_date", sa.Date(), nullable=False),
+        sa.Column("source_type", sa.String(32), nullable=False, server_default="manual"),
+        sa.Column("source_ref", sa.String(128), nullable=True),
+        sa.Column("entered_by_id", postgresql.UUID(as_uuid=True), nullable=True),
+        sa.Column("notes", sa.Text(), nullable=True),
+        sa.Column("created_at", sa.DateTime(timezone=True), nullable=False),
+        sa.Column("updated_at", sa.DateTime(timezone=True), nullable=False),
+        sa.ForeignKeyConstraint(["item_id"], ["items.id"], ondelete="CASCADE"),
+        sa.ForeignKeyConstraint(["supplier_id"], ["suppliers.id"]),
+        sa.ForeignKeyConstraint(["entered_by_id"], ["users.id"]),
+    )
+    op.create_index("ix_sku_price_records_item_id", "sku_price_records", ["item_id"])
+    op.create_index("ix_sku_price_records_quotation_date", "sku_price_records", ["quotation_date"])
+
+    op.create_table(
+        "sku_price_benchmarks",
+        sa.Column("id", postgresql.UUID(as_uuid=True), primary_key=True),
+        sa.Column("item_id", postgresql.UUID(as_uuid=True), nullable=False),
+        sa.Column("window_days", sa.Integer(), nullable=False),
+        sa.Column("avg_price", sa.Numeric(18, 4), nullable=False),
+        sa.Column("median_price", sa.Numeric(18, 4), nullable=False),
+        sa.Column("stddev", sa.Numeric(18, 4), nullable=False, server_default="0"),
+        sa.Column("min_price", sa.Numeric(18, 4), nullable=False),
+        sa.Column("max_price", sa.Numeric(18, 4), nullable=False),
+        sa.Column("sample_size", sa.Integer(), nullable=False),
+        sa.Column("last_refreshed_at", sa.DateTime(timezone=True), nullable=False),
+        sa.Column("created_at", sa.DateTime(timezone=True), nullable=False),
+        sa.Column("updated_at", sa.DateTime(timezone=True), nullable=False),
+        sa.ForeignKeyConstraint(["item_id"], ["items.id"], ondelete="CASCADE"),
+        sa.UniqueConstraint("item_id", "window_days"),
+    )
+
+    op.create_table(
+        "sku_price_anomalies",
+        sa.Column("id", postgresql.UUID(as_uuid=True), primary_key=True),
+        sa.Column("item_id", postgresql.UUID(as_uuid=True), nullable=False),
+        sa.Column("price_record_id", postgresql.UUID(as_uuid=True), nullable=True),
+        sa.Column("baseline_avg_price", sa.Numeric(18, 4), nullable=False),
+        sa.Column("observed_price", sa.Numeric(18, 4), nullable=False),
+        sa.Column("deviation_pct", sa.Numeric(9, 4), nullable=False),
+        sa.Column("severity", sa.String(16), nullable=False, server_default="warning"),
+        sa.Column("status", sa.String(16), nullable=False, server_default="new"),
+        sa.Column("notes", sa.Text(), nullable=True),
+        sa.Column("acknowledged_by_id", postgresql.UUID(as_uuid=True), nullable=True),
+        sa.Column("acknowledged_at", sa.DateTime(timezone=True), nullable=True),
+        sa.Column("created_at", sa.DateTime(timezone=True), nullable=False),
+        sa.Column("updated_at", sa.DateTime(timezone=True), nullable=False),
+        sa.ForeignKeyConstraint(["item_id"], ["items.id"], ondelete="CASCADE"),
+        sa.ForeignKeyConstraint(["price_record_id"], ["sku_price_records.id"], ondelete="SET NULL"),
+        sa.ForeignKeyConstraint(["acknowledged_by_id"], ["users.id"]),
+    )
+    op.create_index("ix_sku_price_anomalies_item_id", "sku_price_anomalies", ["item_id"])
+
+    op.create_table(
+        "contract_documents",
+        sa.Column("contract_id", postgresql.UUID(as_uuid=True), nullable=False),
+        sa.Column("document_id", postgresql.UUID(as_uuid=True), nullable=False),
+        sa.Column("role", sa.String(32), nullable=False, server_default="scan"),
+        sa.Column("ocr_text", sa.Text(), nullable=True),
+        sa.Column("display_order", sa.Integer(), nullable=False, server_default="0"),
+        sa.Column("created_at", sa.DateTime(timezone=True), nullable=False),
+        sa.ForeignKeyConstraint(["contract_id"], ["contracts.id"], ondelete="CASCADE"),
+        sa.ForeignKeyConstraint(["document_id"], ["documents.id"], ondelete="RESTRICT"),
+        sa.PrimaryKeyConstraint("contract_id", "document_id"),
+    )
+
 
 def downgrade() -> None:
     for tbl in [

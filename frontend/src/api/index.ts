@@ -308,6 +308,79 @@ export interface DocumentOut {
   created_at: string
 }
 
+export interface SKUPriceRecord {
+  id: string
+  item_id: string
+  supplier_id: string | null
+  price: string
+  currency: string
+  quotation_date: string
+  source_type: string
+  source_ref: string | null
+  entered_by_id: string | null
+  notes: string | null
+}
+
+export interface SKUBenchmark {
+  item_id: string
+  window_days: number
+  avg_price: string
+  median_price: string
+  stddev: string
+  min_price: string
+  max_price: string
+  sample_size: number
+}
+
+export interface SKUAnomaly {
+  id: string
+  item_id: string
+  price_record_id: string | null
+  baseline_avg_price: string
+  observed_price: string
+  deviation_pct: string
+  severity: string
+  status: string
+  notes: string | null
+}
+
+export interface SKUTrendPoint {
+  date: string
+  price: string
+  supplier_id: string | null
+  source_type: string
+}
+
+export interface ContractAttachment {
+  document_id: string
+  role: string
+  display_order: number
+  has_ocr: boolean
+  ocr_chars: number
+  original_filename: string
+  content_type: string
+  file_size: number
+}
+
+export interface ContractSearchHit {
+  id: string
+  contract_number: string
+  title: string
+  status: string
+  total_amount: string
+  expiry_date: string | null
+  matched_in: string[]
+}
+
+export interface ContractExpiring {
+  id: string
+  contract_number: string
+  title: string
+  total_amount: string
+  currency: string
+  expiry_date: string | null
+}
+
 export interface InvoiceExtractResult {
   invoice_number: string | null
   invoice_code: string | null
@@ -566,6 +639,62 @@ export const api = {
   async adminAICallStats(since_days = 7): Promise<Record<string, unknown>[]> {
     const { data } = await client.get('/admin/ai-call-stats', { params: { since_days } })
     return data as Record<string, unknown>[]
+  },
+  async recordSKUPrice(body: {
+    item_id: string
+    price: number
+    quotation_date: string
+    supplier_id?: string | null
+    source_type?: string
+    source_ref?: string | null
+    notes?: string | null
+  }): Promise<{ record: SKUPriceRecord; anomaly: SKUAnomaly | null }> {
+    const { data } = await client.post('/sku/prices', body)
+    return data as { record: SKUPriceRecord; anomaly: SKUAnomaly | null }
+  },
+  async listSKUPrices(item_id?: string): Promise<SKUPriceRecord[]> {
+    const { data } = await client.get<SKUPriceRecord[]>('/sku/prices', { params: { item_id } })
+    return data
+  },
+  async getSKUBenchmark(item_id: string, window_days = 90): Promise<SKUBenchmark | null> {
+    const { data } = await client.get<SKUBenchmark | null>(`/sku/benchmarks/${item_id}`, {
+      params: { window_days },
+    })
+    return data
+  },
+  async getSKUTrend(item_id: string, days = 180): Promise<SKUTrendPoint[]> {
+    const { data } = await client.get<SKUTrendPoint[]>(`/sku/trend/${item_id}`, { params: { days } })
+    return data
+  },
+  async listSKUAnomalies(status?: string): Promise<SKUAnomaly[]> {
+    const { data } = await client.get<SKUAnomaly[]>('/sku/anomalies', { params: { status } })
+    return data
+  },
+  async acknowledgeAnomaly(id: string, notes?: string): Promise<SKUAnomaly> {
+    const { data } = await client.post<SKUAnomaly>(`/sku/anomalies/${id}/acknowledge`, { notes })
+    return data
+  },
+  async attachContractDocument(contract_id: string, document_id: string, run_ocr = true) {
+    const { data } = await client.post(`/contracts/${contract_id}/attachments`, {
+      document_id,
+      role: 'scan',
+      run_ocr,
+    })
+    return data
+  },
+  async listContractAttachments(contract_id: string): Promise<ContractAttachment[]> {
+    const { data } = await client.get<ContractAttachment[]>(`/contracts/${contract_id}/attachments`)
+    return data
+  },
+  async searchContracts(q: string): Promise<ContractSearchHit[]> {
+    const { data } = await client.get<ContractSearchHit[]>('/contracts-search', { params: { q } })
+    return data
+  },
+  async listExpiringContracts(within_days = 30): Promise<ContractExpiring[]> {
+    const { data } = await client.get<ContractExpiring[]>('/contracts-expiring', {
+      params: { within_days },
+    })
+    return data
   },
   async aiStream(
     feature_code: 'pr_description_polish' | 'sku_suggest',
