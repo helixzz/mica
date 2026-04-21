@@ -1,0 +1,43 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 240 240" width="100%" height="100%">
+  <defs>
+    <style>
+      .primary { fill: var(--color-primary-500, #8B5E3C); }
+      .secondary { fill: var(--color-primary-200, #D8C3B1); }
+      .accent { fill: var(--color-primary-700, #543824); }
+      .bg { fill: var(--color-bg-subtle, #F7F6F5); }
+    </style>
+  </defs>
+  
+  <!-- Background blob -->
+  <path class="bg" d="M120,20 C175,20 220,65 220,120 C220,175 175,220 120,220 C65,220 20,175 20,120 C20,65 65,20 120,20 Z" opacity="0.5" />
+  
+  <!-- Sleeping Otter Body -->
+  <path class="primary" d="M60,160 C60,130 80,110 120,110 C160,110 180,130 180,160 C180,180 160,190 120,190 C80,190 60,180 60,160 Z" />
+  
+  <!-- Belly -->
+  <path class="secondary" d="M80,160 C80,140 100,130 120,130 C140,130 160,140 160,160 C160,170 140,180 120,180 C100,180 80,170 80,160 Z" />
+  
+  <!-- Head -->
+  <circle class="primary" cx="160" cy="140" r="30" />
+  
+  <!-- Snout -->
+  <ellipse class="secondary" cx="170" cy="145" rx="15" ry="10" />
+  
+  <!-- Nose -->
+  <circle class="accent" cx="175" cy="142" r="4" />
+  
+  <!-- Sleeping Eyes -->
+  <path class="accent" d="M150,135 Q155,140 160,135" fill="none" stroke="var(--color-primary-700, #543824)" stroke-width="3" stroke-linecap="round" />
+  
+  <!-- Ears -->
+  <circle class="primary" cx="140" cy="115" r="8" />
+  <circle class="primary" cx="175" cy="115" r="8" />
+  
+  <!-- Tail -->
+  <path class="primary" d="M60,160 C40,160 30,170 30,180 C30,190 50,185 70,180 Z" />
+  
+  <!-- Zzz -->
+  <text x="180" y="100" font-family="sans-serif" font-size="16" font-weight="bold" class="secondary">Z</text>
+  <text x="195" y="85" font-family="sans-serif" font-size="20" font-weight="bold" class="secondary">z</text>
+  <text x="215" y="65" font-family="sans-serif" font-size="24" font-weight="bold" class="secondary">z</text>
+</svg>

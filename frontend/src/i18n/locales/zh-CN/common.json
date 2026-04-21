@@ -28,6 +28,9 @@
     "create": "新建",
     "back": "返回",
     "search": "搜索",
+    "print": "打印",
+    "export_pdf": "导出 PDF",
+    "export_excel": "导出 Excel",
     "reset": "重置",
     "refresh": "刷新",
     "approve": "批准",
@@ -182,10 +185,98 @@
     "zh-CN": "中文",
     "en-US": "English"
   },
+  "theme": {
+    "light": "浅色",
+    "dark": "暗色",
+    "system": "跟随系统",
+    "toggle": "切换主题"
+  },
+  "layout": {
+    "menu_toggle": "展开/收起菜单"
+  },
+  "empty": {
+    "default": "暂无数据"
+  },
   "progress": {
     "title": "订单进度",
     "received": "到货",
     "invoiced": "开票",
     "paid": "付款"
+  },
+  "search": {
+    "placeholder": "搜索采购单、合同、供应商...",
+    "noResults": "没有找到关于 '{{query}}' 的结果",
+    "seeAll": "查看全部 {{count}} 条结果",
+    "enterQuery": "请输入搜索词",
+    "resultsFor": "'{{query}}' 的搜索结果",
+    "tabs": {
+      "all": "全部"
+    },
+    "types": {
+      "pr": "采购申请",
+      "po": "采购订单",
+      "contract": "合同",
+      "contract_doc": "合同文档",
+      "invoice": "发票",
+      "supplier": "供应商",
+      "item": "物料"
+    },
+    "meta": {
+      "amount": "金额",
+      "status": "状态",
+      "date": "日期"
+    }
+  },
+  "dashboard": {
+    "greeting": "你好，{{name}}",
+    "total_amount_cny": "总金额 (CNY)",
+    "pending_approvals": "待办审批",
+    "view_all": "查看全部",
+    "no_pending_approvals": "暂无待办审批",
+    "alerts": "预警",
+    "no_alerts": "暂无预警",
+    "expiring_contracts": "即将到期合同",
+    "price_anomalies": "价格异常",
+    "anomaly_item": "物料 {{id}}",
+    "quick_actions": "快捷操作",
+    "new_pr": "新建采购申请",
+    "view_all_pos": "查看所有采购订单",
+    "admin_panel": "管理后台",
+    "notifications": "通知"
+  },
+  "notification": {
+    "title": "通知",
+    "unread": "未读",
+    "markAllRead": "全部标记已读",
+    "empty": "暂无通知",
+    "viewAll": "查看全部",
+    "center": "通知中心",
+    "inbox": "收件箱",
+    "subscriptions": "通知设置",
+    "fetchError": "获取通知失败",
+    "fetchSubsError": "获取订阅设置失败",
+    "saveSuccess": "设置已保存",
+    "saveError": "保存设置失败",
+    "category": "通知类型",
+    "inApp": "站内信",
+    "email": "邮件通知",
+    "markRead": "标为已读",
+    "loadMore": "加载更多",
+    "categories": {
+      "approval": "审批",
+      "po_created": "订单创建",
+      "payment_pending": "待付款",
+      "contract_expiring": "合同到期",
+      "price_anomaly": "价格异常",
+      "system": "系统通知"
+    },
+    "filters": {
+      "all": "全部",
+      "unread": "未读",
+      "approval": "审批",
+      "contract_expiring": "合同",
+      "price_anomaly": "价格",
+      "system": "系统"
+    }
   }
 }

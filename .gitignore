@@ -134,6 +134,7 @@ node_modules/
 
 # 构建产物
 frontend/dist/
+frontend/tsconfig.tsbuildinfo
 frontend/build/
 frontend/.vite/
 frontend/.next/
@@ -182,8 +183,10 @@ docker-compose.local.yml
 # 数据卷（如果不小心绑定到 repo 内）
 deploy/data/
 deploy/volumes/
-deploy/backups/
-deploy/logs/
+deploy/backups/*
+!deploy/backups/.gitkeep
+deploy/logs/*
+!deploy/logs/.gitkeep
 
 # MinIO / Postgres / Redis 本地数据目录
 data/

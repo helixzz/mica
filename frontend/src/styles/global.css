@@ -1,0 +1,327 @@
+@import '@fontsource/inter/400.css';
+@import '@fontsource/inter/500.css';
+@import '@fontsource/inter/600.css';
+@import '@fontsource/inter/700.css';
+
+:root {
+  /* Brand */
+  --color-primary-50: #F8F4F1;
+  --color-primary-100: #EBE1D8;
+  --color-primary-200: #D8C3B1;
+  --color-primary-300: #C4A48A;
+  --color-primary-400: #B18563;
+  --color-primary-500: #8B5E3C;
+  --color-primary-600: #704B30;
+  --color-primary-700: #543824;
+  --color-primary-800: #382518;
+  --color-primary-900: #1C130C;
+
+  /* Neutral */
+  --color-neutral-0: #FFFFFF;
+  --color-neutral-50: #F7F6F5;
+  --color-neutral-100: #EFECE9;
+  --color-neutral-200: #DFDBD7;
+  --color-neutral-300: #CFCAC5;
+  --color-neutral-400: #AFA9A3;
+  --color-neutral-500: #8F8881;
+  --color-neutral-600: #6F6861;
+  --color-neutral-700: #4F4943;
+  --color-neutral-800: #2F2B27;
+  --color-neutral-900: #1F1C19;
+  --color-neutral-950: #0F0E0D;
+
+  /* Semantic */
+  --color-success-50: #F0FDF4;
+  --color-success-500: #22C55E;
+  --color-success-700: #15803D;
+  
+  --color-warning-50: #FFFBEB;
+  --color-warning-500: #F59E0B;
+  --color-warning-700: #B45309;
+  
+  --color-error-50: #FEF2F2;
+  --color-error-500: #EF4444;
+  --color-error-700: #B91C1C;
+  
+  --color-info-50: #EFF6FF;
+  --color-info-500: #3B82F6;
+  --color-info-700: #1D4ED8;
+
+  /* Spacing */
+  --space-0: 0px;
+  --space-1: 4px;
+  --space-2: 8px;
+  --space-3: 12px;
+  --space-4: 16px;
+  --space-5: 24px;
+  --space-6: 32px;
+  --space-7: 48px;
+  --space-8: 64px;
+  --space-9: 96px;
+
+  /* Radius */
+  --radius-none: 0px;
+  --radius-sm: 4px;
+  --radius-md: 6px;
+  --radius-lg: 8px;
+  --radius-xl: 12px;
+  --radius-full: 9999px;
+
+  /* Shadows */
+  --shadow-xs: 0 1px 2px 0 rgba(15, 14, 13, 0.05);
+  --shadow-sm: 0 1px 3px 0 rgba(15, 14, 13, 0.1), 0 1px 2px -1px rgba(15, 14, 13, 0.1);
+  --shadow-md: 0 4px 6px -1px rgba(15, 14, 13, 0.1), 0 2px 4px -2px rgba(15, 14, 13, 0.1);
+  --shadow-lg: 0 10px 15px -3px rgba(15, 14, 13, 0.1), 0 4px 6px -4px rgba(15, 14, 13, 0.1);
+  --shadow-xl: 0 20px 25px -5px rgba(15, 14, 13, 0.1), 0 8px 10px -6px rgba(15, 14, 13, 0.1);
+
+  /* Typography */
+  --font-sans: Inter, -apple-system, BlinkMacSystemFont, "PingFang SC", "Microsoft YaHei", sans-serif;
+  --font-mono: "JetBrains Mono", ui-monospace, monospace;
+
+  /* Light Theme Defaults */
+  --color-bg-base: #FFFFFF;
+  --color-bg-subtle: #F7F6F5;
+  --color-bg-elevated: #FFFFFF;
+  --color-bg-sunken: #EFECE9;
+  
+  --color-text-primary: #1F1C19;
+  --color-text-secondary: #4F4943;
+  --color-text-tertiary: #8F8881;
+  --color-text-disabled: #CFCAC5;
+  --color-text-inverse: #FFFFFF;
+  
+  --color-border-subtle: #EFECE9;
+  --color-border-default: #DFDBD7;
+  --color-border-strong: #AFA9A3;
+}
+
+[data-theme="dark"] {
+  /* Dark Theme Overrides */
+  --color-bg-base: #0F0E0D;
+  --color-bg-subtle: #1F1C19;
+  --color-bg-elevated: #2F2B27;
+  --color-bg-sunken: #000000;
+  
+  --color-text-primary: #F7F6F5;
+  --color-text-secondary: #CFCAC5;
+  --color-text-tertiary: #8F8881;
+  --color-text-disabled: #4F4943;
+  --color-text-inverse: #0F0E0D;
+  
+  --color-border-subtle: #2F2B27;
+  --color-border-default: #4F4943;
+  --color-border-strong: #6F6861;
+}
+
+/* Reset */
+*, *::before, *::after {
+  box-sizing: border-box;
+}
+
+* {
+  margin: 0;
+  padding: 0;
+}
+
+html, body {
+  height: 100%;
+}
+
+body {
+  font-family: var(--font-sans);
+  background-color: var(--color-bg-base);
+  color: var(--color-text-primary);
+  line-height: 1.5;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+/* Selection */
+::selection {
+  background-color: var(--color-primary-100);
+  color: var(--color-primary-900);
+}
+
+[data-theme="dark"] ::selection {
+  background-color: var(--color-primary-900);
+  color: var(--color-primary-100);
+}
+
+/* Scrollbar */
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+  background: var(--color-border-default);
+  border-radius: var(--radius-full);
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: var(--color-border-strong);
+}
+
+/* Print Styles */
+@media print {
+  html, body {
+    background: white !important;
+    color: black !important;
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
+  }
+
+  /* Hide app chrome */
+  .ant-layout-header,
+  .ant-layout-sider,
+  .mobile-menu-toggle,
+  .user-dropdown,
+  .ant-drawer,
+  .ant-modal-mask,
+  .no-print,
+  button,
+  .ant-btn,
+  .ant-pagination,
+  .ant-tabs-nav {
+    display: none !important;
+  }
+
+  .ant-layout-content {
+    padding: 0 !important;
+    margin: 0 !important;
+    max-width: 100% !important;
+  }
+
+  /* Expand tabs to show all content when printing */
+  .ant-tabs-tabpane-hidden {
+    display: block !important;
+  }
+  .ant-tabs-tabpane {
+    break-before: page;
+  }
+  .ant-tabs-tabpane:first-child {
+    break-before: auto;
+  }
+
+  /* Table break behavior */
+  table {
+    page-break-inside: auto;
+    width: 100% !important;
+  }
+  tr {
+    page-break-inside: avoid;
+  }
+  thead {
+    display: table-header-group;
+  }
+
+  /* Links show URL on paper */
+  a[href]::after {
+    content: " (" attr(href) ")";
+    font-size: 0.8em;
+    color: #666;
+  }
+  a[href^="/"]::after,
+  a[href^="#"]::after {
+    content: "";
+  }
+
+  /* Forced page breaks */
+  .print-page-break {
+    break-before: page;
+  }
+
+  /* Print-only element — hidden on screen, shown on paper */
+  .print-only {
+    display: block !important;
+  }
+}
+
+.print-only {
+  display: none;
+}
+
+/* ─────────────────────────────────────────────────────────
+   Responsive / Mobile (approval + view focused, per roadmap)
+   ───────────────────────────────────────────────────────── */
+
+/* Tablet and below */
+@media (max-width: 992px) {
+  .ant-layout-content {
+    padding: var(--space-4) !important;
+  }
+  .page-header-actions {
+    flex-wrap: wrap;
+    gap: var(--space-2);
+  }
+}
+
+/* Phone */
+@media (max-width: 576px) {
+  .ant-layout-content {
+    padding: var(--space-3) !important;
+  }
+
+  /* Stat cards stack instead of 4-across */
+  .ant-row.stat-row > .ant-col {
+    flex: 0 0 100% !important;
+    max-width: 100% !important;
+    margin-bottom: var(--space-3);
+  }
+
+  /* Tables: enable horizontal scroll */
+  .ant-table-wrapper {
+    overflow-x: auto;
+  }
+
+  /* PageHeader typography scale */
+  .ant-typography h2 {
+    font-size: 20px !important;
+  }
+  .ant-typography h3 {
+    font-size: 18px !important;
+  }
+  .ant-typography h4 {
+    font-size: 16px !important;
+  }
+
+  /* Hide less-important columns on narrow screens */
+  .hide-on-mobile {
+    display: none !important;
+  }
+
+  /* Buttons become full-width in action rows */
+  .action-row .ant-btn {
+    flex: 1 1 auto;
+  }
+
+  /* Drawer / Modal full-screen */
+  .ant-drawer-content-wrapper {
+    width: 100vw !important;
+  }
+  .ant-modal {
+    max-width: calc(100vw - 16px) !important;
+    margin: 8px !important;
+  }
+
+  /* Approval-friendly: sticky bottom action bar */
+  .mobile-sticky-actions {
+    position: sticky;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    background: var(--color-bg-base);
+    border-top: 1px solid var(--color-border-subtle);
+    padding: var(--space-3);
+    display: flex;
+    gap: var(--space-2);
+    z-index: 100;
+  }
+  .mobile-sticky-actions .ant-btn {
+    flex: 1;
+  }
+}

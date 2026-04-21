@@ -28,6 +28,9 @@
     "create": "Create",
     "back": "Back",
     "search": "Search",
+    "print": "Print",
+    "export_pdf": "Export PDF",
+    "export_excel": "Export Excel",
     "reset": "Reset",
     "refresh": "Refresh",
     "approve": "Approve",
@@ -182,10 +185,98 @@
     "zh-CN": "中文",
     "en-US": "English"
   },
+  "theme": {
+    "light": "Light",
+    "dark": "Dark",
+    "system": "System",
+    "toggle": "Toggle theme"
+  },
+  "layout": {
+    "menu_toggle": "Toggle menu"
+  },
+  "empty": {
+    "default": "No data yet"
+  },
   "progress": {
     "title": "Order Progress",
     "received": "Received",
     "invoiced": "Invoiced",
     "paid": "Paid"
+  },
+  "search": {
+    "placeholder": "Search PRs, contracts, suppliers...",
+    "noResults": "No results for '{{query}}'",
+    "seeAll": "See all {{count}} results",
+    "enterQuery": "Enter a search query",
+    "resultsFor": "Search results for '{{query}}'",
+    "tabs": {
+      "all": "All"
+    },
+    "types": {
+      "pr": "Purchase Requisition",
+      "po": "Purchase Order",
+      "contract": "Contract",
+      "contract_doc": "Contract Document",
+      "invoice": "Invoice",
+      "supplier": "Supplier",
+      "item": "Item"
+    },
+    "meta": {
+      "amount": "Amount",
+      "status": "Status",
+      "date": "Date"
+    }
+  },
+  "dashboard": {
+    "greeting": "Hi, {{name}}",
+    "total_amount_cny": "Total Amount (CNY)",
+    "pending_approvals": "Pending Approvals",
+    "view_all": "View All",
+    "no_pending_approvals": "No pending approvals",
+    "alerts": "Alerts",
+    "no_alerts": "No alerts",
+    "expiring_contracts": "Expiring Contracts",
+    "price_anomalies": "Price Anomalies",
+    "anomaly_item": "Item {{id}}",
+    "quick_actions": "Quick Actions",
+    "new_pr": "New PR",
+    "view_all_pos": "View All POs",
+    "admin_panel": "Admin Panel",
+    "notifications": "Notifications"
+  },
+  "notification": {
+    "title": "Notifications",
+    "unread": "Unread",
+    "markAllRead": "Mark all as read",
+    "empty": "No notifications",
+    "viewAll": "View all",
+    "center": "Notification Center",
+    "inbox": "Inbox",
+    "subscriptions": "Settings",
+    "fetchError": "Failed to fetch notifications",
+    "fetchSubsError": "Failed to fetch subscription settings",
+    "saveSuccess": "Settings saved",
+    "saveError": "Failed to save settings",
+    "category": "Category",
+    "inApp": "In-App",
+    "email": "Email",
+    "markRead": "Mark as read",
+    "loadMore": "Load more",
+    "categories": {
+      "approval": "Approval",
+      "po_created": "PO Created",
+      "payment_pending": "Payment Pending",
+      "contract_expiring": "Contract Expiring",
+      "price_anomaly": "Price Anomaly",
+      "system": "System"
+    },
+    "filters": {
+      "all": "All",
+      "unread": "Unread",
+      "approval": "Approval",
+      "contract_expiring": "Contract",
+      "price_anomaly": "Price",
+      "system": "System"
+    }
   }
 }
