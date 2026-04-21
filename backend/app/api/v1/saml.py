@@ -3,6 +3,7 @@
 Dev-mode: returns a helpful placeholder indicating how to configure SAML.
 The local password login at /auth/login remains the primary dev flow.
 """
+
 import os
 from typing import Annotated
 
@@ -24,7 +25,9 @@ async def saml_metadata() -> dict:
             "(entityId, SSO URL, x509 cert) in environment variables, then install "
             "python3-saml in the backend image."
         ),
-        "sp_entity_id_suggestion": os.environ.get("SAML_SP_ENTITY_ID", "https://mica.example/saml/metadata"),
+        "sp_entity_id_suggestion": os.environ.get(
+            "SAML_SP_ENTITY_ID", "https://mica.example/saml/metadata"
+        ),
         "sp_acs_suggestion": os.environ.get("SAML_SP_ACS", "https://mica.example/saml/acs"),
     }
 

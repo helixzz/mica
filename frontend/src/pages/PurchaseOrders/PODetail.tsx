@@ -1,4 +1,4 @@
-import { PlusOutlined, UploadOutlined } from '@ant-design/icons'
+import { DownloadOutlined, PlusOutlined, UploadOutlined } from '@ant-design/icons'
 import {
   Button,
   Card,
@@ -35,6 +35,7 @@ import {
   type Shipment,
 } from '@/api'
 import { extractError } from '@/api/client'
+import { getToken } from '@/api/client'
 
 function statusTag(s: string): string {
   return s
@@ -87,7 +88,31 @@ export function PODetailPage() {
           </Typography.Title>
           <Tag color="success">{t(`status.${statusTag(po.status)}` as 'status.confirmed')}</Tag>
         </Space>
-        <Button onClick={() => navigate('/purchase-orders')}>{t('button.back')}</Button>
+        <Space>
+          <Button
+            icon={<DownloadOutlined />}
+            className="no-print"
+            onClick={async () => {
+              const resp = await fetch(`/api/v1/purchase-orders/${po.id}/export/pdf`, {
+                headers: { Authorization: `Bearer ${getToken() ?? ''}` },
+              })
+              if (!resp.ok) return
+              const blob = await resp.blob()
+              const url = URL.createObjectURL(blob)
+              const a = document.createElement('a')
+              a.href = url
+              a.download = `${po.po_number}.pdf`
+              document.body.appendChild(a)
+              a.click()
+              a.remove()
+              URL.revokeObjectURL(url)
+            }}
+          >
+            {t('button.export_pdf')}
+          </Button>
+          <Button className="no-print" onClick={() => window.print()}>{t('button.print')}</Button>
+          <Button onClick={() => navigate('/purchase-orders')}>{t('button.back')}</Button>
+        </Space>
       </div>
 
       <Card>

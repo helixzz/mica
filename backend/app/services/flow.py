@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from decimal import Decimal
 from uuid import UUID
 
@@ -17,10 +17,10 @@ from app.models import (
     InvoiceDocument,
     InvoiceLine,
     InvoiceStatus,
-    POItem,
-    POStatus,
     PaymentRecord,
     PaymentStatus,
+    POItem,
+    POStatus,
     PurchaseOrder,
     SerialNumberEntry,
     Shipment,
@@ -35,7 +35,9 @@ def _as_decimal(v) -> Decimal:
     return v if isinstance(v, Decimal) else Decimal(str(v))
 
 
-async def _audit_write(db: AsyncSession, actor: User, event: str, rtype: str, rid: str, meta: dict | None = None) -> None:
+async def _audit_write(
+    db: AsyncSession, actor: User, event: str, rtype: str, rid: str, meta: dict | None = None
+) -> None:
     db.add(
         AuditLog(
             actor_id=actor.id,
@@ -73,7 +75,7 @@ async def create_contract(
     if po is None:
         raise HTTPException(404, "po.not_found")
 
-    year = datetime.now(timezone.utc).year
+    year = datetime.now(UTC).year
     prefix = f"CT-{year}-"
     n = (
         await db.execute(
@@ -96,7 +98,11 @@ async def create_contract(
     )
     db.add(contract)
     await _audit_write(
-        db, actor, "contract.created", "contract", str(contract.id) or "",
+        db,
+        actor,
+        "contract.created",
+        "contract",
+        str(contract.id) or "",
         meta={"contract_number": number, "po_id": str(po.id)},
     )
     await db.commit()
@@ -177,7 +183,11 @@ async def create_shipment(
         po.status = POStatus.PARTIALLY_RECEIVED.value
 
     await _audit_write(
-        db, actor, "shipment.created", "shipment", str(shipment.id),
+        db,
+        actor,
+        "shipment.created",
+        "shipment",
+        str(shipment.id),
         meta={"po_id": str(po_id), "batch_no": batch_no},
     )
     await db.commit()
@@ -189,9 +199,7 @@ async def create_shipment(
 
 async def list_shipments(db: AsyncSession, po_id: UUID | None = None) -> list[Shipment]:
     stmt = (
-        select(Shipment)
-        .options(selectinload(Shipment.items))
-        .order_by(Shipment.created_at.desc())
+        select(Shipment).options(selectinload(Shipment.items)).order_by(Shipment.created_at.desc())
     )
     if po_id:
         stmt = stmt.where(Shipment.po_id == po_id)
@@ -216,7 +224,11 @@ async def record_serial_numbers(
         db.add(entry)
         entries.append(entry)
     await _audit_write(
-        db, actor, "serials.recorded", "shipment_item", str(shipment_item_id),
+        db,
+        actor,
+        "serials.recorded",
+        "shipment_item",
+        str(shipment_item_id),
         meta={"count": len(entries)},
     )
     await db.commit()
@@ -266,7 +278,11 @@ async def create_payment(
         po.amount_paid = (po.amount_paid or Decimal("0")) + _as_decimal(amount)
 
     await _audit_write(
-        db, actor, "payment.created", "payment_record", str(record.id) or "",
+        db,
+        actor,
+        "payment.created",
+        "payment_record",
+        str(record.id) or "",
         meta={"po_id": str(po_id), "amount": str(amount), "status": status},
     )
     await db.commit()
@@ -274,14 +290,22 @@ async def create_payment(
     return record
 
 
-async def confirm_payment(db: AsyncSession, actor: User, payment_id: UUID, payment_date=None, transaction_ref: str | None = None) -> PaymentRecord:
-    record = (await db.execute(select(PaymentRecord).where(PaymentRecord.id == payment_id))).scalar_one_or_none()
+async def confirm_payment(
+    db: AsyncSession,
+    actor: User,
+    payment_id: UUID,
+    payment_date=None,
+    transaction_ref: str | None = None,
+) -> PaymentRecord:
+    record = (
+        await db.execute(select(PaymentRecord).where(PaymentRecord.id == payment_id))
+    ).scalar_one_or_none()
     if record is None:
         raise HTTPException(404, "payment.not_found")
     if record.status == PaymentStatus.CONFIRMED.value:
         return record
     record.status = PaymentStatus.CONFIRMED.value
-    record.payment_date = payment_date or datetime.now(timezone.utc).date()
+    record.payment_date = payment_date or datetime.now(UTC).date()
     if transaction_ref:
         record.transaction_ref = transaction_ref
     po = await _load_po(db, record.po_id)
@@ -316,8 +340,10 @@ async def create_invoice(
         raise HTTPException(422, "invoice.attachments_required")
 
     attach_rows = (
-        await db.execute(select(Document).where(Document.id.in_(attachment_document_ids)))
-    ).scalars().all()
+        (await db.execute(select(Document).where(Document.id.in_(attachment_document_ids))))
+        .scalars()
+        .all()
+    )
     if len(attach_rows) != len(set(attachment_document_ids)):
         raise HTTPException(404, "invoice.attachment_document_not_found")
 
@@ -327,7 +353,7 @@ async def create_invoice(
     if supplier is None:
         raise HTTPException(404, "supplier.not_found")
 
-    year = datetime.now(timezone.utc).year
+    year = datetime.now(UTC).year
     prefix = f"INV-{year}-"
     n = (
         await db.execute(
@@ -336,19 +362,17 @@ async def create_invoice(
     ).scalar_one() or 0
     internal_number = f"{prefix}{n + 1:04d}"
 
-    po_item_ids = {l.get("po_item_id") for l in lines_in if l.get("po_item_id")}
+    po_item_ids = {line.get("po_item_id") for line in lines_in if line.get("po_item_id")}
     po_items_map: dict[str, POItem] = {}
     currency = "CNY"
     if po_item_ids:
         po_items = (
-            await db.execute(select(POItem).where(POItem.id.in_(po_item_ids)))
-        ).scalars().all()
+            (await db.execute(select(POItem).where(POItem.id.in_(po_item_ids)))).scalars().all()
+        )
         po_items_map = {str(i.id): i for i in po_items}
         if po_items:
             first_po = (
-                await db.execute(
-                    select(PurchaseOrder).where(PurchaseOrder.id == po_items[0].po_id)
-                )
+                await db.execute(select(PurchaseOrder).where(PurchaseOrder.id == po_items[0].po_id))
             ).scalar_one_or_none()
             if first_po:
                 currency = first_po.currency
@@ -397,8 +421,10 @@ async def create_invoice(
     total = subtotal + total_tax
 
     is_matched = all(
-        v["severity"] == "ok" for v in validations
-        if v.get("po_item_id") or lines_in[v["line_no"] - 1].get("line_type", "product") == "product"
+        v["severity"] == "ok"
+        for v in validations
+        if v.get("po_item_id")
+        or lines_in[v["line_no"] - 1].get("line_type", "product") == "product"
     )
     initial_status = (
         InvoiceStatus.MATCHED.value if is_matched else InvoiceStatus.PENDING_MATCH.value
@@ -473,7 +499,11 @@ async def create_invoice(
         ).quantize(Decimal("0.0001"))
 
     await _audit_write(
-        db, actor, "invoice.created", "invoice", str(invoice.id),
+        db,
+        actor,
+        "invoice.created",
+        "invoice",
+        str(invoice.id),
         meta={
             "internal_number": internal_number,
             "subtotal": str(subtotal),

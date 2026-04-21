@@ -1,8 +1,10 @@
 from __future__ import annotations
 
+# pyright: reportUnannotatedClassAttribute=false, reportAny=false, reportExplicitAny=false, reportUnknownLambdaType=false, reportUnknownMemberType=false, reportUnknownVariableType=false, reportUnknownArgumentType=false, reportDeprecated=false
 from datetime import date, datetime
 from decimal import Decimal
 from enum import StrEnum
+from typing import Any
 from uuid import UUID
 
 from sqlalchemy import (
@@ -16,11 +18,18 @@ from sqlalchemy import (
     String,
     Text,
     UniqueConstraint,
+    desc,
 )
-from sqlalchemy.dialects.postgresql import JSONB, UUID as PGUUID
+from sqlalchemy import (
+    Enum as SQLEnum,
+)
+from sqlalchemy.dialects.postgresql import JSONB
+from sqlalchemy.dialects.postgresql import UUID as PGUUID
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.db import Base, TimestampMixin, new_uuid
+
+JSONValue = Any
 
 
 class UserRole(StrEnum):
@@ -122,6 +131,9 @@ class Department(Base, TimestampMixin):
     code: Mapped[str] = mapped_column(String(32), nullable=False)
     name_zh: Mapped[str] = mapped_column(String(128), nullable=False)
     name_en: Mapped[str | None] = mapped_column(String(128))
+    parent_id: Mapped[UUID | None] = mapped_column(
+        PGUUID(as_uuid=True), ForeignKey("departments.id")
+    )
     is_active: Mapped[bool] = mapped_column(default=True, nullable=False)
 
     company: Mapped[Company] = relationship(back_populates="departments")
@@ -172,6 +184,7 @@ class Supplier(Base, TimestampMixin):
     contact_phone: Mapped[str | None] = mapped_column(String(32))
     contact_email: Mapped[str | None] = mapped_column(String(255))
     tax_number: Mapped[str | None] = mapped_column(String(64))
+    notes: Mapped[str | None] = mapped_column(Text)
     is_active: Mapped[bool] = mapped_column(default=True, nullable=False)
 
 
@@ -206,7 +219,9 @@ class PurchaseRequisition(Base, TimestampMixin):
         PGUUID(as_uuid=True), ForeignKey("departments.id")
     )
     currency: Mapped[str] = mapped_column(String(3), default="CNY", nullable=False)
-    total_amount: Mapped[Decimal] = mapped_column(Numeric(18, 4), default=Decimal("0"), nullable=False)
+    total_amount: Mapped[Decimal] = mapped_column(
+        Numeric(18, 4), default=Decimal("0"), nullable=False
+    )
     required_date: Mapped[date | None] = mapped_column(Date)
     submitted_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
     decided_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
@@ -227,17 +242,22 @@ class PRItem(Base, TimestampMixin):
 
     id: Mapped[UUID] = mapped_column(PGUUID(as_uuid=True), primary_key=True, default=new_uuid)
     pr_id: Mapped[UUID] = mapped_column(
-        PGUUID(as_uuid=True), ForeignKey("purchase_requisitions.id", ondelete="CASCADE"),
+        PGUUID(as_uuid=True),
+        ForeignKey("purchase_requisitions.id", ondelete="CASCADE"),
         nullable=False,
     )
     line_no: Mapped[int] = mapped_column(nullable=False)
     item_id: Mapped[UUID | None] = mapped_column(PGUUID(as_uuid=True), ForeignKey("items.id"))
     item_name: Mapped[str] = mapped_column(String(255), nullable=False)
     specification: Mapped[str | None] = mapped_column(Text)
-    supplier_id: Mapped[UUID | None] = mapped_column(PGUUID(as_uuid=True), ForeignKey("suppliers.id"))
+    supplier_id: Mapped[UUID | None] = mapped_column(
+        PGUUID(as_uuid=True), ForeignKey("suppliers.id")
+    )
     qty: Mapped[Decimal] = mapped_column(Numeric(18, 4), nullable=False)
     uom: Mapped[str] = mapped_column(String(16), default="EA", nullable=False)
-    unit_price: Mapped[Decimal] = mapped_column(Numeric(18, 4), default=Decimal("0"), nullable=False)
+    unit_price: Mapped[Decimal] = mapped_column(
+        Numeric(18, 4), default=Decimal("0"), nullable=False
+    )
     amount: Mapped[Decimal] = mapped_column(Numeric(18, 4), default=Decimal("0"), nullable=False)
 
     pr: Mapped[PurchaseRequisition] = relationship(back_populates="items")
@@ -261,12 +281,22 @@ class PurchaseOrder(Base, TimestampMixin):
     company_id: Mapped[UUID] = mapped_column(
         PGUUID(as_uuid=True), ForeignKey("companies.id"), nullable=False
     )
-    status: Mapped[str] = mapped_column(String(32), default=POStatus.CONFIRMED.value, nullable=False)
+    status: Mapped[str] = mapped_column(
+        String(32), default=POStatus.CONFIRMED.value, nullable=False
+    )
     currency: Mapped[str] = mapped_column(String(3), default="CNY", nullable=False)
-    total_amount: Mapped[Decimal] = mapped_column(Numeric(18, 4), default=Decimal("0"), nullable=False)
-    qty_received: Mapped[Decimal] = mapped_column(Numeric(18, 4), default=Decimal("0"), nullable=False)
-    amount_paid: Mapped[Decimal] = mapped_column(Numeric(18, 4), default=Decimal("0"), nullable=False)
-    amount_invoiced: Mapped[Decimal] = mapped_column(Numeric(18, 4), default=Decimal("0"), nullable=False)
+    total_amount: Mapped[Decimal] = mapped_column(
+        Numeric(18, 4), default=Decimal("0"), nullable=False
+    )
+    qty_received: Mapped[Decimal] = mapped_column(
+        Numeric(18, 4), default=Decimal("0"), nullable=False
+    )
+    amount_paid: Mapped[Decimal] = mapped_column(
+        Numeric(18, 4), default=Decimal("0"), nullable=False
+    )
+    amount_invoiced: Mapped[Decimal] = mapped_column(
+        Numeric(18, 4), default=Decimal("0"), nullable=False
+    )
     source_type: Mapped[str] = mapped_column(String(32), default="manual", nullable=False)
     source_ref: Mapped[str | None] = mapped_column(String(128))
     created_by_id: Mapped[UUID] = mapped_column(
@@ -287,7 +317,8 @@ class POItem(Base, TimestampMixin):
 
     id: Mapped[UUID] = mapped_column(PGUUID(as_uuid=True), primary_key=True, default=new_uuid)
     po_id: Mapped[UUID] = mapped_column(
-        PGUUID(as_uuid=True), ForeignKey("purchase_orders.id", ondelete="CASCADE"),
+        PGUUID(as_uuid=True),
+        ForeignKey("purchase_orders.id", ondelete="CASCADE"),
         nullable=False,
     )
     pr_item_id: Mapped[UUID | None] = mapped_column(PGUUID(as_uuid=True), ForeignKey("pr_items.id"))
@@ -296,8 +327,12 @@ class POItem(Base, TimestampMixin):
     item_name: Mapped[str] = mapped_column(String(255), nullable=False)
     specification: Mapped[str | None] = mapped_column(Text)
     qty: Mapped[Decimal] = mapped_column(Numeric(18, 4), nullable=False)
-    qty_received: Mapped[Decimal] = mapped_column(Numeric(18, 4), default=Decimal("0"), nullable=False)
-    qty_invoiced: Mapped[Decimal] = mapped_column(Numeric(18, 4), default=Decimal("0"), nullable=False)
+    qty_received: Mapped[Decimal] = mapped_column(
+        Numeric(18, 4), default=Decimal("0"), nullable=False
+    )
+    qty_invoiced: Mapped[Decimal] = mapped_column(
+        Numeric(18, 4), default=Decimal("0"), nullable=False
+    )
     uom: Mapped[str] = mapped_column(String(16), default="EA", nullable=False)
     unit_price: Mapped[Decimal] = mapped_column(Numeric(18, 4), nullable=False)
     amount: Mapped[Decimal] = mapped_column(Numeric(18, 4), nullable=False)
@@ -320,7 +355,9 @@ class Contract(Base, TimestampMixin):
     )
     title: Mapped[str] = mapped_column(String(255), nullable=False)
     current_version: Mapped[int] = mapped_column(Integer, default=1, nullable=False)
-    status: Mapped[str] = mapped_column(String(32), default=ContractStatus.ACTIVE.value, nullable=False)
+    status: Mapped[str] = mapped_column(
+        String(32), default=ContractStatus.ACTIVE.value, nullable=False
+    )
     currency: Mapped[str] = mapped_column(String(3), default="CNY", nullable=False)
     total_amount: Mapped[Decimal] = mapped_column(Numeric(18, 4), nullable=False)
     signed_date: Mapped[date | None] = mapped_column(Date)
@@ -349,7 +386,9 @@ class Shipment(Base, TimestampMixin):
     tracking_number: Mapped[str | None] = mapped_column(String(128))
     expected_date: Mapped[date | None] = mapped_column(Date)
     actual_date: Mapped[date | None] = mapped_column(Date)
-    received_by_id: Mapped[UUID | None] = mapped_column(PGUUID(as_uuid=True), ForeignKey("users.id"))
+    received_by_id: Mapped[UUID | None] = mapped_column(
+        PGUUID(as_uuid=True), ForeignKey("users.id")
+    )
     notes: Mapped[str | None] = mapped_column(Text)
 
     po: Mapped[PurchaseOrder] = relationship()
@@ -366,7 +405,8 @@ class ShipmentItem(Base, TimestampMixin):
 
     id: Mapped[UUID] = mapped_column(PGUUID(as_uuid=True), primary_key=True, default=new_uuid)
     shipment_id: Mapped[UUID] = mapped_column(
-        PGUUID(as_uuid=True), ForeignKey("shipments.id", ondelete="CASCADE"),
+        PGUUID(as_uuid=True),
+        ForeignKey("shipments.id", ondelete="CASCADE"),
         nullable=False,
     )
     po_item_id: Mapped[UUID] = mapped_column(
@@ -375,7 +415,9 @@ class ShipmentItem(Base, TimestampMixin):
     line_no: Mapped[int] = mapped_column(Integer, nullable=False)
     item_name: Mapped[str] = mapped_column(String(255), nullable=False)
     qty_shipped: Mapped[Decimal] = mapped_column(Numeric(18, 4), nullable=False)
-    qty_received: Mapped[Decimal] = mapped_column(Numeric(18, 4), default=Decimal("0"), nullable=False)
+    qty_received: Mapped[Decimal] = mapped_column(
+        Numeric(18, 4), default=Decimal("0"), nullable=False
+    )
     unit_price: Mapped[Decimal] = mapped_column(Numeric(18, 4), nullable=False)
 
     shipment: Mapped[Shipment] = relationship(back_populates="items")
@@ -387,7 +429,8 @@ class SerialNumberEntry(Base, TimestampMixin):
 
     id: Mapped[UUID] = mapped_column(PGUUID(as_uuid=True), primary_key=True, default=new_uuid)
     shipment_item_id: Mapped[UUID] = mapped_column(
-        PGUUID(as_uuid=True), ForeignKey("shipment_items.id", ondelete="CASCADE"),
+        PGUUID(as_uuid=True),
+        ForeignKey("shipment_items.id", ondelete="CASCADE"),
         nullable=False,
     )
     serial_number: Mapped[str] = mapped_column(String(128), unique=True, nullable=False)
@@ -434,7 +477,9 @@ class Invoice(Base, TimestampMixin):
     received_date: Mapped[date | None] = mapped_column(Date)
     due_date: Mapped[date | None] = mapped_column(Date)
     subtotal: Mapped[Decimal] = mapped_column(Numeric(18, 4), nullable=False)
-    tax_amount: Mapped[Decimal] = mapped_column(Numeric(18, 4), default=Decimal("0"), nullable=False)
+    tax_amount: Mapped[Decimal] = mapped_column(
+        Numeric(18, 4), default=Decimal("0"), nullable=False
+    )
     total_amount: Mapped[Decimal] = mapped_column(Numeric(18, 4), nullable=False)
     currency: Mapped[str] = mapped_column(String(3), default="CNY", nullable=False)
     tax_number: Mapped[str | None] = mapped_column(String(32))
@@ -505,7 +550,9 @@ class DocumentDownloadToken(Base):
     created_by_id: Mapped[UUID] = mapped_column(
         PGUUID(as_uuid=True), ForeignKey("users.id"), nullable=False
     )
-    expires_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False, index=True)
+    expires_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), nullable=False, index=True
+    )
     used_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), default=lambda: datetime.utcnow(), nullable=False
@@ -571,7 +618,9 @@ class SKUPriceAnomaly(Base, TimestampMixin):
     severity: Mapped[str] = mapped_column(String(16), default="warning", nullable=False)
     status: Mapped[str] = mapped_column(String(16), default="new", nullable=False)
     notes: Mapped[str | None] = mapped_column(Text)
-    acknowledged_by_id: Mapped[UUID | None] = mapped_column(PGUUID(as_uuid=True), ForeignKey("users.id"))
+    acknowledged_by_id: Mapped[UUID | None] = mapped_column(
+        PGUUID(as_uuid=True), ForeignKey("users.id")
+    )
     acknowledged_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
 
 
@@ -610,7 +659,9 @@ class InvoiceLine(Base, TimestampMixin):
     qty: Mapped[Decimal] = mapped_column(Numeric(18, 4), nullable=False)
     unit_price: Mapped[Decimal] = mapped_column(Numeric(18, 4), nullable=False)
     subtotal: Mapped[Decimal] = mapped_column(Numeric(18, 4), nullable=False)
-    tax_amount: Mapped[Decimal] = mapped_column(Numeric(18, 4), default=Decimal("0"), nullable=False)
+    tax_amount: Mapped[Decimal] = mapped_column(
+        Numeric(18, 4), default=Decimal("0"), nullable=False
+    )
 
     invoice: Mapped[Invoice] = relationship(back_populates="lines")
 
@@ -652,7 +703,8 @@ class ApprovalTask(Base, TimestampMixin):
 
     id: Mapped[UUID] = mapped_column(PGUUID(as_uuid=True), primary_key=True, default=new_uuid)
     instance_id: Mapped[UUID] = mapped_column(
-        PGUUID(as_uuid=True), ForeignKey("approval_instances.id", ondelete="CASCADE"),
+        PGUUID(as_uuid=True),
+        ForeignKey("approval_instances.id", ondelete="CASCADE"),
         nullable=False,
     )
     stage_order: Mapped[int] = mapped_column(Integer, nullable=False)
@@ -664,6 +716,7 @@ class ApprovalTask(Base, TimestampMixin):
     status: Mapped[str] = mapped_column(String(20), default="pending", nullable=False)
     action: Mapped[str | None] = mapped_column(String(20))
     comment: Mapped[str | None] = mapped_column(Text)
+    meta: Mapped[dict[str, JSONValue]] = mapped_column(JSONB, default=dict, nullable=False)
     assigned_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), default=lambda: datetime.utcnow(), nullable=False
     )
@@ -686,7 +739,7 @@ class AIModel(Base, TimestampMixin):
     timeout_s: Mapped[int] = mapped_column(Integer, default=60, nullable=False)
     is_active: Mapped[bool] = mapped_column(default=True, nullable=False)
     priority: Mapped[int] = mapped_column(Integer, default=100, nullable=False)
-    capabilities: Mapped[dict | None] = mapped_column(JSONB)
+    capabilities: Mapped[dict[str, JSONValue] | None] = mapped_column(JSONB)
 
 
 class AIFeatureRouting(Base, TimestampMixin):
@@ -697,9 +750,11 @@ class AIFeatureRouting(Base, TimestampMixin):
     primary_model_id: Mapped[UUID | None] = mapped_column(
         PGUUID(as_uuid=True), ForeignKey("ai_models.id")
     )
-    fallback_model_ids: Mapped[list | None] = mapped_column(JSONB)
+    fallback_model_ids: Mapped[list[str] | None] = mapped_column(JSONB)
     prompt_template: Mapped[str | None] = mapped_column(Text)
-    temperature: Mapped[Decimal] = mapped_column(Numeric(3, 2), default=Decimal("0.3"), nullable=False)
+    temperature: Mapped[Decimal] = mapped_column(
+        Numeric(3, 2), default=Decimal("0.3"), nullable=False
+    )
     max_tokens: Mapped[int] = mapped_column(Integer, default=1024, nullable=False)
     enabled: Mapped[bool] = mapped_column(default=True, nullable=False)
 
@@ -721,9 +776,7 @@ class AICallLog(Base):
     status: Mapped[str] = mapped_column(String(16), default="success", nullable=False)
     error: Mapped[str | None] = mapped_column(Text)
 
-    __table_args__ = (
-        Index("ix_ai_call_logs_feature_time", "feature_code", "occurred_at"),
-    )
+    __table_args__ = (Index("ix_ai_call_logs_feature_time", "feature_code", "occurred_at"),)
 
 
 class AuditLog(Base):
@@ -738,5 +791,169 @@ class AuditLog(Base):
     event_type: Mapped[str] = mapped_column(String(64), nullable=False)
     resource_type: Mapped[str | None] = mapped_column(String(64))
     resource_id: Mapped[str | None] = mapped_column(String(64))
-    metadata_json: Mapped[dict | None] = mapped_column(JSONB)
+    metadata_json: Mapped[dict[str, JSONValue] | None] = mapped_column(JSONB)
     comment: Mapped[str | None] = mapped_column(Text)
+
+
+# === System parameters ===
+
+
+class SystemParameterCategory(StrEnum):
+    APPROVAL = "approval"
+    AUTH = "auth"
+    SKU = "sku"
+    CONTRACT = "contract"
+    UPLOAD = "upload"
+    PAGINATION = "pagination"
+    AUDIT = "audit"
+
+
+class SystemParameter(Base, TimestampMixin):
+    __tablename__ = "system_parameters"
+
+    id: Mapped[UUID] = mapped_column(PGUUID(as_uuid=True), primary_key=True, default=new_uuid)
+    key: Mapped[str] = mapped_column(String(128), nullable=False)
+    category: Mapped[SystemParameterCategory] = mapped_column(
+        SQLEnum(
+            SystemParameterCategory,
+            native_enum=False,
+            length=32,
+            values_callable=lambda e: [m.value for m in e],
+        ),
+        nullable=False,
+    )
+    value: Mapped[JSONValue] = mapped_column(JSONB, nullable=False)
+    data_type: Mapped[str] = mapped_column(String(16), nullable=False)
+    default_value: Mapped[JSONValue] = mapped_column(JSONB, nullable=False)
+    min_value: Mapped[JSONValue | None] = mapped_column(JSONB)
+    max_value: Mapped[JSONValue | None] = mapped_column(JSONB)
+    unit: Mapped[str | None] = mapped_column(String(32))
+    description_zh: Mapped[str] = mapped_column(Text, nullable=False)
+    description_en: Mapped[str] = mapped_column(Text, nullable=False)
+    is_sensitive: Mapped[bool] = mapped_column(default=False, nullable=False)
+    updated_by_id: Mapped[UUID | None] = mapped_column(PGUUID(as_uuid=True), ForeignKey("users.id"))
+
+    __table_args__ = (
+        UniqueConstraint("key"),
+        Index("ix_system_parameters_category", "category"),
+    )
+
+
+class NotificationCategory(StrEnum):
+    APPROVAL = "approval"
+    PO_CREATED = "po_created"
+    PAYMENT_PENDING = "payment_pending"
+    CONTRACT_EXPIRING = "contract_expiring"
+    PRICE_ANOMALY = "price_anomaly"
+    SYSTEM = "system"
+
+
+class NotificationChannel(StrEnum):
+    IN_APP = "in_app"
+    EMAIL = "email"
+    WEBHOOK = "webhook"
+
+
+class Notification(Base, TimestampMixin):
+    __tablename__ = "notifications"
+
+    id: Mapped[UUID] = mapped_column(PGUUID(as_uuid=True), primary_key=True, default=new_uuid)
+    user_id: Mapped[UUID] = mapped_column(
+        PGUUID(as_uuid=True), ForeignKey("users.id"), nullable=False
+    )
+    category: Mapped[NotificationCategory] = mapped_column(
+        SQLEnum(
+            NotificationCategory,
+            native_enum=False,
+            length=32,
+            values_callable=lambda e: [m.value for m in e],
+        ),
+        nullable=False,
+    )
+    title: Mapped[str] = mapped_column(String(255), nullable=False)
+    body: Mapped[str | None] = mapped_column(Text)
+    link_url: Mapped[str | None] = mapped_column(String(255))
+    biz_type: Mapped[str | None] = mapped_column(String(64))
+    biz_id: Mapped[UUID | None] = mapped_column(PGUUID(as_uuid=True))
+    meta: Mapped[dict[str, JSONValue]] = mapped_column(JSONB, default=dict, nullable=False)
+    read_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    sent_via: Mapped[list[str]] = mapped_column(JSONB, default=list, nullable=False)
+
+    user: Mapped[User] = relationship()
+
+    __table_args__ = (
+        Index("ix_notifications_user_read", "user_id", "read_at"),
+        Index("ix_notifications_user_created", "user_id", desc("created_at")),
+    )
+
+
+class NotificationSubscription(Base, TimestampMixin):
+    __tablename__ = "notification_subscriptions"
+
+    id: Mapped[UUID] = mapped_column(PGUUID(as_uuid=True), primary_key=True, default=new_uuid)
+    user_id: Mapped[UUID] = mapped_column(
+        PGUUID(as_uuid=True), ForeignKey("users.id"), nullable=False
+    )
+    category: Mapped[NotificationCategory] = mapped_column(
+        SQLEnum(
+            NotificationCategory,
+            native_enum=False,
+            length=32,
+            values_callable=lambda e: [m.value for m in e],
+        ),
+        nullable=False,
+    )
+    in_app_enabled: Mapped[bool] = mapped_column(default=True, nullable=False)
+    email_enabled: Mapped[bool] = mapped_column(default=False, nullable=False)
+
+    user: Mapped[User] = relationship()
+
+    __table_args__ = (UniqueConstraint("user_id", "category"),)
+
+
+# === Approval DSL (rules + delegations) ===
+
+
+class ApprovalRule(Base, TimestampMixin):
+    __tablename__ = "approval_rules"
+
+    id: Mapped[UUID] = mapped_column(PGUUID(as_uuid=True), primary_key=True, default=new_uuid)
+    name: Mapped[str] = mapped_column(String(255), nullable=False)
+    biz_type: Mapped[str] = mapped_column(String(64), nullable=False)
+    amount_min: Mapped[Decimal | None] = mapped_column(Numeric(18, 4))
+    amount_max: Mapped[Decimal | None] = mapped_column(Numeric(18, 4))
+    stages: Mapped[list[dict[str, JSONValue]]] = mapped_column(JSONB, default=list, nullable=False)
+    is_active: Mapped[bool] = mapped_column(default=True, nullable=False)
+    priority: Mapped[int] = mapped_column(Integer, default=100, nullable=False)
+
+    __table_args__ = (
+        Index("ix_approval_rules_biz_type", "biz_type"),
+        Index("ix_approval_rules_active_priority", "is_active", "priority"),
+    )
+
+
+class ApproverDelegation(Base, TimestampMixin):
+    __tablename__ = "approver_delegations"
+
+    id: Mapped[UUID] = mapped_column(PGUUID(as_uuid=True), primary_key=True, default=new_uuid)
+    from_user_id: Mapped[UUID] = mapped_column(
+        PGUUID(as_uuid=True), ForeignKey("users.id"), nullable=False
+    )
+    to_user_id: Mapped[UUID] = mapped_column(
+        PGUUID(as_uuid=True), ForeignKey("users.id"), nullable=False
+    )
+    reason: Mapped[str | None] = mapped_column(String(255))
+    starts_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
+    ends_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
+    is_active: Mapped[bool] = mapped_column(default=True, nullable=False)
+    revoked_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+
+    from_user: Mapped[User] = relationship(foreign_keys=[from_user_id])
+    to_user: Mapped[User] = relationship(foreign_keys=[to_user_id])
+
+    __table_args__ = (
+        CheckConstraint("from_user_id <> to_user_id", name="distinct_users"),
+        CheckConstraint("ends_at > starts_at", name="valid_window"),
+        Index("ix_approver_delegations_from_user", "from_user_id"),
+        Index("ix_approver_delegations_to_user", "to_user_id"),
+    )

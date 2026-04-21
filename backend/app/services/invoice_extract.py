@@ -4,6 +4,7 @@ Graceful degradation: if optional libs (pdfplumber/pypdf/pymupdf/easyofd)
 are not installed at runtime, the corresponding strategy is skipped and
 extraction falls back to the next tier.
 """
+
 from __future__ import annotations
 
 import base64
@@ -125,7 +126,11 @@ async def _dispatch(
     db: AsyncSession, actor: User, content: bytes, content_type: str, filename: str
 ) -> InvoiceExtract:
     lower_name = (filename or "").lower()
-    if content_type in ("application/xml", "text/xml") or lower_name.endswith(".xml") or _looks_xml(content):
+    if (
+        content_type in ("application/xml", "text/xml")
+        or lower_name.endswith(".xml")
+        or _looks_xml(content)
+    ):
         return _extract_xml(content)
     if (
         content_type in ("application/ofd", "application/octet-stream")

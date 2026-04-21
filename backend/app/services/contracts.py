@@ -3,18 +3,22 @@
 Reuses documents module for physical storage; contract_documents is a M:N link
 that also carries the OCR-extracted plain text for later search.
 """
+
 from __future__ import annotations
 
-from datetime import date, datetime, timedelta, timezone
+from datetime import UTC, datetime, timedelta
+from typing import cast
 from uuid import UUID
 
 from fastapi import HTTPException
-from sqlalchemy import or_, select
+from sqlalchemy import Text, desc, func, literal_column, or_, select
+from sqlalchemy.dialects import postgresql
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.models import AuditLog, Contract, ContractDocument, Document, User
 from app.services import documents as doc_svc
 from app.services import invoice_extract as extract_svc
+from app.services.system_params import system_params
 
 
 async def attach_document_to_contract(
@@ -52,8 +56,15 @@ async def attach_document_to_contract(
             )
             parts: list[str] = []
             for field_name in (
-                "invoice_number", "invoice_date", "seller_name", "seller_tax_id",
-                "buyer_name", "buyer_tax_id", "subtotal", "tax_amount", "total_amount",
+                "invoice_number",
+                "invoice_date",
+                "seller_name",
+                "seller_tax_id",
+                "buyer_name",
+                "buyer_tax_id",
+                "subtotal",
+                "tax_amount",
+                "total_amount",
             ):
                 val = getattr(extracted, field_name, None)
                 if val:
@@ -105,26 +116,56 @@ async def list_contract_documents(
 
 async def search_contracts(
     db: AsyncSession, query: str, limit: int = 50
-) -> list[dict]:
+) -> list[dict[str, object]]:
     if not query.strip():
         return []
-    pattern = f"%{query}%"
+    normalized_query = query.strip()
+    pattern = f"%{normalized_query}%"
+    contract_search_text = literal_column("contracts.search_text", type_=Text())
+    contract_search_vector = literal_column("contracts.search_vector", type_=postgresql.TSVECTOR())
+    document_search_text = literal_column("contract_documents.search_text", type_=Text())
+    document_search_vector = literal_column(
+        "contract_documents.search_vector", type_=postgresql.TSVECTOR()
+    )
+    tsquery = func.websearch_to_tsquery("simple", normalized_query)
+    contract_score = func.greatest(
+        func.ts_rank_cd(contract_search_vector, tsquery),
+        func.similarity(contract_search_text, normalized_query),
+    )
+    document_score = func.greatest(
+        func.ts_rank_cd(document_search_vector, tsquery),
+        func.similarity(document_search_text, normalized_query),
+    )
     rows = (
         await db.execute(
-            select(Contract, ContractDocument)
+            select(
+                Contract,
+                ContractDocument,
+                contract_score.label("contract_score"),
+                document_score.label("document_score"),
+            )
             .outerjoin(ContractDocument, ContractDocument.contract_id == Contract.id)
             .where(
                 or_(
-                    Contract.title.ilike(pattern),
-                    Contract.contract_number.ilike(pattern),
-                    ContractDocument.ocr_text.ilike(pattern),
+                    contract_search_vector.op("@@")(tsquery),
+                    contract_search_text.ilike(pattern),
+                    document_search_vector.op("@@")(tsquery),
+                    document_search_text.ilike(pattern),
                 )
+            )
+            .order_by(
+                desc(func.greatest(contract_score, document_score)),
+                Contract.created_at.desc(),
             )
             .limit(limit)
         )
     ).all()
-    results: dict[UUID, dict] = {}
-    for contract, doc_link in rows:
+    results: dict[UUID, dict[str, object]] = {}
+    lowered_query = normalized_query.lower()
+    typed_rows = cast(
+        list[tuple[Contract, ContractDocument | None, float | None, float | None]], rows
+    )
+    for contract, doc_link, contract_rank, document_rank in typed_rows:
         entry = results.setdefault(
             contract.id,
             {
@@ -135,38 +176,54 @@ async def search_contracts(
                 "total_amount": str(contract.total_amount),
                 "expiry_date": contract.expiry_date.isoformat() if contract.expiry_date else None,
                 "matched_in": [],
+                "_score": 0.0,
             },
         )
-        if pattern.strip("%").lower() in (contract.title or "").lower():
-            entry["matched_in"].append("title")
-        if doc_link and doc_link.ocr_text and pattern.strip("%").lower() in doc_link.ocr_text.lower():
-            snippet_start = max(0, doc_link.ocr_text.lower().find(pattern.strip("%").lower()) - 30)
-            snippet = doc_link.ocr_text[snippet_start:snippet_start + 200]
-            entry["matched_in"].append(f"ocr:…{snippet}…")
-    return list(results.values())
-
-
-async def expiring_contracts(
-    db: AsyncSession, within_days: int = 30
-) -> list[Contract]:
-    today = datetime.now(timezone.utc).date()
-    cutoff = today + timedelta(days=within_days)
-    rows = (
-        await db.execute(
-            select(Contract)
-            .where(
-                Contract.status == "active",
-                Contract.expiry_date.isnot(None),
-                Contract.expiry_date >= today,
-                Contract.expiry_date <= cutoff,
-            )
-            .order_by(Contract.expiry_date)
+        matched_in = cast(list[str], entry["matched_in"])
+        entry["_score"] = max(
+            cast(float, entry["_score"]), float(contract_rank or 0), float(document_rank or 0)
         )
-    ).scalars().all()
+        if lowered_query in (contract.title or "").lower():
+            matched_in.append("title")
+        if lowered_query in (contract.contract_number or "").lower():
+            matched_in.append("contract_number")
+        if doc_link and doc_link.ocr_text and lowered_query in doc_link.ocr_text.lower():
+            snippet_start = max(0, doc_link.ocr_text.lower().find(lowered_query) - 30)
+            snippet = doc_link.ocr_text[snippet_start : snippet_start + 200]
+            matched_in.append(f"ocr:…{snippet}…")
+    return sorted(
+        results.values(), key=lambda item: cast(float, item.get("_score", 0.0)), reverse=True
+    )
+
+
+async def expiring_contracts(db: AsyncSession, within_days: int | None = None) -> list[Contract]:
+    resolved_within_days = (
+        within_days
+        if within_days is not None
+        else await system_params.get_int(db, "contract.expiry_reminder_days")
+    )
+    today = datetime.now(UTC).date()
+    cutoff = today + timedelta(days=resolved_within_days)
+    rows = (
+        (
+            await db.execute(
+                select(Contract)
+                .where(
+                    Contract.status == "active",
+                    Contract.expiry_date.isnot(None),
+                    Contract.expiry_date >= today,
+                    Contract.expiry_date <= cutoff,
+                )
+                .order_by(Contract.expiry_date)
+            )
+        )
+        .scalars()
+        .all()
+    )
     return list(rows)
 
 
-def to_dict(cd: ContractDocument, d: Document) -> dict:
+def to_dict(cd: ContractDocument, d: Document) -> dict[str, object]:
     return {
         "document_id": str(cd.document_id),
         "role": cd.role,

@@ -1,19 +1,18 @@
 """Admin console backend: system params, AI model CRUD, feature routing CRUD,
 audit log, AI call log, user management. Restricted to admin role.
-
-Following ADR-referenced design; see mica-internal/design/admin-console-spec-v0.5.md.
 """
+
 from __future__ import annotations
 
 import time
-from datetime import datetime, timedelta, timezone
+from datetime import UTC, datetime, timedelta
 from decimal import Decimal
-from typing import Annotated, Any, Literal
+from typing import Annotated, Any, Literal, cast
 from uuid import UUID
 
 from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel, ConfigDict, Field
-from sqlalchemy import func, select, update
+from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.config import get_settings
@@ -25,13 +24,14 @@ from app.models import (
     AIFeatureRouting,
     AIModel,
     AuditLog,
+    JSONValue,
     User,
-    UserRole,
 )
+from app.services import notifications as notification_svc
+from app.services.system_params import system_params
 
 router = APIRouter(prefix="/admin", dependencies=[Depends(require_roles("admin"))])
 settings = get_settings()
-
 
 
 @router.get("/system", tags=["admin"])
@@ -47,7 +47,6 @@ async def system_info(user: CurrentUser):
     }
 
 
-
 class AIModelIn(BaseModel):
     name: str = Field(..., min_length=1, max_length=64)
     provider: str = Field(..., max_length=32)
@@ -58,7 +57,7 @@ class AIModelIn(BaseModel):
     timeout_s: int = 60
     is_active: bool = True
     priority: int = 100
-    capabilities: dict[str, Any] | None = None
+    capabilities: dict[str, JSONValue] | None = None
 
 
 class AIModelOutDetailed(BaseModel):
@@ -73,7 +72,7 @@ class AIModelOutDetailed(BaseModel):
     timeout_s: int
     is_active: bool
     priority: int
-    capabilities: dict[str, Any] | None
+    capabilities: dict[str, JSONValue] | None
     created_at: datetime
     updated_at: datetime
 
@@ -103,7 +102,9 @@ async def list_ai_models(
     user: CurrentUser,
     db: Annotated[AsyncSession, Depends(get_db)],
 ):
-    rows = (await db.execute(select(AIModel).order_by(AIModel.priority, AIModel.name))).scalars().all()
+    rows = (
+        (await db.execute(select(AIModel).order_by(AIModel.priority, AIModel.name))).scalars().all()
+    )
     return [_serialize_model(m) for m in rows]
 
 
@@ -206,7 +207,7 @@ async def delete_ai_model(
 @router.post("/ai-models/{model_id}/test-connection", tags=["admin"])
 async def test_ai_model_connection(
     model_id: UUID,
-    user: CurrentUser,
+    _user: CurrentUser,
     db: Annotated[AsyncSession, Depends(get_db)],
 ):
     m = await db.get(AIModel, model_id)
@@ -237,12 +238,13 @@ async def test_ai_model_connection(
             kwargs["api_key"] = decrypt(m.api_key_encrypted)
         if m.api_base:
             kwargs["api_base"] = m.api_base
-        resp = await acompletion(**kwargs)
+        resp = cast(object, await acompletion(**kwargs))
         latency_ms = int((time.monotonic() - start) * 1000)
-        content = ""
-        try:
-            content = resp.choices[0].message.content or ""
-        except Exception:
+        choices = getattr(resp, "choices", None)
+        if isinstance(choices, list) and choices:
+            message = getattr(choices[0], "message", None)
+            content = str(getattr(message, "content", "") or "")
+        else:
             content = str(resp)
         return {
             "success": True,
@@ -257,7 +259,6 @@ async def test_ai_model_connection(
             "latency_ms": int((time.monotonic() - start) * 1000),
             "error": str(e)[:400],
         }
-
 
 
 class AIFeatureRoutingIn(BaseModel):
@@ -287,7 +288,11 @@ async def list_routings(
     user: CurrentUser,
     db: Annotated[AsyncSession, Depends(get_db)],
 ):
-    rows = (await db.execute(select(AIFeatureRouting).order_by(AIFeatureRouting.feature_code))).scalars().all()
+    rows = (
+        (await db.execute(select(AIFeatureRouting).order_by(AIFeatureRouting.feature_code)))
+        .scalars()
+        .all()
+    )
     return [AIFeatureRoutingOutAdmin.model_validate(r) for r in rows]
 
 
@@ -299,7 +304,9 @@ async def upsert_routing(
     db: Annotated[AsyncSession, Depends(get_db)],
 ):
     row = (
-        await db.execute(select(AIFeatureRouting).where(AIFeatureRouting.feature_code == feature_code))
+        await db.execute(
+            select(AIFeatureRouting).where(AIFeatureRouting.feature_code == feature_code)
+        )
     ).scalar_one_or_none()
     fallback_ids_raw = [str(i) for i in (payload.fallback_model_ids or [])]
     if row is None:
@@ -332,7 +339,6 @@ async def upsert_routing(
     await db.commit()
     await db.refresh(row)
     return AIFeatureRoutingOutAdmin.model_validate(row)
-
 
 
 class UserCreateIn(BaseModel):
@@ -436,7 +442,6 @@ async def reset_user_password(
     await db.commit()
 
 
-
 @router.get("/audit-logs", tags=["admin"])
 async def list_audit_logs(
     user: CurrentUser,
@@ -444,9 +449,14 @@ async def list_audit_logs(
     limit: int = 100,
     event_type_prefix: str | None = None,
     resource_type: str | None = None,
-    since_days: int = 7,
+    since_days: int | None = None,
 ):
-    since = datetime.now(timezone.utc) - timedelta(days=since_days)
+    resolved_since_days = (
+        since_days
+        if since_days is not None
+        else await system_params.get_int_or(db, "audit.default_lookback_days", 7)
+    )
+    since = datetime.now(UTC) - timedelta(days=resolved_since_days)
     stmt = (
         select(AuditLog)
         .where(AuditLog.occurred_at >= since)
@@ -479,9 +489,14 @@ async def list_ai_call_logs(
     db: Annotated[AsyncSession, Depends(get_db)],
     limit: int = 100,
     feature_code: str | None = None,
-    since_days: int = 7,
+    since_days: int | None = None,
 ):
-    since = datetime.now(timezone.utc) - timedelta(days=since_days)
+    resolved_since_days = (
+        since_days
+        if since_days is not None
+        else await system_params.get_int_or(db, "audit.default_lookback_days", 7)
+    )
+    since = datetime.now(UTC) - timedelta(days=resolved_since_days)
     stmt = (
         select(AICallLog)
         .where(AICallLog.occurred_at >= since)
@@ -513,9 +528,14 @@ async def list_ai_call_logs(
 async def ai_call_stats(
     user: CurrentUser,
     db: Annotated[AsyncSession, Depends(get_db)],
-    since_days: int = 7,
+    since_days: int | None = None,
 ):
-    since = datetime.now(timezone.utc) - timedelta(days=since_days)
+    resolved_since_days = (
+        since_days
+        if since_days is not None
+        else await system_params.get_int_or(db, "audit.default_lookback_days", 7)
+    )
+    since = datetime.now(UTC) - timedelta(days=resolved_since_days)
     rows = (
         await db.execute(
             select(
@@ -537,3 +557,23 @@ async def ai_call_stats(
         }
         for r in rows
     ]
+
+
+# === Notification triggers ===
+
+
+@router.post("/notifications/run-contract-expiring", tags=["admin"])
+async def run_contract_expiring_notifications(
+    user: CurrentUser,
+    db: Annotated[AsyncSession, Depends(get_db)],
+    within_days: int = 30,
+):
+    return await notification_svc.notify_expiring_contracts(db, within_days=within_days)
+
+
+@router.post("/notifications/run-price-anomaly", tags=["admin"])
+async def run_price_anomaly_notifications(
+    user: CurrentUser,
+    db: Annotated[AsyncSession, Depends(get_db)],
+):
+    return await notification_svc.notify_new_price_anomalies(db)

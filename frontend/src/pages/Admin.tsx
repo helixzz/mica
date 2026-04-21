@@ -24,6 +24,7 @@ import { useTranslation } from 'react-i18next'
 import { api } from '@/api'
 import { extractError } from '@/api/client'
 import { useAuth } from '@/auth/useAuth'
+import { SystemParamsTab } from './admin/SystemParamsTab'
 
 type AIModelRow = {
   id: string
@@ -58,7 +59,8 @@ export function AdminPage() {
       </Typography.Title>
       <Tabs
         items={[
-          { key: 'system', label: '系统参数', children: <SystemInfoPanel /> },
+          { key: 'system', label: '系统信息', children: <SystemInfoPanel /> },
+          { key: 'system_params', label: '系统参数', children: <SystemParamsTab /> },
           { key: 'models', label: 'LLM 模型', children: <AIModelsPanel /> },
           { key: 'routings', label: 'AI 场景路由', children: <RoutingsPanel /> },
           { key: 'users', label: '用户管理', children: <UsersPanel /> },

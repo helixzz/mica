@@ -12,7 +12,6 @@ from app.services import ai as ai_svc
 from app.services import documents as doc_svc
 from app.services import invoice_extract as extract_svc
 
-
 router = APIRouter()
 
 
@@ -28,15 +27,22 @@ async def ai_stream(
     else:
         query = payload.query or ""
         from sqlalchemy import select
+
         from app.models import Item
+
         items = (
-            await db.execute(
-                select(Item).where(Item.is_active.is_(True)).order_by(Item.name).limit(30)
+            (
+                await db.execute(
+                    select(Item).where(Item.is_active.is_(True)).order_by(Item.name).limit(30)
+                )
             )
-        ).scalars().all()
-        catalog = "\n".join(
-            f"{i.code} | {i.name} | {i.specification or ''}" for i in items
-        ) or "(catalog empty)"
+            .scalars()
+            .all()
+        )
+        catalog = (
+            "\n".join(f"{i.code} | {i.name} | {i.specification or ''}" for i in items)
+            or "(catalog empty)"
+        )
         prompt = ai_svc.render_prompt("sku_suggest", query=query, catalog=catalog)
 
     async def event_generator():
@@ -71,6 +77,8 @@ async def ai_invoice_extract(
     if doc is None or doc.deleted_at is not None:
         raise HTTPException(404, "document.not_found")
     content = await doc_svc.read_document_bytes(doc)
-    result = await extract_svc.extract_invoice(db, user, content, doc.content_type, doc.original_filename)
+    result = await extract_svc.extract_invoice(
+        db, user, content, doc.content_type, doc.original_filename
+    )
     await db.commit()
     return InvoiceExtractOut(**extract_svc.to_dict(result))

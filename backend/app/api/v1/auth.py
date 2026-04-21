@@ -1,4 +1,4 @@
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from typing import Annotated
 
 from fastapi import APIRouter, Depends, HTTPException, Request, status
@@ -16,10 +16,19 @@ from app.db import get_db
 from app.i18n import detect_locale, t
 from app.models import Company, Department, User
 from app.schemas import CompanyOut, DepartmentOut, LoginRequest, TokenResponse, UserOut
+from app.services.system_params import system_params
 
 settings = get_settings()
 
 router = APIRouter()
+
+
+async def _access_token_ttl_minutes(db: AsyncSession) -> int:
+    return await system_params.get_int_or(
+        db,
+        "auth.access_token_expire_minutes",
+        settings.access_token_expire_minutes,
+    )
 
 
 @router.post("/auth/login", response_model=TokenResponse, tags=["auth"])
@@ -31,8 +40,10 @@ async def login(
     locale = detect_locale(request)
     result = await db.execute(select(User).where(User.username == form_data.username))
     user = result.scalar_one_or_none()
-    if user is None or not user.password_hash or not verify_password(
-        form_data.password, user.password_hash
+    if (
+        user is None
+        or not user.password_hash
+        or not verify_password(form_data.password, user.password_hash)
     ):
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
@@ -42,13 +53,18 @@ async def login(
     if not user.is_active:
         raise HTTPException(401, detail=t("auth.user_inactive", locale))
 
-    user.last_login_at = datetime.now(timezone.utc)
+    user.last_login_at = datetime.now(UTC)
     await db.commit()
 
-    token = create_access_token(str(user.id), extra={"role": user.role})
+    access_token_ttl_minutes = int(await _access_token_ttl_minutes(db))
+    token = create_access_token(
+        str(user.id),
+        extra={"role": user.role},
+        expire_minutes=access_token_ttl_minutes,
+    )
     return TokenResponse(
         access_token=token,
-        expires_in=settings.access_token_expire_minutes * 60,
+        expires_in=access_token_ttl_minutes * 60,
     )
 
 
@@ -61,20 +77,27 @@ async def login_json(
     locale = detect_locale(request)
     result = await db.execute(select(User).where(User.username == payload.username))
     user = result.scalar_one_or_none()
-    if user is None or not user.password_hash or not verify_password(
-        payload.password, user.password_hash
+    if (
+        user is None
+        or not user.password_hash
+        or not verify_password(payload.password, user.password_hash)
     ):
         raise HTTPException(401, detail=t("auth.invalid_credentials", locale))
     if not user.is_active:
         raise HTTPException(401, detail=t("auth.user_inactive", locale))
 
-    user.last_login_at = datetime.now(timezone.utc)
+    user.last_login_at = datetime.now(UTC)
     await db.commit()
 
-    token = create_access_token(str(user.id), extra={"role": user.role})
+    access_token_ttl_minutes = int(await _access_token_ttl_minutes(db))
+    token = create_access_token(
+        str(user.id),
+        extra={"role": user.role},
+        expire_minutes=access_token_ttl_minutes,
+    )
     return TokenResponse(
         access_token=token,
-        expires_in=settings.access_token_expire_minutes * 60,
+        expires_in=access_token_ttl_minutes * 60,
     )
 
 
@@ -85,7 +108,7 @@ async def get_me(user: CurrentUser) -> UserOut:
 
 @router.get("/companies", response_model=list[CompanyOut], tags=["org"])
 async def list_companies(
-    user: CurrentUser,
+    _user: CurrentUser,
     db: Annotated[AsyncSession, Depends(get_db)],
 ) -> list[CompanyOut]:
     result = await db.execute(select(Company).where(Company.is_active == True))  # noqa: E712

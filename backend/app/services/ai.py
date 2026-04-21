@@ -11,7 +11,6 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.core.crypto import decrypt
 from app.models import AICallLog, AIFeatureRouting, AIModel, User
 
-
 PROMPT_TEMPLATES: dict[str, str] = {
     "pr_description_polish": (
         "你是企业采购系统的写作助手。请把用户草稿改写为更清晰、专业的业务说明，"
@@ -29,7 +28,9 @@ PROMPT_TEMPLATES: dict[str, str] = {
 }
 
 
-async def _get_routing(db: AsyncSession, feature_code: str) -> tuple[AIFeatureRouting, AIModel | None]:
+async def _get_routing(
+    db: AsyncSession, feature_code: str
+) -> tuple[AIFeatureRouting, AIModel | None]:
     routing = (
         await db.execute(
             select(AIFeatureRouting).where(AIFeatureRouting.feature_code == feature_code)

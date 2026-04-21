@@ -2,6 +2,7 @@ from typing import Annotated
 from uuid import UUID
 
 from fastapi import APIRouter, Depends, status
+from fastapi.responses import Response
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.security import CurrentUser
@@ -16,25 +17,33 @@ from app.schemas import (
     PaymentCreateIn,
     PaymentOut,
     POProgressOut,
+    SerialNumberIn,
     ShipmentCreateIn,
     ShipmentOut,
-    SerialNumberIn,
 )
-from app.services import flow
-
+from app.services import export_excel, flow
 
 router = APIRouter()
 
 
-@router.post("/contracts", response_model=ContractOut, status_code=status.HTTP_201_CREATED, tags=["flow"])
+@router.post(
+    "/contracts", response_model=ContractOut, status_code=status.HTTP_201_CREATED, tags=["flow"]
+)
 async def create_contract(
     payload: ContractCreateIn,
     user: CurrentUser,
     db: Annotated[AsyncSession, Depends(get_db)],
 ):
     c = await flow.create_contract(
-        db, user, payload.po_id, payload.title, payload.total_amount,
-        payload.signed_date, payload.effective_date, payload.expiry_date, payload.notes,
+        db,
+        user,
+        payload.po_id,
+        payload.title,
+        payload.total_amount,
+        payload.signed_date,
+        payload.effective_date,
+        payload.expiry_date,
+        payload.notes,
     )
     return ContractOut.model_validate(c)
 
@@ -48,14 +57,18 @@ async def list_contracts(
     return [ContractOut.model_validate(c) for c in await flow.list_contracts(db, po_id)]
 
 
-@router.post("/shipments", response_model=ShipmentOut, status_code=status.HTTP_201_CREATED, tags=["flow"])
+@router.post(
+    "/shipments", response_model=ShipmentOut, status_code=status.HTTP_201_CREATED, tags=["flow"]
+)
 async def create_shipment(
     payload: ShipmentCreateIn,
     user: CurrentUser,
     db: Annotated[AsyncSession, Depends(get_db)],
 ):
     s = await flow.create_shipment(
-        db, user, payload.po_id,
+        db,
+        user,
+        payload.po_id,
         [i.model_dump() for i in payload.items],
         carrier=payload.carrier,
         tracking_number=payload.tracking_number,
@@ -88,14 +101,19 @@ async def record_serials(
     return [{"id": str(e.id), "serial_number": e.serial_number} for e in entries]
 
 
-@router.post("/payments", response_model=PaymentOut, status_code=status.HTTP_201_CREATED, tags=["flow"])
+@router.post(
+    "/payments", response_model=PaymentOut, status_code=status.HTTP_201_CREATED, tags=["flow"]
+)
 async def create_payment(
     payload: PaymentCreateIn,
     user: CurrentUser,
     db: Annotated[AsyncSession, Depends(get_db)],
 ):
     p = await flow.create_payment(
-        db, user, payload.po_id, payload.amount,
+        db,
+        user,
+        payload.po_id,
+        payload.amount,
         due_date=payload.due_date,
         payment_date=payload.payment_date,
         payment_method=payload.payment_method,
@@ -112,7 +130,9 @@ async def confirm_payment(
     user: CurrentUser,
     db: Annotated[AsyncSession, Depends(get_db)],
 ):
-    p = await flow.confirm_payment(db, user, payment_id, payload.payment_date, payload.transaction_ref)
+    p = await flow.confirm_payment(
+        db, user, payment_id, payload.payment_date, payload.transaction_ref
+    )
     return PaymentOut.model_validate(p)
 
 
@@ -125,6 +145,28 @@ async def list_payments(
     return [PaymentOut.model_validate(p) for p in await flow.list_payments(db, po_id)]
 
 
+@router.get("/payments/export/excel", tags=["flow"])
+async def export_payments_excel(
+    user: CurrentUser,
+    db: Annotated[AsyncSession, Depends(get_db)],
+    po_id: UUID | None = None,
+    status_filter: str | None = None,
+):
+    xlsx_bytes = await export_excel.render_payments_xlsx(
+        db,
+        po_id=str(po_id) if po_id else None,
+        status=status_filter,
+    )
+    return Response(
+        content=xlsx_bytes,
+        media_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+        headers={
+            "Content-Disposition": 'attachment; filename="mica-payments.xlsx"',
+            "Content-Length": str(len(xlsx_bytes)),
+        },
+    )
+
+
 @router.post("/invoices", status_code=status.HTTP_201_CREATED, tags=["flow"])
 async def create_invoice(
     payload: InvoiceCreateIn,
@@ -132,11 +174,12 @@ async def create_invoice(
     db: Annotated[AsyncSession, Depends(get_db)],
 ):
     inv, validations = await flow.create_invoice(
-        db, user,
+        db,
+        user,
         supplier_id=payload.supplier_id,
         invoice_number=payload.invoice_number,
         invoice_date=payload.invoice_date,
-        lines_in=[l.model_dump() for l in payload.lines],
+        lines_in=[line.model_dump() for line in payload.lines],
         tax_number=payload.tax_number,
         due_date=payload.due_date,
         notes=payload.notes,
@@ -157,10 +200,13 @@ async def create_invoice(
     return {
         "invoice": inv_dict,
         "validations": [
-            {**v, "invoiced_subtotal": str(v["invoiced_subtotal"]),
-             "po_remaining": str(v["po_remaining"]) if v["po_remaining"] is not None else None,
-             "overage": str(v["overage"]),
-             "po_item_id": str(v["po_item_id"]) if v["po_item_id"] else None}
+            {
+                **v,
+                "invoiced_subtotal": str(v["invoiced_subtotal"]),
+                "po_remaining": str(v["po_remaining"]) if v["po_remaining"] is not None else None,
+                "overage": str(v["overage"]),
+                "po_item_id": str(v["po_item_id"]) if v["po_item_id"] else None,
+            }
             for v in validations
         ],
     }

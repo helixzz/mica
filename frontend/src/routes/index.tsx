@@ -21,6 +21,7 @@ import { ShipmentsPage } from '@/pages/Shipments'
 import { SKUPage } from '@/pages/SKU'
 import { useAuth } from '@/auth/useAuth'
 import { getToken } from '@/api/client'
+import SearchResults from '@/pages/SearchResults'
 
 function Protected({ children }: { children: React.ReactNode }) {
   const { user, initialized, loadMe } = useAuth()
@@ -69,6 +70,7 @@ export function AppRoutes() {
         <Route path="/invoices/:id" element={<InvoiceDetailPage />} />
         <Route path="/sku" element={<SKUPage />} />
         <Route path="/admin" element={<AdminPage />} />
+        <Route path="/search" element={<SearchResults />} />
       </Route>
       <Route path="*" element={<Navigate to="/" replace />} />
     </Routes>

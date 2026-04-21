@@ -23,5 +23,23 @@
   },
   "po": {
     "not_found": "Purchase order not found"
+  },
+  "approval": {
+    "task_not_found": "Approval task not found"
+  },
+  "notification": {
+    "not_found": "Notification not found",
+    "ids_or_all_required": "Provide notification ids or all=true",
+    "approval": {
+      "new_task": "New approval task: {title}",
+      "approved": "Approved: {title}",
+      "rejected": "Rejected: {title}"
+    },
+    "contract": {
+      "expiring": "Contract expiring soon: {name}"
+    },
+    "price": {
+      "anomaly": "Price anomaly detected: {item}"
+    }
   }
 }

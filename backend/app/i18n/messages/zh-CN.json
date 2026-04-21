@@ -23,5 +23,23 @@
   },
   "po": {
     "not_found": "采购订单不存在"
+  },
+  "approval": {
+    "task_not_found": "审批任务不存在"
+  },
+  "notification": {
+    "not_found": "通知不存在",
+    "ids_or_all_required": "请提供通知 ID 列表或 all=true",
+    "approval": {
+      "new_task": "新审批任务: {title}",
+      "approved": "审批已通过: {title}",
+      "rejected": "审批被驳回: {title}"
+    },
+    "contract": {
+      "expiring": "合同即将到期: {name}"
+    },
+    "price": {
+      "anomaly": "价格异常: {item}"
+    }
   }
 }

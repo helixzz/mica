@@ -2,6 +2,7 @@
 
 Loaded from environment variables. See deploy/.env.example for the full list.
 """
+
 from functools import lru_cache
 from typing import Literal
 

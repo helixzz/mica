@@ -1,0 +1,441 @@
+from __future__ import annotations
+
+from collections.abc import Callable, Mapping
+from datetime import UTC, datetime, timedelta
+from uuid import UUID
+
+from fastapi import HTTPException
+from sqlalchemy import func, select, update
+from sqlalchemy.ext.asyncio import AsyncSession
+
+from app.db import new_uuid
+from app.i18n import t
+from app.models import (
+    Item,
+    JSONValue,
+    Notification,
+    NotificationCategory,
+    NotificationChannel,
+    NotificationSubscription,
+    PurchaseOrder,
+    SKUPriceAnomaly,
+    User,
+    UserRole,
+)
+from app.services import contracts as contract_svc
+
+NotificationText = str | Callable[[User | None], str]
+
+
+def _locale_for_user(user: User | None) -> str:
+    if user and user.preferred_locale:
+        return user.preferred_locale
+    return "zh-CN"
+
+
+def _resolve_text(value: NotificationText | None, user: User | None) -> str | None:
+    if value is None:
+        return None
+    return value(user) if callable(value) else value
+
+
+async def _get_user(session: AsyncSession, user_id: UUID) -> User | None:
+    return await session.get(User, user_id)
+
+
+async def _get_subscription(
+    session: AsyncSession,
+    *,
+    user_id: UUID,
+    category: NotificationCategory,
+) -> NotificationSubscription | None:
+    return (
+        await session.execute(
+            select(NotificationSubscription).where(
+                NotificationSubscription.user_id == user_id,
+                NotificationSubscription.category == category,
+            )
+        )
+    ).scalar_one_or_none()
+
+
+async def _recent_notification_exists(
+    session: AsyncSession,
+    *,
+    user_id: UUID,
+    category: NotificationCategory,
+    biz_type: str | None,
+    biz_id: UUID | None,
+    within_hours: int = 24,
+) -> bool:
+    if biz_type is None or biz_id is None:
+        return False
+    since = datetime.now(UTC) - timedelta(hours=within_hours)
+    return (
+        await session.execute(
+            select(Notification.id).where(
+                Notification.user_id == user_id,
+                Notification.category == category,
+                Notification.biz_type == biz_type,
+                Notification.biz_id == biz_id,
+                Notification.created_at >= since,
+            )
+        )
+    ).scalar_one_or_none() is not None
+
+
+async def _create_notification_if_fresh(
+    session: AsyncSession,
+    *,
+    user_id: UUID,
+    category: NotificationCategory,
+    title: NotificationText,
+    body: NotificationText | None = None,
+    link_url: str | None = None,
+    biz_type: str | None = None,
+    biz_id: UUID | None = None,
+    meta: Mapping[str, JSONValue] | None = None,
+) -> Notification | None:
+    if await _recent_notification_exists(
+        session,
+        user_id=user_id,
+        category=category,
+        biz_type=biz_type,
+        biz_id=biz_id,
+    ):
+        return None
+    return await create_notification(
+        session,
+        user_id=user_id,
+        category=category,
+        title=title,
+        body=body,
+        link_url=link_url,
+        biz_type=biz_type,
+        biz_id=biz_id,
+        meta=meta,
+    )
+
+
+async def create_notification(
+    session: AsyncSession,
+    *,
+    user_id: UUID,
+    category: NotificationCategory,
+    title: NotificationText,
+    body: NotificationText | None = None,
+    link_url: str | None = None,
+    biz_type: str | None = None,
+    biz_id: UUID | None = None,
+    meta: Mapping[str, JSONValue] | None = None,
+) -> Notification | None:
+    """Respects user's subscription. Returns created notification or None if muted."""
+    subscription = await _get_subscription(session, user_id=user_id, category=category)
+    if subscription is not None and not subscription.in_app_enabled:
+        return None
+
+    user: User | None = None
+    if callable(title) or callable(body):
+        user = await _get_user(session, user_id)
+
+    notification = Notification(
+        user_id=user_id,
+        category=category,
+        title=_resolve_text(title, user) or "",
+        body=_resolve_text(body, user),
+        link_url=link_url,
+        biz_type=biz_type,
+        biz_id=biz_id,
+        meta=dict(meta or {}),
+        sent_via=[NotificationChannel.IN_APP.value],
+    )
+    session.add(notification)
+    await session.flush()
+    return notification
+
+
+async def bulk_notify_role(
+    session: AsyncSession,
+    *,
+    role: UserRole,
+    company_id: UUID | None = None,
+    category: NotificationCategory,
+    title: NotificationText,
+    body: NotificationText | None = None,
+    link_url: str | None = None,
+    biz_type: str | None = None,
+    biz_id: UUID | None = None,
+    meta: Mapping[str, JSONValue] | None = None,
+) -> list[Notification]:
+    """Send same notification to all users with given role. Useful for approval-pending fanout."""
+    stmt = select(User).where(User.role == role.value, User.is_active.is_(True))
+    if company_id is not None:
+        stmt = stmt.where(User.company_id == company_id)
+    users = (await session.execute(stmt.order_by(User.username))).scalars().all()
+    notifications: list[Notification] = []
+    for user in users:
+        if biz_type is not None and biz_id is not None:
+            notification = await _create_notification_if_fresh(
+                session,
+                user_id=user.id,
+                category=category,
+                title=title,
+                body=body,
+                link_url=link_url,
+                biz_type=biz_type,
+                biz_id=biz_id,
+                meta=meta,
+            )
+        else:
+            notification = await create_notification(
+                session,
+                user_id=user.id,
+                category=category,
+                title=title,
+                body=body,
+                link_url=link_url,
+                biz_type=biz_type,
+                biz_id=biz_id,
+                meta=meta,
+            )
+        if notification is not None:
+            notifications.append(notification)
+    return notifications
+
+
+async def list_notifications(
+    session: AsyncSession,
+    *,
+    user_id: UUID,
+    unread_only: bool = False,
+    category: NotificationCategory | None = None,
+    limit: int = 20,
+    before_created_at: datetime | None = None,
+) -> list[Notification]:
+    """Paginated listing for user. Cursor-based on created_at for scale."""
+    stmt = select(Notification).where(Notification.user_id == user_id)
+    if unread_only:
+        stmt = stmt.where(Notification.read_at.is_(None))
+    if category is not None:
+        stmt = stmt.where(Notification.category == category)
+    if before_created_at is not None:
+        stmt = stmt.where(Notification.created_at < before_created_at)
+    stmt = stmt.order_by(Notification.created_at.desc(), Notification.id.desc()).limit(limit)
+    return list((await session.execute(stmt)).scalars().all())
+
+
+async def count_unread(session: AsyncSession, *, user_id: UUID) -> dict[str, int | dict[str, int]]:
+    """Returns {total: N, by_category: {approval: 3, ...}} for bell badge + filter UI."""
+    rows = (
+        await session.execute(
+            select(Notification.category, func.count(Notification.id))
+            .where(Notification.user_id == user_id, Notification.read_at.is_(None))
+            .group_by(Notification.category)
+        )
+    ).all()
+    by_category = {
+        category.value if isinstance(category, NotificationCategory) else str(category): int(count)
+        for category, count in rows
+    }
+    return {"total": sum(by_category.values()), "by_category": by_category}
+
+
+async def mark_read(
+    session: AsyncSession,
+    *,
+    user_id: UUID,
+    notification_ids: list[UUID] | None = None,
+    all: bool = False,
+) -> int:
+    """Mark specific notifications or all unread as read. Returns count updated.
+    Authorization: only the owner can mark their own notifications.
+    """
+    if not all and not notification_ids:
+        raise HTTPException(422, "notification.ids_or_all_required")
+
+    filters = [
+        Notification.user_id == user_id,
+        Notification.read_at.is_(None),
+    ]
+    if not all:
+        filters.append(Notification.id.in_(notification_ids or []))
+    count_stmt = select(func.count(Notification.id)).where(*filters)
+    updated = int((await session.execute(count_stmt)).scalar_one() or 0)
+    stmt = update(Notification).where(*filters)
+    await session.execute(
+        stmt.values(read_at=datetime.now(UTC)).execution_options(synchronize_session=False)
+    )
+    await session.commit()
+    return updated
+
+
+async def get_subscriptions(
+    session: AsyncSession, *, user_id: UUID
+) -> list[NotificationSubscription]:
+    """Returns all categories with user's current preference (defaults if row absent)."""
+    rows = (
+        (
+            await session.execute(
+                select(NotificationSubscription).where(NotificationSubscription.user_id == user_id)
+            )
+        )
+        .scalars()
+        .all()
+    )
+    by_category = {row.category: row for row in rows}
+    results: list[NotificationSubscription] = []
+    for category in NotificationCategory:
+        existing = by_category.get(category)
+        if existing is not None:
+            results.append(existing)
+            continue
+        results.append(
+            NotificationSubscription(
+                id=new_uuid(),
+                user_id=user_id,
+                category=category,
+                in_app_enabled=True,
+                email_enabled=False,
+            )
+        )
+    return results
+
+
+async def upsert_subscription(
+    session: AsyncSession,
+    *,
+    user_id: UUID,
+    category: NotificationCategory,
+    in_app_enabled: bool,
+    email_enabled: bool,
+) -> NotificationSubscription:
+    """Upsert per (user_id, category)."""
+    row = await _get_subscription(session, user_id=user_id, category=category)
+    if row is None:
+        row = NotificationSubscription(
+            user_id=user_id,
+            category=category,
+            in_app_enabled=in_app_enabled,
+            email_enabled=email_enabled,
+        )
+        session.add(row)
+    else:
+        row.in_app_enabled = in_app_enabled
+        row.email_enabled = email_enabled
+    await session.commit()
+    await session.refresh(row)
+    return row
+
+
+async def notify_expiring_contracts(
+    session: AsyncSession,
+    within_days: int = 30,
+) -> dict[str, int]:
+    contracts = await contract_svc.expiring_contracts(session, within_days=within_days)
+    created = 0
+    scanned = len(contracts)
+    for contract in contracts:
+        meta = {
+            "contract_number": contract.contract_number,
+            "expiry_date": contract.expiry_date.isoformat() if contract.expiry_date else None,
+            "po_id": str(contract.po_id),
+        }
+        purchase_order = await session.get(PurchaseOrder, contract.po_id)
+        if purchase_order is not None and purchase_order.created_by_id:
+            notification = await _create_notification_if_fresh(
+                session,
+                user_id=purchase_order.created_by_id,
+                category=NotificationCategory.CONTRACT_EXPIRING,
+                title=lambda user, contract=contract: t(
+                    "notification.contract.expiring",
+                    _locale_for_user(user),
+                    name=contract.title,
+                ),
+                body=contract.notes,
+                link_url=f"/contracts/{contract.id}",
+                biz_type="contract",
+                biz_id=contract.id,
+                meta=meta,
+            )
+            if notification is not None:
+                created += 1
+
+        manager_notifications = await bulk_notify_role(
+            session,
+            role=UserRole.PROCUREMENT_MGR,
+            company_id=purchase_order.company_id if purchase_order is not None else None,
+            category=NotificationCategory.CONTRACT_EXPIRING,
+            title=lambda user, contract=contract: t(
+                "notification.contract.expiring",
+                _locale_for_user(user),
+                name=contract.title,
+            ),
+            body=contract.notes,
+            link_url=f"/contracts/{contract.id}",
+            biz_type="contract",
+            biz_id=contract.id,
+            meta=meta,
+        )
+        created += len(manager_notifications)
+
+    await session.commit()
+    return {"scanned": scanned, "created": created}
+
+
+async def notify_new_price_anomalies(session: AsyncSession) -> dict[str, int]:
+    rows = (
+        await session.execute(
+            select(SKUPriceAnomaly, Item)
+            .join(Item, Item.id == SKUPriceAnomaly.item_id)
+            .where(SKUPriceAnomaly.status == "new")
+            .order_by(SKUPriceAnomaly.created_at.desc())
+        )
+    ).all()
+
+    created = 0
+    scanned = len(rows)
+    for anomaly, item in rows:
+        meta = {
+            "severity": anomaly.severity,
+            "observed_price": str(anomaly.observed_price),
+            "baseline_avg_price": str(anomaly.baseline_avg_price),
+            "deviation_pct": str(anomaly.deviation_pct),
+            "item_id": str(item.id),
+        }
+        created += len(
+            await bulk_notify_role(
+                session,
+                role=UserRole.PROCUREMENT_MGR,
+                category=NotificationCategory.PRICE_ANOMALY,
+                title=lambda recipient, item=item: t(
+                    "notification.price.anomaly",
+                    _locale_for_user(recipient),
+                    item=item.name,
+                ),
+                body=item.specification,
+                link_url="/sku/anomalies",
+                biz_type="sku_price_anomaly",
+                biz_id=anomaly.id,
+                meta=meta,
+            )
+        )
+        created += len(
+            await bulk_notify_role(
+                session,
+                role=UserRole.IT_BUYER,
+                category=NotificationCategory.PRICE_ANOMALY,
+                title=lambda recipient, item=item: t(
+                    "notification.price.anomaly",
+                    _locale_for_user(recipient),
+                    item=item.name,
+                ),
+                body=item.specification,
+                link_url="/sku/anomalies",
+                biz_type="sku_price_anomaly",
+                biz_id=anomaly.id,
+                meta=meta,
+            )
+        )
+
+    await session.commit()
+    return {"scanned": scanned, "created": created}

@@ -1,8 +1,9 @@
 """SKU market price tracking, benchmark computation, anomaly detection."""
+
 from __future__ import annotations
 
 import statistics
-from datetime import date, datetime, timedelta, timezone
+from datetime import UTC, date, datetime, timedelta
 from decimal import Decimal
 from uuid import UUID
 
@@ -18,14 +19,11 @@ from app.models import (
     SKUPriceRecord,
     User,
 )
+from app.services.system_params import system_params
 
 
-def _as_decimal(v) -> Decimal:
+def _as_decimal(v: Decimal | int | float | str) -> Decimal:
     return v if isinstance(v, Decimal) else Decimal(str(v))
-
-
-DEFAULT_WINDOW_DAYS = 90
-DEFAULT_ANOMALY_THRESHOLD_PCT = Decimal("20")
 
 
 async def record_price(
@@ -38,7 +36,7 @@ async def record_price(
     source_type: str = "manual",
     source_ref: str | None = None,
     notes: str | None = None,
-    anomaly_threshold_pct: Decimal = DEFAULT_ANOMALY_THRESHOLD_PCT,
+    anomaly_threshold_pct: Decimal | None = None,
 ) -> tuple[SKUPriceRecord, SKUPriceAnomaly | None]:
     item = await db.get(Item, item_id)
     if item is None:
@@ -58,14 +56,25 @@ async def record_price(
     db.add(record)
     await db.flush()
 
-    benchmark = await _refresh_benchmark(db, item_id, window_days=DEFAULT_WINDOW_DAYS)
+    benchmark_window_days = await system_params.get_int(db, "sku.benchmark_window_days")
+    threshold_pct = (
+        anomaly_threshold_pct
+        if anomaly_threshold_pct is not None
+        else Decimal(str(await system_params.get_int(db, "sku.anomaly_threshold_pct")))
+    )
+    sample_size_min = await system_params.get_int(db, "sku.sample_size_min")
+    critical_multiplier = await system_params.get_decimal(db, "sku.critical_multiplier")
+
+    benchmark = await _refresh_benchmark(db, item_id, window_days=benchmark_window_days)
     anomaly: SKUPriceAnomaly | None = None
-    if benchmark and benchmark.sample_size >= 3:
+    if benchmark and benchmark.sample_size >= sample_size_min:
         dev_pct = (
             (_as_decimal(price) - benchmark.avg_price) / benchmark.avg_price * Decimal("100")
         ).quantize(Decimal("0.0001"))
-        if abs(dev_pct) >= anomaly_threshold_pct:
-            severity = "critical" if abs(dev_pct) >= anomaly_threshold_pct * 2 else "warning"
+        if abs(dev_pct) >= threshold_pct:
+            severity = (
+                "critical" if abs(dev_pct) >= threshold_pct * critical_multiplier else "warning"
+            )
             anomaly = SKUPriceAnomaly(
                 item_id=item_id,
                 price_record_id=record.id,
@@ -100,17 +109,26 @@ async def record_price(
 
 
 async def _refresh_benchmark(
-    db: AsyncSession, item_id: UUID, window_days: int = DEFAULT_WINDOW_DAYS
+    db: AsyncSession, item_id: UUID, window_days: int | None = None
 ) -> SKUPriceBenchmark | None:
-    since = datetime.now(timezone.utc).date() - timedelta(days=window_days)
+    resolved_window_days = (
+        window_days
+        if window_days is not None
+        else await system_params.get_int(db, "sku.benchmark_window_days")
+    )
+    since = datetime.now(UTC).date() - timedelta(days=resolved_window_days)
     rows = (
-        await db.execute(
-            select(SKUPriceRecord.price).where(
-                SKUPriceRecord.item_id == item_id,
-                SKUPriceRecord.quotation_date >= since,
+        (
+            await db.execute(
+                select(SKUPriceRecord.price).where(
+                    SKUPriceRecord.item_id == item_id,
+                    SKUPriceRecord.quotation_date >= since,
+                )
             )
         )
-    ).scalars().all()
+        .scalars()
+        .all()
+    )
     if not rows:
         return None
 
@@ -125,21 +143,21 @@ async def _refresh_benchmark(
         await db.execute(
             select(SKUPriceBenchmark).where(
                 SKUPriceBenchmark.item_id == item_id,
-                SKUPriceBenchmark.window_days == window_days,
+                SKUPriceBenchmark.window_days == resolved_window_days,
             )
         )
     ).scalar_one_or_none()
     if existing is None:
         bm = SKUPriceBenchmark(
             item_id=item_id,
-            window_days=window_days,
+            window_days=resolved_window_days,
             avg_price=Decimal(str(avg)).quantize(Decimal("0.0001")),
             median_price=Decimal(str(med)).quantize(Decimal("0.0001")),
             stddev=Decimal(str(std)).quantize(Decimal("0.0001")),
             min_price=Decimal(str(mn)).quantize(Decimal("0.0001")),
             max_price=Decimal(str(mx)).quantize(Decimal("0.0001")),
             sample_size=len(prices),
-            last_refreshed_at=datetime.now(timezone.utc),
+            last_refreshed_at=datetime.now(UTC),
         )
         db.add(bm)
         await db.flush()
@@ -150,7 +168,7 @@ async def _refresh_benchmark(
     existing.min_price = Decimal(str(mn)).quantize(Decimal("0.0001"))
     existing.max_price = Decimal(str(mx)).quantize(Decimal("0.0001"))
     existing.sample_size = len(prices)
-    existing.last_refreshed_at = datetime.now(timezone.utc)
+    existing.last_refreshed_at = datetime.now(UTC)
     await db.flush()
     return existing
 
@@ -165,13 +183,18 @@ async def list_price_records(
 
 
 async def get_benchmark(
-    db: AsyncSession, item_id: UUID, window_days: int = DEFAULT_WINDOW_DAYS
+    db: AsyncSession, item_id: UUID, window_days: int | None = None
 ) -> SKUPriceBenchmark | None:
+    resolved_window_days = (
+        window_days
+        if window_days is not None
+        else await system_params.get_int(db, "sku.benchmark_window_days")
+    )
     return (
         await db.execute(
             select(SKUPriceBenchmark).where(
                 SKUPriceBenchmark.item_id == item_id,
-                SKUPriceBenchmark.window_days == window_days,
+                SKUPriceBenchmark.window_days == resolved_window_days,
             )
         )
     ).scalar_one_or_none()
@@ -194,7 +217,7 @@ async def acknowledge_anomaly(
         raise HTTPException(404, "anomaly.not_found")
     row.status = "acknowledged"
     row.acknowledged_by_id = actor.id
-    row.acknowledged_at = datetime.now(timezone.utc)
+    row.acknowledged_at = datetime.now(UTC)
     if notes:
         row.notes = notes
     await db.commit()
@@ -203,17 +226,26 @@ async def acknowledge_anomaly(
 
 
 async def price_trend(
-    db: AsyncSession, item_id: UUID, days: int = 180
-) -> list[dict]:
-    since = datetime.now(timezone.utc).date() - timedelta(days=days)
+    db: AsyncSession, item_id: UUID, days: int | None = None
+) -> list[dict[str, str | None]]:
+    resolved_days = (
+        days if days is not None else await system_params.get_int(db, "sku.price_trend_window_days")
+    )
+    since = datetime.now(UTC).date() - timedelta(days=resolved_days)
     rows = (
-        await db.execute(
-            select(SKUPriceRecord).where(
-                SKUPriceRecord.item_id == item_id,
-                SKUPriceRecord.quotation_date >= since,
-            ).order_by(SKUPriceRecord.quotation_date)
+        (
+            await db.execute(
+                select(SKUPriceRecord)
+                .where(
+                    SKUPriceRecord.item_id == item_id,
+                    SKUPriceRecord.quotation_date >= since,
+                )
+                .order_by(SKUPriceRecord.quotation_date)
+            )
         )
-    ).scalars().all()
+        .scalars()
+        .all()
+    )
     return [
         {
             "date": r.quotation_date.isoformat(),

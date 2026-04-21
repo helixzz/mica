@@ -1,4 +1,5 @@
 """SQLAlchemy async engine, session factory, and declarative base."""
+
 from collections.abc import AsyncGenerator
 from datetime import datetime
 from uuid import UUID, uuid4

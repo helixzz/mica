@@ -1,11 +1,29 @@
 from __future__ import annotations
 
+import re
+
+# pyright: reportUnannotatedClassAttribute=false, reportAny=false, reportExplicitAny=false, reportUnknownMemberType=false, reportUnknownVariableType=false
 from datetime import date, datetime
 from decimal import Decimal
 from typing import Literal
 from uuid import UUID
 
-from pydantic import BaseModel, ConfigDict, Field
+from pydantic import BaseModel, ConfigDict, Field, field_validator
+
+from app.models import JSONValue
+
+_MASTER_DATA_CODE_RE = re.compile(r"^[A-Z0-9_-]+$")
+
+
+def _normalize_master_data_code(value: str) -> str:
+    normalized = value.strip().upper()
+    if not normalized:
+        raise ValueError("code is required")
+    if not _MASTER_DATA_CODE_RE.fullmatch(normalized):
+        raise ValueError(
+            "code must contain only uppercase letters, numbers, hyphens, or underscores"
+        )
+    return normalized
 
 
 class LoginRequest(BaseModel):
@@ -32,6 +50,34 @@ class UserOut(BaseModel):
     is_active: bool
 
 
+class CompanyCreate(BaseModel):
+    code: str = Field(..., min_length=1, max_length=32)
+    name_zh: str = Field(..., min_length=1, max_length=255)
+    name_en: str | None = Field(default=None, max_length=255)
+    default_locale: str = Field(default="zh-CN", min_length=2, max_length=10)
+    default_currency: str = Field(default="CNY", min_length=3, max_length=3)
+
+    @field_validator("code")
+    @classmethod
+    def validate_code(cls, value: str) -> str:
+        return _normalize_master_data_code(value)
+
+
+class CompanyUpdate(BaseModel):
+    code: str | None = Field(default=None, min_length=1, max_length=32)
+    name_zh: str | None = Field(default=None, min_length=1, max_length=255)
+    name_en: str | None = Field(default=None, max_length=255)
+    default_locale: str | None = Field(default=None, min_length=2, max_length=10)
+    default_currency: str | None = Field(default=None, min_length=3, max_length=3)
+
+    @field_validator("code")
+    @classmethod
+    def validate_code(cls, value: str | None) -> str | None:
+        if value is None:
+            return value
+        return _normalize_master_data_code(value)
+
+
 class CompanyOut(BaseModel):
     model_config = ConfigDict(from_attributes=True)
     id: UUID
@@ -40,6 +86,36 @@ class CompanyOut(BaseModel):
     name_en: str | None = None
     default_locale: str
     default_currency: str
+    is_active: bool
+    created_at: datetime
+    updated_at: datetime
+
+
+class DepartmentCreate(BaseModel):
+    company_id: UUID
+    code: str = Field(..., min_length=1, max_length=32)
+    name_zh: str = Field(..., min_length=1, max_length=128)
+    name_en: str | None = Field(default=None, max_length=128)
+    parent_id: UUID | None = None
+
+    @field_validator("code")
+    @classmethod
+    def validate_code(cls, value: str) -> str:
+        return _normalize_master_data_code(value)
+
+
+class DepartmentUpdate(BaseModel):
+    code: str | None = Field(default=None, min_length=1, max_length=32)
+    name_zh: str | None = Field(default=None, min_length=1, max_length=128)
+    name_en: str | None = Field(default=None, max_length=128)
+    parent_id: UUID | None = None
+
+    @field_validator("code")
+    @classmethod
+    def validate_code(cls, value: str | None) -> str | None:
+        if value is None:
+            return value
+        return _normalize_master_data_code(value)
 
 
 class DepartmentOut(BaseModel):
@@ -49,6 +125,42 @@ class DepartmentOut(BaseModel):
     code: str
     name_zh: str
     name_en: str | None = None
+    parent_id: UUID | None = None
+    is_active: bool
+    created_at: datetime
+    updated_at: datetime
+
+
+class SupplierCreate(BaseModel):
+    code: str = Field(..., min_length=1, max_length=32)
+    name: str = Field(..., min_length=1, max_length=255)
+    tax_number: str | None = Field(default=None, max_length=64)
+    contact_name: str | None = Field(default=None, max_length=128)
+    contact_phone: str | None = Field(default=None, max_length=32)
+    contact_email: str | None = Field(default=None, max_length=255)
+    notes: str | None = None
+
+    @field_validator("code")
+    @classmethod
+    def validate_code(cls, value: str) -> str:
+        return _normalize_master_data_code(value)
+
+
+class SupplierUpdate(BaseModel):
+    code: str | None = Field(default=None, min_length=1, max_length=32)
+    name: str | None = Field(default=None, min_length=1, max_length=255)
+    tax_number: str | None = Field(default=None, max_length=64)
+    contact_name: str | None = Field(default=None, max_length=128)
+    contact_phone: str | None = Field(default=None, max_length=32)
+    contact_email: str | None = Field(default=None, max_length=255)
+    notes: str | None = None
+
+    @field_validator("code")
+    @classmethod
+    def validate_code(cls, value: str | None) -> str | None:
+        if value is None:
+            return value
+        return _normalize_master_data_code(value)
 
 
 class SupplierOut(BaseModel):
@@ -56,9 +168,44 @@ class SupplierOut(BaseModel):
     id: UUID
     code: str
     name: str
+    tax_number: str | None = None
     contact_name: str | None = None
     contact_phone: str | None = None
     contact_email: str | None = None
+    notes: str | None = None
+    is_active: bool
+    created_at: datetime
+    updated_at: datetime
+
+
+class ItemCreate(BaseModel):
+    code: str = Field(..., min_length=1, max_length=64)
+    name: str = Field(..., min_length=1, max_length=255)
+    category: str | None = Field(default=None, max_length=64)
+    uom: str = Field(default="EA", min_length=1, max_length=16)
+    specification: str | None = None
+    requires_serial: bool = False
+
+    @field_validator("code")
+    @classmethod
+    def validate_code(cls, value: str) -> str:
+        return _normalize_master_data_code(value)
+
+
+class ItemUpdate(BaseModel):
+    code: str | None = Field(default=None, min_length=1, max_length=64)
+    name: str | None = Field(default=None, min_length=1, max_length=255)
+    category: str | None = Field(default=None, max_length=64)
+    uom: str | None = Field(default=None, min_length=1, max_length=16)
+    specification: str | None = None
+    requires_serial: bool | None = None
+
+    @field_validator("code")
+    @classmethod
+    def validate_code(cls, value: str | None) -> str | None:
+        if value is None:
+            return value
+        return _normalize_master_data_code(value)
 
 
 class ItemOut(BaseModel):
@@ -70,6 +217,9 @@ class ItemOut(BaseModel):
     uom: str
     specification: str | None = None
     requires_serial: bool = False
+    is_active: bool
+    created_at: datetime
+    updated_at: datetime
 
 
 class PRItemIn(BaseModel):
@@ -422,6 +572,7 @@ class ApprovalTaskOut(BaseModel):
     status: str
     action: str | None
     comment: str | None
+    meta: dict[str, JSONValue] = Field(default_factory=dict)
     assigned_at: datetime
     acted_at: datetime | None
 
@@ -441,6 +592,64 @@ class ApprovalInstanceOut(BaseModel):
     submitted_at: datetime | None
     completed_at: datetime | None
     tasks: list[ApprovalTaskOut]
+
+
+class ApprovalRuleStageIn(BaseModel):
+    stage_name: str = Field(..., min_length=1, max_length=100)
+    approver_role: Literal[
+        "admin", "dept_manager", "procurement_mgr", "finance_auditor", "it_buyer"
+    ]
+    order: int = Field(..., ge=1)
+
+
+class ApprovalRuleIn(BaseModel):
+    name: str = Field(..., min_length=1, max_length=255)
+    biz_type: str = Field(..., min_length=1, max_length=64)
+    amount_min: Decimal | None = None
+    amount_max: Decimal | None = None
+    stages: list[ApprovalRuleStageIn] = Field(..., min_length=1)
+    is_active: bool = True
+    priority: int = 100
+
+
+class ApprovalRuleOut(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+    id: UUID
+    name: str
+    biz_type: str
+    amount_min: Decimal | None
+    amount_max: Decimal | None
+    stages: list[ApprovalRuleStageIn]
+    is_active: bool
+    priority: int
+    created_at: datetime
+    updated_at: datetime
+
+
+class ApproverDelegationIn(BaseModel):
+    to_user_id: UUID
+    starts_at: datetime
+    ends_at: datetime
+    reason: str | None = Field(default=None, max_length=255)
+
+
+class ApproverDelegationAdminIn(ApproverDelegationIn):
+    from_user_id: UUID
+    is_active: bool = True
+
+
+class ApproverDelegationOut(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+    id: UUID
+    from_user_id: UUID
+    to_user_id: UUID
+    reason: str | None
+    starts_at: datetime
+    ends_at: datetime
+    is_active: bool
+    revoked_at: datetime | None
+    created_at: datetime
+    updated_at: datetime
 
 
 class AIFeaturePromptIn(BaseModel):
@@ -519,3 +728,85 @@ class InvoiceExtractOut(BaseModel):
     raw_extract_source: str
     confidence: float
     error: str | None = None
+
+
+class NotificationOut(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+    id: UUID
+    category: str
+    title: str
+    body: str | None
+    link_url: str | None
+    biz_type: str | None
+    biz_id: UUID | None
+    meta: dict[str, object]
+    read_at: datetime | None
+    sent_via: list[str]
+    created_at: datetime
+
+
+class NotificationListResponse(BaseModel):
+    items: list[NotificationOut]
+    has_more: bool
+
+
+class UnreadCountResponse(BaseModel):
+    total: int
+    by_category: dict[str, int]
+
+
+class MarkReadRequest(BaseModel):
+    ids: list[UUID] | None = None
+    all: bool = False
+
+
+class SubscriptionOut(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+    category: str
+    in_app_enabled: bool
+    email_enabled: bool
+
+
+class SubscriptionUpdate(BaseModel):
+    in_app_enabled: bool
+    email_enabled: bool
+
+
+class SystemParameterOut(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
+    id: UUID
+    key: str
+    category: str
+    value: JSONValue
+    data_type: str
+    default_value: JSONValue
+    min_value: JSONValue | None = None
+    max_value: JSONValue | None = None
+    unit: str | None = None
+    description_zh: str
+    description_en: str
+    is_sensitive: bool
+    updated_by_id: UUID | None = None
+    created_at: datetime
+    updated_at: datetime
+
+
+class SystemParameterUpdate(BaseModel):
+    value: JSONValue
+
+
+class SearchHit(BaseModel):
+    entity_type: Literal["pr", "po", "contract", "contract_doc", "invoice", "supplier", "item"]
+    entity_id: str
+    title: str
+    snippet: str | None = None
+    score: float
+    link_url: str
+    meta: dict[str, JSONValue] = Field(default_factory=dict)
+
+
+class SearchResponse(BaseModel):
+    total: int
+    by_type: dict[str, list[SearchHit]]
+    top_hits: list[SearchHit]

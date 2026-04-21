@@ -1,5 +1,7 @@
 """Security primitives: password hashing, JWT, auth deps."""
-from datetime import datetime, timedelta, timezone
+
+from collections.abc import Mapping
+from datetime import UTC, datetime, timedelta
 from typing import Annotated
 from uuid import UUID
 
@@ -29,12 +31,17 @@ def verify_password(plain: str, hashed: str) -> bool:
     return pwd_context.verify(plain, hashed)
 
 
-def create_access_token(subject: str, extra: dict | None = None) -> str:
-    expire = datetime.now(timezone.utc) + timedelta(minutes=settings.access_token_expire_minutes)
+def create_access_token(
+    subject: str,
+    extra: Mapping[str, str] | None = None,
+    expire_minutes: int | None = None,
+) -> str:
+    ttl_minutes = expire_minutes or settings.access_token_expire_minutes
+    expire = datetime.now(UTC) + timedelta(minutes=ttl_minutes)
     to_encode = {
         "sub": subject,
         "exp": expire,
-        "iat": datetime.now(timezone.utc),
+        "iat": datetime.now(UTC),
         "type": "access",
     }
     if extra:

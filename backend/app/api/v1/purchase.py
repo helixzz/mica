@@ -2,6 +2,7 @@ from typing import Annotated
 from uuid import UUID
 
 from fastapi import APIRouter, Depends, status
+from fastapi.responses import Response
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.security import CurrentUser
@@ -15,6 +16,7 @@ from app.schemas import (
     PROut,
     PRUpdateIn,
 )
+from app.services import export_pdf
 from app.services import purchase as svc
 
 router = APIRouter()
@@ -118,3 +120,21 @@ async def get_po(
 ):
     po = await svc.get_po(db, po_id)
     return POOut.model_validate(po)
+
+
+@router.get("/purchase-orders/{po_id}/export/pdf", tags=["purchase"])
+async def export_po_pdf(
+    po_id: UUID,
+    user: CurrentUser,
+    db: Annotated[AsyncSession, Depends(get_db)],
+):
+    await svc.get_po(db, po_id)
+    pdf_bytes = await export_pdf.render_po_pdf(db, po_id)
+    return Response(
+        content=pdf_bytes,
+        media_type="application/pdf",
+        headers={
+            "Content-Disposition": f'attachment; filename="PO-{po_id}.pdf"',
+            "Content-Length": str(len(pdf_bytes)),
+        },
+    )

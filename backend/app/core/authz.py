@@ -1,10 +1,10 @@
 from __future__ import annotations
 
-import yaml
 from pathlib import Path
 
-from app.models import User, UserRole
+import yaml
 
+from app.models import User, UserRole
 
 POLICIES_DIR = Path(__file__).resolve().parents[2] / "cerbos-policies"
 

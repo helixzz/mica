@@ -1,6 +1,7 @@
 from __future__ import annotations
 
-from datetime import datetime, timezone
+# pyright: reportUnknownParameterType=false, reportMissingParameterType=false, reportExplicitAny=false
+from datetime import UTC, datetime
 from decimal import Decimal
 from uuid import UUID
 
@@ -11,6 +12,7 @@ from sqlalchemy.orm import selectinload
 
 from app.models import (
     AuditLog,
+    JSONValue,
     POItem,
     POStatus,
     PRItem,
@@ -24,7 +26,7 @@ from app.schemas import PRCreateIn, PRDecisionIn, PRUpdateIn
 from app.services import approval as approval_svc
 
 
-def _as_decimal(v) -> Decimal:
+def _as_decimal(v: Decimal | int | float | str) -> Decimal:
     return v if isinstance(v, Decimal) else Decimal(str(v))
 
 
@@ -33,7 +35,7 @@ def _compute_line_amount(qty: Decimal, unit_price: Decimal) -> Decimal:
 
 
 async def _next_pr_number(db: AsyncSession) -> str:
-    year = datetime.now(timezone.utc).year
+    year = datetime.now(UTC).year
     prefix = f"PR-{year}-"
     result = await db.execute(
         select(func.count(PurchaseRequisition.id)).where(
@@ -45,12 +47,10 @@ async def _next_pr_number(db: AsyncSession) -> str:
 
 
 async def _next_po_number(db: AsyncSession) -> str:
-    year = datetime.now(timezone.utc).year
+    year = datetime.now(UTC).year
     prefix = f"PO-{year}-"
     result = await db.execute(
-        select(func.count(PurchaseOrder.id)).where(
-            PurchaseOrder.po_number.startswith(prefix)
-        )
+        select(func.count(PurchaseOrder.id)).where(PurchaseOrder.po_number.startswith(prefix))
     )
     n = (result.scalar_one() or 0) + 1
     return f"{prefix}{n:04d}"
@@ -63,7 +63,7 @@ async def _audit(
     resource_type: str,
     resource_id: str,
     comment: str | None = None,
-    metadata: dict | None = None,
+    metadata: dict[str, JSONValue] | None = None,
 ) -> None:
     db.add(
         AuditLog(
@@ -113,11 +113,20 @@ async def create_pr(db: AsyncSession, actor: User, payload: PRCreateIn) -> Purch
             )
         )
     pr.total_amount = total
-    await _audit(db, actor, "pr.created", "purchase_requisition", str(pr.id),
-                 metadata={"pr_number": pr.pr_number})
+    await _audit(
+        db,
+        actor,
+        "pr.created",
+        "purchase_requisition",
+        str(pr.id),
+        metadata={"pr_number": pr.pr_number},
+    )
     await db.commit()
     await db.refresh(pr)
-    return await _load_pr(db, pr.id)
+    result = await _load_pr(db, pr.id)
+    if result is None:
+        raise HTTPException(404, "pr.not_found")
+    return result
 
 
 async def update_pr(
@@ -168,7 +177,10 @@ async def update_pr(
 
     await _audit(db, actor, "pr.updated", "purchase_requisition", str(pr.id))
     await db.commit()
-    return await _load_pr(db, pr.id)
+    result = await _load_pr(db, pr.id)
+    if result is None:
+        raise HTTPException(404, "pr.not_found")
+    return result
 
 
 async def submit_pr(db: AsyncSession, actor: User, pr_id: UUID) -> PurchaseRequisition:
@@ -183,9 +195,9 @@ async def submit_pr(db: AsyncSession, actor: User, pr_id: UUID) -> PurchaseRequi
         raise HTTPException(422, "pr.no_items")
 
     pr.status = PRStatus.SUBMITTED.value
-    pr.submitted_at = datetime.now(timezone.utc)
+    pr.submitted_at = datetime.now(UTC)
 
-    await approval_svc.create_instance_for_pr(
+    _ = await approval_svc.create_instance_for_pr(
         db,
         submitter=actor,
         biz_type="purchase_requisition",
@@ -196,7 +208,10 @@ async def submit_pr(db: AsyncSession, actor: User, pr_id: UUID) -> PurchaseRequi
     )
     await _audit(db, actor, "pr.submitted", "purchase_requisition", str(pr.id))
     await db.commit()
-    return await _load_pr(db, pr.id)
+    result = await _load_pr(db, pr.id)
+    if result is None:
+        raise HTTPException(404, "pr.not_found")
+    return result
 
 
 async def decide_pr(
@@ -211,23 +226,38 @@ async def decide_pr(
     instance = await approval_svc.get_instance_for_biz(db, "purchase_requisition", pr.id)
     if instance is None:
         raise HTTPException(404, "pr.approval_not_found")
-    await approval_svc.act_on_task(db, actor, instance.id, payload.action, payload.comment)
+    instance = await approval_svc.act_on_task(
+        db, actor, instance.id, payload.action, payload.comment
+    )
 
-    if payload.action == "approve":
+    if instance.status == "approved":
         pr.status = PRStatus.APPROVED.value
-    elif payload.action == "reject":
+        pr.decided_at = datetime.now(UTC)
+        pr.decided_by_id = actor.id
+        pr.decision_comment = payload.comment
+    elif instance.status == "rejected":
         pr.status = PRStatus.REJECTED.value
-    else:
+        pr.decided_at = datetime.now(UTC)
+        pr.decided_by_id = actor.id
+        pr.decision_comment = payload.comment
+    elif instance.status == "returned":
         pr.status = PRStatus.RETURNED.value
-    pr.decided_at = datetime.now(timezone.utc)
-    pr.decided_by_id = actor.id
-    pr.decision_comment = payload.comment
+        pr.decided_at = datetime.now(UTC)
+        pr.decided_by_id = actor.id
+        pr.decision_comment = payload.comment
     await _audit(
-        db, actor, f"pr.{payload.action}", "purchase_requisition", str(pr.id),
+        db,
+        actor,
+        f"pr.{payload.action}",
+        "purchase_requisition",
+        str(pr.id),
         comment=payload.comment,
     )
     await db.commit()
-    return await _load_pr(db, pr.id)
+    result = await _load_pr(db, pr.id)
+    if result is None:
+        raise HTTPException(404, "pr.not_found")
+    return result
 
 
 async def convert_pr_to_po(db: AsyncSession, actor: User, pr_id: UUID) -> PurchaseOrder:
@@ -274,11 +304,18 @@ async def convert_pr_to_po(db: AsyncSession, actor: User, pr_id: UUID) -> Purcha
 
     pr.status = PRStatus.CONVERTED.value
     await _audit(
-        db, actor, "po.created_from_pr", "purchase_order", str(po.id),
+        db,
+        actor,
+        "po.created_from_pr",
+        "purchase_order",
+        str(po.id),
         metadata={"pr_id": str(pr.id), "pr_number": pr.pr_number, "po_number": po.po_number},
     )
     await db.commit()
-    return await _load_po(db, po.id)
+    result = await _load_po(db, po.id)
+    if result is None:
+        raise HTTPException(404, "po.not_found")
+    return result
 
 
 async def _load_pr(db: AsyncSession, pr_id: UUID) -> PurchaseRequisition | None:
@@ -326,6 +363,7 @@ async def get_pr(db: AsyncSession, actor: User, pr_id: UUID) -> PurchaseRequisit
 
 
 async def list_pos(db: AsyncSession, actor: User) -> list[PurchaseOrder]:
+    _ = actor
     stmt = select(PurchaseOrder).order_by(PurchaseOrder.created_at.desc())
     result = await db.execute(stmt)
     return list(result.scalars().all())

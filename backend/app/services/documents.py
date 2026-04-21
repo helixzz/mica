@@ -2,18 +2,18 @@ from __future__ import annotations
 
 import hashlib
 import secrets
-from datetime import datetime, timedelta, timezone
+from datetime import UTC, datetime, timedelta
 from pathlib import Path
 from uuid import UUID
 
 import aiofiles
-import aiofiles.os
 from fastapi import HTTPException, UploadFile
 from sqlalchemy import select, update
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.config import get_settings
 from app.models import Document, DocumentDownloadToken, User
+from app.services.system_params import system_params
 
 settings = get_settings()
 
@@ -27,7 +27,6 @@ ALLOWED_CONTENT_TYPES = {
     "image/png",
     "image/tiff",
 }
-MAX_FILE_SIZE = 10 * 1024 * 1024
 
 
 def _media_root() -> Path:
@@ -43,19 +42,20 @@ def _storage_key(content_hash: str, original_filename: str) -> str:
     return f"{content_hash[:2]}/{content_hash}{suffix}"
 
 
-async def _stream_read_and_hash(file: UploadFile) -> tuple[str, int, bytes]:
+async def _stream_read_and_hash(db: AsyncSession, file: UploadFile) -> tuple[str, int, bytes]:
     hasher = hashlib.sha256()
     chunks: list[bytes] = []
     size = 0
-    CHUNK = 1024 * 1024
+    chunk_size = await system_params.get_int(db, "upload.chunk_size_bytes")
+    max_file_size = await system_params.get_int(db, "upload.max_file_size_bytes")
     while True:
-        chunk = await file.read(CHUNK)
+        chunk = await file.read(chunk_size)
         if not chunk:
             break
         hasher.update(chunk)
         chunks.append(chunk)
         size += len(chunk)
-        if size > MAX_FILE_SIZE:
+        if size > max_file_size:
             raise HTTPException(413, "file.too_large")
     return hasher.hexdigest(), size, b"".join(chunks)
 
@@ -70,7 +70,7 @@ async def upload_document(
     if content_type not in ALLOWED_CONTENT_TYPES:
         raise HTTPException(415, f"file.unsupported_type:{content_type}")
 
-    content_hash, file_size, content = await _stream_read_and_hash(file)
+    content_hash, file_size, content = await _stream_read_and_hash(db, file)
 
     existing = (
         await db.execute(
@@ -91,7 +91,7 @@ async def upload_document(
     tmp = dest.with_suffix(dest.suffix + ".tmp")
     async with aiofiles.open(tmp, "wb") as f:
         await f.write(content)
-    tmp.rename(dest)
+    _ = tmp.rename(dest)
 
     doc = Document(
         storage_key=key,
@@ -122,16 +122,17 @@ async def create_download_token(
     db: AsyncSession,
     document_id: UUID,
     created_by: User,
-    ttl_seconds: int = 3600,
+    ttl_seconds: int | None = None,
 ) -> DocumentDownloadToken:
     doc = await db.get(Document, document_id)
     if doc is None or doc.deleted_at is not None:
         raise HTTPException(404, "document.not_found")
+    resolved_ttl_seconds = ttl_seconds or settings.download_token_ttl_seconds
     tok = DocumentDownloadToken(
         token=secrets.token_urlsafe(32),
         document_id=document_id,
         created_by_id=created_by.id,
-        expires_at=datetime.now(timezone.utc) + timedelta(seconds=ttl_seconds),
+        expires_at=datetime.now(UTC) + timedelta(seconds=resolved_ttl_seconds),
     )
     db.add(tok)
     await db.flush()
@@ -139,7 +140,7 @@ async def create_download_token(
 
 
 async def consume_token(db: AsyncSession, token: str) -> Document:
-    now = datetime.now(timezone.utc)
+    now = datetime.now(UTC)
     row = (
         await db.execute(
             select(DocumentDownloadToken).where(
@@ -151,7 +152,7 @@ async def consume_token(db: AsyncSession, token: str) -> Document:
     ).scalar_one_or_none()
     if row is None:
         raise HTTPException(403, "download.invalid_token")
-    await db.execute(
+    _ = await db.execute(
         update(DocumentDownloadToken)
         .where(DocumentDownloadToken.token == token)
         .values(used_at=now)

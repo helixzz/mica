@@ -74,7 +74,8 @@ async def record_price(
     db: Annotated[AsyncSession, Depends(get_db)],
 ):
     record, anomaly = await sku_svc.record_price(
-        db, user,
+        db,
+        user,
         item_id=payload.item_id,
         price=payload.price,
         quotation_date=payload.quotation_date,
@@ -104,7 +105,7 @@ async def get_benchmark(
     item_id: UUID,
     user: CurrentUser,
     db: Annotated[AsyncSession, Depends(get_db)],
-    window_days: int = 90,
+    window_days: int | None = None,
 ):
     bm = await sku_svc.get_benchmark(db, item_id, window_days)
     if bm is None:
@@ -117,7 +118,7 @@ async def get_trend(
     item_id: UUID,
     user: CurrentUser,
     db: Annotated[AsyncSession, Depends(get_db)],
-    days: int = 180,
+    days: int | None = None,
 ):
     return await sku_svc.price_trend(db, item_id, days)
 

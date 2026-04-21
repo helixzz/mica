@@ -59,7 +59,7 @@ async def search(
 async def list_expiring(
     user: CurrentUser,
     db: Annotated[AsyncSession, Depends(get_db)],
-    within_days: int = 30,
+    within_days: int | None = None,
 ):
     rows = await svc.expiring_contracts(db, within_days)
     return [

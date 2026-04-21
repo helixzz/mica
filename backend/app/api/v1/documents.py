@@ -10,6 +10,7 @@ from app.core.security import CurrentUser
 from app.db import get_db
 from app.schemas import DocumentOut, DownloadTokenOut
 from app.services import documents as doc_svc
+from app.services.system_params import system_params
 
 router = APIRouter()
 settings = get_settings()
@@ -37,13 +38,16 @@ async def create_token(
     user: CurrentUser,
     db: Annotated[AsyncSession, Depends(get_db)],
 ):
-    tok = await doc_svc.create_download_token(
-        db, document_id, user, ttl_seconds=settings.download_token_ttl_seconds
+    ttl_seconds = await system_params.get_int_or(
+        db,
+        "auth.download_token_ttl_seconds",
+        settings.download_token_ttl_seconds,
     )
+    tok = await doc_svc.create_download_token(db, document_id, user, ttl_seconds=ttl_seconds)
     await db.commit()
     return DownloadTokenOut(
         download_url=f"/api/v1/documents/download/{tok.token}",
-        expires_in=settings.download_token_ttl_seconds,
+        expires_in=ttl_seconds,
     )
 
 
@@ -57,10 +61,11 @@ async def download(
     doc = await doc_svc.consume_token(db, token)
     await db.commit()
     path = doc_svc.document_path(doc)
+    chunk_size = await system_params.get_int_or(db, "upload.chunk_size_bytes", 1024 * 1024)
 
     async def iterator():
         async with aiofiles.open(path, "rb") as f:
-            while chunk := await f.read(1024 * 1024):
+            while chunk := await f.read(chunk_size):
                 yield chunk
 
     return StreamingResponse(
