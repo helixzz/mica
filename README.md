@@ -57,9 +57,9 @@ mica/
 
 ## 文档
 
+- [用户手册](docs/user-manual/) · [在线版 helixzz.github.io/mica](https://helixzz.github.io/mica/)
 - [架构决策记录 (ADR)](docs/adr/)
 - [API 参考](docs/api/)
-- [用户手册](docs/user-manual/)
 
 ## 开发与部署
 

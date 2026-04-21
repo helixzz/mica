@@ -38,6 +38,15 @@
 | SSO | 单点登录 | Single Sign-On（当前为骨架，生产环境将启用 ADFS） |
 | SKU | 标准物料编号 | Stock Keeping Unit |
 
+## 在线阅读
+
+推送到 `main` 分支后，本手册会通过 GitHub Actions 自动构建并发布到 GitHub Pages：
+
+<https://helixzz.github.io/mica/>
+
+> 首次启用需在 **GitHub 仓库设置 → Pages → Source** 选择 `GitHub Actions`（非 `Deploy from a branch`）。
+> 构建配置位于 [`mkdocs.yml`](../../mkdocs.yml)，工作流 [`.github/workflows/docs.yml`](../../.github/workflows/docs.yml)。
+
 ## 反馈
 
 发现错别字、流程与实际不符、截图缺失、功能疑问：

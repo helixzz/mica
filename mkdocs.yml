@@ -1,0 +1,91 @@
+site_name: Mica 用户手册
+site_description: 觅采采购管理系统 · 使用指南
+site_author: Mica Contributors
+site_url: https://helixzz.github.io/mica/
+repo_url: https://github.com/helixzz/mica
+repo_name: helixzz/mica
+edit_uri: edit/main/docs/user-manual/
+
+docs_dir: docs/user-manual
+site_dir: _site
+
+theme:
+  name: material
+  language: zh
+  palette:
+    - media: "(prefers-color-scheme: light)"
+      scheme: default
+      primary: teal
+      accent: orange
+      toggle:
+        icon: material/weather-night
+        name: 切换到深色模式
+    - media: "(prefers-color-scheme: dark)"
+      scheme: slate
+      primary: teal
+      accent: orange
+      toggle:
+        icon: material/weather-sunny
+        name: 切换到浅色模式
+  features:
+    - navigation.instant
+    - navigation.tracking
+    - navigation.tabs
+    - navigation.sections
+    - navigation.top
+    - navigation.footer
+    - search.suggest
+    - search.highlight
+    - content.code.copy
+    - content.action.edit
+    - toc.follow
+  icon:
+    repo: fontawesome/brands/github
+
+nav:
+  - 首页: README.md
+  - 概述: 00-introduction.md
+  - 角色与权限: 01-roles-and-permissions.md
+  - 全局业务工作流: 02-global-workflow.md
+  - 各角色工作流: 03-per-role-workflow.md
+  - 功能参考: 04-features.md
+  - 常见问题: 05-faq.md
+  - 流程图集: _diagrams.md
+
+markdown_extensions:
+  - admonition
+  - attr_list
+  - md_in_html
+  - toc:
+      permalink: true
+  - pymdownx.highlight:
+      anchor_linenums: true
+  - pymdownx.superfences:
+      custom_fences:
+        - name: mermaid
+          class: mermaid
+          format: !!python/name:pymdownx.superfences.fence_code_format
+  - pymdownx.tabbed:
+      alternate_style: true
+  - pymdownx.tasklist:
+      custom_checkbox: true
+  - pymdownx.details
+  - pymdownx.emoji
+
+plugins:
+  - search:
+      lang:
+        - zh
+        - en
+
+extra:
+  version:
+    provider: mike
+  social:
+    - icon: fontawesome/brands/github
+      link: https://github.com/helixzz/mica
+  generator: false
+
+copyright: >
+  Copyright &copy; 2026 Mica Contributors ·
+  Licensed under Apache 2.0
