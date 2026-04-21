@@ -196,18 +196,19 @@ export interface PaymentRecord {
 export interface InvoiceLine {
   id: string
   po_item_id: string | null
+  line_type: 'product' | 'freight' | 'adjustment' | 'tax_surcharge' | 'note'
   line_no: number
   item_name: string
   qty: string
   unit_price: string
-  amount: string
+  subtotal: string
+  tax_amount: string
 }
 
 export interface Invoice {
   id: string
   internal_number: string
   invoice_number: string
-  po_id: string
   supplier_id: string
   invoice_date: string
   due_date: string | null
@@ -217,9 +218,40 @@ export interface Invoice {
   currency: string
   tax_number: string | null
   status: string
+  is_fully_matched: boolean
   notes: string | null
   created_at: string
   lines: InvoiceLine[]
+}
+
+export interface InvoiceListRow {
+  id: string
+  internal_number: string
+  invoice_number: string
+  supplier_id: string
+  invoice_date: string
+  subtotal: string
+  tax_amount: string
+  total_amount: string
+  currency: string
+  status: string
+  is_fully_matched: boolean
+  created_at: string
+}
+
+export interface InvoiceValidation {
+  line_no: number
+  po_item_id: string | null
+  invoiced_subtotal: string
+  po_remaining: string | null
+  overage: string
+  severity: 'ok' | 'warn' | 'error'
+  message: string | null
+}
+
+export interface InvoiceCreateResponse {
+  invoice: Invoice
+  validations: InvoiceValidation[]
 }
 
 export interface POProgress {
@@ -385,21 +417,31 @@ export const api = {
     const { data } = await client.post<PaymentRecord>(`/payments/${id}/confirm`, payload)
     return data
   },
-  async listInvoices(po_id?: string): Promise<Invoice[]> {
-    const { data } = await client.get<Invoice[]>('/invoices', { params: { po_id } })
+  async listInvoices(po_id?: string): Promise<InvoiceListRow[]> {
+    const { data } = await client.get<InvoiceListRow[]>('/invoices', { params: { po_id } })
+    return data
+  },
+  async getInvoice(id: string): Promise<Invoice> {
+    const { data } = await client.get<Invoice>(`/invoices/${id}`)
     return data
   },
   async createInvoice(payload: {
-    po_id: string
+    supplier_id: string
     invoice_number: string
     invoice_date: string
-    tax_amount?: number | string
     tax_number?: string | null
     due_date?: string | null
     notes?: string | null
-    lines: { po_item_id?: string | null; item_name: string; qty: number; unit_price: number }[]
-  }): Promise<Invoice> {
-    const { data } = await client.post<Invoice>('/invoices', payload)
+    lines: {
+      po_item_id?: string | null
+      line_type?: 'product' | 'freight' | 'adjustment' | 'tax_surcharge' | 'note'
+      item_name: string
+      qty: number
+      unit_price: number
+      tax_amount?: number
+    }[]
+  }): Promise<InvoiceCreateResponse> {
+    const { data } = await client.post<InvoiceCreateResponse>('/invoices', payload)
     return data
   },
   async myPendingApprovals(): Promise<ApprovalTask[]> {

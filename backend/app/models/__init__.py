@@ -81,6 +81,14 @@ class InvoiceStatus(StrEnum):
     CANCELLED = "cancelled"
 
 
+class InvoiceLineType(StrEnum):
+    PRODUCT = "product"
+    FREIGHT = "freight"
+    ADJUSTMENT = "adjustment"
+    TAX_SURCHARGE = "tax_surcharge"
+    NOTE = "note"
+
+
 class ApprovalAction(StrEnum):
     APPROVE = "approve"
     REJECT = "reject"
@@ -417,9 +425,6 @@ class Invoice(Base, TimestampMixin):
     id: Mapped[UUID] = mapped_column(PGUUID(as_uuid=True), primary_key=True, default=new_uuid)
     internal_number: Mapped[str] = mapped_column(String(32), unique=True, nullable=False)
     invoice_number: Mapped[str] = mapped_column(String(64), nullable=False)
-    po_id: Mapped[UUID] = mapped_column(
-        PGUUID(as_uuid=True), ForeignKey("purchase_orders.id"), nullable=False
-    )
     supplier_id: Mapped[UUID] = mapped_column(
         PGUUID(as_uuid=True), ForeignKey("suppliers.id"), nullable=False
     )
@@ -434,9 +439,9 @@ class Invoice(Base, TimestampMixin):
     status: Mapped[str] = mapped_column(
         String(32), default=InvoiceStatus.DRAFT.value, nullable=False
     )
+    is_fully_matched: Mapped[bool] = mapped_column(default=False, nullable=False)
     notes: Mapped[str | None] = mapped_column(Text)
 
-    po: Mapped[PurchaseOrder] = relationship()
     supplier: Mapped[Supplier] = relationship()
     lines: Mapped[list[InvoiceLine]] = relationship(
         back_populates="invoice", cascade="all, delete-orphan", order_by="InvoiceLine.line_no"
@@ -450,12 +455,18 @@ class InvoiceLine(Base, TimestampMixin):
     invoice_id: Mapped[UUID] = mapped_column(
         PGUUID(as_uuid=True), ForeignKey("invoices.id", ondelete="CASCADE"), nullable=False
     )
-    po_item_id: Mapped[UUID | None] = mapped_column(PGUUID(as_uuid=True), ForeignKey("po_items.id"))
+    po_item_id: Mapped[UUID | None] = mapped_column(
+        PGUUID(as_uuid=True), ForeignKey("po_items.id", ondelete="SET NULL")
+    )
+    line_type: Mapped[str] = mapped_column(
+        String(32), default=InvoiceLineType.PRODUCT.value, nullable=False
+    )
     line_no: Mapped[int] = mapped_column(Integer, nullable=False)
     item_name: Mapped[str] = mapped_column(String(255), nullable=False)
     qty: Mapped[Decimal] = mapped_column(Numeric(18, 4), nullable=False)
     unit_price: Mapped[Decimal] = mapped_column(Numeric(18, 4), nullable=False)
-    amount: Mapped[Decimal] = mapped_column(Numeric(18, 4), nullable=False)
+    subtotal: Mapped[Decimal] = mapped_column(Numeric(18, 4), nullable=False)
+    tax_amount: Mapped[Decimal] = mapped_column(Numeric(18, 4), default=Decimal("0"), nullable=False)
 
     invoice: Mapped[Invoice] = relationship(back_populates="lines")
 

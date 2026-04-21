@@ -310,16 +310,17 @@ class PaymentConfirmIn(BaseModel):
 
 class InvoiceLineIn(BaseModel):
     po_item_id: UUID | None = None
+    line_type: Literal["product", "freight", "adjustment", "tax_surcharge", "note"] = "product"
     item_name: str = Field(..., min_length=1)
     qty: Decimal = Field(..., gt=0)
     unit_price: Decimal = Field(..., ge=0)
+    tax_amount: Decimal = Decimal("0")
 
 
 class InvoiceCreateIn(BaseModel):
-    po_id: UUID
     invoice_number: str = Field(..., min_length=1, max_length=64)
+    supplier_id: UUID
     invoice_date: date
-    tax_amount: Decimal = Decimal("0")
     tax_number: str | None = None
     due_date: date | None = None
     notes: str | None = None
@@ -330,11 +331,13 @@ class InvoiceLineOut(BaseModel):
     model_config = ConfigDict(from_attributes=True)
     id: UUID
     po_item_id: UUID | None
+    line_type: str
     line_no: int
     item_name: str
     qty: Decimal
     unit_price: Decimal
-    amount: Decimal
+    subtotal: Decimal
+    tax_amount: Decimal
 
 
 class InvoiceOut(BaseModel):
@@ -342,7 +345,6 @@ class InvoiceOut(BaseModel):
     id: UUID
     internal_number: str
     invoice_number: str
-    po_id: UUID
     supplier_id: UUID
     invoice_date: date
     due_date: date | None
@@ -352,9 +354,36 @@ class InvoiceOut(BaseModel):
     currency: str
     tax_number: str | None
     status: str
+    is_fully_matched: bool
     notes: str | None
     created_at: datetime
     lines: list[InvoiceLineOut]
+
+
+class InvoiceListOut(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+    id: UUID
+    internal_number: str
+    invoice_number: str
+    supplier_id: UUID
+    invoice_date: date
+    subtotal: Decimal
+    tax_amount: Decimal
+    total_amount: Decimal
+    currency: str
+    status: str
+    is_fully_matched: bool
+    created_at: datetime
+
+
+class InvoiceLineValidation(BaseModel):
+    line_no: int
+    po_item_id: UUID | None
+    invoiced_subtotal: Decimal
+    po_remaining: Decimal | None
+    overage: Decimal
+    severity: Literal["ok", "warn", "error"]
+    message: str | None = None
 
 
 class POProgressOut(BaseModel):

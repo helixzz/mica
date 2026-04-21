@@ -27,7 +27,7 @@ import { useNavigate, useParams } from 'react-router-dom'
 
 import {
   api,
-  type Invoice,
+  type InvoiceListRow,
   type PaymentRecord,
   type POProgress,
   type PurchaseOrder,
@@ -48,7 +48,7 @@ export function PODetailPage() {
   const [progress, setProgress] = useState<POProgress | null>(null)
   const [shipments, setShipments] = useState<Shipment[]>([])
   const [payments, setPayments] = useState<PaymentRecord[]>([])
-  const [invoices, setInvoices] = useState<Invoice[]>([])
+  const [invoices, setInvoices] = useState<InvoiceListRow[]>([])
 
   const [shipmentOpen, setShipmentOpen] = useState(false)
   const [paymentOpen, setPaymentOpen] = useState(false)
@@ -468,20 +468,28 @@ function InvoiceModal({ open, po, onClose, onDone, busy, setBusy }: ModalProps) 
   const [invoiceNumber, setInvoiceNumber] = useState('')
   const [invoiceDate, setInvoiceDate] = useState<dayjs.Dayjs>(dayjs())
   const [dueDate, setDueDate] = useState<dayjs.Dayjs | null>(dayjs().add(30, 'day'))
-  const [taxAmount, setTaxAmount] = useState<number>(0)
   const [taxNumber, setTaxNumber] = useState('')
   const [lines, setLines] = useState(
-    po.items.map((i) => ({ po_item_id: i.id, item_name: i.item_name, qty: Number(i.qty) - Number(i.qty_invoiced || 0), unit_price: Number(i.unit_price) }))
+    po.items.map((i) => ({
+      po_item_id: i.id as string | null,
+      line_type: 'product' as const,
+      item_name: i.item_name,
+      qty: Math.max(0, Number(i.qty) - Number(i.qty_invoiced || 0)),
+      unit_price: Number(i.unit_price),
+      tax_amount: 0,
+    }))
   )
 
   useEffect(() => {
     if (open) {
       setInvoiceNumber('')
       setLines(po.items.map((i) => ({
-        po_item_id: i.id,
+        po_item_id: i.id as string | null,
+        line_type: 'product' as const,
         item_name: i.item_name,
         qty: Math.max(0, Number(i.qty) - Number(i.qty_invoiced || 0)),
         unit_price: Number(i.unit_price),
+        tax_amount: Number(((Number(i.qty) - Number(i.qty_invoiced || 0)) * Number(i.unit_price) * 0.13).toFixed(2)),
       })))
     }
   }, [open, po])
@@ -493,16 +501,21 @@ function InvoiceModal({ open, po, onClose, onDone, busy, setBusy }: ModalProps) 
     }
     try {
       setBusy(true)
-      await api.createInvoice({
-        po_id: po.id,
+      const result = await api.createInvoice({
+        supplier_id: po.supplier_id,
         invoice_number: invoiceNumber,
         invoice_date: invoiceDate.format('YYYY-MM-DD'),
         due_date: dueDate ? dueDate.format('YYYY-MM-DD') : null,
-        tax_amount: taxAmount,
         tax_number: taxNumber || null,
         lines: lines.filter((l) => l.qty > 0),
       })
-      void message.success(t('message.invoice_recorded'))
+      const warns = result.validations.filter((v) => v.severity === 'warn')
+      if (warns.length > 0) {
+        const details = warns.map((w) => `行 ${w.line_no}: ${w.message} (超额 ${w.overage})`).join('; ')
+        void message.warning(`${t('message.invoice_recorded')} (${warns.length} warnings: ${details})`, 8)
+      } else {
+        void message.success(t('message.invoice_recorded'))
+      }
       onDone()
     } catch (e) {
       void message.error(extractError(e).detail)
@@ -531,11 +544,6 @@ function InvoiceModal({ open, po, onClose, onDone, busy, setBusy }: ModalProps) 
             </Form.Item>
           </Col>
           <Col span={12}>
-            <Form.Item label={t('field.tax_amount')}>
-              <InputNumber min={0} value={taxAmount} onChange={(v) => setTaxAmount(Number(v ?? 0))} style={{ width: '100%' }} />
-            </Form.Item>
-          </Col>
-          <Col span={12}>
             <Form.Item label={t('field.tax_number')}>
               <Input value={taxNumber} onChange={(e) => setTaxNumber(e.target.value)} />
             </Form.Item>
@@ -550,7 +558,7 @@ function InvoiceModal({ open, po, onClose, onDone, busy, setBusy }: ModalProps) 
             { title: t('field.item_name'), dataIndex: 'item_name' },
             {
               title: t('field.qty'),
-              width: 120,
+              width: 100,
               render: (_: unknown, r) => (
                 <InputNumber
                   min={0}
@@ -562,7 +570,7 @@ function InvoiceModal({ open, po, onClose, onDone, busy, setBusy }: ModalProps) 
             },
             {
               title: t('field.unit_price'),
-              width: 140,
+              width: 120,
               render: (_: unknown, r) => (
                 <InputNumber
                   min={0}
@@ -572,7 +580,23 @@ function InvoiceModal({ open, po, onClose, onDone, busy, setBusy }: ModalProps) 
                 />
               ),
             },
-            { title: t('field.amount'), align: 'right', width: 110, render: (_: unknown, r) => (lines[r.__idx]?.qty * lines[r.__idx]?.unit_price).toFixed(2) },
+            {
+              title: t('field.subtotal'),
+              align: 'right', width: 110,
+              render: (_: unknown, r) => (lines[r.__idx]?.qty * lines[r.__idx]?.unit_price).toFixed(2),
+            },
+            {
+              title: t('field.tax_amount'),
+              width: 120,
+              render: (_: unknown, r) => (
+                <InputNumber
+                  min={0}
+                  value={lines[r.__idx]?.tax_amount}
+                  onChange={(v) => setLines((ls) => ls.map((x, i) => i === r.__idx ? { ...x, tax_amount: Number(v ?? 0) } : x))}
+                  style={{ width: '100%' }}
+                />
+              ),
+            },
           ]}
         />
       </Form>

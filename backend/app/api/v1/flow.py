@@ -10,6 +10,7 @@ from app.schemas import (
     ContractCreateIn,
     ContractOut,
     InvoiceCreateIn,
+    InvoiceListOut,
     InvoiceOut,
     PaymentConfirmIn,
     PaymentCreateIn,
@@ -124,28 +125,65 @@ async def list_payments(
     return [PaymentOut.model_validate(p) for p in await flow.list_payments(db, po_id)]
 
 
-@router.post("/invoices", response_model=InvoiceOut, status_code=status.HTTP_201_CREATED, tags=["flow"])
+@router.post("/invoices", status_code=status.HTTP_201_CREATED, tags=["flow"])
 async def create_invoice(
     payload: InvoiceCreateIn,
     user: CurrentUser,
     db: Annotated[AsyncSession, Depends(get_db)],
 ):
-    inv = await flow.create_invoice(
-        db, user, payload.po_id, payload.invoice_number, payload.invoice_date,
-        [l.model_dump() for l in payload.lines],
-        tax_amount=payload.tax_amount, tax_number=payload.tax_number,
-        due_date=payload.due_date, notes=payload.notes,
+    inv, validations = await flow.create_invoice(
+        db, user,
+        supplier_id=payload.supplier_id,
+        invoice_number=payload.invoice_number,
+        invoice_date=payload.invoice_date,
+        lines_in=[l.model_dump() for l in payload.lines],
+        tax_number=payload.tax_number,
+        due_date=payload.due_date,
+        notes=payload.notes,
     )
-    return InvoiceOut.model_validate(inv)
+    return {
+        "invoice": InvoiceOut.model_validate(inv).model_dump(mode="json"),
+        "validations": [
+            {**v, "invoiced_subtotal": str(v["invoiced_subtotal"]),
+             "po_remaining": str(v["po_remaining"]) if v["po_remaining"] is not None else None,
+             "overage": str(v["overage"]),
+             "po_item_id": str(v["po_item_id"]) if v["po_item_id"] else None}
+            for v in validations
+        ],
+    }
 
 
-@router.get("/invoices", response_model=list[InvoiceOut], tags=["flow"])
+@router.get("/invoices", response_model=list[InvoiceListOut], tags=["flow"])
 async def list_invoices(
     user: CurrentUser,
     db: Annotated[AsyncSession, Depends(get_db)],
     po_id: UUID | None = None,
 ):
-    return [InvoiceOut.model_validate(i) for i in await flow.list_invoices(db, po_id)]
+    if po_id:
+        rows = await flow.list_invoices_for_po(db, po_id)
+    else:
+        rows = await flow.list_invoices(db)
+    return [InvoiceListOut.model_validate(i) for i in rows]
+
+
+@router.get("/invoices/{invoice_id}", response_model=InvoiceOut, tags=["flow"])
+async def get_invoice(
+    invoice_id: UUID,
+    user: CurrentUser,
+    db: Annotated[AsyncSession, Depends(get_db)],
+):
+    from sqlalchemy import select
+    from sqlalchemy.orm import selectinload
+    from app.models import Invoice
+    inv = (
+        await db.execute(
+            select(Invoice).where(Invoice.id == invoice_id).options(selectinload(Invoice.lines))
+        )
+    ).scalar_one_or_none()
+    if inv is None:
+        from fastapi import HTTPException
+        raise HTTPException(404, "invoice.not_found")
+    return InvoiceOut.model_validate(inv)
 
 
 @router.get("/purchase-orders/{po_id}/progress", response_model=POProgressOut, tags=["flow"])

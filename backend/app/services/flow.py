@@ -24,6 +24,7 @@ from app.models import (
     Shipment,
     ShipmentItem,
     ShipmentStatus,
+    Supplier,
     User,
 )
 
@@ -300,18 +301,19 @@ async def list_payments(db: AsyncSession, po_id: UUID | None = None) -> list[Pay
 async def create_invoice(
     db: AsyncSession,
     actor: User,
-    po_id: UUID,
+    supplier_id: UUID,
     invoice_number: str,
     invoice_date,
     lines_in: list[dict],
-    tax_amount: Decimal = Decimal("0"),
     tax_number: str | None = None,
     due_date=None,
     notes: str | None = None,
-) -> Invoice:
-    po = await _load_po(db, po_id)
-    if po is None:
-        raise HTTPException(404, "po.not_found")
+) -> tuple[Invoice, list[dict]]:
+    supplier = (
+        await db.execute(select(Supplier).where(Supplier.id == supplier_id))
+    ).scalar_one_or_none()
+    if supplier is None:
+        raise HTTPException(404, "supplier.not_found")
 
     year = datetime.now(timezone.utc).year
     prefix = f"INV-{year}-"
@@ -322,66 +324,163 @@ async def create_invoice(
     ).scalar_one() or 0
     internal_number = f"{prefix}{n + 1:04d}"
 
-    subtotal = sum((_as_decimal(l["qty"]) * _as_decimal(l["unit_price"]) for l in lines_in), start=Decimal("0"))
-    total = subtotal + _as_decimal(tax_amount)
+    po_item_ids = {l.get("po_item_id") for l in lines_in if l.get("po_item_id")}
+    po_items_map: dict[str, POItem] = {}
+    currency = "CNY"
+    if po_item_ids:
+        po_items = (
+            await db.execute(select(POItem).where(POItem.id.in_(po_item_ids)))
+        ).scalars().all()
+        po_items_map = {str(i.id): i for i in po_items}
+        if po_items:
+            first_po = (
+                await db.execute(
+                    select(PurchaseOrder).where(PurchaseOrder.id == po_items[0].po_id)
+                )
+            ).scalar_one_or_none()
+            if first_po:
+                currency = first_po.currency
+
+    subtotal = Decimal("0")
+    total_tax = Decimal("0")
+    validations: list[dict] = []
+    touched_po_ids: set[UUID] = set()
+
+    for idx, line_in in enumerate(lines_in, start=1):
+        qty = _as_decimal(line_in["qty"])
+        unit_price = _as_decimal(line_in["unit_price"])
+        line_subtotal = (qty * unit_price).quantize(Decimal("0.0001"))
+        line_tax = _as_decimal(line_in.get("tax_amount", 0)).quantize(Decimal("0.0001"))
+        subtotal += line_subtotal
+        total_tax += line_tax
+        line_type = line_in.get("line_type", "product")
+
+        po_item_id = line_in.get("po_item_id")
+        po_item = po_items_map.get(str(po_item_id)) if po_item_id else None
+
+        validation = {
+            "line_no": idx,
+            "po_item_id": po_item_id,
+            "invoiced_subtotal": line_subtotal,
+            "po_remaining": None,
+            "overage": Decimal("0"),
+            "severity": "ok",
+            "message": None,
+        }
+        if line_type == "product" and po_item:
+            po_line_subtotal = (po_item.qty * po_item.unit_price).quantize(Decimal("0.0001"))
+            already_invoiced = (po_item.qty_invoiced or Decimal("0")) * po_item.unit_price
+            po_remaining = po_line_subtotal - already_invoiced
+            validation["po_remaining"] = po_remaining
+            overage = line_subtotal - po_remaining
+            if overage > Decimal("0.01"):
+                validation["overage"] = overage
+                validation["severity"] = "warn"
+                validation["message"] = "exceeds_po_remaining"
+        elif line_type == "product" and po_item_id is None:
+            validation["severity"] = "warn"
+            validation["message"] = "product_line_without_po_item"
+        validations.append(validation)
+
+    total = subtotal + total_tax
 
     invoice = Invoice(
         internal_number=internal_number,
         invoice_number=invoice_number,
-        po_id=po_id,
-        supplier_id=po.supplier_id,
+        supplier_id=supplier_id,
         invoice_date=invoice_date,
         due_date=due_date,
         subtotal=subtotal,
-        tax_amount=_as_decimal(tax_amount),
+        tax_amount=total_tax,
         total_amount=total,
-        currency=po.currency,
+        currency=currency,
         tax_number=tax_number,
         status=InvoiceStatus.VERIFIED.value,
         notes=notes,
+        is_fully_matched=all(
+            v["severity"] == "ok" for v in validations
+            if v.get("po_item_id") or lines_in[v["line_no"] - 1].get("line_type", "product") == "product"
+        ),
     )
     db.add(invoice)
     await db.flush()
 
-    po_item_map = {str(i.id): i for i in po.items}
     for idx, line_in in enumerate(lines_in, start=1):
         qty = _as_decimal(line_in["qty"])
         unit_price = _as_decimal(line_in["unit_price"])
-        amt = qty * unit_price
-        po_item = po_item_map.get(str(line_in.get("po_item_id") or ""))
+        line_subtotal = (qty * unit_price).quantize(Decimal("0.0001"))
+        line_tax = _as_decimal(line_in.get("tax_amount", 0)).quantize(Decimal("0.0001"))
+        po_item_id = line_in.get("po_item_id")
+        po_item = po_items_map.get(str(po_item_id)) if po_item_id else None
+        line_type = line_in.get("line_type", "product")
+
         db.add(
             InvoiceLine(
                 invoice_id=invoice.id,
                 po_item_id=po_item.id if po_item else None,
+                line_type=line_type,
                 line_no=idx,
                 item_name=line_in["item_name"],
                 qty=qty,
                 unit_price=unit_price,
-                amount=amt,
+                subtotal=line_subtotal,
+                tax_amount=line_tax,
             )
         )
-        if po_item:
-            po_item.qty_invoiced = (po_item.qty_invoiced or Decimal("0")) + qty
 
-    po.amount_invoiced = (po.amount_invoiced or Decimal("0")) + total
+        if po_item and line_type == "product":
+            po_item.qty_invoiced = (po_item.qty_invoiced or Decimal("0")) + qty
+            touched_po_ids.add(po_item.po_id)
+
+    for po_id in touched_po_ids:
+        po = (
+            await db.execute(
+                select(PurchaseOrder)
+                .where(PurchaseOrder.id == po_id)
+                .options(selectinload(PurchaseOrder.items))
+            )
+        ).scalar_one()
+        po.amount_invoiced = sum(
+            ((i.qty_invoiced or Decimal("0")) * i.unit_price for i in po.items),
+            start=Decimal("0"),
+        ).quantize(Decimal("0.0001"))
+
     await _audit_write(
         db, actor, "invoice.created", "invoice", str(invoice.id),
-        meta={"po_id": str(po_id), "internal_number": internal_number, "total": str(total)},
+        meta={
+            "internal_number": internal_number,
+            "subtotal": str(subtotal),
+            "tax": str(total_tax),
+            "total": str(total),
+            "po_ids": [str(p) for p in touched_po_ids],
+        },
     )
     await db.commit()
-    await db.refresh(invoice)
-    return (
+
+    loaded = (
         await db.execute(
             select(Invoice).where(Invoice.id == invoice.id).options(selectinload(Invoice.lines))
         )
     ).scalar_one()
+    return loaded, validations
 
 
-async def list_invoices(db: AsyncSession, po_id: UUID | None = None) -> list[Invoice]:
-    stmt = select(Invoice).options(selectinload(Invoice.lines)).order_by(Invoice.created_at.desc())
-    if po_id:
-        stmt = stmt.where(Invoice.po_id == po_id)
+async def list_invoices(db: AsyncSession, po_item_ids: list[UUID] | None = None) -> list[Invoice]:
+    stmt = select(Invoice).order_by(Invoice.created_at.desc())
+    if po_item_ids:
+        sub = select(InvoiceLine.invoice_id).where(InvoiceLine.po_item_id.in_(po_item_ids))
+        stmt = stmt.where(Invoice.id.in_(sub))
     return list((await db.execute(stmt)).scalars().all())
+
+
+async def list_invoices_for_po(db: AsyncSession, po_id: UUID) -> list[Invoice]:
+    po = await _load_po(db, po_id)
+    if po is None:
+        return []
+    item_ids = [i.id for i in po.items]
+    if not item_ids:
+        return []
+    return await list_invoices(db, item_ids)
 
 
 async def po_progress(db: AsyncSession, po_id: UUID) -> dict:
@@ -391,6 +490,10 @@ async def po_progress(db: AsyncSession, po_id: UUID) -> dict:
     total_qty = sum((i.qty for i in po.items), start=Decimal("0"))
     qty_received = sum((i.qty_received or Decimal("0") for i in po.items), start=Decimal("0"))
     qty_invoiced = sum((i.qty_invoiced or Decimal("0") for i in po.items), start=Decimal("0"))
+    amount_invoiced_subtotal = sum(
+        ((i.qty_invoiced or Decimal("0")) * i.unit_price for i in po.items),
+        start=Decimal("0"),
+    )
 
     def pct(n: Decimal, d: Decimal) -> float:
         return float((n / d * Decimal("100")).quantize(Decimal("0.01"))) if d > 0 else 0.0
@@ -400,11 +503,11 @@ async def po_progress(db: AsyncSession, po_id: UUID) -> dict:
         "po_number": po.po_number,
         "total_amount": str(po.total_amount),
         "amount_paid": str(po.amount_paid),
-        "amount_invoiced": str(po.amount_invoiced),
+        "amount_invoiced": str(amount_invoiced_subtotal),
         "total_qty": str(total_qty),
         "qty_received": str(qty_received),
         "qty_invoiced": str(qty_invoiced),
         "pct_received": pct(qty_received, total_qty),
-        "pct_invoiced": pct(po.amount_invoiced, po.total_amount),
+        "pct_invoiced": pct(amount_invoiced_subtotal, po.total_amount),
         "pct_paid": pct(po.amount_paid, po.total_amount),
     }
