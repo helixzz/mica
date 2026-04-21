@@ -14,8 +14,6 @@
 > **效率优先 > 扩展性 > 标准化管控**
 > 系统服务于人，而不是限制人。
 
-Mica 面向的是一个 < 100 人规模、月均 < 300 单的企业场景，采用深度定制而非通用 SaaS，以便与团队既有工作流完美契合。
-
 ## 已交付能力（v0.5.0）
 
 ### 采购主线（v0.1 - v0.4）
@@ -128,7 +126,7 @@ cd deploy
 
 ## 文档
 
-- [用户手册](docs/user-manual/) · [在线版 helixzz.github.io/mica](https://helixzz.github.io/mica/)
+- [用户手册](https://helixzz.github.io/mica/)
 - [Quickstart（3 分钟）](docs/QUICKSTART.md)
 - [开发指南](docs/DEVELOPMENT.md)
 - [架构决策记录 (ADR)](docs/adr/)
@@ -147,11 +145,6 @@ cd deploy
 ## 许可
 
 本项目采用 **Apache License 2.0** 授权。详见 [LICENSE](LICENSE) 与 [NOTICE](NOTICE)。
-
-选择 Apache 2.0 的原因：
-- 包含**专利授权**条款，企业使用更放心
-- 要求**修改声明**与**版权保留**，比 MIT 更适合企业项目
-- 广泛被主流开源基础设施采用（Kubernetes、Apache 基金会项目等），兼容性好
 
 ## 致谢
 
