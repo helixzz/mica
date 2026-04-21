@@ -5,7 +5,7 @@ from decimal import Decimal
 from typing import Literal
 from uuid import UUID
 
-from pydantic import BaseModel, ConfigDict, EmailStr, Field
+from pydantic import BaseModel, ConfigDict, Field
 
 
 class LoginRequest(BaseModel):
@@ -23,7 +23,7 @@ class UserOut(BaseModel):
     model_config = ConfigDict(from_attributes=True)
     id: UUID
     username: str
-    email: EmailStr
+    email: str
     display_name: str
     role: str
     company_id: UUID

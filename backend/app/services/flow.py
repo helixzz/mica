@@ -178,8 +178,10 @@ async def create_shipment(
         meta={"po_id": str(po_id), "batch_no": batch_no},
     )
     await db.commit()
-    await db.refresh(shipment)
-    return shipment
+    result = await db.execute(
+        select(Shipment).where(Shipment.id == shipment.id).options(selectinload(Shipment.items))
+    )
+    return result.scalar_one()
 
 
 async def list_shipments(db: AsyncSession, po_id: UUID | None = None) -> list[Shipment]:
