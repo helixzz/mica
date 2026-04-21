@@ -2,7 +2,7 @@
 
 本文件集中存放《Mica 用户手册》所需的全部 Mermaid 流程图，供其它章节 include/引用。所有图均可在 GitHub 上原生渲染，无需外部图片资源。
 
-图中节点文字以中文为主，首次出现的关键术语后附英文缩写，如"采购申请 (PR)"。版本基线：Mica v0.4（单级审批、发票 `draft → verified → approved → paid` 链路）。
+图中节点文字以中文为主，首次出现的关键术语后附英文缩写，如"采购申请 (PR)"。版本基线：Mica v0.5（支持多级串签 + 审批代理人、发票 `draft → verified → approved → paid` 链路、pg_trgm 全局搜索、站内通知中心）。
 
 ---
 
@@ -76,7 +76,7 @@ stateDiagram-v2
 
 ## 4. 发票（Invoice）状态机 — 当前实现
 
-v0.4 当前链路：发票创建即进入 `verified`（见 `backend/app/services/flow.py:398`，系统自动核对行项与 PO），随后财务审核员审批，审批通过后登记付款，付款确认后发票转为 `paid`。**注**：模型枚举中已预留 `pending_match / matched / mismatched`，计划在下一迭代改造为三单匹配链路，当前手册仅描述现行实现。
+当前链路：发票创建即进入 `verified`（见 `backend/app/services/flow.py`，系统自动核对行项与 PO），随后财务审核员审批，审批通过后登记付款，付款确认后发票转为 `paid`。**注**：模型枚举中已预留 `pending_match / matched / mismatched`，计划在下一迭代改造为完整三单匹配链路，当前手册仅描述现行实现。
 
 ```mermaid
 stateDiagram-v2
@@ -220,7 +220,7 @@ sequenceDiagram
 
 ## 9. 权限三层防御
 
-Mica 对每次 HTTP 请求实施三层防御（概念示意，当前 v0.4 以应用层实现为主，Cerbos / Postgres RLS 作为后续版本的兜底通道）。任何一层放行失败即终止请求。
+Mica 对每次 HTTP 请求实施三层防御（概念示意，当前 v0.5 以应用层 + 字段级 authz 实现为主，Cerbos / Postgres RLS 作为 v0.6+ 版本的兜底通道）。任何一层放行失败即终止请求。
 
 ```mermaid
 flowchart LR

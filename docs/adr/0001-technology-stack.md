@@ -43,6 +43,18 @@ Mica 进入实施阶段。为避免后期大幅重构，在首版 Walking Skelet
 - **缓存 / 异步**：Redis（按需引入）
 - **飞书集成**：自建应用 + 3 权限码（v0.7 引入）
 
+## 实施说明（v0.5.0, 2026-04-21）
+
+v0.0 - v0.5 迭代过程中，部分选型根据实施可行性作出调整，记录如下：
+
+- **OCR 方案**：未采用 RapidOCR（需 ONNX runtime + 模型权重，镜像膨胀）。v0.4.2 改用 `pdfplumber + pymupdf + easyofd + LLM Vision 兜底` 的 4 级分层策略，更轻量。
+- **文档生成**：未采用 `xltpl + WeasyPrint`。v0.5 改用 `reportlab`（PDF，纯 Python；含 STSong-Light CID 中文字体）+ `openpyxl`（Excel）。WeasyPrint 需要 pango/cairo 系统库，reportlab 方案更易容器化。
+- **全文检索**：最初倾向 `zhparser`，v0.5 改为 `pg_trgm + tsvector` 轻量组合。`postgres:16-alpine` 官方镜像不含 zhparser，引入自定义镜像会破坏 `docker compose up` 一键启动体验。详见 [ADR 0002](./0002-search-pg-trgm-over-zhparser.md)。
+- **Cerbos**：v0.5 仍未引入独立 sidecar，字段级权限内嵌于 `core/field_authz.py`。Cerbos 化规划至 v0.6+。
+- **ADFS SAML**：骨架已就绪，实际对接等企业 IdP 测试环境。
+- **对象存储**：v0.5 仍使用本地 `media/` volume，MinIO 引入推迟至集群部署阶段。
+- **新增依赖**：v0.5 引入 `reportlab`、`openpyxl`、`@fontsource/inter`、`zustand`、`python-jose`。
+
 ## 依据
 
 本决策基于 9 份并行技术调研的综合结论，涉及 ADFS SAML、飞书最小权限、OCR 全文检索、Excel/PDF 生成、LLM 企业集成、轻量审批工作流、内网部署运维、字段级/行级权限、采购分批模型。完整调研记录与对比矩阵保留于项目内部档案库。

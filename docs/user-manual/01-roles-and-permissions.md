@@ -121,4 +121,4 @@ Mica 的角色枚举在 [`backend/app/models/__init__.py`](../../backend/app/mod
 
 ---
 
-> 版本 **v0.4.0** · 维护人 **helixzz**
+> 版本 **v0.5.0** · 维护人 **helixzz**

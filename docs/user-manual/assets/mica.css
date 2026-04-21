@@ -1,0 +1,21 @@
+:root {
+  --md-primary-fg-color: #8B5E3C;
+  --md-primary-fg-color--light: #A67654;
+  --md-primary-fg-color--dark: #704B30;
+  --md-accent-fg-color: #E8833A;
+}
+
+[data-md-color-scheme="slate"] {
+  --md-primary-fg-color: #A67654;
+  --md-primary-fg-color--light: #C4A48A;
+  --md-primary-fg-color--dark: #704B30;
+  --md-accent-fg-color: #F0A964;
+}
+
+.md-header {
+  background-color: var(--md-primary-fg-color);
+}
+
+.md-tabs {
+  background-color: var(--md-primary-fg-color--dark);
+}
