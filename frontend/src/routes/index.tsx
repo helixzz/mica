@@ -78,6 +78,9 @@ const SKUPage = lazy(() =>
 const RFQListPage = lazy(() => import('@/pages/RFQList'))
 const RFQNewPage = lazy(() => import('@/pages/RFQNew'))
 const RFQDetailPage = lazy(() => import('@/pages/RFQDetail'))
+const SuppliersPage = lazy(() => import('@/pages/Suppliers'))
+const SupplierDetailPage = lazy(() => import('@/pages/SupplierDetail'))
+const ItemDetailPage = lazy(() => import('@/pages/ItemDetail'))
 
 function PageFallback() {
   return (
@@ -152,6 +155,9 @@ export function AppRoutes() {
           <Route path="/rfqs" element={<RFQListPage />} />
           <Route path="/rfqs/new" element={<RFQNewPage />} />
           <Route path="/rfqs/:id" element={<RFQDetailPage />} />
+          <Route path="/suppliers" element={<SuppliersPage />} />
+          <Route path="/suppliers/:id" element={<SupplierDetailPage />} />
+          <Route path="/items/:id" element={<ItemDetailPage />} />
           <Route path="/admin" element={<AdminPage />} />
           <Route path="/search" element={<SearchResults />} />
           <Route path="/notifications" element={<NotificationCenter />} />
