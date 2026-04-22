@@ -57,7 +57,7 @@ export function POListPage() {
         dataSource={rows}
         columns={columns}
         loading={loading}
-        pagination={{ pageSize: 20, showSizeChanger: true, showTotal: (total) => `共 ${total} 条` }}
+        pagination={{ pageSize: 20, showSizeChanger: true, showTotal: (total) => t('item.total_count', { total }) }}
         size="small"
       />
     </Space>

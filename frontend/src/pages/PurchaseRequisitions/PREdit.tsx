@@ -124,7 +124,7 @@ export function PREditPage() {
     try {
       const values = await form.validateFields()
       if (lines.length === 0) {
-        void message.error('请至少添加一行明细')
+        void message.error(t('pr.at_least_one_line'))
         return
       }
       setSubmitting(true)
@@ -148,10 +148,10 @@ export function PREditPage() {
           unit_price: l.unit_price || 0,
         })),
       })
-      void message.success('已保存')
+      void message.success(t('message.saved'))
       navigate(`/purchase-requisitions/${id}`)
     } catch (e) {
-      void message.error(extractError(e).detail || '保存失败')
+      void message.error(extractError(e).detail || t('error.save_failed'))
     } finally {
       setSubmitting(false)
     }
@@ -168,7 +168,7 @@ export function PREditPage() {
         <Space direction="vertical" size={0} style={{ width: '100%' }}>
           <Select
             style={{ width: '100%' }}
-            placeholder={isRequester ? '选择物料' : t('placeholder.select_item')}
+            placeholder={isRequester ? t('placeholder.select_item') : t('placeholder.select_item')}
             value={r.item_id ?? undefined}
             onChange={(v) => updateLine(r.key, 'item_id', v)}
             options={items.map((it) => ({ value: it.id, label: `${it.code} · ${it.name}` }))}
@@ -176,8 +176,8 @@ export function PREditPage() {
           />
           {r.item_id && refPrices[r.item_id] && (
             <Typography.Text type="secondary" style={{ fontSize: 11 }}>
-              参考：最近 ¥{refPrices[r.item_id].latest_price?.toLocaleString() ?? '-'}
-              {refPrices[r.item_id].avg_price ? ` · 均价 ¥${refPrices[r.item_id].avg_price?.toLocaleString()}` : ''}
+              {t('sku.ref_latest')}: ¥{refPrices[r.item_id].latest_price?.toLocaleString() ?? '-'}
+              {refPrices[r.item_id].avg_price ? ` · ${t('sku.ref_avg')}: ¥${refPrices[r.item_id].avg_price?.toLocaleString()}` : ''}
             </Typography.Text>
           )}
         </Space>
@@ -212,7 +212,7 @@ export function PREditPage() {
       title: isRequester ? <span>{t('field.unit_price')}<br /><Typography.Text type="secondary" style={{ fontSize: 10 }}>可选</Typography.Text></span> : t('field.unit_price'),
       width: 130,
       render: (_: unknown, r: LineForm) => (
-        <InputNumber min={0} value={r.unit_price || undefined} onChange={(v) => updateLine(r.key, 'unit_price', Number(v ?? 0))} style={{ width: '100%' }} placeholder={isRequester ? '可选' : undefined} />
+        <InputNumber min={0} value={r.unit_price || undefined} onChange={(v) => updateLine(r.key, 'unit_price', Number(v ?? 0))} style={{ width: '100%' }} placeholder={isRequester ? t('pr.optional_label') : undefined} />
       ),
     },
     {
@@ -229,7 +229,7 @@ export function PREditPage() {
 
   return (
     <Space direction="vertical" size="large" style={{ width: '100%' }}>
-      <Card title="编辑采购申请（草稿）">
+      <Card title={t('pr.edit_draft')}>
         <Form form={form} layout="vertical">
           <Row gutter={16}>
             <Col span={12}>
@@ -250,22 +250,22 @@ export function PREditPage() {
           </Row>
           <Row gutter={16}>
             <Col span={6}>
-              <Form.Item label="公司主体" name="company_id" rules={[{ required: true }]}>
+              <Form.Item label={t('pr.company_label')} name="company_id" rules={[{ required: true }]}>
                 <Select options={companies.map((c) => ({ value: c.id, label: c.name_zh }))} />
               </Form.Item>
             </Col>
             <Col span={6}>
-              <Form.Item label="成本中心" name="cost_center_id" rules={[{ required: true }]}>
+              <Form.Item label={t('pr.cost_center_label')} name="cost_center_id" rules={[{ required: true }]}>
                 <Select options={costCenters.map((c) => ({ value: c.id, label: c.label_zh }))} />
               </Form.Item>
             </Col>
             <Col span={6}>
-              <Form.Item label="开支类型" name="expense_type_id" rules={[{ required: true }]}>
+              <Form.Item label={t('pr.expense_type_label')} name="expense_type_id" rules={[{ required: true }]}>
                 <Select options={expenseTypes.map((e) => ({ value: e.id, label: e.label_zh }))} />
               </Form.Item>
             </Col>
             <Col span={6}>
-              <Form.Item label="采购种类" name="procurement_category_id">
+              <Form.Item label={t('pr.category_label')} name="procurement_category_id">
                 <Select allowClear showSearch optionFilterProp="label" options={procCategories.map((c) => ({ value: c.id, label: (c.level ?? 1) === 2 ? `  └ ${c.label_zh}` : c.label_zh }))} />
               </Form.Item>
             </Col>
@@ -276,18 +276,18 @@ export function PREditPage() {
         </Form>
 
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }}>
-          <Typography.Text strong>采购明细</Typography.Text>
-          <Button icon={<PlusOutlined />} onClick={addLine}>添加一行</Button>
+          <Typography.Text strong>{t('pr.line_items')}</Typography.Text>
+          <Button icon={<PlusOutlined />} onClick={addLine}>{t('pr.add_line')}</Button>
         </div>
         <Table dataSource={lines} columns={columns} rowKey="key" size="small" pagination={false} />
         <div style={{ textAlign: 'right', marginTop: 8 }}>
-          <Typography.Text strong>合计: {total > 0 ? `¥${total.toLocaleString()}` : '-'}</Typography.Text>
+          <Typography.Text strong>{t('pr.total_label')}: {total > 0 ? `¥${total.toLocaleString()}` : '-'}</Typography.Text>
         </div>
       </Card>
 
       <Space>
         <Button onClick={() => navigate(`/purchase-requisitions/${id}`)}>{t('button.back')}</Button>
-        <Button type="primary" onClick={onSave} loading={submitting}>保存修改</Button>
+        <Button type="primary" onClick={onSave} loading={submitting}>{t('pr.save_changes')}</Button>
       </Space>
     </Space>
   )

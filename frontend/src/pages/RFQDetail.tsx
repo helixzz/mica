@@ -14,6 +14,7 @@ const statusColors: Record<string, string> = {
 export default function RFQDetailPage() {
   const { id } = useParams<{ id: string }>()
   const navigate = useNavigate()
+  const { t } = useTranslation()
   const [rfq, setRfq] = useState<any>(null)
   const [suppliers, setSuppliers] = useState<Supplier[]>([])
   const [quoteModal, setQuoteModal] = useState<{ rfqItemId: string; supplierId: string } | null>(null)
@@ -27,7 +28,7 @@ export default function RFQDetailPage() {
   }
   useEffect(load, [id])
 
-  if (!rfq) return <div>加载中...</div>
+  if (!rfq) return <div>{t('message.loading')}</div>
 
   const supplierMap = Object.fromEntries(suppliers.map((s) => [s.id, s.name]))
   const canSend = rfq.status === 'draft'
@@ -37,9 +38,9 @@ export default function RFQDetailPage() {
   const doSend = async () => {
     try {
       await client.post(`/rfqs/${id}/send`)
-      void message.success('询价单已发出')
+      void message.success(t('message.rfq_sent'))
       load()
-    } catch (e) { void message.error(extractError(e).detail || '发送失败') }
+    } catch (e) { void message.error(extractError(e).detail || t('error.send_failed')) }
   }
 
   const doAddQuote = async () => {
@@ -51,20 +52,20 @@ export default function RFQDetailPage() {
         unit_price: quotePrice,
         delivery_days: quoteDays,
       })
-      void message.success('报价已录入')
+      void message.success(t('rfq.quote_entered'))
       setQuoteModal(null)
       setQuotePrice(0)
       setQuoteDays(null)
       load()
-    } catch (e) { void message.error(extractError(e).detail || '录入失败') }
+    } catch (e) { void message.error(extractError(e).detail || t('rfq.entry_failed')) }
   }
 
   const doAward = async (quoteIds: string[]) => {
     try {
       await client.post(`/rfqs/${id}/award`, { quote_ids: quoteIds })
-      void message.success('已定标')
+      void message.success(t('rfq.awarded_msg'))
       load()
-    } catch (e) { void message.error(extractError(e).detail || '定标失败') }
+    } catch (e) { void message.error(extractError(e).detail || t('rfq.award_failed')) }
   }
 
   const comparisonData = rfq.items.map((item: any) => {
@@ -84,7 +85,7 @@ export default function RFQDetailPage() {
       const q = row[`sup_${sup.supplier_id}`]
       if (!q) {
         return canQuote ? (
-          <Button size="small" icon={<PlusOutlined />} onClick={() => setQuoteModal({ rfqItemId: row.key, supplierId: sup.supplier_id })}>录入</Button>
+          <Button size="small" icon={<PlusOutlined />} onClick={() => setQuoteModal({ rfqItemId: row.key, supplierId: sup.supplier_id })}>{t('rfq.enter_btn')}</Button>
         ) : '-'
       }
       return (
@@ -92,8 +93,8 @@ export default function RFQDetailPage() {
           <Typography.Text strong style={q.selected ? { color: '#22C55E' } : undefined}>
             ¥{q.price.toLocaleString()}
           </Typography.Text>
-          {q.days && <Typography.Text type="secondary" style={{ fontSize: 11 }}>{q.days}天交付</Typography.Text>}
-          {q.selected && <Tag color="success" icon={<CheckCircleOutlined />}>中标</Tag>}
+          {q.days && <Typography.Text type="secondary" style={{ fontSize: 11 }}>{q.days} {t('rfq.days_delivery')}</Typography.Text>}
+          {q.selected && <Tag color="success" icon={<CheckCircleOutlined />}>{t('rfq.awarded')}</Tag>}
         </Space>
       )
     },
@@ -107,8 +108,8 @@ export default function RFQDetailPage() {
           <Tag color={statusColors[rfq.status]}>{rfq.status}</Tag>
         </Space>
         <Space>
-          <Button onClick={() => navigate('/rfqs')}>返回</Button>
-          {canSend && <Button type="primary" onClick={doSend}>发出询价</Button>}
+          <Button onClick={() => navigate('/rfqs')}>{t('button.back')}</Button>
+          {canSend && <Button type="primary" onClick={doSend}>{t('rfq.send')}</Button>}
           {canAward && (
             <Button type="primary" onClick={() => {
               const selectedIds = rfq.quotes.filter((q: any) => !q.is_selected).length > 0
@@ -122,17 +123,16 @@ export default function RFQDetailPage() {
                     lowestPerItem.push(lowest.id)
                   }
                 }
-                if (lowestPerItem.length === 0) { void message.warning('暂无报价可定标'); return }
+                if (lowestPerItem.length === 0) { void message.warning(t('rfq.no_quotes')); return }
                 Modal.confirm({
-                  title: '自动选择最低价定标？',
-                  content: `将自动选择每个物料的最低报价（共 ${lowestPerItem.length} 项）`,
+                  title: t('rfq.award_confirm_title'),
+                  content: t('rfq.auto_award_content', { count: lowestPerItem.length }),
                   onOk: () => doAward(lowestPerItem),
                 })
               } else {
                 doAward(selectedIds)
               }
-            }}>
-              定标（选最低价）
+            }}>{t('rfq.award')}
             </Button>
           )}
         </Space>
@@ -140,15 +140,15 @@ export default function RFQDetailPage() {
 
       <Card>
         <Descriptions bordered size="small" column={2}>
-          <Descriptions.Item label="标题">{rfq.title}</Descriptions.Item>
-          <Descriptions.Item label="截止日期">{rfq.deadline || '-'}</Descriptions.Item>
-          <Descriptions.Item label="状态"><Tag color={statusColors[rfq.status]}>{rfq.status}</Tag></Descriptions.Item>
-          <Descriptions.Item label="创建时间">{rfq.created_at?.slice(0, 10)}</Descriptions.Item>
-          {rfq.notes && <Descriptions.Item label="备注" span={2}>{rfq.notes}</Descriptions.Item>}
+          <Descriptions.Item label={t('field.title')}>{rfq.title}</Descriptions.Item>
+          <Descriptions.Item label={t('field.deadline')}>{rfq.deadline || '-'}</Descriptions.Item>
+          <Descriptions.Item label={t('field.status')}><Tag color={statusColors[rfq.status]}>{rfq.status}</Tag></Descriptions.Item>
+          <Descriptions.Item label={t('field.created_at')}>{rfq.created_at?.slice(0, 10)}</Descriptions.Item>
+          {rfq.notes && <Descriptions.Item label={t('field.notes')} span={2}>{rfq.notes}</Descriptions.Item>}
         </Descriptions>
       </Card>
 
-      <Card title="比价表">
+      <Card title={t('rfq.comparison_table')}>
         <Table
           dataSource={comparisonData}
           rowKey="key"
@@ -156,17 +156,17 @@ export default function RFQDetailPage() {
           pagination={false}
           scroll={{ x: 'max-content' }}
           columns={[
-            { title: '物料', dataIndex: 'item_name', fixed: 'left', width: 200 },
-            { title: '数量', dataIndex: 'qty', width: 80, align: 'right', render: (v: number, r: any) => `${v} ${r.uom}` },
+            { title: t('rfq.item_col'), dataIndex: 'item_name', fixed: 'left', width: 200 },
+            { title: t('rfq.qty_col'), dataIndex: 'qty', width: 80, align: 'right', render: (v: number, r: any) => `${v} ${r.uom}` },
             ...supplierCols,
           ]}
         />
       </Card>
 
-      <Modal title="录入报价" open={!!quoteModal} onCancel={() => setQuoteModal(null)} onOk={doAddQuote} okText="保存">
+      <Modal title={t('rfq.enter_quote')} open={!!quoteModal} onCancel={() => setQuoteModal(null)} onOk={doAddQuote} okText={t('button.save')}>
         <Space direction="vertical" size="middle" style={{ width: '100%' }}>
-          <div><Typography.Text>单价</Typography.Text><InputNumber style={{ width: '100%' }} min={0} value={quotePrice} onChange={(v) => setQuotePrice(Number(v ?? 0))} prefix="¥" /></div>
-          <div><Typography.Text>交货天数（可选）</Typography.Text><InputNumber style={{ width: '100%' }} min={0} value={quoteDays ?? undefined} onChange={(v) => setQuoteDays(v ? Number(v) : null)} /></div>
+          <div><Typography.Text>{t('rfq.unit_price')}</Typography.Text><InputNumber style={{ width: '100%' }} min={0} value={quotePrice} onChange={(v) => setQuotePrice(Number(v ?? 0))} prefix="¥" /></div>
+          <div><Typography.Text>{t('rfq.delivery_days')}</Typography.Text><InputNumber style={{ width: '100%' }} min={0} value={quoteDays ?? undefined} onChange={(v) => setQuoteDays(v ? Number(v) : null)} /></div>
         </Space>
       </Modal>
     </Space>

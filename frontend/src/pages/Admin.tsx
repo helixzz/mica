@@ -49,7 +49,7 @@ export function AdminPage() {
     return (
       <Card>
         <Typography.Title level={4}>{t('error.permission_denied')}</Typography.Title>
-        <Typography.Text type="secondary">仅管理员可访问此页面 / Admin only.</Typography.Text>
+        <Typography.Text type="secondary">{t('admin.admin_only')}</Typography.Text>
       </Card>
     )
   }
@@ -57,21 +57,21 @@ export function AdminPage() {
   return (
     <Space direction="vertical" size="large" style={{ width: '100%' }}>
       <Typography.Title level={3} style={{ margin: 0 }}>
-        系统管理 / Admin Console
+        {t('admin.admin_console')}
       </Typography.Title>
       <Tabs
         items={[
-          { key: 'system', label: '系统信息', children: <SystemInfoPanel /> },
-          { key: 'companies', label: '公司主体', children: <CompaniesTab /> },
-          { key: 'system_params', label: '系统参数', children: <SystemParamsTab /> },
-          { key: 'approval_rules', label: '审批规则', children: <ApprovalRulesTab /> },
-          { key: 'classification', label: '分类管理', children: <ClassificationTab /> },
+          { key: 'system', label: t('admin.system_info'), children: <SystemInfoPanel /> },
+          { key: 'companies', label: t('admin.companies'), children: <CompaniesTab /> },
+          { key: 'system_params', label: t('admin.system_params'), children: <SystemParamsTab /> },
+          { key: 'approval_rules', label: t('admin.approval_rules'), children: <ApprovalRulesTab /> },
+          { key: 'classification', label: t('admin.classification'), children: <ClassificationTab /> },
           { key: 'import', label: '数据导入', children: <ImportTab /> },
-          { key: 'models', label: 'LLM 模型', children: <AIModelsPanel /> },
-          { key: 'routings', label: 'AI 场景路由', children: <RoutingsPanel /> },
-          { key: 'users', label: '用户管理', children: <UsersPanel /> },
-          { key: 'ai_logs', label: 'AI 调用日志', children: <AILogsPanel /> },
-          { key: 'audit', label: '审计日志', children: <AuditPanel /> },
+          { key: 'models', label: t('admin.llm_models'), children: <AIModelsPanel /> },
+          { key: 'routings', label: t('admin.ai_routing'), children: <RoutingsPanel /> },
+          { key: 'users', label: t('admin.users'), children: <UsersPanel /> },
+          { key: 'ai_logs', label: t('admin.ai_logs'), children: <AILogsPanel /> },
+          { key: 'audit', label: t('admin.audit'), children: <AuditPanel /> },
         ]}
       />
     </Space>
@@ -98,6 +98,7 @@ function SystemInfoPanel() {
 }
 
 function AIModelsPanel() {
+  const { t } = useTranslation()
   const [rows, setRows] = useState<AIModelRow[]>([])
   const [loading, setLoading] = useState(false)
   const [editOpen, setEditOpen] = useState(false)
@@ -112,23 +113,22 @@ function AIModelsPanel() {
   const test = async (id: string) => {
     const r = await api.adminTestAIModel(id)
     if (r.success) {
-      void message.success(`连接成功 (${r.latency_ms}ms): ${r.model_response?.slice(0, 80)}`)
+      void message.success(t('admin.connection_ok') + ` (${r.latency_ms}ms): ${r.model_response?.slice(0, 80)}`)
     } else {
-      void message.error(`连接失败: ${r.error}`)
+      void message.error(t('admin.connection_fail') + `: ${r.error}`)
     }
   }
 
   const del = async (id: string) => {
     await api.adminDeleteAIModel(id)
-    void message.success('已删除')
+    void message.success(t('message.deleted'))
     load()
   }
 
   return (
     <>
       <Space style={{ marginBottom: 12 }}>
-        <Button type="primary" icon={<PlusOutlined />} onClick={() => { setEditing(null); setEditOpen(true) }}>
-          新增模型
+        <Button type="primary" icon={<PlusOutlined />} onClick={() => { setEditing(null); setEditOpen(true) }}>{t('admin.new_model')}
         </Button>
       </Space>
       <Table
@@ -148,14 +148,12 @@ function AIModelsPanel() {
             title: '',
             render: (_, r) => (
               <Space>
-                <Button size="small" icon={<ThunderboltOutlined />} onClick={() => test(r.id)}>
-                  测试连接
+                <Button size="small" icon={<ThunderboltOutlined />} onClick={() => test(r.id)}>{t('admin.test_connection')}
                 </Button>
-                <Button size="small" onClick={() => { setEditing(r); setEditOpen(true) }}>
-                  编辑
+                <Button size="small" onClick={() => { setEditing(r); setEditOpen(true) }}>{t('button.edit')}
                 </Button>
                 <Button size="small" danger icon={<DeleteOutlined />} onClick={() => {
-                  Modal.confirm({ title: `删除 ${r.name}？`, onOk: () => del(r.id) })
+                  Modal.confirm({ title: `${t('button.delete')} ${r.name}?`, onOk: () => del(r.id) })
                 }} />
               </Space>
             ),
@@ -180,6 +178,7 @@ function AIModelDrawer({
   onClose: () => void
   onSaved: () => void
 }) {
+  const { t } = useTranslation()
   const [form] = Form.useForm()
   const [busy, setBusy] = useState(false)
 
@@ -226,7 +225,7 @@ function AIModelDrawer({
       } else {
         await api.adminCreateAIModel(body)
       }
-      void message.success('已保存')
+      void message.success(t('message.saved'))
       onSaved()
     } catch (e) {
       void message.error(extractError(e).detail)
@@ -237,11 +236,11 @@ function AIModelDrawer({
 
   return (
     <Drawer
-      title={initial ? `编辑模型 ${initial.name}` : '新增 LLM 模型'}
+      title={initial ? t('admin.edit_model', { name: initial.name }) : t('admin.new_llm_model')}
       open={open}
       onClose={onClose}
       width={520}
-      extra={<Button type="primary" onClick={save} loading={busy}>保存</Button>}
+      extra={<Button type="primary" onClick={save} loading={busy}>{t('button.save')}</Button>}
     >
       <Form form={form} layout="vertical">
         <Alert
@@ -249,25 +248,23 @@ function AIModelDrawer({
           showIcon
           icon={<InfoCircleOutlined />}
           style={{ marginBottom: 16 }}
-          message="OpenAI 兼容 API 填写指南"
+          message={t('admin.openai_guide_title')}
           description={
             <Typography.Text style={{ fontSize: 13 }}>
-              使用任意 OpenAI 兼容的第三方服务（DeepSeek / 智谱 GLM / Modelverse / 通义兼容接口等）时：
-              <br />1. <b>Provider</b> 填 <Typography.Text code>openai</Typography.Text>（或 <Typography.Text code>openai-compatible</Typography.Text>、<Typography.Text code>deepseek</Typography.Text> 等）
-              <br />2. <b>Model String</b> 填 vendor 的原始 model id（例如 <Typography.Text code>zai-org/glm-4.7</Typography.Text>）— 后端会自动补 <Typography.Text code>openai/</Typography.Text> 前缀
+              {t('admin.openai_guide_body')}
               <br />3. <b>API Base</b> 填 vendor 的 <Typography.Text code>/v1</Typography.Text> 端点（例如 <Typography.Text code>https://api.modelverse.cn/v1</Typography.Text>）
-              <br />4. <b>API Key</b> 填 vendor 发放的密钥
+
             </Typography.Text>
           }
         />
-        <Form.Item label="模型名称 Name" name="name" rules={[{ required: true }]}>
+        <Form.Item label={t('admin.model_name')} name="name" rules={[{ required: true }]}>
           <Input placeholder="qwen-max / gpt-4o / glm-4.7 / ..." />
         </Form.Item>
         <Form.Item
           label="Provider"
           name="provider"
           rules={[{ required: true }]}
-          help="OpenAI 兼容服务统一填 openai（或 openai-compatible / deepseek / modelverse 等别名）"
+          help={t('admin.provider_help')}
         >
           <Input placeholder="openai / anthropic / dashscope / volcengine / mock" />
         </Form.Item>
@@ -275,7 +272,7 @@ function AIModelDrawer({
           label="Model String"
           name="model_string"
           rules={[{ required: true }]}
-          help="填 vendor 的原始 model id（如 zai-org/glm-4.7、deepseek-chat）；已带 openai/ 等前缀则保持不变"
+          help={t('admin.model_string_help')}
         >
           <Input placeholder="zai-org/glm-4.7 · deepseek-chat · openai/gpt-4o" />
         </Form.Item>
@@ -285,9 +282,9 @@ function AIModelDrawer({
           ]} />
         </Form.Item>
         <Form.Item label="API Base" name="api_base">
-          <Input placeholder="可选，留空使用默认" />
+          <Input placeholder={t('admin.api_base_placeholder')} />
         </Form.Item>
-        <Form.Item label="API Key" name="api_key" help={initial ? '留空表示不修改' : '保存后仅展示脱敏'}>
+        <Form.Item label="API Key" name="api_key" help={initial ? t('admin.api_key_help_edit') : t('admin.api_key_help_new')}>
           <Input.Password />
         </Form.Item>
         <Space>
@@ -297,7 +294,7 @@ function AIModelDrawer({
           <Form.Item label="Priority" name="priority">
             <InputNumber />
           </Form.Item>
-          <Form.Item label="启用" name="is_active" valuePropName="checked">
+          <Form.Item label={t('common.enabled')} name="is_active" valuePropName="checked">
             <Switch />
           </Form.Item>
         </Space>
@@ -307,6 +304,7 @@ function AIModelDrawer({
 }
 
 function RoutingsPanel() {
+  const { t } = useTranslation()
   const [rows, setRows] = useState<Record<string, unknown>[]>([])
   const [models, setModels] = useState<AIModelRow[]>([])
   const [loading, setLoading] = useState(false)
@@ -331,7 +329,7 @@ function RoutingsPanel() {
       max_tokens: current.max_tokens,
       enabled: current.enabled,
     })
-    void message.success('已更新路由')
+    void message.success(t('admin.routing_updated'))
     load()
   }
 
@@ -342,9 +340,9 @@ function RoutingsPanel() {
       loading={loading}
       pagination={false}
       columns={[
-        { title: '场景 Feature', dataIndex: 'feature_code' },
+        { title: t('admin.feature_col'), dataIndex: 'feature_code' },
         {
-          title: '主模型',
+          title: t('admin.primary_model'),
           dataIndex: 'primary_model_id',
           render: (v: string | null, r) => (
             <Select
@@ -353,7 +351,7 @@ function RoutingsPanel() {
               onChange={(val) => changePrimary(r.feature_code as string, val, r)}
               allowClear
               options={models.map((m) => ({ value: m.id, label: `${m.name} (${m.modality})` }))}
-              placeholder="未配置"
+              placeholder={t('admin.not_configured')}
             />
           ),
         },
@@ -470,6 +468,7 @@ function AuditPanel() {
 }
 
 function ApprovalRulesTab() {
+  const { t } = useTranslation()
   const [rules, setRules] = useState<any[]>([])
   const [drawerOpen, setDrawerOpen] = useState(false)
   const [form] = Form.useForm()
@@ -483,40 +482,40 @@ function ApprovalRulesTab() {
       const values = form.getFieldsValue()
       const stages = JSON.parse(values.stages_json || '[]')
       await api.adminCreateApprovalRule?.({ ...values, stages })
-      void message.success('已保存')
+      void message.success(t('message.saved'))
       setDrawerOpen(false)
       form.resetFields()
       void api.adminListApprovalRules?.()?.then(setRules).catch(() => {})
     } catch (e: any) {
-      void message.error(e?.response?.data?.detail || '保存失败')
+      void message.error(e?.response?.data?.detail || t('error.save_failed'))
     }
   }
 
   return (
     <Space direction="vertical" size="middle" style={{ width: '100%' }}>
       <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-        <Typography.Text type="secondary">{rules.length} 条审批规则</Typography.Text>
-        <Button type="primary" icon={<PlusOutlined />} onClick={() => { form.resetFields(); setDrawerOpen(true) }}>新增规则</Button>
+        <Typography.Text type="secondary">{rules.length} {t('admin.rule_count')}</Typography.Text>
+        <Button type="primary" icon={<PlusOutlined />} onClick={() => { form.resetFields(); setDrawerOpen(true) }}>{t('admin.new_rule')}</Button>
       </div>
       <Table dataSource={rules} rowKey="id" size="small" pagination={false} columns={[
-        { title: '业务类型', dataIndex: 'biz_type' },
-        { title: '金额区间', render: (_: unknown, r: any) => `${r.amount_min ?? 0} - ${r.amount_max ?? '∞'}` },
-        { title: '阶段数', render: (_: unknown, r: any) => Array.isArray(r.stages) ? r.stages.length : '-' },
-        { title: '优先级', dataIndex: 'priority' },
-        { title: '启用', dataIndex: 'is_active', render: (v: boolean) => <Tag color={v ? 'success' : 'default'}>{v ? '是' : '否'}</Tag> },
+        { title: t('admin.biz_type'), dataIndex: 'biz_type' },
+        { title: t('admin.amount_range'), render: (_: unknown, r: any) => `${r.amount_min ?? 0} - ${r.amount_max ?? '∞'}` },
+        { title: t('admin.stage_count'), render: (_: unknown, r: any) => Array.isArray(r.stages) ? r.stages.length : '-' },
+        { title: t('admin.priority'), dataIndex: 'priority' },
+        { title: t('admin.enabled'), dataIndex: 'is_active', render: (v: boolean) => <Tag color={v ? 'success' : 'default'}>{v ? t('common.yes') : t('common.no')}</Tag> },
       ]} />
-      <Drawer title="新增/编辑审批规则" width={560} open={drawerOpen} onClose={() => setDrawerOpen(false)} footer={
-        <Space style={{ float: 'right' }}><Button onClick={() => setDrawerOpen(false)}>取消</Button><Button type="primary" onClick={handleSave}>保存</Button></Space>
+      <Drawer title={t('admin.edit_rule_title')} width={560} open={drawerOpen} onClose={() => setDrawerOpen(false)} footer={
+        <Space style={{ float: 'right' }}><Button onClick={() => setDrawerOpen(false)}>{t('button.cancel')}</Button><Button type="primary" onClick={handleSave}>{t('button.save')}</Button></Space>
       }>
         <Form form={form} layout="vertical">
-          <Form.Item name="biz_type" label="业务类型" rules={[{ required: true }]}>
-            <Select options={[{ value: 'purchase_requisition', label: '采购申请' }]} />
+          <Form.Item name="biz_type" label={t('admin.biz_type')} rules={[{ required: true }]}>
+            <Select options={[{ value: 'purchase_requisition', label: t('admin.purchase_requisition_opt') }]} />
           </Form.Item>
-          <Form.Item name="amount_min" label="最小金额"><InputNumber style={{ width: '100%' }} min={0} /></Form.Item>
-          <Form.Item name="amount_max" label="最大金额"><InputNumber style={{ width: '100%' }} min={0} /></Form.Item>
-          <Form.Item name="priority" label="优先级" initialValue={100}><InputNumber style={{ width: '100%' }} /></Form.Item>
-          <Form.Item name="stages_json" label="审批阶段（JSON）" rules={[{ required: true }]} help='格式: [{"role":"dept_manager","label":"部门审批"},{"role":"procurement_mgr","label":"采购经理审批"}]'>
-            <Input.TextArea rows={6} placeholder='[{"role":"dept_manager","label":"部门审批"}]' />
+          <Form.Item name="amount_min" label={t('admin.min_amount')}><InputNumber style={{ width: '100%' }} min={0} /></Form.Item>
+          <Form.Item name="amount_max" label={t('admin.max_amount')}><InputNumber style={{ width: '100%' }} min={0} /></Form.Item>
+          <Form.Item name="priority" label={t('admin.priority')} initialValue={100}><InputNumber style={{ width: '100%' }} /></Form.Item>
+          <Form.Item name="stages_json" label={t('admin.stages_json_help')} rules={[{ required: true }]} help='格式: [{"role":"dept_manager","label":"部门审批"},{"role":"procurement_mgr","label":"采购经理审批"}]'>
+            <Input.TextArea rows={6} placeholder={t('admin.stages_placeholder')} />
           </Form.Item>
         </Form>
       </Drawer>
@@ -525,6 +524,7 @@ function ApprovalRulesTab() {
 }
 
 function CompaniesTab() {
+  const { t } = useTranslation()
   const [companies, setCompanies] = useState<any[]>([])
   const [drawerOpen, setDrawerOpen] = useState(false)
   const [form] = Form.useForm()
@@ -536,36 +536,36 @@ function CompaniesTab() {
     try {
       const values = form.getFieldsValue()
       await api.createCompany(values)
-      void message.success('已创建')
+      void message.success(t('message.created'))
       form.resetFields()
       setDrawerOpen(false)
       load()
     } catch (e: any) {
-      void message.error(e?.response?.data?.detail || '创建失败')
+      void message.error(e?.response?.data?.detail || t('error.create_failed'))
     }
   }
 
   return (
     <Space direction="vertical" size="middle" style={{ width: '100%' }}>
       <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-        <Typography.Text type="secondary">{companies.length} 个公司主体</Typography.Text>
-        <Button type="primary" icon={<PlusOutlined />} onClick={() => { form.resetFields(); setDrawerOpen(true) }}>新增公司</Button>
+        <Typography.Text type="secondary">{companies.length} {t('admin.company_count')}</Typography.Text>
+        <Button type="primary" icon={<PlusOutlined />} onClick={() => { form.resetFields(); setDrawerOpen(true) }}>{t('admin.new_company')}</Button>
       </div>
       <Table dataSource={companies} rowKey="id" size="small" pagination={false} columns={[
-        { title: '编码', dataIndex: 'code', width: 100 },
-        { title: '中文名称', dataIndex: 'name_zh' },
-        { title: '英文名称', dataIndex: 'name_en', render: (v: string | null) => v || '-' },
-        { title: '默认币种', dataIndex: 'default_currency', width: 80 },
-        { title: '状态', dataIndex: 'is_active', width: 70, render: (v: boolean) => <Tag color={v !== false ? 'success' : 'default'}>{v !== false ? '启用' : '停用'}</Tag> },
+        { title: t('admin.code_col'), dataIndex: 'code', width: 100 },
+        { title: t('admin.name_zh_col'), dataIndex: 'name_zh' },
+        { title: t('admin.name_en_col'), dataIndex: 'name_en', render: (v: string | null) => v || '-' },
+        { title: t('admin.default_currency'), dataIndex: 'default_currency', width: 80 },
+        { title: t('admin.status_col'), dataIndex: 'is_active', width: 70, render: (v: boolean) => <Tag color={v !== false ? 'success' : 'default'}>{v !== false ? t('common.enabled') : t('common.disabled')}</Tag> },
       ]} />
-      <Drawer title="新增公司主体" width={420} open={drawerOpen} onClose={() => setDrawerOpen(false)} footer={
-        <Space style={{ float: 'right' }}><Button onClick={() => setDrawerOpen(false)}>取消</Button><Button type="primary" onClick={handleSave}>保存</Button></Space>
+      <Drawer title={t('admin.new_company_entity')} width={420} open={drawerOpen} onClose={() => setDrawerOpen(false)} footer={
+        <Space style={{ float: 'right' }}><Button onClick={() => setDrawerOpen(false)}>{t('button.cancel')}</Button><Button type="primary" onClick={handleSave}>{t('button.save')}</Button></Space>
       }>
         <Form form={form} layout="vertical">
-          <Form.Item name="code" label="编码" rules={[{ required: true }]}><Input placeholder="DEMO" /></Form.Item>
-          <Form.Item name="name_zh" label="中文名称" rules={[{ required: true }]}><Input placeholder="觅采科技有限公司" /></Form.Item>
-          <Form.Item name="name_en" label="英文名称"><Input placeholder="Mica Technology Co., Ltd." /></Form.Item>
-          <Form.Item name="default_currency" label="默认币种" initialValue="CNY">
+          <Form.Item name="code" label={t('admin.code_label')} rules={[{ required: true }]}><Input placeholder="DEMO" /></Form.Item>
+          <Form.Item name="name_zh" label={t('admin.name_zh_label')} rules={[{ required: true }]}><Input placeholder="觅采科技有限公司" /></Form.Item>
+          <Form.Item name="name_en" label={t('admin.name_en_label')}><Input placeholder="Mica Technology Co., Ltd." /></Form.Item>
+          <Form.Item name="default_currency" label={t('admin.currency_label')} initialValue="CNY">
             <Select options={[{ value: 'CNY' }, { value: 'USD' }, { value: 'EUR' }, { value: 'HKD' }, { value: 'JPY' }]} />
           </Form.Item>
         </Form>
@@ -575,6 +575,7 @@ function CompaniesTab() {
 }
 
 function ImportTab() {
+  const { t } = useTranslation()
   const [result, setResult] = useState<{ created?: number; skipped?: number; errors?: string[] } | null>(null)
   const [uploading, setUploading] = useState(false)
 
@@ -586,9 +587,9 @@ function ImportTab() {
       formData.append('file', file)
       const { data } = await api.adminUploadFile(endpoint, formData)
       setResult(data)
-      void message.success(`导入完成：新增 ${data.created} 条${data.skipped ? `，跳过 ${data.skipped} 条` : ''}`)
+      void message.success(t('admin.import_complete', { created: data.created }) + (data.skipped ? `, ${t('admin.import_skipped', { skipped: data.skipped })}` : ''))
     } catch (e: any) {
-      void message.error(e?.response?.data?.detail || '导入失败')
+      void message.error(e?.response?.data?.detail || t('admin.import_failed'))
     } finally {
       setUploading(false)
     }
@@ -597,22 +598,22 @@ function ImportTab() {
   const importConfigs = [
     {
       key: 'suppliers',
-      title: '导入供应商',
-      desc: 'Excel 列：名称（必填）、编码、联系人、电话、邮箱',
+      title: t('admin.import_suppliers'),
+      desc: t('admin.import_suppliers_desc'),
       endpoint: '/admin/import/suppliers',
       templateKind: 'suppliers',
     },
     {
       key: 'items',
-      title: '导入物料 / SKU',
-      desc: 'Excel 列：编码（必填）、名称（必填）、分类、单位、规格',
+      title: t('admin.import_items_title'),
+      desc: t('admin.import_items_desc'),
       endpoint: '/admin/import/items',
       templateKind: 'items',
     },
     {
       key: 'prices',
-      title: '导入报价 / 行情',
-      desc: 'Excel 列：物料编码（必填）、价格（必填）、日期(YYYY-MM-DD)、供应商名、币种',
+      title: t('admin.import_prices_title'),
+      desc: t('admin.import_prices_desc'),
       endpoint: '/admin/import/prices',
       templateKind: 'prices',
     },
@@ -631,19 +632,20 @@ function ImportTab() {
               showUploadList={false}
               maxCount={1}
             >
-              <Button type="primary" icon={<PlusOutlined />} loading={uploading}>上传数据</Button>
+              <Button type="primary" icon={<PlusOutlined />} loading={uploading}>{t('admin.upload_data')}</Button>
             </Upload>
           </Space>
         </Card>
       ))}
       {result && result.errors && result.errors.length > 0 && (
-        <Alert type="warning" message={`${result.errors.length} 行有问题`} description={result.errors.slice(0, 10).join('\n')} showIcon />
+        <Alert type="warning" message={t('admin.rows_with_issues', { count: result.errors.length })} description={result.errors.slice(0, 10).join('\n')} showIcon />
       )}
     </Space>
   )
 }
 
 function ClassificationTab() {
+  const { t } = useTranslation()
   const [costCenters, setCostCenters] = useState<any[]>([])
   const [categories, setCategories] = useState<any[]>([])
   const [expenseTypes, setExpenseTypes] = useState<any[]>([])
@@ -667,12 +669,12 @@ function ClassificationTab() {
       } else {
         await api.createLookupValue({ ...values, type: 'expense_type' })
       }
-      void message.success('已添加')
+      void message.success(t('admin.added'))
       form.resetFields()
       setAdding(null)
       load()
     } catch (e: any) {
-      void message.error(e?.response?.data?.detail || '创建失败')
+      void message.error(e?.response?.data?.detail || t('error.create_failed'))
     }
   }
 
@@ -681,10 +683,10 @@ function ClassificationTab() {
       if (dimension === 'cost_center') await api.deleteCostCenter(id)
       else if (dimension === 'category') await api.deleteProcurementCategory(id)
       else await api.deleteLookupValue(id)
-      void message.success('已停用')
+      void message.success(t('admin.deactivated'))
       load()
     } catch (e: any) {
-      void message.error(e?.response?.data?.detail || '操作失败')
+      void message.error(e?.response?.data?.detail || t('admin.operation_failed'))
     }
   }
 
@@ -692,7 +694,7 @@ function ClassificationTab() {
     <Card
       size="small"
       title={<Space><AppstoreOutlined />{title}</Space>}
-      extra={<Button size="small" icon={<PlusOutlined />} onClick={() => { setAdding(dimension); form.resetFields() }}>添加</Button>}
+      extra={<Button size="small" icon={<PlusOutlined />} onClick={() => { setAdding(dimension); form.resetFields() }}>{t('common.add')}</Button>}
       style={{ marginBottom: 16 }}
     >
       <Table
@@ -701,10 +703,10 @@ function ClassificationTab() {
         size="small"
         pagination={false}
         columns={[
-          { title: '编码', dataIndex: 'code', width: 120 },
-          { title: '中文名称', dataIndex: 'label_zh' },
-          { title: '英文名称', dataIndex: 'label_en' },
-          { title: '排序', dataIndex: 'sort_order', width: 60 },
+          { title: t('admin.code_col'), dataIndex: 'code', width: 120 },
+          { title: t('admin.label_zh'), dataIndex: 'label_zh' },
+          { title: t('admin.label_en'), dataIndex: 'label_en' },
+          { title: t('admin.sort_order'), dataIndex: 'sort_order', width: 60 },
           {
             title: '',
             width: 60,
@@ -720,8 +722,8 @@ function ClassificationTab() {
   const renderCategoryTree = () => (
     <Card
       size="small"
-      title={<Space><AppstoreOutlined />采购种类（2 级层级）</Space>}
-      extra={<Button size="small" icon={<PlusOutlined />} onClick={() => { setAdding('category'); form.resetFields() }}>添加</Button>}
+      title={<Space><AppstoreOutlined />{t('admin.category_hierarchy')}</Space>}
+      extra={<Button size="small" icon={<PlusOutlined />} onClick={() => { setAdding('category'); form.resetFields() }}>{t('common.add')}</Button>}
       style={{ marginBottom: 16 }}
     >
       {categories.map((cat: any) => (
@@ -746,42 +748,42 @@ function ClassificationTab() {
           ))}
         </div>
       ))}
-      {categories.length === 0 && <Typography.Text type="secondary">暂无分类</Typography.Text>}
+      {categories.length === 0 && <Typography.Text type="secondary">{t('admin.no_categories')}</Typography.Text>}
     </Card>
   )
 
   return (
     <Space direction="vertical" size="middle" style={{ width: '100%' }}>
-      {renderList('cost_center', costCenters, '成本中心')}
+      {renderList('cost_center', costCenters, t('admin.cost_center_title'))}
       {renderCategoryTree()}
-      {renderList('expense_type', expenseTypes, '开支类型')}
+      {renderList('expense_type', expenseTypes, t('admin.expense_type_title'))}
 
       <Modal
-        title={adding === 'cost_center' ? '添加成本中心' : adding === 'category' ? '添加采购种类' : '添加开支类型'}
+        title={adding === 'cost_center' ? t('admin.add_cost_center') : adding === 'category' ? t('admin.add_category') : t('admin.add_expense_type')}
         open={!!adding}
         onCancel={() => setAdding(null)}
         onOk={() => adding && handleAdd(adding)}
-        okText="保存"
-        cancelText="取消"
+        okText={t('button.save')}
+        cancelText={t('button.cancel')}
       >
         <Form form={form} layout="vertical">
-          <Form.Item name="code" label="编码" rules={[{ required: true }]}>
-            <Input placeholder="如 CC-IT / laptop / capex" />
+          <Form.Item name="code" label={t('admin.code_label')} rules={[{ required: true }]}>
+            <Input placeholder={t('admin.code_placeholder')} />
           </Form.Item>
-          <Form.Item name="label_zh" label="中文名称" rules={[{ required: true }]}>
-            <Input placeholder="信息技术部 / 笔记本电脑 / 资本性支出" />
+          <Form.Item name="label_zh" label={t('admin.label_zh')} rules={[{ required: true }]}>
+            <Input placeholder={t('admin.label_zh_placeholder')} />
           </Form.Item>
-          <Form.Item name="label_en" label="英文名称" rules={[{ required: true }]}>
+          <Form.Item name="label_en" label={t('admin.label_en')} rules={[{ required: true }]}>
             <Input placeholder="IT Department / Laptops / CapEx" />
           </Form.Item>
-          <Form.Item name="sort_order" label="排序" initialValue={0}>
+          <Form.Item name="sort_order" label={t('admin.sort_order')} initialValue={0}>
             <InputNumber style={{ width: '100%' }} />
           </Form.Item>
           {adding === 'category' && (
-            <Form.Item name="parent_id" label="上级分类（留空为一级）">
+            <Form.Item name="parent_id" label={t('admin.parent_category')}>
               <Select
                 allowClear
-                placeholder="选择上级分类（一级）"
+                placeholder={t('admin.select_parent')}
                 options={categories.map((c: any) => ({ value: c.id, label: c.label_zh }))}
               />
             </Form.Item>

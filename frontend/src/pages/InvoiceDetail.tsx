@@ -41,7 +41,7 @@ export function InvoiceDetailPage() {
       document.body.appendChild(a)
       a.click()
       document.body.removeChild(a)
-      void message.info('下载 token 为一次性，新标签中已打开。如需再次下载请回到列表重新生成')
+      void message.info(t('invoice.download_hint'))
     } catch (e) {
       void message.error(extractError(e).detail)
     }
@@ -100,7 +100,7 @@ export function InvoiceDetailPage() {
         </Descriptions>
       </Card>
 
-      <Card title="发票附件 / Invoice Attachments">
+      <Card title={t('invoice.attachments')}>
         {inv.attachments && inv.attachments.length > 0 ? (
           <Row gutter={[12, 12]}>
             {inv.attachments.map((a) => (
@@ -117,7 +117,7 @@ export function InvoiceDetailPage() {
                       onClick={() => downloadAttachment(a.document_id, a.original_filename)}
                       block
                     >
-                      {t('button.submit').includes('Submit') ? 'Download' : '下载'}
+                      {t('common.download')}
                     </Button>
                   </Space>
                 </Card>

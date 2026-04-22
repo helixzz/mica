@@ -288,27 +288,23 @@ export function DashboardPage() {
               icon={<PlusOutlined />}
               onClick={() => navigate('/purchase-requisitions/new')}
             >
-              {isRequester ? '提交采购需求' : t('dashboard.new_pr')}
+              {isRequester ? t('pr.submit_demand') : t('dashboard.new_pr')}
             </Button>
           )}
           {(isItBuyer || isProcurementMgr || role === 'admin') && (
-            <Button icon={<PlusOutlined />} onClick={() => navigate('/rfqs/new')}>
-              新建询价
+            <Button icon={<PlusOutlined />} onClick={() => navigate('/rfqs/new')}>{t('dashboard.new_rfq')}
             </Button>
           )}
           {isRequester && (
-            <Button onClick={() => navigate('/purchase-requisitions')}>
-              我的采购申请 {myPrs.length > 0 ? `(${myPrs.length})` : ''}
+            <Button onClick={() => navigate('/purchase-requisitions')}>{t('pr.my_prs')} {myPrs.length > 0 ? `(${myPrs.length})` : ''}
             </Button>
           )}
           {isDeptManager && (
-            <Button type="primary" icon={<AuditOutlined />} onClick={() => navigate('/approvals')}>
-              待审批 ({pending.length})
+            <Button type="primary" icon={<AuditOutlined />} onClick={() => navigate('/approvals')}>{t('dashboard.pending_approvals')} ({pending.length})
             </Button>
           )}
           {isFinanceAuditor && (
-            <Button onClick={() => navigate('/payments')}>
-              付款管理
+            <Button onClick={() => navigate('/payments')}>{t('dashboard.payment_mgmt')}
             </Button>
           )}
           <Button icon={<AppstoreOutlined />} onClick={() => navigate('/purchase-orders')}>
@@ -326,11 +322,11 @@ export function DashboardPage() {
       </Section>
 
       {isRequester && myPrs.length > 0 && (
-        <Section title="我的采购进度">
+        <Section title={t('pr.my_progress')}>
           <Row gutter={16}>
-            <Col span={8}><StatCard label="草稿" value={myDrafts} variant={myDrafts > 0 ? 'accent' : 'default'} /></Col>
-            <Col span={8}><StatCard label="待审批" value={myPending} /></Col>
-            <Col span={8}><StatCard label="已批准（待询价）" value={myApproved} variant={myApproved > 0 ? 'accent' : 'default'} /></Col>
+            <Col span={8}><StatCard label={t('pr.draft_count')} value={myDrafts} variant={myDrafts > 0 ? 'accent' : 'default'} /></Col>
+            <Col span={8}><StatCard label={t('pr.pending_count')} value={myPending} /></Col>
+            <Col span={8}><StatCard label={t('pr.approved_awaiting')} value={myApproved} variant={myApproved > 0 ? 'accent' : 'default'} /></Col>
           </Row>
         </Section>
       )}

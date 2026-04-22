@@ -12,19 +12,18 @@ dayjs.extend(relativeTime);
 
 const { Title, Text } = Typography;
 
-const CATEGORIES = [
-  { key: 'all', label: '全部' },
-  { key: 'unread', label: '未读' },
-  { key: 'approval', label: '审批' },
-  { key: 'contract_expiring', label: '合同' },
-  { key: 'price_anomaly', label: '价格' },
-  { key: 'system', label: '系统' }
-];
-
 const ALL_CATEGORIES = ['approval', 'po_created', 'payment_pending', 'contract_expiring', 'price_anomaly', 'system'];
 
 export const NotificationCenter: React.FC = () => {
   const { t } = useTranslation();
+  const CATEGORIES = [
+    { key: 'all', label: t('notification.filters.all') },
+    { key: 'unread', label: t('notification.filters.unread') },
+    { key: 'approval', label: t('notification.filters.approval') },
+    { key: 'contract_expiring', label: t('notification.filters.contract_expiring') },
+    { key: 'price_anomaly', label: t('notification.filters.price_anomaly') },
+    { key: 'system', label: t('notification.filters.system') }
+  ];
   const { token } = theme.useToken();
   const [searchParams, setSearchParams] = useSearchParams();
   const navigate = useNavigate();
@@ -57,7 +56,7 @@ export const NotificationCenter: React.FC = () => {
       setItems(prev => loadMore ? [...prev, ...res.items] : res.items);
       setHasMore(res.has_more);
     } catch (error) {
-      message.error(t('notification.fetchError', '获取通知失败'));
+      message.error(t('notification.fetchError'));
     } finally {
       setLoading(false);
     }
@@ -69,7 +68,7 @@ export const NotificationCenter: React.FC = () => {
       const res = await getSubscriptions();
       setSubscriptions(res);
     } catch (error) {
-      message.error(t('notification.fetchSubsError', '获取订阅设置失败'));
+      message.error(t('notification.fetchSubsError'));
     } finally {
       setSubsLoading(false);
     }
@@ -129,15 +128,15 @@ export const NotificationCenter: React.FC = () => {
         }
         return [...prev, payload];
       });
-      message.success(t('notification.saveSuccess', '设置已保存'));
+      message.success(t('notification.saveSuccess'));
     } catch (error) {
-      message.error(t('notification.saveError', '保存设置失败'));
+      message.error(t('notification.saveError'));
     }
   };
 
   const columns = [
     {
-      title: t('notification.category', '通知类型'),
+      title: t('notification.category'),
       dataIndex: 'category',
       key: 'category',
       render: (category: string) => {
@@ -151,7 +150,7 @@ export const NotificationCenter: React.FC = () => {
       }
     },
     {
-      title: t('notification.inApp', '站内信'),
+      title: t('notification.inApp'),
       dataIndex: 'in_app_enabled',
       key: 'in_app_enabled',
       render: (enabled: boolean, record: any) => (
@@ -162,7 +161,7 @@ export const NotificationCenter: React.FC = () => {
       )
     },
     {
-      title: t('notification.email', '邮件通知'),
+      title: t('notification.email'),
       dataIndex: 'email_enabled',
       key: 'email_enabled',
       render: (enabled: boolean, record: any) => (
@@ -186,7 +185,7 @@ export const NotificationCenter: React.FC = () => {
 
   return (
     <div style={{ padding: 24, maxWidth: 1000, margin: '0 auto' }}>
-      <Title level={3} style={{ marginBottom: 24 }}>{t('notification.center', '通知中心')}</Title>
+      <Title level={3} style={{ marginBottom: 24 }}>{t('notification.center')}</Title>
       
       <Card bodyStyle={{ padding: 0 }}>
         <Tabs 
@@ -196,7 +195,7 @@ export const NotificationCenter: React.FC = () => {
           items={[
             {
               key: 'inbox',
-              label: t('notification.inbox', '收件箱'),
+              label: t('notification.inbox'),
               children: (
                 <div style={{ padding: '16px 0' }}>
                   <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 16 }}>
@@ -211,7 +210,7 @@ export const NotificationCenter: React.FC = () => {
                         </Tag.CheckableTag>
                       ))}
                     </Space>
-                    <Button onClick={handleMarkAllRead}>{t('notification.markAllRead', '全部标记已读')}</Button>
+                    <Button onClick={handleMarkAllRead}>{t('notification.markAllRead')}</Button>
                   </div>
                   
                   <List
@@ -234,7 +233,7 @@ export const NotificationCenter: React.FC = () => {
                                 type="link" 
                                 onClick={(e) => { e.stopPropagation(); handleMarkRead(item.id); }}
                               >
-                                {t('notification.markRead', '标为已读')}
+                                {t('notification.markRead')}
                               </Button>
                             )
                           ].filter(Boolean)}
@@ -262,7 +261,7 @@ export const NotificationCenter: React.FC = () => {
                   {hasMore && (
                     <div style={{ textAlign: 'center', marginTop: 16, marginBottom: 16 }}>
                       <Button loading={loading} onClick={() => fetchNotifications(true)}>
-                        {t('notification.loadMore', '加载更多')}
+                        {t('notification.loadMore')}
                       </Button>
                     </div>
                   )}
@@ -271,7 +270,7 @@ export const NotificationCenter: React.FC = () => {
             },
             {
               key: 'subscriptions',
-              label: t('notification.subscriptions', '通知设置'),
+              label: t('notification.subscriptions'),
               children: (
                 <div style={{ padding: '16px 0 24px' }}>
                   <Table 
