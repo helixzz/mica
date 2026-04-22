@@ -55,7 +55,7 @@ async def list_items(
 )
 async def create_supplier(
     payload: SupplierCreate,
-    user: Annotated[CurrentUser, Depends(require_roles("admin", "procurement_mgr"))],
+    user: Annotated[CurrentUser, Depends(require_roles("admin", "procurement_mgr", "it_buyer"))],
     db: Annotated[AsyncSession, Depends(get_db)],
 ) -> SupplierOut:
     supplier = await master_data_svc.create_supplier(db, user, payload)
@@ -66,7 +66,7 @@ async def create_supplier(
 async def update_supplier(
     supplier_id: UUID,
     payload: SupplierUpdate,
-    user: Annotated[CurrentUser, Depends(require_roles("admin", "procurement_mgr"))],
+    user: Annotated[CurrentUser, Depends(require_roles("admin", "procurement_mgr", "it_buyer"))],
     db: Annotated[AsyncSession, Depends(get_db)],
 ) -> SupplierOut:
     supplier = await master_data_svc.update_supplier(db, user, supplier_id, payload)
@@ -78,7 +78,7 @@ async def update_supplier(
 )
 async def delete_supplier(
     supplier_id: UUID,
-    user: Annotated[CurrentUser, Depends(require_roles("admin"))],
+    user: Annotated[CurrentUser, Depends(require_roles("admin", "procurement_mgr", "it_buyer"))],
     db: Annotated[AsyncSession, Depends(get_db)],
     hard: bool = False,
 ) -> Response:
