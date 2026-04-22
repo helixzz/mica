@@ -41,5 +41,10 @@
     "price": {
       "anomaly": "Price anomaly detected: {item}"
     }
-  }
+  },
+  "contract.not_found": "Contract not found",
+  "schedule_item.not_found": "Payment schedule item not found",
+  "schedule_item.cannot_delete_paid": "Cannot delete a paid schedule item",
+  "schedule_item.already_paid": "This installment has already been paid",
+  "invoice.not_found": "Invoice not found"
 }

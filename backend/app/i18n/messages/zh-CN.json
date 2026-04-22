@@ -41,5 +41,10 @@
     "price": {
       "anomaly": "价格异常: {item}"
     }
-  }
+  },
+  "contract.not_found": "合同不存在",
+  "schedule_item.not_found": "付款计划期次不存在",
+  "schedule_item.cannot_delete_paid": "已付款的计划不能删除",
+  "schedule_item.already_paid": "该期已付款，不能重复执行",
+  "invoice.not_found": "发票不存在"
 }
