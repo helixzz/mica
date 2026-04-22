@@ -19,7 +19,7 @@ import { useEffect, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { useNavigate } from 'react-router-dom'
 
-import { api, type Item, type PRItem, type Supplier } from '@/api'
+import { api, type ClassificationItem, type Item, type PRItem, type Supplier } from '@/api'
 import { extractError } from '@/api/client'
 import { AIStreamButton } from '@/components/AIStreamButton'
 
@@ -43,9 +43,15 @@ export function PRNewPage() {
     business_reason?: string
     required_date?: dayjs.Dayjs
     currency: string
+    cost_center_id?: string
+    expense_type_id?: string
+    procurement_category_id?: string
   }>()
   const [suppliers, setSuppliers] = useState<Supplier[]>([])
   const [items, setItems] = useState<Item[]>([])
+  const [costCenters, setCostCenters] = useState<{ id: string; label_zh: string }[]>([])
+  const [expenseTypes, setExpenseTypes] = useState<{ id: string; label_zh: string }[]>([])
+  const [procCategories, setProcCategories] = useState<ClassificationItem[]>([])
   const [lines, setLines] = useState<LineForm[]>([
     { key: 1, line_no: 1, item_id: null, item_name: '', specification: '', supplier_id: null, qty: 1, uom: 'EA', unit_price: 0 },
   ])
@@ -54,6 +60,9 @@ export function PRNewPage() {
   useEffect(() => {
     void api.suppliers().then(setSuppliers)
     void api.items().then(setItems)
+    void api.listCostCenters().then(setCostCenters)
+    void api.listLookupValues('expense_type').then(setExpenseTypes)
+    void api.listProcurementCategories().then(setProcCategories)
   }, [])
 
   const addLine = () => {
@@ -112,6 +121,9 @@ export function PRNewPage() {
         business_reason: values.business_reason,
         currency: values.currency || 'CNY',
         required_date: values.required_date ? values.required_date.format('YYYY-MM-DD') : null,
+        cost_center_id: values.cost_center_id || null,
+        expense_type_id: values.expense_type_id || null,
+        procurement_category_id: values.procurement_category_id || null,
         items: lines.map<PRItem>((l) => ({
           line_no: l.line_no,
           item_id: l.item_id,
@@ -253,6 +265,40 @@ export function PRNewPage() {
             <Col span={6}>
               <Form.Item label={t('field.required_date')} name="required_date">
                 <DatePicker style={{ width: '100%' }} />
+              </Form.Item>
+            </Col>
+          </Row>
+          <Row gutter={16}>
+            <Col span={8}>
+              <Form.Item label="成本中心" name="cost_center_id">
+                <Select
+                  allowClear
+                  placeholder="选择成本中心"
+                  options={costCenters.map((c) => ({ value: c.id, label: c.label_zh }))}
+                />
+              </Form.Item>
+            </Col>
+            <Col span={8}>
+              <Form.Item label="开支类型" name="expense_type_id">
+                <Select
+                  allowClear
+                  placeholder="CapEx / OpEx"
+                  options={expenseTypes.map((e) => ({ value: e.id, label: e.label_zh }))}
+                />
+              </Form.Item>
+            </Col>
+            <Col span={8}>
+              <Form.Item label="采购种类" name="procurement_category_id">
+                <Select
+                  allowClear
+                  showSearch
+                  optionFilterProp="label"
+                  placeholder="选择采购种类"
+                  options={procCategories.map((c) => ({
+                    value: c.id,
+                    label: c.level === 2 ? `  └ ${c.label_zh}` : c.label_zh,
+                  }))}
+                />
               </Form.Item>
             </Col>
           </Row>

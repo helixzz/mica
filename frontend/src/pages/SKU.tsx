@@ -25,6 +25,7 @@ import { useTranslation } from 'react-i18next'
 
 import {
   api,
+  type ClassificationItem,
   type Item,
   type SKUAnomaly,
   type SKUBenchmark,
@@ -44,12 +45,15 @@ export function SKUPage() {
   const [benchmarks, setBenchmarks] = useState<Record<string, SKUBenchmark>>({})
   const [trends, setTrends] = useState<Record<string, SKUTrendPoint[]>>({})
   const [recordOpen, setRecordOpen] = useState(false)
+  const [categories, setCategories] = useState<ClassificationItem[]>([])
+  const [categoryFilter, setCategoryFilter] = useState<string | null>(null)
 
   const load = () => {
     void api.items().then(setItems)
     void api.suppliers().then(setSuppliers)
     void api.listSKUAnomalies('new').then(setAnomalies)
     void api.listSKUPrices().then(setPrices)
+    void api.listProcurementCategories().then(setCategories)
   }
 
   useEffect(load, [])
@@ -193,18 +197,33 @@ export function SKUPage() {
       )}
 
       <Card title={<Space><LineChartOutlined />选择物料对比价格走势</Space>}>
-        <Select
-          mode="multiple"
-          style={{ width: '100%', maxWidth: 720 }}
-          placeholder="选择一个或多个 SKU 进行价格走势对比"
-          value={selectedItems}
-          onChange={setSelectedItems}
-          options={items.map((i) => ({ value: i.id, label: `${i.code} · ${i.name}` }))}
-          showSearch
-          optionFilterProp="label"
-          allowClear
-          maxTagCount={6}
-        />
+        <Space style={{ marginBottom: 12 }} wrap>
+          <Select
+            style={{ width: 200 }}
+            allowClear
+            placeholder="按分类筛选"
+            value={categoryFilter}
+            onChange={setCategoryFilter}
+            options={categories.map((c) => ({
+              value: c.id,
+              label: c.level === 2 ? `  └ ${c.label_zh}` : c.label_zh,
+            }))}
+          />
+          <Select
+            mode="multiple"
+            style={{ width: 520 }}
+            placeholder="选择一个或多个 SKU 进行价格走势对比"
+            value={selectedItems}
+            onChange={setSelectedItems}
+            options={items
+              .filter((i) => !categoryFilter || (i as any).category_id === categoryFilter || !((i as any).category_id))
+              .map((i) => ({ value: i.id, label: `${i.code} · ${i.name}` }))}
+            showSearch
+            optionFilterProp="label"
+            allowClear
+            maxTagCount={6}
+          />
+        </Space>
 
         {selectedItems.length > 0 && (
           <Row gutter={16} style={{ marginTop: 16 }}>
