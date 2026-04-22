@@ -964,6 +964,14 @@ export const api = {
   async adminUploadFile(endpoint: string, formData: FormData): Promise<{ data: any }> {
     return client.post(endpoint, formData, { headers: { 'Content-Type': 'multipart/form-data' } })
   },
+  async adminListApprovalRules(): Promise<any[]> {
+    const { data } = await client.get('/approval-rules')
+    return data
+  },
+  async adminCreateApprovalRule(body: any): Promise<any> {
+    const { data } = await client.post('/approval-rules', body)
+    return data
+  },
   async aiStream(
     feature_code: 'pr_description_polish' | 'sku_suggest',
     body: { draft?: string; query?: string },

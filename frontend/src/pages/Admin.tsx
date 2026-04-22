@@ -64,6 +64,7 @@ export function AdminPage() {
           { key: 'system', label: '系统信息', children: <SystemInfoPanel /> },
           { key: 'companies', label: '公司主体', children: <CompaniesTab /> },
           { key: 'system_params', label: '系统参数', children: <SystemParamsTab /> },
+          { key: 'approval_rules', label: '审批规则', children: <ApprovalRulesTab /> },
           { key: 'classification', label: '分类管理', children: <ClassificationTab /> },
           { key: 'import', label: '数据导入', children: <ImportTab /> },
           { key: 'models', label: 'LLM 模型', children: <AIModelsPanel /> },
@@ -465,6 +466,61 @@ function AuditPanel() {
         { title: 'Comment', dataIndex: 'comment', ellipsis: true },
       ]}
     />
+  )
+}
+
+function ApprovalRulesTab() {
+  const [rules, setRules] = useState<any[]>([])
+  const [drawerOpen, setDrawerOpen] = useState(false)
+  const [form] = Form.useForm()
+
+  useEffect(() => {
+    void api.adminListApprovalRules?.()?.then(setRules).catch(() => {})
+  }, [])
+
+  const handleSave = async () => {
+    try {
+      const values = form.getFieldsValue()
+      const stages = JSON.parse(values.stages_json || '[]')
+      await api.adminCreateApprovalRule?.({ ...values, stages })
+      void message.success('已保存')
+      setDrawerOpen(false)
+      form.resetFields()
+      void api.adminListApprovalRules?.()?.then(setRules).catch(() => {})
+    } catch (e: any) {
+      void message.error(e?.response?.data?.detail || '保存失败')
+    }
+  }
+
+  return (
+    <Space direction="vertical" size="middle" style={{ width: '100%' }}>
+      <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+        <Typography.Text type="secondary">{rules.length} 条审批规则</Typography.Text>
+        <Button type="primary" icon={<PlusOutlined />} onClick={() => { form.resetFields(); setDrawerOpen(true) }}>新增规则</Button>
+      </div>
+      <Table dataSource={rules} rowKey="id" size="small" pagination={false} columns={[
+        { title: '业务类型', dataIndex: 'biz_type' },
+        { title: '金额区间', render: (_: unknown, r: any) => `${r.amount_min ?? 0} - ${r.amount_max ?? '∞'}` },
+        { title: '阶段数', render: (_: unknown, r: any) => Array.isArray(r.stages) ? r.stages.length : '-' },
+        { title: '优先级', dataIndex: 'priority' },
+        { title: '启用', dataIndex: 'is_active', render: (v: boolean) => <Tag color={v ? 'success' : 'default'}>{v ? '是' : '否'}</Tag> },
+      ]} />
+      <Drawer title="新增/编辑审批规则" width={560} open={drawerOpen} onClose={() => setDrawerOpen(false)} footer={
+        <Space style={{ float: 'right' }}><Button onClick={() => setDrawerOpen(false)}>取消</Button><Button type="primary" onClick={handleSave}>保存</Button></Space>
+      }>
+        <Form form={form} layout="vertical">
+          <Form.Item name="biz_type" label="业务类型" rules={[{ required: true }]}>
+            <Select options={[{ value: 'purchase_requisition', label: '采购申请' }]} />
+          </Form.Item>
+          <Form.Item name="amount_min" label="最小金额"><InputNumber style={{ width: '100%' }} min={0} /></Form.Item>
+          <Form.Item name="amount_max" label="最大金额"><InputNumber style={{ width: '100%' }} min={0} /></Form.Item>
+          <Form.Item name="priority" label="优先级" initialValue={100}><InputNumber style={{ width: '100%' }} /></Form.Item>
+          <Form.Item name="stages_json" label="审批阶段（JSON）" rules={[{ required: true }]} help='格式: [{"role":"dept_manager","label":"部门审批"},{"role":"procurement_mgr","label":"采购经理审批"}]'>
+            <Input.TextArea rows={6} placeholder='[{"role":"dept_manager","label":"部门审批"}]' />
+          </Form.Item>
+        </Form>
+      </Drawer>
+    </Space>
   )
 }
 
