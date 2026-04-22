@@ -1,3 +1,4 @@
+import { useTranslation } from 'react-i18next'
 import { Button, Card, Descriptions, Space, Table, Tag, Typography } from 'antd'
 import { useEffect, useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'

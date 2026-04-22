@@ -6,6 +6,7 @@ import { useTranslation } from 'react-i18next'
 import { Link } from 'react-router-dom'
 
 import { api, type InvoiceListRow } from '@/api'
+import { fmtAmount } from '@/utils/format'
 
 export function InvoicesPage() {
   const { t } = useTranslation()
@@ -35,7 +36,9 @@ export function InvoicesPage() {
       render: (v: boolean) =>
         v ? <CheckCircleTwoTone twoToneColor="#52c41a" /> : <WarningTwoTone twoToneColor="#faad14" />,
     },
-    { title: t('field.status'), dataIndex: 'status', render: (s) => <Tag>{t(`status.${s}` as 'status.draft')}</Tag> },
+    { title: t('field.status'), dataIndex: 'status',
+      filters: [{text:'draft',value:'draft'},{text:'pending_match',value:'pending_match'},{text:'matched',value:'matched'},{text:'approved',value:'approved'},{text:'paid',value:'paid'},{text:'cancelled',value:'cancelled'}],
+      onFilter: (value: any, record: any) => record.status === value, render: (s) => <Tag>{t(`status.${s}` as 'status.draft')}</Tag> },
   ]
 
   return (
