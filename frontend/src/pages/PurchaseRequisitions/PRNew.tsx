@@ -129,6 +129,12 @@ export function PRNewPage() {
           : l
       )
     )
+    void client
+      .get<Record<string, { latest_price: number | null; avg_price: number | null }>>(
+        `/sku/reference-prices?item_ids=${itemId}`,
+      )
+      .then((r) => setRefPrices((prev) => ({ ...prev, ...r.data })))
+      .catch(() => {})
   }
 
   const removeLine = (key: number) => {
@@ -198,7 +204,7 @@ export function PRNewPage() {
             optionFilterProp="label"
             allowClear
           />
-          {isRequester && r.item_id && refPrices[r.item_id] && (
+          {r.item_id && refPrices[r.item_id] && (
             <Typography.Text type="secondary" style={{ fontSize: 11 }}>
               参考：最近 ¥{refPrices[r.item_id].latest_price?.toLocaleString() ?? '-'}
               {refPrices[r.item_id].avg_price ? ` · 均价 ¥${refPrices[r.item_id].avg_price?.toLocaleString()}` : ''}
