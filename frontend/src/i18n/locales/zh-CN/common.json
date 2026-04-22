@@ -16,7 +16,8 @@
     "approvals": "待办审批",
     "suppliers": "供应商",
     "items": "物料",
-    "logout": "退出登录"
+    "logout": "退出登录",
+    "rfqs": "询价管理"
   },
   "button": {
     "submit": "提交",
@@ -106,7 +107,14 @@
     "amount_invoiced": "已开票金额",
     "pct_received": "到货进度",
     "pct_paid": "付款进度",
-    "pct_invoiced": "开票进度"
+    "pct_invoiced": "开票进度",
+    "cost_center": "成本中心",
+    "expense_type": "开支类型",
+    "procurement_category": "采购种类",
+    "deadline": "截止日期",
+    "contact_name": "联系人",
+    "contact_phone": "电话",
+    "contact_email": "邮箱"
   },
   "status": {
     "draft": "草稿",
@@ -159,7 +167,14 @@
     "no_pending_tasks": "没有待办的审批任务",
     "shipment_recorded": "交货批次已登记",
     "payment_recorded": "付款记录已创建",
-    "invoice_recorded": "发票已登记"
+    "invoice_recorded": "发票已登记",
+    "rfq_sent": "询价单已发出",
+    "rfq_saved": "询价单已保存为草稿",
+    "quote_added": "报价已录入",
+    "awarded": "已定标",
+    "saved": "已保存",
+    "created": "已创建",
+    "deleted": "已删除"
   },
   "placeholder": {
     "enter_username": "请输入用户名",
@@ -178,7 +193,10 @@
     "login_failed": "登录失败，请检查用户名和密码",
     "network_error": "网络连接错误，请稍后重试",
     "permission_denied": "权限不足",
-    "unexpected": "操作失败，请重试"
+    "unexpected": "操作失败，请重试",
+    "create_failed": "创建失败",
+    "save_failed": "保存失败",
+    "send_failed": "发送失败"
   },
   "language": {
     "switch": "切换语言",
@@ -278,5 +296,66 @@
       "price_anomaly": "价格",
       "system": "系统"
     }
+  },
+  "rfq": {
+    "title": "询价单",
+    "new": "新建询价单",
+    "send": "发出询价",
+    "award": "定标（选最低价）",
+    "award_confirm_title": "自动选择最低价定标？",
+    "enter_quote": "录入报价",
+    "save_draft": "保存草稿",
+    "save_and_send": "保存并发出",
+    "comparison_table": "比价表",
+    "invited_suppliers": "受邀供应商",
+    "rfq_items": "询价物料",
+    "add_item": "添加物料",
+    "days_delivery": "天交付",
+    "awarded": "中标",
+    "no_quotes": "暂无报价可定标"
+  },
+  "supplier": {
+    "back_to_list": "返回列表"
+  },
+  "pr": {
+    "guide_title": "填写采购需求",
+    "guide_title_field": "标题：简要描述你需要采购什么",
+    "guide_required_fields": "公司主体 / 成本中心 / 开支类型：必填，用于财务归属",
+    "guide_items": "明细行：选择物料和数量即可，系统会显示参考价格供你预估",
+    "guide_price": "价格和供应商：无需填写——提交后由采购员询价确定",
+    "guide_reason": "业务说明：说明采购理由，审批人会看到这段文字",
+    "price_optional": "可选 · 询价后由采购员决定",
+    "price_placeholder": "询价后填写",
+    "supplement_quote": "补充报价（供应商+价格）",
+    "modify_quote": "修改报价",
+    "incomplete_items_warning": "部分明细行缺少供应商或价格，请先补充后再转 PO",
+    "submit_demand": "提交采购需求",
+    "my_prs": "我的采购申请",
+    "my_progress": "我的采购进度",
+    "draft_count": "草稿",
+    "pending_count": "待审批",
+    "approved_awaiting": "已批准（待询价）"
+  },
+  "admin": {
+    "companies": "公司主体",
+    "import": "数据导入",
+    "classification": "分类管理",
+    "download_template": "下载模板",
+    "upload_data": "上传数据"
+  },
+  "validation": {
+    "select_company": "请选择公司主体",
+    "select_cost_center": "请选择成本中心",
+    "select_expense_type": "请选择开支类型",
+    "at_least_one_item": "请至少添加一个物料",
+    "at_least_one_supplier": "请至少选择一个供应商",
+    "at_least_one_line": "请至少添加一行明细"
+  },
+  "ai": {
+    "unavailable_tooltip": "AI 功能需要管理员配置模型后方可使用"
+  },
+  "sku": {
+    "ref_latest": "最近",
+    "ref_avg": "均价"
   }
 }

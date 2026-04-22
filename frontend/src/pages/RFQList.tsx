@@ -21,8 +21,8 @@ export default function RFQListPage() {
   return (
     <Space direction="vertical" size="large" style={{ width: '100%' }}>
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-        <Typography.Title level={3} style={{ margin: 0 }}>询价管理</Typography.Title>
-        <Button type="primary" icon={<PlusOutlined />} onClick={() => navigate('/rfqs/new')}>新建询价单</Button>
+        <Typography.Title level={3} style={{ margin: 0 }}>{	('nav.rfqs')}</Typography.Title>
+        <Button type="primary" icon={<PlusOutlined />} onClick={() => navigate('/rfqs/new')}>{	('rfq.new')}</Button>
       </div>
       <Table
         dataSource={rfqs} rowKey="id" loading={loading} size="small"
