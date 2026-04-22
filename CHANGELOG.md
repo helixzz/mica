@@ -7,6 +7,25 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [v0.7.3] — 2026-04-22
+
+i18n 全量覆盖 + 权限优化 + Bug 修复。
+
+### 修复
+
+- **物料分类无法保存**：`update_item()` 遗漏 `category_id` 和 `is_active` 字段处理，编辑物料时分类始终显示"未分类"；同步修复 `create_item()` 也补上 `category_id` 赋值
+- **RFQ 页面标题显示 raw key**：替换脚本误产生 tab 字符代替 `t` 函数名
+
+### 改进
+
+- **i18n 全量替换**：424 处硬编码中文 → 0，新增 219 个翻译 key（zh-CN + en-US 同步），覆盖全部 21 个组件文件
+- **权限放宽**：
+  - 供应商增改删：`it_buyer` 可操作（此前仅 admin + procurement_mgr）
+  - 分类体系（成本中心 / 开支类型 / 采购种类）9 个写端点：`procurement_mgr` 可操作（此前仅 admin）
+  - 付款计划执行：`procurement_mgr` 可操作（此前仅 admin + finance_auditor）
+
+---
+
 ## [v0.6.2] — 2026-04-22
 
 采购分类体系 + SKU 行情库可视化增强。
