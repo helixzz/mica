@@ -9,6 +9,7 @@ from app.api.v1 import (
     auth,
     authz,
     contracts,
+    dashboard,
     documents,
     flow,
     master_data,
@@ -39,3 +40,4 @@ api_router.include_router(documents.router)
 api_router.include_router(notifications.router)
 api_router.include_router(admin.router)
 api_router.include_router(system_params_admin.router)
+api_router.include_router(dashboard.router)
