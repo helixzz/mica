@@ -9,7 +9,7 @@
 - **Mica（觅采）** — 企业内部采购管理系统（Internal Procurement Management System）
 - **规模**：单公司 < 100 员工、月 < 300 单的 IT 部门内部使用
 - **License**：Apache 2.0
-- **状态**：v0.5.0（2026-04-21）· [CHANGELOG.md](./CHANGELOG.md) · [Release](https://github.com/helixzz/mica/releases/tag/v0.5.0)
+- **状态**：v0.6.2（2026-04-22）· [CHANGELOG.md](./CHANGELOG.md) · [Release](https://github.com/helixzz/mica/releases/tag/v0.6.2)
 - **设计准则**：效率优先 > 扩展性 > 标准化管控
 - **仓库**：`git@github.com:helixzz/mica.git`（main 分支）
 
@@ -36,7 +36,7 @@ mica/
 │   │   ├── main.py                 # FastAPI 入口
 │   │   ├── config.py               # Pydantic Settings（bootstrap defaults）
 │   │   ├── db/__init__.py          # engine / session / Base / TimestampMixin
-│   │   ├── models/__init__.py      # 所有 SQLAlchemy 模型（单文件 ~920 行）
+│   │   ├── models/__init__.py      # 所有 SQLAlchemy 模型（单文件 ~1100 行）
 │   │   ├── schemas/__init__.py     # 所有 Pydantic request/response
 │   │   ├── core/                   # security / authz / field_authz / i18n
 │   │   ├── api/
@@ -44,7 +44,7 @@ mica/
 │   │   │   └── v1/                 # 所有 REST 端点，每文件一个业务域
 │   │   ├── services/               # 业务逻辑层
 │   │   ├── i18n/messages/          # zh-CN.json / en-US.json
-│   ├── migrations/versions/        # Alembic 迁移文件
+│   ├── migrations/versions/        # Alembic 迁移文件（0001-0008）
 │   └── pyproject.toml              # 依赖 + ruff 配置
 ├── frontend/
 │   └── src/
@@ -258,11 +258,11 @@ docker compose up -d && sleep 15
 
 ## 9. 未完待续
 
-详见 [CHANGELOG.md](./CHANGELOG.md) "版本路线（规划中）" 章节。当前 v0.5.0 已交付；v0.6 候选主题：
+详见 [CHANGELOG.md](./CHANGELOG.md) "版本路线（规划中）" 章节。当前 v0.6.2 已交付；v0.7 候选主题：
 - 飞书集成（消息通知 + 审批卡片联动）
-- 单元测试覆盖 + CI 覆盖率报告
-- 真实 LLM 模型接通演示
+- 覆盖率硬阈值（backend 70% / frontend 60%）+ E2E 浏览器测试
 - 批量导入 Excel
+- 真实 LLM 模型接通演示
 
 新功能进入开发前，建议先看 [CHANGELOG.md](./CHANGELOG.md) 和相关 ADR，避免与既有设计冲突。
 

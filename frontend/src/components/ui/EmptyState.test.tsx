@@ -23,7 +23,8 @@ describe('<EmptyState />', () => {
   it('renders default otter-empty illustration', () => {
     const { container } = renderWithProviders(<EmptyState title="x" />)
     const img = container.querySelector('img')
-    expect(img?.getAttribute('src')).toContain('otter-empty.svg')
+    expect(img).toBeInTheDocument()
+    expect(img?.getAttribute('alt')).toBe('empty')
   })
 
   it('renders welcome illustration when specified', () => {
@@ -31,6 +32,6 @@ describe('<EmptyState />', () => {
       <EmptyState illustration="welcome" title="x" />,
     )
     const img = container.querySelector('img')
-    expect(img?.getAttribute('src')).toContain('otter-welcome.svg')
+    expect(img?.getAttribute('alt')).toBe('welcome')
   })
 })

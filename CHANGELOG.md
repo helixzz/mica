@@ -7,6 +7,48 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [v0.6.2] — 2026-04-22
+
+采购分类体系 + SKU 行情库可视化增强。
+
+### 新增
+
+- **分类体系（混合架构）**
+  - `cost_centers` 独立表：成本中心管理（预留 `budget_amount` / `manager_id`），seed 4 个（IT / 行政 / 产品 / 财务）
+  - `procurement_categories` 独立表：2 级层级（`parent_id` 自引用），seed 6 L1 + 4 L2（服务器配件下的内存/SSD/CPU/网卡）；同时服务 PR 分类和 SKU/Item 分类
+  - `lookup_values` 通用枚举表：seed expense_type（CapEx / OpEx）；未来新增枚举维度零代码
+  - Migration 0008：3 张新表 + PR 加 3 个 nullable FK + Item 加 `category_id` FK
+  - 12 个 API 端点：Admin CRUD ×3 + 公开 read + category tree
+- **Admin 分类管理 Tab**：成本中心表格 + 采购种类树形展示（L1/L2 标签）+ 开支类型表格 + 统一添加 Modal（含上级分类选择器）
+- **PR 创建表单**：新增 3 个可选下拉框（成本中心 / 开支类型 / 采购种类）
+- **SKU 分类筛选**：按 procurement_category 过滤物料列表后再多选对比
+
+---
+
+## [v0.6.1] — 2026-04-22
+
+合同付款计划 + SKU 多选价格走势对比图。
+
+### 新增
+
+- **合同付款计划**
+  - `payment_schedules` 新表（Migration 0007）：按期管理合同付款，支持 4 种触发类型（fixed_date / milestone / invoice_received / acceptance）
+  - 7 个 API 端点：CRUD + execute（创建 PaymentRecord）+ link-invoice + payment-forecast（按月现金流预测）
+  - `system_parameters` 新增 `payment.invoice_due_days`（默认 30 天）
+  - ContractDetail 页新 Tab"付款计划"：汇总栏（合同/计划/已付/待付）+ 明细表格 + 执行/删除操作 + 新建 Drawer（动态 Form.List）
+- **SKU 多选价格走势对比**
+  - 多选 Select（搜索 + 清除 + max 6 tags）替代原单选
+  - 纯 SVG 交互式折线图：每 SKU 独立颜色线 + 数据点 tooltip + 自动缩放 Y 轴 + 日期标签智能稀疏 + 10 色品牌调色板
+  - 每 SKU 基准卡片（均价/最低/最高）
+  - `@ant-design/charts` 安装备用
+
+### 测试
+
+- 11 个付款计划单元测试（CRUD / execute / forecast / 边界条件）
+- 82 → 82 backend tests pass（+11 新 -0 回归）
+
+---
+
 ## [v0.6.0] — 2026-04-22
 
 测试基础设施 + 质量工程 + UI/UX 打磨 + Cerbos 授权外化。首次引入自动化测试（103 个），bundle 代码分割首屏瘦身 97%，LLM 真实接入，审批授权迁移到 Cerbos 策略引擎。
