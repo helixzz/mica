@@ -154,3 +154,43 @@ async def get_insights(
     from app.services.sku_insights import get_insights
 
     return await get_insights(db, item_id, window_days)
+
+
+@router.get("/sku/reference-prices", tags=["sku"])
+async def get_reference_prices(
+    user: CurrentUser,
+    db: Annotated[AsyncSession, Depends(get_db)],
+    item_ids: str = "",
+):
+    from sqlalchemy import func, select
+
+    from app.models import SKUPriceRecord
+
+    ids = [i.strip() for i in item_ids.split(",") if i.strip()]
+    if not ids:
+        return {}
+
+    result = {}
+    for item_id in ids:
+        try:
+            uid = UUID(item_id)
+        except ValueError:
+            continue
+
+        latest_q = (
+            select(SKUPriceRecord.price)
+            .where(SKUPriceRecord.item_id == uid)
+            .order_by(SKUPriceRecord.quotation_date.desc())
+            .limit(1)
+        )
+        latest = (await db.execute(latest_q)).scalar()
+
+        avg_q = select(func.avg(SKUPriceRecord.price)).where(SKUPriceRecord.item_id == uid)
+        avg = (await db.execute(avg_q)).scalar()
+
+        if latest is not None or avg is not None:
+            result[item_id] = {
+                "latest_price": float(latest) if latest else None,
+                "avg_price": round(float(avg), 2) if avg else None,
+            }
+    return result

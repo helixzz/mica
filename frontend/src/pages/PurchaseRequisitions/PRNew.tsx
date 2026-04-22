@@ -1,5 +1,6 @@
 import { DeleteOutlined, PlusOutlined } from '@ant-design/icons'
 import {
+  Alert,
   Button,
   Card,
   Col,
@@ -21,6 +22,7 @@ import { useNavigate } from 'react-router-dom'
 
 import { api, type ClassificationItem, flattenCategoryTree, type Item, type PRItem, type Supplier } from '@/api'
 import { client, extractError } from '@/api/client'
+import { useAuth } from '@/auth/useAuth'
 import { AIStreamButton } from '@/components/AIStreamButton'
 
 interface LineForm {
@@ -59,6 +61,9 @@ export function PRNewPage() {
     { key: 1, line_no: 1, item_id: null, item_name: '', specification: '', supplier_id: null, qty: 1, uom: 'EA', unit_price: 0 },
   ])
   const [submitting, setSubmitting] = useState(false)
+  const { user } = useAuth()
+  const isRequester = user?.role === 'requester'
+  const [refPrices, setRefPrices] = useState<Record<string, { latest_price: number | null; avg_price: number | null }>>({})
 
   useEffect(() => {
     void api.suppliers().then(setSuppliers)
@@ -88,7 +93,26 @@ export function PRNewPage() {
   }
 
   const updateLine = <K extends keyof LineForm>(key: number, field: K, value: LineForm[K]) => {
-    setLines((ls) => ls.map((l) => (l.key === key ? { ...l, [field]: value } : l)))
+    setLines((ls) =>
+      ls.map((l) => {
+        if (l.key !== key) return l
+        const updated = { ...l, [field]: value }
+        if (field === 'item_id' && value) {
+          const item = items.find((i) => i.id === value)
+          if (item) {
+            updated.item_name = item.name
+            updated.specification = item.specification || ''
+          }
+          void client
+            .get<Record<string, { latest_price: number | null; avg_price: number | null }>>(
+              `/sku/reference-prices?item_ids=${value}`,
+            )
+            .then((r) => setRefPrices((prev) => ({ ...prev, ...r.data })))
+            .catch(() => {})
+        }
+        return updated
+      }),
+    )
   }
 
   const onItemSelect = (key: number, itemId: string | null) => {
@@ -163,34 +187,46 @@ export function PRNewPage() {
       title: t('field.item_name'),
       width: 280,
       render: (_: unknown, r: LineForm) => (
-        <Select
-          style={{ width: '100%' }}
-          placeholder={t('placeholder.select_item')}
-          value={r.item_id ?? undefined}
-          onChange={(v) => onItemSelect(r.key, v)}
-          options={items.map((it) => ({ value: it.id, label: `${it.code} · ${it.name}` }))}
-          showSearch
-          optionFilterProp="label"
-          allowClear
-        />
+        <Space direction="vertical" size={0} style={{ width: '100%' }}>
+          <Select
+            style={{ width: '100%' }}
+            placeholder={isRequester ? '选择你需要采购的物料' : t('placeholder.select_item')}
+            value={r.item_id ?? undefined}
+            onChange={(v) => onItemSelect(r.key, v)}
+            options={items.map((it) => ({ value: it.id, label: `${it.code} · ${it.name}` }))}
+            showSearch
+            optionFilterProp="label"
+            allowClear
+          />
+          {isRequester && r.item_id && refPrices[r.item_id] && (
+            <Typography.Text type="secondary" style={{ fontSize: 11 }}>
+              参考：最近 ¥{refPrices[r.item_id].latest_price?.toLocaleString() ?? '-'}
+              {refPrices[r.item_id].avg_price ? ` · 均价 ¥${refPrices[r.item_id].avg_price?.toLocaleString()}` : ''}
+            </Typography.Text>
+          )}
+        </Space>
       ),
     },
-    {
-      title: t('field.supplier'),
-      width: 220,
-      render: (_: unknown, r: LineForm) => (
-        <Select
-          style={{ width: '100%' }}
-          placeholder={t('placeholder.select_supplier')}
-          value={r.supplier_id ?? undefined}
-          onChange={(v) => updateLine(r.key, 'supplier_id', v)}
-          options={suppliers.map((s) => ({ value: s.id, label: s.name }))}
-          showSearch
-          optionFilterProp="label"
-          allowClear
-        />
-      ),
-    },
+    ...(!isRequester
+      ? [
+          {
+            title: t('field.supplier'),
+            width: 220,
+            render: (_: unknown, r: LineForm) => (
+              <Select
+                style={{ width: '100%' }}
+                placeholder={t('placeholder.select_supplier')}
+                value={r.supplier_id ?? undefined}
+                onChange={(v: string) => updateLine(r.key, 'supplier_id', v)}
+                options={suppliers.map((s) => ({ value: s.id, label: s.name }))}
+                showSearch
+                optionFilterProp="label"
+                allowClear
+              />
+            ),
+          },
+        ]
+      : []),
     {
       title: t('field.qty'),
       width: 110,
@@ -214,14 +250,22 @@ export function PRNewPage() {
       ),
     },
     {
-      title: t('field.unit_price'),
-      width: 140,
+      title: isRequester ? (
+        <Space direction="vertical" size={0}>
+          <span>{t('field.unit_price')}</span>
+          <Typography.Text type="secondary" style={{ fontSize: 10, fontWeight: 'normal' }}>可选 · 询价后由采购员决定</Typography.Text>
+        </Space>
+      ) : (
+        t('field.unit_price')
+      ),
+      width: 160,
       render: (_: unknown, r: LineForm) => (
         <InputNumber
           min={0}
-          value={r.unit_price}
+          value={r.unit_price || undefined}
           onChange={(v) => updateLine(r.key, 'unit_price', Number(v ?? 0))}
           style={{ width: '100%' }}
+          placeholder={isRequester ? '询价后填写' : undefined}
         />
       ),
     },
@@ -229,7 +273,10 @@ export function PRNewPage() {
       title: t('field.amount'),
       width: 120,
       align: 'right' as const,
-      render: (_: unknown, r: LineForm) => (r.qty * r.unit_price).toFixed(2),
+      render: (_: unknown, r: LineForm) => {
+        const amt = r.qty * (r.unit_price || 0)
+        return amt > 0 ? `¥${amt.toLocaleString()}` : '-'
+      },
     },
     {
       title: '',
@@ -250,6 +297,23 @@ export function PRNewPage() {
       <Typography.Title level={3}>
         {t('button.create')} · {t('nav.purchase_requisitions')}
       </Typography.Title>
+
+      {isRequester && (
+        <Alert
+          type="info"
+          showIcon
+          message="填写采购需求"
+          description={
+            <ul style={{ margin: '4px 0 0', paddingLeft: 20, fontSize: 13 }}>
+              <li><b>标题</b>：简要描述你需要采购什么（如"Q3 新员工笔记本"）</li>
+              <li><b>公司主体 / 成本中心 / 开支类型</b>：必填，用于财务归属</li>
+              <li><b>明细行</b>：选择物料和数量即可，系统会显示参考价格供你预估</li>
+              <li><b>价格和供应商</b>：<b>无需填写</b>——提交后由采购员询价确定</li>
+              <li><b>业务说明</b>：说明采购理由，审批人会看到这段文字</li>
+            </ul>
+          }
+        />
+      )}
 
       <Card>
         <Form form={form} layout="vertical" initialValues={{ currency: 'CNY' }}>
