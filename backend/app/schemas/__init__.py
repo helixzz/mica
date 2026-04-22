@@ -810,3 +810,80 @@ class SearchResponse(BaseModel):
     total: int
     by_type: dict[str, list[SearchHit]]
     top_hits: list[SearchHit]
+
+
+class PaymentScheduleItemIn(BaseModel):
+    installment_no: int
+    label: str = Field(max_length=128)
+    planned_amount: Decimal
+    planned_date: date | None = None
+    trigger_type: str = "fixed_date"
+    trigger_description: str | None = None
+    notes: str | None = None
+
+
+class PaymentScheduleIn(BaseModel):
+    items: list[PaymentScheduleItemIn]
+
+
+class PaymentScheduleItemOut(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
+    id: UUID
+    contract_id: UUID
+    installment_no: int
+    label: str
+    planned_amount: Decimal
+    planned_date: date | None
+    trigger_type: str
+    trigger_description: str | None
+    status: str
+    actual_amount: Decimal | None
+    actual_date: date | None
+    payment_record_id: UUID | None
+    invoice_id: UUID | None
+    notes: str | None
+    created_at: datetime
+    updated_at: datetime
+
+
+class PaymentScheduleItemUpdate(BaseModel):
+    label: str | None = None
+    planned_amount: Decimal | None = None
+    planned_date: date | None = None
+    trigger_type: str | None = None
+    trigger_description: str | None = None
+    notes: str | None = None
+
+
+class PaymentScheduleExecuteIn(BaseModel):
+    payment_method: str = "bank_transfer"
+    transaction_ref: str | None = None
+    invoice_id: UUID | None = None
+    amount: Decimal | None = None
+
+
+class PaymentScheduleLinkInvoiceIn(BaseModel):
+    invoice_id: UUID
+
+
+class PaymentScheduleSummaryOut(BaseModel):
+    contract_total: Decimal
+    planned_total: Decimal
+    paid_total: Decimal
+    remaining: Decimal
+    total_mismatch: bool
+    items: list[PaymentScheduleItemOut]
+
+
+class PaymentForecastMonth(BaseModel):
+    month: str
+    planned: Decimal
+    paid: Decimal
+    remaining: Decimal
+
+
+class PaymentForecastOut(BaseModel):
+    months: list[PaymentForecastMonth]
+    grand_planned: Decimal
+    grand_paid: Decimal

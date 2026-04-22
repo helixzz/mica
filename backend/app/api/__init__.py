@@ -14,6 +14,7 @@ from app.api.v1 import (
     flow,
     master_data,
     notifications,
+    payment_schedule,
     purchase,
     saml,
     search,
@@ -41,3 +42,4 @@ api_router.include_router(notifications.router)
 api_router.include_router(admin.router)
 api_router.include_router(system_params_admin.router)
 api_router.include_router(dashboard.router)
+api_router.include_router(payment_schedule.router)

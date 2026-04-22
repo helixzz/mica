@@ -92,6 +92,21 @@ class InvoiceStatus(StrEnum):
     CANCELLED = "cancelled"
 
 
+class PaymentTriggerType(StrEnum):
+    FIXED_DATE = "fixed_date"
+    MILESTONE = "milestone"
+    INVOICE_RECEIVED = "invoice_received"
+    ACCEPTANCE = "acceptance"
+
+
+class ScheduleItemStatus(StrEnum):
+    PLANNED = "planned"
+    DUE = "due"
+    PARTIALLY_PAID = "partially_paid"
+    PAID = "paid"
+    CANCELLED = "cancelled"
+
+
 class InvoiceLineType(StrEnum):
     PRODUCT = "product"
     FREIGHT = "freight"
@@ -367,6 +382,55 @@ class Contract(Base, TimestampMixin):
 
     po: Mapped[PurchaseOrder] = relationship()
     supplier: Mapped[Supplier] = relationship()
+    schedules: Mapped[list[PaymentSchedule]] = relationship(
+        back_populates="contract",
+        cascade="all, delete-orphan",
+        order_by="PaymentSchedule.installment_no",
+    )
+
+
+class PaymentSchedule(Base, TimestampMixin):
+    __tablename__ = "payment_schedules"
+
+    id: Mapped[UUID] = mapped_column(PGUUID(as_uuid=True), primary_key=True, default=new_uuid)
+    contract_id: Mapped[UUID] = mapped_column(
+        PGUUID(as_uuid=True),
+        ForeignKey("contracts.id", ondelete="CASCADE"),
+        nullable=False,
+        index=True,
+    )
+    installment_no: Mapped[int] = mapped_column(Integer, nullable=False)
+    label: Mapped[str] = mapped_column(String(128), nullable=False)
+    planned_amount: Mapped[Decimal] = mapped_column(Numeric(18, 4), nullable=False)
+    planned_date: Mapped[date | None] = mapped_column(Date)
+    trigger_type: Mapped[str] = mapped_column(
+        String(32),
+        default=PaymentTriggerType.FIXED_DATE.value,
+        nullable=False,
+    )
+    trigger_description: Mapped[str | None] = mapped_column(String(255))
+    status: Mapped[str] = mapped_column(
+        String(32),
+        default=ScheduleItemStatus.PLANNED.value,
+        nullable=False,
+    )
+    actual_amount: Mapped[Decimal | None] = mapped_column(Numeric(18, 4))
+    actual_date: Mapped[date | None] = mapped_column(Date)
+    payment_record_id: Mapped[UUID | None] = mapped_column(
+        PGUUID(as_uuid=True),
+        ForeignKey("payment_records.id", ondelete="SET NULL"),
+    )
+    invoice_id: Mapped[UUID | None] = mapped_column(
+        PGUUID(as_uuid=True),
+        ForeignKey("invoices.id", ondelete="SET NULL"),
+    )
+    notes: Mapped[str | None] = mapped_column(Text)
+
+    contract: Mapped[Contract] = relationship(back_populates="schedules")
+    payment_record: Mapped[PaymentRecord | None] = relationship(
+        foreign_keys=[payment_record_id],
+    )
+    invoice: Mapped[Invoice | None] = relationship()
 
 
 class Shipment(Base, TimestampMixin):
@@ -460,6 +524,10 @@ class PaymentRecord(Base, TimestampMixin):
         String(32), default=PaymentStatus.PENDING.value, nullable=False
     )
     notes: Mapped[str | None] = mapped_column(Text)
+    schedule_item_id: Mapped[UUID | None] = mapped_column(
+        PGUUID(as_uuid=True),
+        ForeignKey("payment_schedules.id", ondelete="SET NULL"),
+    )
 
     po: Mapped[PurchaseOrder] = relationship()
 
@@ -806,6 +874,7 @@ class SystemParameterCategory(StrEnum):
     UPLOAD = "upload"
     PAGINATION = "pagination"
     AUDIT = "audit"
+    PAYMENT = "payment"
 
 
 class SystemParameter(Base, TimestampMixin):
