@@ -82,3 +82,24 @@ async def ai_invoice_extract(
     )
     await db.commit()
     return InvoiceExtractOut(**extract_svc.to_dict(result))
+
+
+@router.get("/ai/features-available", tags=["ai"])
+async def list_available_features(
+    _user: CurrentUser,
+    db: Annotated[AsyncSession, Depends(get_db)],
+):
+    from sqlalchemy import select
+
+    from app.models import AIFeatureRouting, AIModel
+
+    rows = (
+        await db.execute(
+            select(
+                AIFeatureRouting.feature_code,
+                AIFeatureRouting.enabled,
+                AIModel.is_active.label("model_active"),
+            ).outerjoin(AIModel, AIFeatureRouting.primary_model_id == AIModel.id)
+        )
+    ).all()
+    return {r.feature_code: r.enabled and (r.model_active is True) for r in rows}

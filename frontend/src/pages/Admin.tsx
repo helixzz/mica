@@ -61,6 +61,7 @@ export function AdminPage() {
       <Tabs
         items={[
           { key: 'system', label: '系统信息', children: <SystemInfoPanel /> },
+          { key: 'companies', label: '公司主体', children: <CompaniesTab /> },
           { key: 'system_params', label: '系统参数', children: <SystemParamsTab /> },
           { key: 'classification', label: '分类管理', children: <ClassificationTab /> },
           { key: 'models', label: 'LLM 模型', children: <AIModelsPanel /> },
@@ -462,6 +463,56 @@ function AuditPanel() {
         { title: 'Comment', dataIndex: 'comment', ellipsis: true },
       ]}
     />
+  )
+}
+
+function CompaniesTab() {
+  const [companies, setCompanies] = useState<any[]>([])
+  const [drawerOpen, setDrawerOpen] = useState(false)
+  const [form] = Form.useForm()
+
+  const load = () => { void api.companies().then(setCompanies) }
+  useEffect(load, [])
+
+  const handleSave = async () => {
+    try {
+      const values = form.getFieldsValue()
+      await api.createCompany(values)
+      void message.success('已创建')
+      form.resetFields()
+      setDrawerOpen(false)
+      load()
+    } catch (e: any) {
+      void message.error(e?.response?.data?.detail || '创建失败')
+    }
+  }
+
+  return (
+    <Space direction="vertical" size="middle" style={{ width: '100%' }}>
+      <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+        <Typography.Text type="secondary">{companies.length} 个公司主体</Typography.Text>
+        <Button type="primary" icon={<PlusOutlined />} onClick={() => { form.resetFields(); setDrawerOpen(true) }}>新增公司</Button>
+      </div>
+      <Table dataSource={companies} rowKey="id" size="small" pagination={false} columns={[
+        { title: '编码', dataIndex: 'code', width: 100 },
+        { title: '中文名称', dataIndex: 'name_zh' },
+        { title: '英文名称', dataIndex: 'name_en', render: (v: string | null) => v || '-' },
+        { title: '默认币种', dataIndex: 'default_currency', width: 80 },
+        { title: '状态', dataIndex: 'is_active', width: 70, render: (v: boolean) => <Tag color={v !== false ? 'success' : 'default'}>{v !== false ? '启用' : '停用'}</Tag> },
+      ]} />
+      <Drawer title="新增公司主体" width={420} open={drawerOpen} onClose={() => setDrawerOpen(false)} footer={
+        <Space style={{ float: 'right' }}><Button onClick={() => setDrawerOpen(false)}>取消</Button><Button type="primary" onClick={handleSave}>保存</Button></Space>
+      }>
+        <Form form={form} layout="vertical">
+          <Form.Item name="code" label="编码" rules={[{ required: true }]}><Input placeholder="DEMO" /></Form.Item>
+          <Form.Item name="name_zh" label="中文名称" rules={[{ required: true }]}><Input placeholder="觅采科技有限公司" /></Form.Item>
+          <Form.Item name="name_en" label="英文名称"><Input placeholder="Mica Technology Co., Ltd." /></Form.Item>
+          <Form.Item name="default_currency" label="默认币种" initialValue="CNY">
+            <Select options={[{ value: 'CNY' }, { value: 'USD' }, { value: 'EUR' }, { value: 'HKD' }, { value: 'JPY' }]} />
+          </Form.Item>
+        </Form>
+      </Drawer>
+    </Space>
   )
 }
 
