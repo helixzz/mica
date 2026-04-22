@@ -135,9 +135,17 @@ async def update_pr(
     pr = await _load_pr(db, pr_id)
     if pr is None:
         raise HTTPException(404, "pr.not_found")
-    if pr.requester_id != actor.id and actor.role != UserRole.ADMIN.value:
+    if pr.requester_id != actor.id and actor.role not in (
+        UserRole.ADMIN.value, UserRole.IT_BUYER.value, UserRole.PROCUREMENT_MGR.value,
+    ):
         raise HTTPException(403, "insufficient_role")
-    if pr.status != PRStatus.DRAFT.value:
+    if pr.status == PRStatus.DRAFT.value:
+        pass
+    elif pr.status == "approved" and actor.role in (
+        UserRole.IT_BUYER.value, UserRole.PROCUREMENT_MGR.value, UserRole.ADMIN.value,
+    ):
+        pass
+    else:
         raise HTTPException(409, "pr.cannot_edit_submitted")
 
     if payload.title is not None:

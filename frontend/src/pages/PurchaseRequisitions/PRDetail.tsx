@@ -57,8 +57,11 @@ export function PRDetailPage() {
   const canEdit = pr.status === 'draft' && user?.id === pr.requester_id
   const canDecide =
     pr.status === 'submitted' && (user?.role === 'dept_manager' || user?.role === 'admin')
+  const isBuyer = user?.role === 'it_buyer' || user?.role === 'procurement_mgr' || user?.role === 'admin'
+  const canSupplementQuote = pr.status === 'approved' && isBuyer
+  const hasIncompleteItems = (pr.items || []).some((item: any) => !item.unit_price || Number(item.unit_price) === 0 || !item.supplier_id)
   const canConvert =
-    pr.status === 'approved' && (user?.role === 'procurement_mgr' || user?.role === 'admin' || user?.role === 'it_buyer')
+    pr.status === 'approved' && isBuyer && !hasIncompleteItems
 
   const runDecision = (action: 'approve' | 'reject' | 'return') => {
     Modal.confirm({
@@ -149,6 +152,21 @@ export function PRDetailPage() {
           {canConvert && (
             <Button type="primary" onClick={runConvert} loading={busy}>
               {t('button.convert_to_po')}
+            </Button>
+          )}
+          {canSupplementQuote && hasIncompleteItems && (
+            <>
+              <Button type="primary" onClick={() => navigate(`/purchase-requisitions/${pr.id}/edit`)}>
+                补充报价（供应商+价格）
+              </Button>
+              <Typography.Text type="warning" style={{ fontSize: 12 }}>
+                部分明细行缺少供应商或价格，请先补充后再转 PO
+              </Typography.Text>
+            </>
+          )}
+          {canSupplementQuote && !hasIncompleteItems && (
+            <Button onClick={() => navigate(`/purchase-requisitions/${pr.id}/edit`)}>
+              修改报价
             </Button>
           )}
         </Space>
