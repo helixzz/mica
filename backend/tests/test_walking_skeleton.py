@@ -79,9 +79,7 @@ async def test_walking_skeleton_end_to_end(seeded_client):
     assert po["po_number"].startswith("PO-")
 
     # PR status should be converted
-    r = await seeded_client.get(
-        f"/api/v1/purchase-requisitions/{pr_id}", headers=alice_headers
-    )
+    r = await seeded_client.get(f"/api/v1/purchase-requisitions/{pr_id}", headers=alice_headers)
     assert r.json()["status"] == "converted"
 
 
