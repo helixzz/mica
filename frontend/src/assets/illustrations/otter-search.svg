@@ -1,49 +1,40 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 240 240" width="100%" height="100%">
   <defs>
     <style>
-      .primary { fill: var(--color-primary-500, #8B5E3C); }
-      .secondary { fill: var(--color-primary-200, #D8C3B1); }
-      .accent { fill: var(--color-primary-700, #543824); }
-      .bg { fill: var(--color-bg-subtle, #F7F6F5); }
-      .glass { fill: var(--color-info-50, #EFF6FF); stroke: var(--color-info-500, #3B82F6); stroke-width: 4; }
+      .pri { fill: var(--color-primary-500, #8B5E3C); }
+      .sec { fill: var(--color-primary-200, #D8C3B1); }
+      .acc { fill: var(--color-primary-700, #543824); }
+      .bg  { fill: var(--color-bg-subtle, #F7F6F5); }
+      .ln  { stroke: var(--color-primary-700, #543824); fill: none; stroke-linecap: round; stroke-linejoin: round; }
     </style>
   </defs>
-  
-  <!-- Background blob -->
-  <path class="bg" d="M120,20 C175,20 220,65 220,120 C220,175 175,220 120,220 C65,220 20,175 20,120 C20,65 65,20 120,20 Z" opacity="0.5" />
-  
-  <!-- Otter Body -->
-  <path class="primary" d="M80,180 C80,120 100,80 140,80 C180,80 200,120 200,180 C200,200 180,210 140,210 C100,210 80,200 80,180 Z" />
-  
-  <!-- Belly -->
-  <path class="secondary" d="M100,180 C100,140 120,110 140,110 C160,110 180,140 180,180 C180,190 160,200 140,200 C120,200 100,190 100,180 Z" />
-  
-  <!-- Head -->
-  <circle class="primary" cx="140" cy="90" r="35" />
-  
-  <!-- Snout -->
-  <ellipse class="secondary" cx="140" cy="100" rx="20" ry="15" />
-  
-  <!-- Nose -->
-  <circle class="accent" cx="140" cy="95" r="5" />
-  
-  <!-- Eyes (Looking through glass) -->
-  <circle class="accent" cx="125" cy="85" r="4" />
-  <circle class="accent" cx="155" cy="85" r="4" />
-  
-  <!-- Ears -->
-  <circle class="primary" cx="105" cy="75" r="10" />
-  <circle class="primary" cx="175" cy="75" r="10" />
-  
-  <!-- Tail -->
-  <path class="primary" d="M80,180 C50,180 40,190 40,200 C40,210 60,205 90,200 Z" />
-  
-  <!-- Magnifying Glass Handle -->
-  <rect class="accent" x="60" y="140" width="10" height="40" rx="5" transform="rotate(-45 65 160)" />
-  
-  <!-- Magnifying Glass Lens -->
-  <circle class="glass" cx="100" cy="120" r="30" />
-  
-  <!-- Arm holding glass -->
-  <path class="primary" d="M100,140 C80,140 70,150 70,160 C70,170 90,165 110,160 Z" />
+  <ellipse class="bg" cx="120" cy="130" rx="90" ry="85" opacity="0.4" />
+  <ellipse class="pri" cx="120" cy="165" rx="45" ry="38" />
+  <ellipse class="sec" cx="120" cy="168" rx="30" ry="25" />
+  <circle class="pri" cx="120" cy="105" r="36" />
+  <circle class="pri" cx="90" cy="78" r="11" />
+  <circle class="sec" cx="90" cy="78" r="6" />
+  <circle class="pri" cx="150" cy="78" r="11" />
+  <circle class="sec" cx="150" cy="78" r="6" />
+  <ellipse class="sec" cx="120" cy="112" rx="22" ry="16" />
+  <ellipse class="acc" cx="120" cy="108" rx="5" ry="3.5" />
+  <circle class="acc" cx="107" cy="98" r="4" />
+  <circle class="acc" cx="133" cy="98" r="4" />
+  <circle fill="white" cx="108.5" cy="97" r="1.5" />
+  <circle fill="white" cx="134.5" cy="97" r="1.5" />
+  <path class="ln" d="M130,91 Q136,87 140,91" stroke-width="2" />
+  <path class="ln" d="M115,116 Q120,120 125,116" stroke-width="1.8" />
+  <path class="pri" d="M78,148 C62,140 48,130 52,120 L65,125 C60,135 70,145 82,148 Z" />
+  <path class="pri" d="M162,152 C172,158 175,170 165,175 L150,168 Z" />
+  <circle class="sec" cx="148" cy="165" r="7" />
+  <circle fill="none" stroke="var(--color-primary-700, #543824)" cx="42" cy="108" r="18" stroke-width="4" />
+  <line stroke="var(--color-primary-500, #8B5E3C)" x1="55" y1="120" x2="68" y2="133" stroke-width="5" stroke-linecap="round" />
+  <path fill="none" stroke="white" d="M34,100 Q38,96 42,100" stroke-width="2" opacity="0.6" stroke-linecap="round" />
+  <ellipse class="acc" cx="100" cy="198" rx="14" ry="7" />
+  <ellipse class="acc" cx="140" cy="198" rx="14" ry="7" />
+  <path class="pri" d="M158,180 C175,185 185,195 178,202 C170,208 158,198 155,188 Z" />
+  <g class="acc" font-family="Inter, sans-serif" font-weight="700" opacity="0.5">
+    <text x="160" y="62" font-size="16">?</text>
+    <text x="175" y="48" font-size="20">?</text>
+  </g>
 </svg>

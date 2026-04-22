@@ -70,8 +70,6 @@ services:
 
   nginx:
     image: nginx:alpine
-    container_name: mica-nginx
-    restart: unless-stopped
     depends_on:
       - backend
       - frontend
@@ -79,6 +77,22 @@ services:
       - "${HTTP_BIND:-0.0.0.0}:${HTTP_PORT:-80}:80"
     volumes:
       - ./nginx/conf.d:/etc/nginx/conf.d:ro
+
+  cerbos:
+    image: ghcr.io/cerbos/cerbos:0.40.0
+    command: ["server", "--config=/config.yaml"]
+    volumes:
+      - ./cerbos-policies:/policies:ro
+      - ./cerbos-config.yaml:/config.yaml:ro
+    ports:
+      - "127.0.0.1:3593:3593"
+      - "127.0.0.1:3592:3592"
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://localhost:3593/api/status"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+    restart: unless-stopped
 
 volumes:
   postgres_data:

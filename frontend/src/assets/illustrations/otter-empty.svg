@@ -1,43 +1,69 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 240 240" width="100%" height="100%">
   <defs>
     <style>
-      .primary { fill: var(--color-primary-500, #8B5E3C); }
-      .secondary { fill: var(--color-primary-200, #D8C3B1); }
-      .accent { fill: var(--color-primary-700, #543824); }
-      .bg { fill: var(--color-bg-subtle, #F7F6F5); }
+      .pri { fill: var(--color-primary-500, #8B5E3C); }
+      .sec { fill: var(--color-primary-200, #D8C3B1); }
+      .acc { fill: var(--color-primary-700, #543824); }
+      .bg  { fill: var(--color-bg-subtle, #F7F6F5); }
+      .ln  { stroke: var(--color-primary-700, #543824); fill: none; stroke-linecap: round; stroke-linejoin: round; }
     </style>
   </defs>
-  
-  <!-- Background blob -->
-  <path class="bg" d="M120,20 C175,20 220,65 220,120 C220,175 175,220 120,220 C65,220 20,175 20,120 C20,65 65,20 120,20 Z" opacity="0.5" />
-  
-  <!-- Sleeping Otter Body -->
-  <path class="primary" d="M60,160 C60,130 80,110 120,110 C160,110 180,130 180,160 C180,180 160,190 120,190 C80,190 60,180 60,160 Z" />
-  
-  <!-- Belly -->
-  <path class="secondary" d="M80,160 C80,140 100,130 120,130 C140,130 160,140 160,160 C160,170 140,180 120,180 C100,180 80,170 80,160 Z" />
-  
+
+  <!-- Soft bg blob -->
+  <ellipse class="bg" cx="120" cy="130" rx="90" ry="85" opacity="0.4" />
+
+  <!-- Body -->
+  <ellipse class="pri" cx="120" cy="155" rx="52" ry="42" />
+
+  <!-- Belly patch -->
+  <ellipse class="sec" cx="120" cy="160" rx="35" ry="28" />
+
   <!-- Head -->
-  <circle class="primary" cx="160" cy="140" r="30" />
-  
-  <!-- Snout -->
-  <ellipse class="secondary" cx="170" cy="145" rx="15" ry="10" />
-  
-  <!-- Nose -->
-  <circle class="accent" cx="175" cy="142" r="4" />
-  
-  <!-- Sleeping Eyes -->
-  <path class="accent" d="M150,135 Q155,140 160,135" fill="none" stroke="var(--color-primary-700, #543824)" stroke-width="3" stroke-linecap="round" />
-  
+  <circle class="pri" cx="120" cy="105" r="36" />
+
   <!-- Ears -->
-  <circle class="primary" cx="140" cy="115" r="8" />
-  <circle class="primary" cx="175" cy="115" r="8" />
-  
+  <circle class="pri" cx="90" cy="78" r="11" />
+  <circle class="sec" cx="90" cy="78" r="6" />
+  <circle class="pri" cx="150" cy="78" r="11" />
+  <circle class="sec" cx="150" cy="78" r="6" />
+
+  <!-- Face patch -->
+  <ellipse class="sec" cx="120" cy="112" rx="22" ry="16" />
+
+  <!-- Nose -->
+  <ellipse class="acc" cx="120" cy="108" rx="5" ry="3.5" />
+
+  <!-- Closed eyes (sleeping / peaceful) -->
+  <path class="ln" d="M104,100 Q108,105 112,100" stroke-width="2.5" />
+  <path class="ln" d="M128,100 Q132,105 136,100" stroke-width="2.5" />
+
+  <!-- Gentle mouth -->
+  <path class="ln" d="M115,115 Q120,119 125,115" stroke-width="1.8" />
+
+  <!-- Arms resting on belly -->
+  <path class="pri" d="M78,145 C68,150 65,165 75,170 L90,162 Z" />
+  <path class="pri" d="M162,145 C172,150 175,165 165,170 L150,162 Z" />
+
+  <!-- Paws (hands on belly) -->
+  <circle class="sec" cx="92" cy="158" r="7" />
+  <circle class="sec" cx="148" cy="158" r="7" />
+
+  <!-- Feet -->
+  <ellipse class="acc" cx="98" cy="192" rx="14" ry="7" />
+  <ellipse class="acc" cx="142" cy="192" rx="14" ry="7" />
+
   <!-- Tail -->
-  <path class="primary" d="M60,160 C40,160 30,170 30,180 C30,190 50,185 70,180 Z" />
-  
+  <path class="pri" d="M72,175 C55,182 48,195 58,200 C68,205 78,195 82,185 Z" />
+
+  <!-- Floating shapes (empty state hint) -->
+  <rect class="sec" x="170" y="55" width="12" height="12" rx="2" opacity="0.5" transform="rotate(15 176 61)" />
+  <circle class="sec" cx="185" cy="80" r="5" opacity="0.4" />
+  <rect class="sec" x="55" y="50" width="10" height="10" rx="2" opacity="0.35" transform="rotate(-12 60 55)" />
+
   <!-- Zzz -->
-  <text x="180" y="100" font-family="sans-serif" font-size="16" font-weight="bold" class="secondary">Z</text>
-  <text x="195" y="85" font-family="sans-serif" font-size="20" font-weight="bold" class="secondary">z</text>
-  <text x="215" y="65" font-family="sans-serif" font-size="24" font-weight="bold" class="secondary">z</text>
+  <g class="acc" font-family="Inter, sans-serif" font-weight="600" opacity="0.6">
+    <text x="155" y="72" font-size="11">z</text>
+    <text x="165" y="58" font-size="14">z</text>
+    <text x="178" y="42" font-size="17">Z</text>
+  </g>
 </svg>

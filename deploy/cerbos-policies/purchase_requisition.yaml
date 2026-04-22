@@ -1,0 +1,18 @@
+---
+apiVersion: "api.cerbos.dev/v1"
+resourcePolicy:
+  version: "default"
+  resource: "purchase_requisition"
+  rules:
+    - actions: ["read:*"]
+      effect: EFFECT_ALLOW
+      roles: ["admin", "it_buyer", "dept_manager", "procurement_mgr"]
+
+    - actions: ["read:id", "read:pr_number", "read:title", "read:business_reason",
+                "read:status", "read:requester_id", "read:company_id",
+                "read:department_id", "read:currency", "read:total_amount",
+                "read:required_date", "read:submitted_at", "read:decided_at",
+                "read:decided_by_id", "read:decision_comment",
+                "read:created_at", "read:updated_at", "read:items"]
+      effect: EFFECT_ALLOW
+      roles: ["finance_auditor"]
