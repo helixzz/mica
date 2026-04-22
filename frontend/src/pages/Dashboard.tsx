@@ -186,7 +186,7 @@ export function DashboardPage() {
                 renderItem={(item) => (
                   <List.Item
                     actions={[
-                      <Link key="view" to={`/approvals`}>
+                      <Link key="view" to={`/purchase-requisitions/${item.biz_id}`}>
                         {t('button.approve')}
                       </Link>,
                     ]}
@@ -198,10 +198,11 @@ export function DashboardPage() {
                           icon={<CheckCircleOutlined />}
                         />
                       }
-                      title={<Link to={`/approvals`}>{item.instance_id.slice(0, 8)}</Link>}
+                      title={<Link to={`/purchase-requisitions/${item.biz_id}`}>{item.biz_number || item.instance_id.slice(0, 8)}: {item.biz_title || item.stage_name}</Link>}
                       description={
                         <Space>
                           <Tag color="orange">{item.stage_name}</Tag>
+                          {item.submitter_name && <Text type="secondary">{item.submitter_name}</Text>}
                           <Text type="secondary">{new Date(item.assigned_at).toLocaleString()}</Text>
                         </Space>
                       }

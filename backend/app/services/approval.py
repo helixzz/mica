@@ -328,7 +328,7 @@ async def list_pending_tasks_for_user(db: AsyncSession, user_id: UUID) -> list[A
     stmt = (
         select(ApprovalTask)
         .where(ApprovalTask.assignee_id == user_id, ApprovalTask.status == TASK_STATUS_PENDING)
-        .options(selectinload(ApprovalTask.instance))
+        .options(selectinload(ApprovalTask.instance).selectinload(ApprovalInstance.submitter))
         .order_by(ApprovalTask.assigned_at.desc())
     )
     return list((await db.execute(stmt)).scalars().all())

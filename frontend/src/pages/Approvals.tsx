@@ -5,6 +5,7 @@ import { useTranslation } from 'react-i18next'
 import { Link } from 'react-router-dom'
 
 import { api, type ApprovalTask } from '@/api'
+import { fmtAmount } from '@/utils/format'
 
 export function ApprovalsPage() {
   const { t } = useTranslation()
@@ -17,17 +18,20 @@ export function ApprovalsPage() {
   }, [])
 
   const columns: ColumnsType<ApprovalTask> = [
-    { title: t('field.status'), dataIndex: 'status', render: (s) => <Tag color="processing">{t(`status.${s}` as 'status.pending')}</Tag> },
-    { title: t('field.display_name'), dataIndex: 'stage_name' },
     {
       title: t('field.pr_number'),
-      dataIndex: 'instance_id',
+      dataIndex: 'biz_number',
       render: (_, r) => (
-        <Link to={`/approvals/instance/${r.instance_id}`}>
-          {r.instance_id.slice(0, 8)}
+        <Link to={`/purchase-requisitions/${r.biz_id}`}>
+          {r.biz_number || r.instance_id.slice(0, 8)}
         </Link>
       ),
     },
+    { title: t('field.title'), dataIndex: 'biz_title', ellipsis: true },
+    { title: t('field.requester'), dataIndex: 'submitter_name' },
+    { title: t('field.total_amount'), dataIndex: 'biz_amount', align: 'right', render: (v: number | null) => v != null ? fmtAmount(v) : '-' },
+    { title: t('field.status'), dataIndex: 'status', width: 100, render: (s) => <Tag color="processing">{t(`status.${s}` as 'status.pending')}</Tag> },
+    { title: t('field.display_name'), dataIndex: 'stage_name' },
     {
       title: t('field.created_at'),
       dataIndex: 'assigned_at',

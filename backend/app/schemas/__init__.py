@@ -590,6 +590,12 @@ class ApprovalTaskOut(BaseModel):
     meta: dict[str, JSONValue] = Field(default_factory=dict)
     assigned_at: datetime
     acted_at: datetime | None
+    # Flattened from instance relationship
+    biz_id: UUID | None = None
+    biz_number: str | None = None
+    biz_title: str | None = None
+    biz_amount: Decimal | None = None
+    submitter_name: str | None = None
 
 
 class ApprovalInstanceOut(BaseModel):
