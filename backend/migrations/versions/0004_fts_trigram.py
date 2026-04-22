@@ -10,16 +10,17 @@ we use core pg_trgm plus simple-config tsvector columns. This keeps docker-compo
 bootstrapping automatic while still accelerating Chinese substring search.
 """
 
-from typing import Sequence, Union
+from typing import Union
+from collections.abc import Sequence
 
 import sqlalchemy as sa
 from alembic import op
 from sqlalchemy.dialects import postgresql
 
 revision: str = "0004"
-down_revision: Union[str, None] = "0003"
-branch_labels: Union[str, Sequence[str], None] = None
-depends_on: Union[str, Sequence[str], None] = None
+down_revision: str | None = "0003"
+branch_labels: str | Sequence[str] | None = None
+depends_on: str | Sequence[str] | None = None
 
 
 SEARCH_SPECS: dict[str, list[str]] = {
