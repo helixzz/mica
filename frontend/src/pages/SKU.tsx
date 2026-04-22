@@ -1,10 +1,11 @@
-import { CheckOutlined, PlusOutlined, WarningOutlined } from '@ant-design/icons'
+import { CheckOutlined, LineChartOutlined, PlusOutlined, WarningOutlined } from '@ant-design/icons'
 import {
   Alert,
   Button,
   Card,
   Col,
   DatePicker,
+  Empty,
   Form,
   InputNumber,
   Modal,
@@ -19,7 +20,7 @@ import {
 } from 'antd'
 import type { ColumnsType } from 'antd/es/table'
 import dayjs from 'dayjs'
-import { useEffect, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 
 import {
@@ -39,9 +40,9 @@ export function SKUPage() {
   const [suppliers, setSuppliers] = useState<Supplier[]>([])
   const [anomalies, setAnomalies] = useState<SKUAnomaly[]>([])
   const [prices, setPrices] = useState<SKUPriceRecord[]>([])
-  const [selectedItem, setSelectedItem] = useState<string | null>(null)
-  const [benchmark, setBenchmark] = useState<SKUBenchmark | null>(null)
-  const [trend, setTrend] = useState<SKUTrendPoint[]>([])
+  const [selectedItems, setSelectedItems] = useState<string[]>([])
+  const [benchmarks, setBenchmarks] = useState<Record<string, SKUBenchmark>>({})
+  const [trends, setTrends] = useState<Record<string, SKUTrendPoint[]>>({})
   const [recordOpen, setRecordOpen] = useState(false)
 
   const load = () => {
@@ -54,14 +55,27 @@ export function SKUPage() {
   useEffect(load, [])
 
   useEffect(() => {
-    if (!selectedItem) {
-      setBenchmark(null)
-      setTrend([])
+    if (selectedItems.length === 0) {
+      setBenchmarks({})
+      setTrends({})
       return
     }
-    void api.getSKUBenchmark(selectedItem).then(setBenchmark)
-    void api.getSKUTrend(selectedItem).then(setTrend)
-  }, [selectedItem])
+    const newBenchmarks: Record<string, SKUBenchmark> = {}
+    const newTrends: Record<string, SKUTrendPoint[]> = {}
+    Promise.all(
+      selectedItems.map(async (itemId) => {
+        const [bm, tr] = await Promise.all([
+          api.getSKUBenchmark(itemId).catch(() => null),
+          api.getSKUTrend(itemId).catch(() => []),
+        ])
+        if (bm) newBenchmarks[itemId] = bm
+        newTrends[itemId] = tr
+      }),
+    ).then(() => {
+      setBenchmarks(newBenchmarks)
+      setTrends(newTrends)
+    })
+  }, [selectedItems])
 
   const itemMap = Object.fromEntries(items.map((i) => [i.id, i]))
   const supplierMap = Object.fromEntries(suppliers.map((s) => [s.id, s]))
@@ -178,60 +192,47 @@ export function SKUPage() {
         />
       )}
 
-      <Card title="选择物料查看价格基准与趋势">
+      <Card title={<Space><LineChartOutlined />选择物料对比价格走势</Space>}>
         <Select
-          style={{ width: 360 }}
-          placeholder="选择 SKU"
-          value={selectedItem || undefined}
-          onChange={setSelectedItem}
+          mode="multiple"
+          style={{ width: '100%', maxWidth: 720 }}
+          placeholder="选择一个或多个 SKU 进行价格走势对比"
+          value={selectedItems}
+          onChange={setSelectedItems}
           options={items.map((i) => ({ value: i.id, label: `${i.code} · ${i.name}` }))}
           showSearch
           optionFilterProp="label"
           allowClear
+          maxTagCount={6}
         />
-        {benchmark && (
+
+        {selectedItems.length > 0 && (
           <Row gutter={16} style={{ marginTop: 16 }}>
-            <Col span={4}>
-              <Statistic title="样本数" value={benchmark.sample_size} suffix={`条`} />
-            </Col>
-            <Col span={5}>
-              <Statistic title={`${benchmark.window_days} 日均价`} value={benchmark.avg_price} />
-            </Col>
-            <Col span={5}>
-              <Statistic title="中位数" value={benchmark.median_price} />
-            </Col>
-            <Col span={5}>
-              <Statistic title="最低" value={benchmark.min_price} />
-            </Col>
-            <Col span={5}>
-              <Statistic title="最高" value={benchmark.max_price} />
-            </Col>
+            {selectedItems.map((itemId) => {
+              const bm = benchmarks[itemId]
+              const name = itemMap[itemId]?.name || itemId.slice(0, 8)
+              if (!bm) return null
+              return (
+                <Col key={itemId} xs={24} md={12} lg={8} style={{ marginBottom: 12 }}>
+                  <Card size="small" title={name} type="inner">
+                    <Row gutter={8}>
+                      <Col span={8}><Statistic title="均价" value={bm.avg_price} valueStyle={{ fontSize: 14 }} /></Col>
+                      <Col span={8}><Statistic title="最低" value={bm.min_price} valueStyle={{ fontSize: 14 }} /></Col>
+                      <Col span={8}><Statistic title="最高" value={bm.max_price} valueStyle={{ fontSize: 14 }} /></Col>
+                    </Row>
+                  </Card>
+                </Col>
+              )
+            })}
           </Row>
         )}
-        {selectedItem && !benchmark && (
-          <Typography.Text type="secondary" style={{ marginLeft: 16 }}>
-            尚无历史报价
-          </Typography.Text>
-        )}
-        {trend.length > 0 && (
-          <Table
-            rowKey={(r) => `${r.date}-${r.supplier_id || 'no'}-${r.price}`}
-            style={{ marginTop: 16 }}
-            size="small"
-            dataSource={trend}
-            pagination={false}
-            columns={[
-              { title: '日期', dataIndex: 'date', width: 140 },
-              { title: '价格', dataIndex: 'price', align: 'right' },
-              {
-                title: '供应商',
-                dataIndex: 'supplier_id',
-                render: (id: string | null) => (id ? supplierMap[id]?.name : '-'),
-              },
-              { title: '来源', dataIndex: 'source_type' },
-            ]}
-          />
-        )}
+
+        <PriceTrendChart
+          selectedItems={selectedItems}
+          trends={trends}
+          itemMap={itemMap}
+          supplierMap={supplierMap}
+        />
       </Card>
 
       <Card title="近期全部报价">
@@ -252,13 +253,162 @@ export function SKUPage() {
         onDone={() => {
           setRecordOpen(false)
           load()
-          if (selectedItem) {
-            void api.getSKUBenchmark(selectedItem).then(setBenchmark)
-            void api.getSKUTrend(selectedItem).then(setTrend)
-          }
+          selectedItems.forEach((itemId) => {
+            void api.getSKUBenchmark(itemId).then((bm) => {
+              if (bm) setBenchmarks((prev) => ({ ...prev, [itemId]: bm }))
+            })
+            void api.getSKUTrend(itemId).then((tr) =>
+              setTrends((prev) => ({ ...prev, [itemId]: tr })),
+            )
+          })
         }}
       />
     </Space>
+  )
+}
+
+const CHART_COLORS = [
+  '#8B5E3C', '#3B82F6', '#22C55E', '#F59E0B', '#EF4444',
+  '#8B5CF6', '#06B6D4', '#EC4899', '#84CC16', '#F97316',
+]
+
+function PriceTrendChart({
+  selectedItems,
+  trends,
+  itemMap,
+  supplierMap,
+}: {
+  selectedItems: string[]
+  trends: Record<string, SKUTrendPoint[]>
+  itemMap: Record<string, Item>
+  supplierMap: Record<string, Supplier>
+}) {
+  const chartData = useMemo(() => {
+    const rows: { date: string; price: number; sku: string }[] = []
+    selectedItems.forEach((itemId) => {
+      const points = trends[itemId] || []
+      const name = itemMap[itemId]?.name || itemId.slice(0, 8)
+      points.forEach((p) => {
+        rows.push({ date: p.date, price: Number(p.price), sku: name })
+      })
+    })
+    rows.sort((a, b) => a.date.localeCompare(b.date))
+    return rows
+  }, [selectedItems, trends, itemMap])
+
+  if (selectedItems.length === 0) {
+    return (
+      <div style={{ marginTop: 24, textAlign: 'center', padding: '40px 0' }}>
+        <Empty description="选择一个或多个 SKU 查看价格走势对比" />
+      </div>
+    )
+  }
+
+  if (chartData.length === 0) {
+    return (
+      <div style={{ marginTop: 24, textAlign: 'center', padding: '40px 0' }}>
+        <Empty description="所选 SKU 暂无历史报价数据" />
+      </div>
+    )
+  }
+
+  const skuNames = [...new Set(chartData.map((d) => d.sku))]
+
+  return (
+    <div style={{ marginTop: 24, minHeight: 360 }}>
+      <Typography.Text type="secondary" style={{ display: 'block', marginBottom: 8 }}>
+        价格走势对比（{skuNames.length} 个 SKU）
+      </Typography.Text>
+      <svg viewBox={`0 0 800 320`} style={{ width: '100%', maxHeight: 400, border: '1px solid var(--color-border-default, #ddd)', borderRadius: 8, background: 'var(--color-bg-subtle, #fafafa)' }}>
+        <ChartContent data={chartData} skuNames={skuNames} width={800} height={320} />
+      </svg>
+      <div style={{ display: 'flex', flexWrap: 'wrap', gap: 12, marginTop: 8 }}>
+        {skuNames.map((name, i) => (
+          <Space key={name} size={4}>
+            <div style={{ width: 12, height: 12, borderRadius: 2, background: CHART_COLORS[i % CHART_COLORS.length] }} />
+            <Typography.Text style={{ fontSize: 12 }}>{name}</Typography.Text>
+          </Space>
+        ))}
+      </div>
+    </div>
+  )
+}
+
+function ChartContent({
+  data,
+  skuNames,
+  width,
+  height,
+}: {
+  data: { date: string; price: number; sku: string }[]
+  skuNames: string[]
+  width: number
+  height: number
+}) {
+  const padding = { top: 20, right: 20, bottom: 40, left: 60 }
+  const plotW = width - padding.left - padding.right
+  const plotH = height - padding.top - padding.bottom
+
+  const allDates = [...new Set(data.map((d) => d.date))].sort()
+  const allPrices = data.map((d) => d.price)
+  const minPrice = Math.min(...allPrices) * 0.95
+  const maxPrice = Math.max(...allPrices) * 1.05
+  const priceRange = maxPrice - minPrice || 1
+
+  const xScale = (date: string) => {
+    const idx = allDates.indexOf(date)
+    return padding.left + (idx / Math.max(allDates.length - 1, 1)) * plotW
+  }
+  const yScale = (price: number) =>
+    padding.top + plotH - ((price - minPrice) / priceRange) * plotH
+
+  const yTicks = 5
+  const yStep = priceRange / yTicks
+
+  return (
+    <g>
+      {Array.from({ length: yTicks + 1 }, (_, i) => {
+        const val = minPrice + i * yStep
+        const y = yScale(val)
+        return (
+          <g key={i}>
+            <line x1={padding.left} y1={y} x2={width - padding.right} y2={y} stroke="#e5e5e5" strokeWidth={0.5} />
+            <text x={padding.left - 8} y={y + 4} textAnchor="end" fontSize={10} fill="#999">
+              {val >= 1000 ? `${(val / 1000).toFixed(1)}k` : val.toFixed(0)}
+            </text>
+          </g>
+        )
+      })}
+
+      {allDates.map((date, i) => {
+        if (allDates.length > 15 && i % Math.ceil(allDates.length / 10) !== 0) return null
+        const x = xScale(date)
+        return (
+          <text key={date} x={x} y={height - 8} textAnchor="middle" fontSize={10} fill="#999">
+            {date.slice(5)}
+          </text>
+        )
+      })}
+
+      {skuNames.map((sku, si) => {
+        const points = data.filter((d) => d.sku === sku).sort((a, b) => a.date.localeCompare(b.date))
+        if (points.length === 0) return null
+        const color = CHART_COLORS[si % CHART_COLORS.length]
+        const pathD = points
+          .map((p, i) => `${i === 0 ? 'M' : 'L'} ${xScale(p.date).toFixed(1)} ${yScale(p.price).toFixed(1)}`)
+          .join(' ')
+        return (
+          <g key={sku}>
+            <path d={pathD} fill="none" stroke={color} strokeWidth={2} strokeLinejoin="round" />
+            {points.map((p, i) => (
+              <circle key={i} cx={xScale(p.date)} cy={yScale(p.price)} r={3} fill={color} stroke="white" strokeWidth={1}>
+                <title>{`${sku}\n${p.date}: ¥${p.price.toLocaleString()}`}</title>
+              </circle>
+            ))}
+          </g>
+        )
+      })}
+    </g>
   )
 }
 
