@@ -7,158 +7,81 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
-## [Unreleased] — v0.6.0-dev.4 (2026-04-22)
+## [v0.6.0] — 2026-04-22
 
-**状态**：v0.6 开发中。A2-B4 + B1 + B5 + 补缺的路由。
-
-### 新增
-
-- **A2-B4 approval service 单元测试**（15 tests）
-  - 小额/大额规则匹配、单/双阶段路由
-  - 阶段推进（第一阶段 approve → 第二阶段 pending）
-  - 拒绝短路（后续 waiting tasks → skipped）
-  - 返回操作（同拒绝类似）
-  - 代理人委托（delegation 激活时 assignee 切到 delegate）
-  - 未授权用户不能 act_on_task
-  - 非法 action 返回 422
-  - count_pending_for_user / list_pending_tasks / get_instance_for_biz
-  - 无匹配规则时回退到 legacy threshold 路径
-  - **coverage: 42% → 87%**（+45!!）
-
-- **B5 Dashboard trend**
-  - 后端新增 `GET /api/v1/dashboard/metrics?compare_to=last_month|last_week`
-  - 新模块：`backend/app/api/v1/dashboard.py`
-  - 返回 4 个 trend 指标：`pr_count` / `po_count` / `po_total_amount` / `pending_approvals`（每个带 current/previous/direction/delta_pct）
-  - 额外两个简单计数：`expiring_contracts_30d` / `price_anomalies_pending`
-  - 前端 `api/index.ts` 加 `getDashboardMetrics()` + `DashboardMetrics` / `TrendInfo` 类型
-  - `Dashboard.tsx` 的 4 个 StatCard 接入 trend（direction=flat 时不显示，避免"没变化"也画个箭头）
-
-- **B1 Bundle code splitting**
-  - `routes/index.tsx` 改用 `React.lazy` + `<Suspense fallback={<Spin/>}>` 包裹 **16 个页面**
-  - `vite.config.ts` 加 `manualChunks`：antd / react-vendor / router / i18n / dayjs / axios / zustand
-  - 顺便补上 `/notifications` 路由接到 NotificationCenter（之前缺）
-  - **Build 结果**：
-    - main `index.js`: **1,531 KB → 42.8 KB** (-97%)
-    - 页面 chunks: Dashboard 9.6KB, Admin 14.4KB, PODetail 15KB 等
-    - vendor chunks: antd 1.14MB / react-vendor 142KB / axios 38KB / i18n 60KB
-  - `chunkSizeWarningLimit` 提到 1500 适配 antd chunk 大小
-
-### 测试总数
-
-- Backend: 46 → **61 tests pass**（+15 approval）
-- Frontend: 32 tests pass（不受 B1 改动影响）
-- **总计 93 tests, all green**
-- Backend coverage: 55% → **57%**
-  - approval: 42% → 87%
-  - 整体测试基础设施已非常稳固
-
----
-
-## [Unreleased] — v0.6.0-dev.3 (2026-04-22)
-
-**状态**：v0.6 开发中。Wave 1 A2-F4 收尾：ThemeProvider hook 测试。
-
-### 新增（相对 dev.2）
-
-- **Wave 1 A2-F4**：7 个 ThemeProvider + useTheme 测试
-  - 默认 `'system'` 模式
-  - localStorage 读取 + 持久化
-  - `setMode` 更新 `data-theme` attr
-  - `matchMedia` prefers-dark / prefers-light 正确分派
-  - `useTheme()` 在 Provider 外调用时 throw
-
-### 测试总数
-
-- Backend: 46 tests pass（无变化）
-- Frontend: 25 → **32 tests pass**
-- **总计 78 tests, all green**
-
-### Wave 1 状态
-
-✅ **Wave 1 全部完成**（除 A2-B4 approval 单元测试推迟到下一批；approval 已通过 walking_skeleton 获得 42% 覆盖）
-
----
-
-## [Unreleased] — v0.6.0-dev.2 (2026-04-22)
-
-**状态**：v0.6 开发中。在 dev.1 基础上补充 services 单元测试，覆盖率阶梯上升。
-
-### 新增（相对 dev.1）
-
-- **Wave 1 A2-B3 (system_params)**：15 个单元测试覆盖 `SystemParamsService`（get / get_int / get_decimal / get_int_or / cache / invalidate / get_all / get_param / 边界条件 + 模块单例）。覆盖率 34% → **50%**。
-- **Wave 1 A2-B5 (notifications)**：11 个单元测试覆盖核心 notification service（create / mute subscription / callable title / recent dedupe / list / count_unread by_category / mark_read by ids + all）。覆盖率 26% → **53%**。
-- **`seeded_db_session` fixture**：在 `conftest.py` 新增。为需要 seed users/suppliers/items 的 service 测试提供已 seed 的 savepoint 隔离 session。同时清理 legacy `seeded_client` 留下的 notifications 污染，避免测试间泄漏。
-
-### 覆盖率进展（backend）
-
-| 模块 | dev.1 | dev.2 | Δ |
-|---|---|---|---|
-| `core/litellm_helpers.py` | 100% | 100% | — |
-| `services/approval.py` | 20% | 42% | +22 |
-| `services/notifications.py` | 26% | **53%** | +27 |
-| `services/system_params.py` | 34% | **50%** | +16 |
-| **Total** | 54% | **55%** | +1 |
-
-（注：approval 提升来自 walking_skeleton 用 seeded_client 走完整端到端路径；专门的 unit 测试作为 A2-B4 待补）
-
-### 测试总数
-
-- Backend: 35 → **46 tests pass** (0.02s-3.5s runtime)
-- Frontend: 25 tests pass（无变化）
-- **总计 71 tests, all green**
-
----
-
-## [Unreleased] — v0.6.0-dev.1 (2026-04-22)
-
-**状态**：v0.6 开发中。首个 dev 发布：测试基础设施 + 首批单元测试 + CI 覆盖率上传 + UI 小改。
+测试基础设施 + 质量工程 + UI/UX 打磨 + Cerbos 授权外化。首次引入自动化测试（103 个），bundle 代码分割首屏瘦身 97%，LLM 真实接入，审批授权迁移到 Cerbos 策略引擎。
 
 ### 新增
 
-- **Backend 测试基础设施 (A2-B1)**
-  - `tests/conftest.py` 完全重写：
-    - 删除 deprecated `event_loop` session fixture
-    - `pyproject.toml` 加 `asyncio_default_fixture_loop_scope = "session"` + `asyncio_default_test_loop_scope = "session"`
-    - `db_session` fixture 用 **SAVEPOINT rollback pattern**（`join_transaction_mode="create_savepoint"`）：`session.commit()` 在测试中成为 SAVEPOINT release，outer transaction 保证 rollback → 零状态泄漏
-    - 新 `client` fixture：FastAPI `app.dependency_overrides[get_db]` 替代旧 monkeypatch
-    - `seeded_client` 保留为 legacy（带 deprecation 说明）
-    - `test_engine` 改用 `alembic upgrade head`（subprocess 规避 asyncio 嵌套 loop 冲突），确保 migrations 里的 seed data（system_parameters、approval_rules 等）也就位
-  - pytest-asyncio 依赖 bump 到 `>=0.26.0`
-- **Backend 测试补充**
-  - `tests/unit/test_litellm_helpers.py`：17 个单元测试覆盖 `resolve_litellm_model`（OpenAI 兼容白名单 / 原生 provider 前缀 / 边界条件）
-  - walking skeleton 整体重跑绿（20/20 pass）
-- **Frontend 测试基础设施 (A2-F1)**
-  - 依赖：`vitest` + `@testing-library/react` + `@testing-library/jest-dom` + `@testing-library/user-event` + `jsdom` + `@vitest/coverage-v8`
-  - 新建 `vitest.config.ts`（jsdom + v8 coverage）
-  - 新建 `src/test/setup.ts`：`matchMedia` / `ResizeObserver` / `IntersectionObserver` polyfills（AntD 5 依赖）
-  - 新建 `src/test/utils.tsx`：`renderWithProviders` helper（ConfigProvider + MemoryRouter + I18nextProvider）
-  - package.json scripts：`test` / `test:watch` / `test:coverage`
-- **Frontend 测试补充**
-  - `src/stores/notification.test.ts`：5 个测试覆盖 refresh / markRead / markAllRead + 空 ids 防御 + API 失败处理
-  - `src/components/ui/*.test.tsx`：StatCard / Section / PageHeader / EmptyState 共 17 个 render 测试
-  - 初始 coverage baseline：notification store 92% / ui primitives 79%
-- **CI 扩展 (A2-CI)**
-  - `.github/workflows/ci.yml` 新增 2 个 job：
-    - `backend-test`：postgres service container + pytest + xml coverage → Codecov (`flags: backend`)
-    - `frontend-test`：vitest + lcov coverage → Codecov (`flags: frontend`)
-  - 新建 `.codecov.yml`：ignore patterns（migrations / tests / __init__.py / dist / assets / i18n）+ 双 flag 配置
+- **单元测试基础设施**
+  - Backend (pytest)：完全重写 `conftest.py`——SAVEPOINT rollback 隔离、`alembic upgrade head` 替代 `create_all`（保留 migration seed data）、`seeded_db_session` fixture、pytest-asyncio ≥ 0.26 session-scoped loop
+  - Frontend (vitest)：`vitest.config.ts` + `setup.ts`（matchMedia / ResizeObserver / IntersectionObserver polyfills for AntD 5）+ `test/utils.tsx`（renderWithProviders helper）
+  - CI：`.github/workflows/ci.yml` 新增 `backend-test`（postgres service + pytest + Codecov）和 `frontend-test`（vitest + Codecov）两个 job；`.codecov.yml` 双 flag 配置
+- **Backend 单元测试**（68 个新 tests）
+  - `test_litellm_helpers.py` (17)：resolve_litellm_model 的 OpenAI 兼容 / 原生 provider / 边界条件
+  - `test_system_params.py` (15)：get / get_int / get_decimal / cache / invalidate / get_all
+  - `test_approval.py` (15)：规则匹配 / 阶段推进 / 拒绝短路 / 代理人 / 授权检查 / fallback
+  - `test_notifications.py` (11)：创建 / 订阅 mute / 去重窗口 / 列表 / count_unread / mark_read
+  - `test_cerbos_client.py` (10)：Cerbos fallback 等价性 × 8 种 role×resource + 边界
+- **Frontend 单元测试**（32 个新 tests）
+  - `stores/notification.test.ts` (5)：refresh / markRead / markAllRead
+  - `components/ui/*.test.tsx` (13)：StatCard / Section / PageHeader / EmptyState
+  - `theme/ThemeProvider.test.tsx` (7)：mode 持久化 / matchMedia / data-theme / 越界 throw
+  - `test/smoke.test.ts` (3)：jsdom 基础验证
+- **Dashboard 月环比趋势**
+  - `GET /api/v1/dashboard/metrics?compare_to=last_month|last_week`（新 endpoint）
+  - 4 个 StatCard 显示 ↑/↓ 箭头 + 百分比 delta（direction=flat 时不显示）
+  - 额外 `expiring_contracts_30d` + `price_anomalies_pending` 计数
+- **Cerbos 策略引擎集成**
+  - `docker-compose.yml` 新增 `cerbos` sidecar（`ghcr.io/cerbos/cerbos:0.40.0`，disk-based policy + watchForChanges 热更新）
+  - 4 个 resource policy YAML（`purchase_requisition` / `purchase_order` / `payment_record` / `invoice`），与原 `FIELD_PERMISSIONS` dict 1:1 等价
+  - `backend/app/core/cerbos_client.py`：async HTTP client + graceful fallback（Cerbos 不可达时降级到静态 dict）
+  - `api/v1/authz.py`：field-manifest 端点切换到 Cerbos check_field_access
+  - `services/search.py`：搜索 meta 过滤切换到 filter_dict_via_cerbos
 
 ### 改进
 
-- **B2 主题图标 AntD 化**：`AppLayout.tsx` 主题切换按钮替换 emoji（☀️🌙💻）→ AntD `SunOutlined` / `MoonOutlined` / `DesktopOutlined`，并改用 Button `icon` prop 惯用法
+- **Frontend bundle 代码分割**
+  - 16 个页面组件改用 `React.lazy` + `<Suspense>` 包裹
+  - `vite.config.ts` 加 `manualChunks`（antd / react-vendor / router / i18n / dayjs / axios / zustand）
+  - 主 chunk `index.js`：**1,531 KB → 42.8 KB (-97%)**；路由导航按需加载 9-15 KB 页面 chunk
+  - 补上遗漏的 `/notifications` 路由
+- **暗色模式对比度**
+  - Playwright 截图验收 Dashboard / Admin / PODetail × light/dark（5 张归档）
+  - `tokens.ts`：dark border 提亮 (`#2F2B27→#3A3632` / `#4F4943→#5A544E` / `#6F6861→#7A7369`)
+  - `tokens.ts`：dark text secondary/tertiary 提亮 (`#CFCAC5→#D5D0CB` / `#8F8881→#9E9790`)
+  - `antdTheme.ts`：dark Table borderColor 改用 border token（不再硬编码 neutral[800]）
+- **水獭 SVG 插画升级**
+  - 3 张 geometric placeholder 替换为详细矢量水獭（head/ears/face/nose/eyes/mouth/arms/paws/feet/tail + 场景道具）
+  - `otter-empty`：睡觉水獭 + Zzz + 漂浮几何图形
+  - `otter-search`：举放大镜水獭 + 问号
+  - `otter-welcome`：挥手水獭 + 闪烁粒子
+  - 保留 CSS var 主题适配，每张 <3 KB
+- **主题切换图标**
+  - AppLayout：emoji（☀️🌙💻）→ AntD `SunOutlined` / `MoonOutlined` / `DesktopOutlined`
 
-### 内部
+### 修复
 
-- 版本号 bump 到 0.6.0-dev.1（进入 v0.6 开发期，首个 dev tag）
-- `v0.6-work-plan.md` 进度更新：A2-B1 / A2-F1..F3 / A2-CI1..3 / B2 标记完成
-- `tests/` 目录结构：`tests/unit/` 子目录（pure unit tests）vs 根 `tests/` 下 integration tests
+- **LiteLLM provider 路由**：OpenAI 兼容 vendor 的 model_string 含斜杠时被 LiteLLM 误判为 HuggingFace repo。新增 `resolve_litellm_model()` 自动补 `openai/` 前缀（DB 值不变）
+- **Embedding modality 分派**：`test_ai_model_connection` 对所有 modality 都调 `acompletion`。改为按 `AIModel.modality` 分派（embedding → `aembedding`）
+- **Embedding encoding_format=null**：LiteLLM 默认传 `encoding_format=None`，Modelverse 严格 schema 拒绝。改为显式传 `"float"`
+- **前端 API 客户端 URL 双重前缀**：`admin-system-params.ts` / `notifications.ts` / `search.ts` 共 10 处 `/api/v1/` 冗余导致 404
+- **Admin LLM 表单**：新增 OpenAI 兼容配置 Alert 引导 + Provider/Model String 字段 help 文案
+- **版本号同步**：v0.5.0 发布时遗漏的 4 处 version drift 对齐
 
-### 🚧 进行中 / 下一步
+### 测试数据
 
-- Wave 1 剩余：services 单元测试（system_params / approval / notifications）→ 目标 backend coverage 从当前 54% 提升到 70%+
-- A3-1（LLM UI 补强 + feature routing）
-- A4（Cerbos sidecar）
-- B1 / B3 / B4 / B5
+| | v0.5.0 | v0.6.0 | Δ |
+|---|---|---|---|
+| Backend tests | 3 | **71** | +68 |
+| Frontend tests | 0 | **32** | +32 |
+| **Total** | **3** | **103** | **+100** |
+| Backend coverage | N/A | **57%** | — |
+| approval.py | 0% | **87%** | — |
+| notifications.py | 0% | **53%** | — |
+| system_params.py | 0% | **50%** | — |
+| litellm_helpers.py | N/A | **100%** | — |
+| Main JS chunk | 1,531 KB | **42.8 KB** | **-97%** |
 
 ---
 

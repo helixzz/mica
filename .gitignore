@@ -288,3 +288,4 @@ docs/_build/
 docs/.docusaurus/
 site/
 _site/
+.playwright-mcp/
