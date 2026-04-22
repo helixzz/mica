@@ -1,5 +1,6 @@
-import { DeleteOutlined, ExperimentOutlined, PlusOutlined, ThunderboltOutlined } from '@ant-design/icons'
+import { DeleteOutlined, ExperimentOutlined, InfoCircleOutlined, PlusOutlined, ThunderboltOutlined } from '@ant-design/icons'
 import {
+  Alert,
   Button,
   Card,
   Descriptions,
@@ -238,14 +239,40 @@ function AIModelDrawer({
       extra={<Button type="primary" onClick={save} loading={busy}>保存</Button>}
     >
       <Form form={form} layout="vertical">
+        <Alert
+          type="info"
+          showIcon
+          icon={<InfoCircleOutlined />}
+          style={{ marginBottom: 16 }}
+          message="OpenAI 兼容 API 填写指南"
+          description={
+            <Typography.Text style={{ fontSize: 13 }}>
+              使用任意 OpenAI 兼容的第三方服务（DeepSeek / 智谱 GLM / Modelverse / 通义兼容接口等）时：
+              <br />1. <b>Provider</b> 填 <Typography.Text code>openai</Typography.Text>（或 <Typography.Text code>openai-compatible</Typography.Text>、<Typography.Text code>deepseek</Typography.Text> 等）
+              <br />2. <b>Model String</b> 填 vendor 的原始 model id（例如 <Typography.Text code>zai-org/glm-4.7</Typography.Text>）— 后端会自动补 <Typography.Text code>openai/</Typography.Text> 前缀
+              <br />3. <b>API Base</b> 填 vendor 的 <Typography.Text code>/v1</Typography.Text> 端点（例如 <Typography.Text code>https://api.modelverse.cn/v1</Typography.Text>）
+              <br />4. <b>API Key</b> 填 vendor 发放的密钥
+            </Typography.Text>
+          }
+        />
         <Form.Item label="模型名称 Name" name="name" rules={[{ required: true }]}>
-          <Input placeholder="qwen-max / gpt-4o / ..." />
+          <Input placeholder="qwen-max / gpt-4o / glm-4.7 / ..." />
         </Form.Item>
-        <Form.Item label="Provider" name="provider" rules={[{ required: true }]}>
-          <Input placeholder="openai / dashscope / volcengine / mock" />
+        <Form.Item
+          label="Provider"
+          name="provider"
+          rules={[{ required: true }]}
+          help="OpenAI 兼容服务统一填 openai（或 openai-compatible / deepseek / modelverse 等别名）"
+        >
+          <Input placeholder="openai / anthropic / dashscope / volcengine / mock" />
         </Form.Item>
-        <Form.Item label="Model String (LiteLLM)" name="model_string" rules={[{ required: true }]}>
-          <Input placeholder="openai/gpt-4o · dashscope/qwen-max" />
+        <Form.Item
+          label="Model String"
+          name="model_string"
+          rules={[{ required: true }]}
+          help="填 vendor 的原始 model id（如 zai-org/glm-4.7、deepseek-chat）；已带 openai/ 等前缀则保持不变"
+        >
+          <Input placeholder="zai-org/glm-4.7 · deepseek-chat · openai/gpt-4o" />
         </Form.Item>
         <Form.Item label="Modality" name="modality">
           <Select options={[

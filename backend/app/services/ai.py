@@ -9,6 +9,7 @@ from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.crypto import decrypt
+from app.core.litellm_helpers import resolve_litellm_model
 from app.models import AICallLog, AIFeatureRouting, AIModel, User
 
 PROMPT_TEMPLATES: dict[str, str] = {
@@ -95,7 +96,7 @@ async def _call_litellm_stream(
 
     api_key = decrypt(model.api_key_encrypted) if model.api_key_encrypted else None
     kwargs: dict[str, Any] = {
-        "model": model.model_string,
+        "model": resolve_litellm_model(model.provider, model.model_string),
         "messages": [{"role": "user", "content": prompt}],
         "stream": True,
         "temperature": temperature,
