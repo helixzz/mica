@@ -80,9 +80,9 @@ export function AppLayout() {
   const currentKey = '/' + (location.pathname.split('/')[1] || 'dashboard');
 
   const Logo = () => (
-    <Link to="/dashboard" style={{ textDecoration: 'none' }}>
+    <Link to="/dashboard" style={{ textDecoration: 'none', display: 'flex', alignItems: 'center' }}>
       <Space size="small" style={{ display: 'flex', alignItems: 'center', cursor: 'pointer' }}>
-        <svg width="32" height="32" viewBox="0 0 64 64" xmlns="http://www.w3.org/2000/svg">
+        <svg width="32" height="32" viewBox="0 0 64 64" xmlns="http://www.w3.org/2000/svg" style={{ display: 'block' }}>
           {/* Otter face */}
           <circle cx="32" cy="34" r="24" fill={token.colorPrimary} />
           {/* Ears */}
@@ -106,6 +106,7 @@ export function AppLayout() {
           <path d="M27,44 Q32,48 37,44" fill="none" stroke={token.colorPrimaryActive} strokeWidth="1.5" strokeLinecap="round" />
         </svg>
         <Text
+          className="logo-text"
           style={{
             fontSize: 20,
             fontWeight: 700,
@@ -135,7 +136,7 @@ export function AppLayout() {
           boxShadow: token.boxShadowTertiary,
         }}
       >
-        <div style={{ display: 'flex', alignItems: 'center', width: 220, flexShrink: 0 }}>
+        <div className="header-logo" style={{ display: 'flex', alignItems: 'center', width: 220, flexShrink: 0 }}>
           <Logo />
         </div>
 
@@ -148,7 +149,7 @@ export function AppLayout() {
           title={t('layout.menu_toggle')}
         />
 
-        <div style={{ flex: 1, display: 'flex', justifyContent: 'center', maxWidth: 480, margin: '0 24px' }}>
+        <div style={{ flex: 1, display: 'flex', justifyContent: 'center', maxWidth: 480, margin: '0 12px', minWidth: 0 }} className="header-search">
           <SearchSlot />
         </div>
 
@@ -258,10 +259,25 @@ export function AppLayout() {
           }
           .mobile-menu-toggle {
             display: inline-flex !important;
-            margin-right: 16px;
+            margin-right: 8px;
           }
           .user-name {
             display: none;
+          }
+          .header-search {
+            max-width: 240px !important;
+            margin: 0 8px !important;
+          }
+        }
+        @media (max-width: 768px) {
+          .header-search {
+            display: none !important;
+          }
+          .logo-text {
+            display: none;
+          }
+          .header-logo {
+            width: auto !important;
           }
         }
         .user-dropdown:hover {

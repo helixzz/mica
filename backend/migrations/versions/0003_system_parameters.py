@@ -7,7 +7,7 @@ Create Date: 2026-04-21 00:30:00.000000
 """
 from __future__ import annotations
 
-from datetime import datetime, timezone
+from datetime import datetime, timezone, UTC
 from uuid import uuid4
 from collections.abc import Sequence
 
@@ -92,7 +92,7 @@ def upgrade() -> None:
         sa.column("updated_at", sa.DateTime(timezone=True)),
     )
 
-    now = datetime.now(timezone.utc)
+    now = datetime.now(UTC)
     seed_rows = [
         {
             "id": uuid4(),

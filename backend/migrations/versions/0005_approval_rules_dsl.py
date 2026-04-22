@@ -8,7 +8,7 @@ Create Date: 2026-04-21 21:00:00.000000
 from __future__ import annotations
 
 from collections.abc import Sequence
-from datetime import datetime, timezone
+from datetime import datetime, timezone, UTC
 from uuid import uuid4
 
 import sqlalchemy as sa
@@ -94,7 +94,7 @@ def upgrade() -> None:
         sa.column("updated_at", sa.DateTime(timezone=True)),
     )
 
-    now = datetime.now(timezone.utc)
+    now = datetime.now(UTC)
     op.bulk_insert(
         approval_rules,
         [

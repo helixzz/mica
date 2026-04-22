@@ -9,7 +9,7 @@ from alembic import context
 
 from app.config import get_settings
 from app.db import Base
-from app import models  # noqa: F401  import registers mappers
+from app import models
 
 config = context.config
 
