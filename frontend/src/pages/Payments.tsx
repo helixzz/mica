@@ -36,7 +36,7 @@ export function PaymentsPage() {
   const columns: ColumnsType<PaymentRecord> = [
     { title: t('field.payment_number'), dataIndex: 'payment_number' },
     { title: t('field.installment_no'), dataIndex: 'installment_no' },
-    { title: t('field.amount'), align: 'right', render: (_, r) => `${r.currency} ${r.amount}` },
+    { title: t('field.amount'), align: 'right', render: (_, r) => `${r.currency} ${Number(r.amount).toLocaleString(undefined, { maximumFractionDigits: 2 })}` },
     { title: t('field.status'), dataIndex: 'status',
       render: (s) => <Tag color={s === 'confirmed' ? 'success' : 'default'}>{t(`status.${s}` as 'status.pending')}</Tag> },
     { title: t('field.due_date'), dataIndex: 'due_date' },
