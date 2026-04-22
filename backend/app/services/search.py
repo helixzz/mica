@@ -10,7 +10,7 @@ from sqlalchemy.dialects import postgresql
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.authz import check_permission
-from app.core.field_authz import filter_dict_by_role
+from app.core.cerbos_client import filter_dict_via_cerbos
 from app.models import (
     Contract,
     ContractDocument,
@@ -98,8 +98,17 @@ def _can_view_pr(actor: User, pr: PurchaseRequisition) -> bool:
     return False
 
 
-def _filter_meta(actor: User, resource: str, meta: SearchMeta) -> SearchMeta:
-    return cast(SearchMeta, filter_dict_by_role(meta, resource, actor.role))
+async def _filter_meta(actor: User, resource: str, meta: SearchMeta) -> SearchMeta:
+    return cast(
+        SearchMeta,
+        await filter_dict_via_cerbos(
+            meta,
+            principal_id=str(actor.id),
+            principal_role=actor.role,
+            resource_kind=resource,
+            resource_id="search-meta",
+        ),
+    )
 
 
 async def _search_prs(db: AsyncSession, actor: User, query: str, limit: int) -> list[SearchHit]:
@@ -128,7 +137,7 @@ async def _search_prs(db: AsyncSession, actor: User, query: str, limit: int) -> 
                 "snippet": _trim_snippet(headline or pr.business_reason or pr.title, query),
                 "score": float(rank_score or 0),
                 "link_url": f"/purchase-requisitions/{pr.id}",
-                "meta": _filter_meta(
+                "meta": await _filter_meta(
                     actor,
                     "purchase_requisition",
                     {
@@ -166,7 +175,7 @@ async def _search_pos(db: AsyncSession, actor: User, query: str, limit: int) -> 
             "snippet": _trim_snippet(headline or po.source_ref or po.po_number, query),
             "score": float(rank_score or 0),
             "link_url": f"/purchase-orders/{po.id}",
-            "meta": _filter_meta(
+            "meta": await _filter_meta(
                 actor,
                 "purchase_order",
                 {
@@ -266,28 +275,33 @@ async def _search_invoices(
         )
     ).all()
     typed_rows = cast(list[tuple[Invoice, float | None, str | None]], rows)
-    return [
-        {
-            "entity_type": "invoice",
-            "entity_id": str(invoice.id),
-            "title": invoice.invoice_number,
-            "snippet": _trim_snippet(headline or invoice.notes or invoice.invoice_number, query),
-            "score": float(rank_score or 0),
-            "link_url": f"/invoices/{invoice.id}",
-            "meta": _filter_meta(
-                actor,
-                "invoice",
-                {
-                    "internal_number": invoice.internal_number,
-                    "invoice_number": invoice.invoice_number,
-                    "invoice_date": invoice.invoice_date.isoformat(),
-                    "total_amount": _as_str(invoice.total_amount),
-                    "status": invoice.status,
-                },
-            ),
-        }
-        for invoice, rank_score, headline in typed_rows
-    ]
+    hits: list[SearchHit] = []
+    for invoice, rank_score, headline in typed_rows:
+        meta = await _filter_meta(
+            actor,
+            "invoice",
+            {
+                "internal_number": invoice.internal_number,
+                "invoice_number": invoice.invoice_number,
+                "invoice_date": invoice.invoice_date.isoformat(),
+                "total_amount": _as_str(invoice.total_amount),
+                "status": invoice.status,
+            },
+        )
+        hits.append(
+            {
+                "entity_type": "invoice",
+                "entity_id": str(invoice.id),
+                "title": invoice.invoice_number,
+                "snippet": _trim_snippet(
+                    headline or invoice.notes or invoice.invoice_number, query
+                ),
+                "score": float(rank_score or 0),
+                "link_url": f"/invoices/{invoice.id}",
+                "meta": meta,
+            }
+        )
+    return hits
 
 
 async def _search_suppliers(db: AsyncSession, query: str, limit: int) -> list[SearchHit]:
