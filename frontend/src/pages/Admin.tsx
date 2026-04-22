@@ -63,6 +63,7 @@ export function AdminPage() {
           { key: 'system', label: '系统信息', children: <SystemInfoPanel /> },
           { key: 'system_params', label: '系统参数', children: <SystemParamsTab /> },
           { key: 'classification', label: '分类管理', children: <ClassificationTab /> },
+          { key: 'items', label: 'SKU 物料', children: <ItemsTab /> },
           { key: 'models', label: 'LLM 模型', children: <AIModelsPanel /> },
           { key: 'routings', label: 'AI 场景路由', children: <RoutingsPanel /> },
           { key: 'users', label: '用户管理', children: <UsersPanel /> },
@@ -610,6 +611,150 @@ function ClassificationTab() {
           )}
         </Form>
       </Modal>
+    </Space>
+  )
+}
+
+function ItemsTab() {
+  const [items, setItems] = useState<any[]>([])
+  const [categories, setCategories] = useState<any[]>([])
+  const [drawerOpen, setDrawerOpen] = useState(false)
+  const [editingItem, setEditingItem] = useState<any | null>(null)
+  const [form] = Form.useForm()
+
+  const load = () => {
+    void api.items().then(setItems)
+    void api.listProcurementCategories().then(setCategories)
+  }
+  useEffect(load, [])
+
+  const handleSave = async () => {
+    try {
+      const values = form.getFieldsValue()
+      if (editingItem) {
+        await api.updateItem(editingItem.id, values)
+        void message.success('已更新')
+      } else {
+        await api.createItem(values)
+        void message.success('已创建')
+      }
+      form.resetFields()
+      setDrawerOpen(false)
+      setEditingItem(null)
+      load()
+    } catch (e: any) {
+      void message.error(e?.response?.data?.detail || '操作失败')
+    }
+  }
+
+  const handleDelete = async (id: string) => {
+    try {
+      await api.deleteItem(id)
+      void message.success('已删除')
+      load()
+    } catch (e: any) {
+      void message.error(e?.response?.data?.detail || '删除失败')
+    }
+  }
+
+  const openEdit = (item: any) => {
+    setEditingItem(item)
+    form.setFieldsValue(item)
+    setDrawerOpen(true)
+  }
+
+  const openNew = () => {
+    setEditingItem(null)
+    form.resetFields()
+    setDrawerOpen(true)
+  }
+
+  const cols: any[] = [
+    { title: '编码', dataIndex: 'code', width: 120 },
+    { title: '名称', dataIndex: 'name' },
+    { title: '分类', dataIndex: 'category', render: (v: string | null) => v || '-' },
+    { title: '单位', dataIndex: 'uom', width: 60 },
+    { title: '规格', dataIndex: 'specification', ellipsis: true },
+    {
+      title: '状态',
+      dataIndex: 'is_active',
+      width: 80,
+      render: (v: boolean) => <Tag color={v ? 'success' : 'default'}>{v ? '启用' : '停用'}</Tag>,
+    },
+    {
+      title: '操作',
+      width: 120,
+      render: (_: unknown, r: any) => (
+        <Space>
+          <Button size="small" onClick={() => openEdit(r)}>编辑</Button>
+          <Button size="small" danger icon={<DeleteOutlined />} onClick={() => handleDelete(r.id)} />
+        </Space>
+      ),
+    },
+  ]
+
+  return (
+    <Space direction="vertical" size="middle" style={{ width: '100%' }}>
+      <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+        <Typography.Text type="secondary">{items.length} 个物料</Typography.Text>
+        <Button type="primary" icon={<PlusOutlined />} onClick={openNew}>新增物料</Button>
+      </div>
+      <Table dataSource={items} columns={cols} rowKey="id" size="small" pagination={{ pageSize: 20 }} />
+
+      <Drawer
+        title={editingItem ? `编辑 ${editingItem.code}` : '新增物料'}
+        width={480}
+        open={drawerOpen}
+        onClose={() => { setDrawerOpen(false); setEditingItem(null) }}
+        footer={
+          <Space style={{ float: 'right' }}>
+            <Button onClick={() => setDrawerOpen(false)}>取消</Button>
+            <Button type="primary" onClick={handleSave}>保存</Button>
+          </Space>
+        }
+      >
+        <Form form={form} layout="vertical">
+          <Form.Item name="code" label="编码" rules={[{ required: !editingItem }]}>
+            <Input placeholder="LAPTOP-001" disabled={!!editingItem} />
+          </Form.Item>
+          <Form.Item name="name" label="名称" rules={[{ required: true }]}>
+            <Input placeholder="MacBook Pro 16 M4 Pro" />
+          </Form.Item>
+          <Form.Item name="category" label="分类标签（文本）">
+            <Input placeholder="laptop / server / memory" />
+          </Form.Item>
+          <Form.Item name="category_id" label="采购种类（结构化）">
+            <Select
+              allowClear
+              placeholder="选择采购种类"
+              options={categories.map((c: any) => ({
+                value: c.id,
+                label: c.level === 2 ? `  └ ${c.label_zh}` : c.label_zh,
+              }))}
+            />
+          </Form.Item>
+          <Form.Item name="uom" label="计量单位" initialValue="EA">
+            <Select options={[
+              { value: 'EA', label: 'EA (个)' },
+              { value: 'SET', label: 'SET (套)' },
+              { value: 'BOX', label: 'BOX (箱)' },
+              { value: 'KG', label: 'KG (千克)' },
+              { value: 'M', label: 'M (米)' },
+            ]} />
+          </Form.Item>
+          <Form.Item name="specification" label="规格描述">
+            <Input.TextArea rows={3} placeholder="16 英寸 / M4 Pro / 36GB / 512GB SSD" />
+          </Form.Item>
+          <Form.Item name="requires_serial" label="需要序列号" valuePropName="checked">
+            <Switch />
+          </Form.Item>
+          {editingItem && (
+            <Form.Item name="is_active" label="启用状态" valuePropName="checked">
+              <Switch />
+            </Form.Item>
+          )}
+        </Form>
+      </Drawer>
     </Space>
   )
 }
