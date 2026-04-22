@@ -156,6 +156,62 @@ class Department(Base, TimestampMixin):
     __table_args__ = (UniqueConstraint("company_id", "code"),)
 
 
+class CostCenter(Base, TimestampMixin):
+    __tablename__ = "cost_centers"
+
+    id: Mapped[UUID] = mapped_column(PGUUID(as_uuid=True), primary_key=True, default=new_uuid)
+    code: Mapped[str] = mapped_column(String(32), unique=True, nullable=False)
+    label_zh: Mapped[str] = mapped_column(String(128), nullable=False)
+    label_en: Mapped[str] = mapped_column(String(128), nullable=False)
+    sort_order: Mapped[int] = mapped_column(Integer, default=0, nullable=False)
+    is_active: Mapped[bool] = mapped_column(default=True, nullable=False)
+    budget_amount: Mapped[Decimal | None] = mapped_column(Numeric(18, 4))
+    manager_id: Mapped[UUID | None] = mapped_column(
+        PGUUID(as_uuid=True),
+        ForeignKey("users.id", ondelete="SET NULL", use_alter=True),
+    )
+    meta: Mapped[dict | None] = mapped_column(JSONB)
+
+
+class ProcurementCategory(Base, TimestampMixin):
+    __tablename__ = "procurement_categories"
+
+    id: Mapped[UUID] = mapped_column(PGUUID(as_uuid=True), primary_key=True, default=new_uuid)
+    code: Mapped[str] = mapped_column(String(64), unique=True, nullable=False)
+    label_zh: Mapped[str] = mapped_column(String(128), nullable=False)
+    label_en: Mapped[str] = mapped_column(String(128), nullable=False)
+    sort_order: Mapped[int] = mapped_column(Integer, default=0, nullable=False)
+    is_active: Mapped[bool] = mapped_column(default=True, nullable=False)
+    parent_id: Mapped[UUID | None] = mapped_column(
+        PGUUID(as_uuid=True),
+        ForeignKey("procurement_categories.id", ondelete="SET NULL"),
+    )
+    level: Mapped[int] = mapped_column(Integer, default=1, nullable=False)
+
+    parent: Mapped[ProcurementCategory | None] = relationship(
+        remote_side="ProcurementCategory.id",
+    )
+    children: Mapped[list[ProcurementCategory]] = relationship(
+        back_populates="parent",
+        order_by="ProcurementCategory.sort_order",
+    )
+
+
+class LookupValue(Base, TimestampMixin):
+    __tablename__ = "lookup_values"
+
+    id: Mapped[UUID] = mapped_column(PGUUID(as_uuid=True), primary_key=True, default=new_uuid)
+    type: Mapped[str] = mapped_column(String(64), nullable=False, index=True)
+    code: Mapped[str] = mapped_column(String(64), nullable=False)
+    label_zh: Mapped[str] = mapped_column(String(128), nullable=False)
+    label_en: Mapped[str] = mapped_column(String(128), nullable=False)
+    sort_order: Mapped[int] = mapped_column(Integer, default=0, nullable=False)
+    is_active: Mapped[bool] = mapped_column(default=True, nullable=False)
+    meta: Mapped[dict | None] = mapped_column(JSONB)
+
+    __table_args__ = (UniqueConstraint("type", "code"),)
+
+
 class User(Base, TimestampMixin):
     __tablename__ = "users"
 
@@ -210,10 +266,16 @@ class Item(Base, TimestampMixin):
     code: Mapped[str] = mapped_column(String(64), unique=True, nullable=False)
     name: Mapped[str] = mapped_column(String(255), nullable=False)
     category: Mapped[str | None] = mapped_column(String(64))
+    category_id: Mapped[UUID | None] = mapped_column(
+        PGUUID(as_uuid=True),
+        ForeignKey("procurement_categories.id", ondelete="SET NULL"),
+    )
     uom: Mapped[str] = mapped_column(String(16), default="EA", nullable=False)
     specification: Mapped[str | None] = mapped_column(Text)
     requires_serial: Mapped[bool] = mapped_column(default=False, nullable=False)
     is_active: Mapped[bool] = mapped_column(default=True, nullable=False)
+
+    procurement_category: Mapped[ProcurementCategory | None] = relationship()
 
 
 class PurchaseRequisition(Base, TimestampMixin):
@@ -242,11 +304,26 @@ class PurchaseRequisition(Base, TimestampMixin):
     decided_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
     decided_by_id: Mapped[UUID | None] = mapped_column(PGUUID(as_uuid=True), ForeignKey("users.id"))
     decision_comment: Mapped[str | None] = mapped_column(Text)
+    cost_center_id: Mapped[UUID | None] = mapped_column(
+        PGUUID(as_uuid=True),
+        ForeignKey("cost_centers.id", ondelete="SET NULL"),
+    )
+    expense_type_id: Mapped[UUID | None] = mapped_column(
+        PGUUID(as_uuid=True),
+        ForeignKey("lookup_values.id", ondelete="SET NULL"),
+    )
+    procurement_category_id: Mapped[UUID | None] = mapped_column(
+        PGUUID(as_uuid=True),
+        ForeignKey("procurement_categories.id", ondelete="SET NULL"),
+    )
 
     requester: Mapped[User] = relationship(foreign_keys=[requester_id])
     decided_by: Mapped[User | None] = relationship(foreign_keys=[decided_by_id])
     company: Mapped[Company] = relationship()
     department: Mapped[Department | None] = relationship()
+    cost_center: Mapped[CostCenter | None] = relationship()
+    expense_type: Mapped[LookupValue | None] = relationship()
+    procurement_category: Mapped[ProcurementCategory | None] = relationship()
     items: Mapped[list[PRItem]] = relationship(
         back_populates="pr", cascade="all, delete-orphan", order_by="PRItem.line_no"
     )
