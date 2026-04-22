@@ -20,7 +20,7 @@ import { useTranslation } from 'react-i18next'
 import { useNavigate } from 'react-router-dom'
 
 import { api, type ClassificationItem, flattenCategoryTree, type Item, type PRItem, type Supplier } from '@/api'
-import { extractError } from '@/api/client'
+import { client, extractError } from '@/api/client'
 import { AIStreamButton } from '@/components/AIStreamButton'
 
 interface LineForm {
@@ -46,12 +46,15 @@ export function PRNewPage() {
     cost_center_id?: string
     expense_type_id?: string
     procurement_category_id?: string
+    company_id?: string
   }>()
   const [suppliers, setSuppliers] = useState<Supplier[]>([])
   const [items, setItems] = useState<Item[]>([])
+  const [companies, setCompanies] = useState<{ id: string; name_zh: string }[]>([])
   const [costCenters, setCostCenters] = useState<{ id: string; label_zh: string }[]>([])
   const [expenseTypes, setExpenseTypes] = useState<{ id: string; label_zh: string }[]>([])
   const [procCategories, setProcCategories] = useState<ClassificationItem[]>([])
+  const [aiFeatures, setAiFeatures] = useState<Record<string, boolean>>({})
   const [lines, setLines] = useState<LineForm[]>([
     { key: 1, line_no: 1, item_id: null, item_name: '', specification: '', supplier_id: null, qty: 1, uom: 'EA', unit_price: 0 },
   ])
@@ -60,9 +63,11 @@ export function PRNewPage() {
   useEffect(() => {
     void api.suppliers().then(setSuppliers)
     void api.items().then(setItems)
+    void api.companies().then(setCompanies)
     void api.listCostCenters().then(setCostCenters)
     void api.listLookupValues('expense_type').then(setExpenseTypes)
     void api.getCategoryTree().then((tree) => setProcCategories(flattenCategoryTree(tree)))
+    void client.get<Record<string, boolean>>('/ai/features-available').then((r) => setAiFeatures(r.data)).catch(() => {})
   }, [])
 
   const addLine = () => {
@@ -121,6 +126,7 @@ export function PRNewPage() {
         business_reason: values.business_reason,
         currency: values.currency || 'CNY',
         required_date: values.required_date ? values.required_date.format('YYYY-MM-DD') : null,
+        company_id: values.company_id || null,
         cost_center_id: values.cost_center_id || null,
         expense_type_id: values.expense_type_id || null,
         procurement_category_id: values.procurement_category_id || null,
@@ -269,25 +275,31 @@ export function PRNewPage() {
             </Col>
           </Row>
           <Row gutter={16}>
-            <Col span={8}>
-              <Form.Item label="成本中心" name="cost_center_id">
+            <Col span={6}>
+              <Form.Item label="公司主体" name="company_id" rules={[{ required: true, message: '请选择公司主体' }]}>
                 <Select
-                  allowClear
+                  placeholder="选择公司主体"
+                  options={companies.map((c) => ({ value: c.id, label: c.name_zh }))}
+                />
+              </Form.Item>
+            </Col>
+            <Col span={6}>
+              <Form.Item label="成本中心" name="cost_center_id" rules={[{ required: true, message: '请选择成本中心' }]}>
+                <Select
                   placeholder="选择成本中心"
                   options={costCenters.map((c) => ({ value: c.id, label: c.label_zh }))}
                 />
               </Form.Item>
             </Col>
-            <Col span={8}>
-              <Form.Item label="开支类型" name="expense_type_id">
+            <Col span={6}>
+              <Form.Item label="开支类型" name="expense_type_id" rules={[{ required: true, message: '请选择开支类型' }]}>
                 <Select
-                  allowClear
                   placeholder="CapEx / OpEx"
                   options={expenseTypes.map((e) => ({ value: e.id, label: e.label_zh }))}
                 />
               </Form.Item>
             </Col>
-            <Col span={8}>
+            <Col span={6}>
               <Form.Item label="采购种类" name="procurement_category_id">
                 <Select
                   allowClear
@@ -296,7 +308,7 @@ export function PRNewPage() {
                   placeholder="选择采购种类"
                   options={procCategories.map((c) => ({
                     value: c.id,
-                    label: c.level === 2 ? `  └ ${c.label_zh}` : c.label_zh,
+                    label: (c.level ?? 1) === 2 ? `  └ ${c.label_zh}` : c.label_zh,
                   }))}
                 />
               </Form.Item>
@@ -314,11 +326,9 @@ export function PRNewPage() {
                 form.setFieldValue('business_reason', current + chunk)
               }}
               disabled={!Form.useWatch('business_reason', form)}
+              available={aiFeatures['pr_description_polish'] === true}
               label={t('button.ai_polish')}
             />
-            <Typography.Text type="secondary" style={{ fontSize: 12 }}>
-              {t('message.ai_demo_mode')}
-            </Typography.Text>
           </Space>
         </Form>
       </Card>

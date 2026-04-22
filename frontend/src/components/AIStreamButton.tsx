@@ -1,5 +1,5 @@
 import { ThunderboltOutlined } from '@ant-design/icons'
-import { Button, Space } from 'antd'
+import { Button, Space, Tooltip } from 'antd'
 import { useRef, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 
@@ -11,10 +11,11 @@ interface Props {
   onChunk: (text: string) => void
   onDone?: () => void
   disabled?: boolean
+  available?: boolean
   label?: string
 }
 
-export function AIStreamButton({ feature, body, onChunk, onDone, disabled, label }: Props) {
+export function AIStreamButton({ feature, body, onChunk, onDone, disabled, available = true, label }: Props) {
   const { t } = useTranslation()
   const [running, setRunning] = useState(false)
   const abortRef = useRef<AbortController | null>(null)
@@ -38,16 +39,24 @@ export function AIStreamButton({ feature, body, onChunk, onDone, disabled, label
     }
   }
 
-  return (
-    <Space>
-      <Button
-        icon={<ThunderboltOutlined />}
-        onClick={click}
-        disabled={disabled}
-        danger={running}
-      >
-        {running ? t('message.ai_thinking') : label || t('button.ai_polish')}
-      </Button>
-    </Space>
+  const btn = (
+    <Button
+      icon={<ThunderboltOutlined />}
+      onClick={click}
+      disabled={disabled || !available}
+      danger={running}
+    >
+      {running ? t('message.ai_thinking') : label || t('button.ai_polish')}
+    </Button>
   )
+
+  if (!available) {
+    return (
+      <Tooltip title="AI 功能需要管理员配置模型后方可使用">
+        <span>{btn}</span>
+      </Tooltip>
+    )
+  }
+
+  return <Space>{btn}</Space>
 }

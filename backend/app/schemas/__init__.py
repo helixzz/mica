@@ -246,6 +246,10 @@ class PRCreateIn(BaseModel):
     title: str = Field(..., min_length=1, max_length=255)
     business_reason: str | None = None
     department_id: UUID | None = None
+    company_id: UUID | None = None
+    cost_center_id: UUID | None = None
+    expense_type_id: UUID | None = None
+    procurement_category_id: UUID | None = None
     currency: str = "CNY"
     required_date: date | None = None
     items: list[PRItemIn] = Field(default_factory=list)
@@ -275,6 +279,9 @@ class PROut(BaseModel):
     requester_id: UUID
     company_id: UUID
     department_id: UUID | None
+    cost_center_id: UUID | None = None
+    expense_type_id: UUID | None = None
+    procurement_category_id: UUID | None = None
     currency: str
     total_amount: Decimal
     required_date: date | None

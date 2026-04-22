@@ -25,6 +25,7 @@ export interface Company {
   name_en: string | null
   default_locale: string
   default_currency: string
+  is_active: boolean
 }
 
 export interface Department {
@@ -567,6 +568,14 @@ export const api = {
   },
   async companies(): Promise<Company[]> {
     const { data } = await client.get<Company[]>('/companies')
+    return data
+  },
+  async createCompany(body: { code: string; name_zh: string; name_en?: string; default_currency?: string }): Promise<Company> {
+    const { data } = await client.post<Company>('/companies', body)
+    return data
+  },
+  async updateCompany(id: string, body: { name_zh?: string; name_en?: string; default_currency?: string; is_active?: boolean }): Promise<Company> {
+    const { data } = await client.patch<Company>(`/companies/${id}`, body)
     return data
   },
   async departments(): Promise<Department[]> {
