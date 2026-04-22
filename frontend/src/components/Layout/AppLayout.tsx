@@ -24,7 +24,7 @@ import { LanguageSwitcher } from '../LanguageSwitcher';
 import { useAuth } from '@/auth/useAuth';
 import { useTheme } from '@/theme/ThemeProvider';
 
-const { Header, Sider, Content } = Layout;
+const { Header, Sider, Content, Footer } = Layout;
 const { Text } = Typography;
 
 // Slot components for downstream agents to fill
@@ -80,34 +80,43 @@ export function AppLayout() {
   const currentKey = '/' + (location.pathname.split('/')[1] || 'dashboard');
 
   const Logo = () => (
-    <Space size="small" style={{ display: 'flex', alignItems: 'center' }}>
-      <div
-        style={{
-          width: 32,
-          height: 32,
-          borderRadius: token.borderRadiusSM,
-          backgroundColor: token.colorPrimary,
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'center',
-          color: token.colorTextLightSolid,
-          fontWeight: 'bold',
-          fontSize: 18,
-        }}
-      >
-        M
-      </div>
-      <Text
-        style={{
-          fontSize: 20,
-          fontWeight: 700,
-          color: token.colorText,
-          letterSpacing: '-0.02em',
-        }}
-      >
-        Mica
-      </Text>
-    </Space>
+    <Link to="/dashboard" style={{ textDecoration: 'none' }}>
+      <Space size="small" style={{ display: 'flex', alignItems: 'center', cursor: 'pointer' }}>
+        <svg width="32" height="32" viewBox="0 0 64 64" xmlns="http://www.w3.org/2000/svg">
+          {/* Otter face */}
+          <circle cx="32" cy="34" r="24" fill={token.colorPrimary} />
+          {/* Ears */}
+          <circle cx="12" cy="16" r="6" fill={token.colorPrimary} />
+          <circle cx="52" cy="16" r="6" fill={token.colorPrimary} />
+          <circle cx="12" cy="16" r="3.5" fill={token.colorPrimaryBg} />
+          <circle cx="52" cy="16" r="3.5" fill={token.colorPrimaryBg} />
+          {/* Face patch */}
+          <ellipse cx="32" cy="40" rx="16" ry="12" fill={token.colorPrimaryBg} />
+          {/* Nose */}
+          <ellipse cx="32" cy="36" rx="4" ry="2.5" fill={token.colorPrimaryActive} />
+          {/* Eyes */}
+          <circle cx="22" cy="30" r="3.5" fill={token.colorPrimaryActive} />
+          <circle cx="42" cy="30" r="3.5" fill={token.colorPrimaryActive} />
+          <circle cx="23" cy="29" r="1.2" fill="white" />
+          <circle cx="43" cy="29" r="1.2" fill="white" />
+          {/* Whisker dots */}
+          <circle cx="20" cy="40" r="1" fill={token.colorPrimaryActive} opacity="0.5" />
+          <circle cx="44" cy="40" r="1" fill={token.colorPrimaryActive} opacity="0.5" />
+          {/* Smile */}
+          <path d="M27,44 Q32,48 37,44" fill="none" stroke={token.colorPrimaryActive} strokeWidth="1.5" strokeLinecap="round" />
+        </svg>
+        <Text
+          style={{
+            fontSize: 20,
+            fontWeight: 700,
+            color: token.colorText,
+            letterSpacing: '-0.02em',
+          }}
+        >
+          Mica
+        </Text>
+      </Space>
+    </Link>
   );
 
   return (
@@ -228,6 +237,19 @@ export function AppLayout() {
           <Outlet />
         </Content>
       </Layout>
+
+      <Footer
+        style={{
+          textAlign: 'center',
+          padding: '12px 24px',
+          fontSize: 12,
+          color: token.colorTextTertiary,
+          background: token.colorBgLayout,
+          borderTop: `1px solid ${token.colorBorderSecondary}`,
+        }}
+      >
+        Mica v{__APP_VERSION__} · Built {__BUILD_DATE__}
+      </Footer>
 
       <style>{`
         @media (max-width: 992px) {

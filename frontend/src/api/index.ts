@@ -49,9 +49,11 @@ export interface Item {
   code: string
   name: string
   category: string | null
+  category_id: string | null
   uom: string
   specification: string | null
   requires_serial: boolean
+  is_active: boolean
 }
 
 export interface PRItem {
@@ -567,6 +569,23 @@ export const api = {
   async items(): Promise<Item[]> {
     const { data } = await client.get<Item[]>('/items')
     return data
+  },
+  async createItem(body: {
+    code: string; name: string; category?: string; uom?: string;
+    specification?: string; requires_serial?: boolean; category_id?: string;
+  }): Promise<Item> {
+    const { data } = await client.post<Item>('/items', body)
+    return data
+  },
+  async updateItem(id: string, body: {
+    name?: string; category?: string; uom?: string;
+    specification?: string; requires_serial?: boolean; is_active?: boolean; category_id?: string;
+  }): Promise<Item> {
+    const { data } = await client.patch<Item>(`/items/${id}`, body)
+    return data
+  },
+  async deleteItem(id: string): Promise<void> {
+    await client.delete(`/items/${id}`)
   },
   async listPRs(): Promise<PRListItem[]> {
     const { data } = await client.get<PRListItem[]>('/purchase-requisitions')
