@@ -85,9 +85,19 @@ describe('<ThemeProvider /> and useTheme', () => {
 
   it('throws when useTheme called outside provider', () => {
     const spy = vi.spyOn(console, 'error').mockImplementation(() => {})
-    expect(() => renderHook(() => useTheme())).toThrow(
+    let thrown: unknown
+
+    try {
+      renderHook(() => useTheme())
+    } catch (error) {
+      thrown = error
+    } finally {
+      spy.mockRestore()
+    }
+
+    expect(thrown).toBeInstanceOf(Error)
+    expect((thrown as Error).message).toMatch(
       /useTheme must be used within a ThemeProvider/,
     )
-    spy.mockRestore()
   })
 })
