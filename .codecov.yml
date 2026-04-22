@@ -1,0 +1,36 @@
+coverage:
+  status:
+    project:
+      default:
+        target: auto
+        threshold: 2%
+  precision: 2
+  round: down
+  range: "50...90"
+
+comment:
+  layout: "reach, diff, flags, files"
+  behavior: default
+  require_changes: false
+
+ignore:
+  - "**/migrations/**"
+  - "**/tests/**"
+  - "**/__init__.py"
+  - "**/main.py"
+  - "**/seed.py"
+  - "**/node_modules/**"
+  - "**/dist/**"
+  - "**/i18n/**"
+  - "**/assets/**"
+  - "**/test/**"
+
+flags:
+  backend:
+    paths:
+      - backend/app/
+    carryforward: true
+  frontend:
+    paths:
+      - frontend/src/
+    carryforward: true
