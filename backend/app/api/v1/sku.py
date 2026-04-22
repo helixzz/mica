@@ -142,3 +142,15 @@ async def ack_anomaly(
 ):
     row = await sku_svc.acknowledge_anomaly(db, user, anomaly_id, payload.notes)
     return AnomalyOut.model_validate(row)
+
+
+@router.get("/sku/insights/{item_id}", tags=["sku"])
+async def get_insights(
+    item_id: UUID,
+    user: CurrentUser,
+    db: Annotated[AsyncSession, Depends(get_db)],
+    window_days: int = 365,
+):
+    from app.services.sku_insights import get_insights
+
+    return await get_insights(db, item_id, window_days)
