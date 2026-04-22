@@ -16,7 +16,8 @@
     "approvals": "My Approvals",
     "suppliers": "Suppliers",
     "items": "Items",
-    "logout": "Log out"
+    "logout": "Log out",
+    "rfqs": "RFQ Management"
   },
   "button": {
     "submit": "Submit",
@@ -106,7 +107,14 @@
     "amount_invoiced": "Invoiced",
     "pct_received": "Received %",
     "pct_paid": "Paid %",
-    "pct_invoiced": "Invoiced %"
+    "pct_invoiced": "Invoiced %",
+    "cost_center": "Cost Center",
+    "expense_type": "Expense Type",
+    "procurement_category": "Procurement Category",
+    "deadline": "Deadline",
+    "contact_name": "Contact",
+    "contact_phone": "Phone",
+    "contact_email": "Email"
   },
   "status": {
     "draft": "Draft",
@@ -159,7 +167,14 @@
     "no_pending_tasks": "No pending approval tasks",
     "shipment_recorded": "Shipment recorded",
     "payment_recorded": "Payment recorded",
-    "invoice_recorded": "Invoice recorded"
+    "invoice_recorded": "Invoice recorded",
+    "rfq_sent": "RFQ sent",
+    "rfq_saved": "RFQ saved as draft",
+    "quote_added": "Quote added",
+    "awarded": "Awarded",
+    "saved": "Saved",
+    "created": "Created",
+    "deleted": "Deleted"
   },
   "placeholder": {
     "enter_username": "Username",
@@ -178,7 +193,10 @@
     "login_failed": "Login failed. Check your username and password.",
     "network_error": "Network error. Please try again later.",
     "permission_denied": "Permission denied",
-    "unexpected": "Operation failed. Please try again."
+    "unexpected": "Operation failed. Please try again.",
+    "create_failed": "Create failed",
+    "save_failed": "Save failed",
+    "send_failed": "Send failed"
   },
   "language": {
     "switch": "Language",
@@ -278,5 +296,66 @@
       "price_anomaly": "Price",
       "system": "System"
     }
+  },
+  "rfq": {
+    "title": "RFQ",
+    "new": "New RFQ",
+    "send": "Send RFQ",
+    "award": "Award (Lowest Price)",
+    "award_confirm_title": "Auto-select lowest price?",
+    "enter_quote": "Enter Quote",
+    "save_draft": "Save Draft",
+    "save_and_send": "Save & Send",
+    "comparison_table": "Comparison Table",
+    "invited_suppliers": "Invited Suppliers",
+    "rfq_items": "RFQ Items",
+    "add_item": "Add Item",
+    "days_delivery": "days delivery",
+    "awarded": "Awarded",
+    "no_quotes": "No quotes to award"
+  },
+  "supplier": {
+    "back_to_list": "Back to List"
+  },
+  "pr": {
+    "guide_title": "Fill in Purchase Request",
+    "guide_title_field": "Title: briefly describe what you need",
+    "guide_required_fields": "Company / Cost Center / Expense Type: required for finance",
+    "guide_items": "Line items: select item and qty, system shows reference prices",
+    "guide_price": "Price & supplier: not required — buyer handles after approval",
+    "guide_reason": "Business reason: explain why, approver will see this",
+    "price_optional": "Optional · decided by buyer after quotation",
+    "price_placeholder": "Fill after quotation",
+    "supplement_quote": "Supplement Quote (Supplier + Price)",
+    "modify_quote": "Modify Quote",
+    "incomplete_items_warning": "Some items lack supplier or price, please supplement before converting to PO",
+    "submit_demand": "Submit Purchase Demand",
+    "my_prs": "My PRs",
+    "my_progress": "My Purchase Progress",
+    "draft_count": "Drafts",
+    "pending_count": "Pending",
+    "approved_awaiting": "Approved (Awaiting Quote)"
+  },
+  "admin": {
+    "companies": "Company Entities",
+    "import": "Data Import",
+    "classification": "Classification",
+    "download_template": "Download Template",
+    "upload_data": "Upload Data"
+  },
+  "validation": {
+    "select_company": "Please select company",
+    "select_cost_center": "Please select cost center",
+    "select_expense_type": "Please select expense type",
+    "at_least_one_item": "At least one item required",
+    "at_least_one_supplier": "At least one supplier required",
+    "at_least_one_line": "At least one line required"
+  },
+  "ai": {
+    "unavailable_tooltip": "AI requires admin model configuration"
+  },
+  "sku": {
+    "ref_latest": "Latest",
+    "ref_avg": "Avg"
   }
 }

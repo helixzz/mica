@@ -62,7 +62,7 @@ export default function RFQNewPage() {
 
   return (
     <Space direction="vertical" size="large" style={{ width: '100%' }}>
-      <Typography.Title level={3}>新建询价单</Typography.Title>
+      <Typography.Title level={3}>{	('rfq.new')}</Typography.Title>
       <Card>
         <Form form={form} layout="vertical">
           <Row gutter={16}>
