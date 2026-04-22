@@ -259,6 +259,10 @@ class PRUpdateIn(BaseModel):
     title: str | None = None
     business_reason: str | None = None
     department_id: UUID | None = None
+    company_id: UUID | None = None
+    cost_center_id: UUID | None = None
+    expense_type_id: UUID | None = None
+    procurement_category_id: UUID | None = None
     currency: str | None = None
     required_date: date | None = None
     items: list[PRItemIn] | None = None
