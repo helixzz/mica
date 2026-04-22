@@ -397,6 +397,57 @@ export interface DashboardMetrics {
   price_anomalies_pending: number
 }
 
+export interface PaymentScheduleItemInput {
+  installment_no: number
+  label: string
+  planned_amount: number | string
+  planned_date?: string | null
+  trigger_type?: string
+  trigger_description?: string
+  notes?: string
+}
+
+export interface PaymentScheduleItem {
+  id: string
+  contract_id: string
+  installment_no: number
+  label: string
+  planned_amount: string
+  planned_date: string | null
+  trigger_type: string
+  trigger_description: string | null
+  status: string
+  actual_amount: string | null
+  actual_date: string | null
+  payment_record_id: string | null
+  invoice_id: string | null
+  notes: string | null
+  created_at: string
+  updated_at: string
+}
+
+export interface PaymentScheduleSummary {
+  contract_total: string
+  planned_total: string
+  paid_total: string
+  remaining: string
+  total_mismatch: boolean
+  items: PaymentScheduleItem[]
+}
+
+export interface PaymentForecastMonth {
+  month: string
+  planned: string
+  paid: string
+  remaining: string
+}
+
+export interface PaymentForecast {
+  months: PaymentForecastMonth[]
+  grand_planned: string
+  grand_paid: string
+}
+
 export interface InvoiceExtractResult {
   invoice_number: string | null
   invoice_code: string | null
@@ -717,6 +768,42 @@ export const api = {
   ): Promise<DashboardMetrics> {
     const { data } = await client.get<DashboardMetrics>('/dashboard/metrics', {
       params: { compare_to },
+    })
+    return data
+  },
+  async getPaymentSchedule(contractId: string): Promise<PaymentScheduleSummary> {
+    const { data } = await client.get<PaymentScheduleSummary>(
+      `/contracts/${contractId}/payment-schedule`,
+    )
+    return data
+  },
+  async createPaymentSchedule(
+    contractId: string,
+    items: PaymentScheduleItemInput[],
+  ): Promise<PaymentScheduleItem[]> {
+    const { data } = await client.post<PaymentScheduleItem[]>(
+      `/contracts/${contractId}/payment-schedule`,
+      { items },
+    )
+    return data
+  },
+  async executeScheduleItem(
+    contractId: string,
+    installmentNo: number,
+    body: { payment_method: string; transaction_ref?: string; invoice_id?: string; amount?: number },
+  ): Promise<PaymentScheduleItem> {
+    const { data } = await client.post<PaymentScheduleItem>(
+      `/contracts/${contractId}/payment-schedule/${installmentNo}/execute`,
+      body,
+    )
+    return data
+  },
+  async deleteScheduleItem(contractId: string, installmentNo: number): Promise<void> {
+    await client.delete(`/contracts/${contractId}/payment-schedule/${installmentNo}`)
+  },
+  async getPaymentForecast(months = 6): Promise<PaymentForecast> {
+    const { data } = await client.get<PaymentForecast>('/dashboard/payment-forecast', {
+      params: { months },
     })
     return data
   },
