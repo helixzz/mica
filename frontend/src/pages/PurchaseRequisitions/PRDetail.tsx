@@ -8,6 +8,7 @@ import {
   Tag,
   Typography,
   message,
+  theme,
 } from 'antd'
 import { useEffect, useMemo, useState } from 'react'
 import { useTranslation } from 'react-i18next'
@@ -30,6 +31,7 @@ const statusColors: Record<string, string> = {
 
 export function PRDetailPage() {
   const { t } = useTranslation()
+  const { token } = theme.useToken()
   const { id } = useParams<{ id: string }>()
   const navigate = useNavigate()
   const { user } = useAuth()
@@ -207,6 +209,7 @@ export function PRDetailPage() {
           rowKey="line_no"
           dataSource={pr.items}
           pagination={false}
+          scroll={{ x: 600 }}
           columns={[
             { title: t('field.line_no'), dataIndex: 'line_no', width: 60 },
             { title: t('field.item_name'), dataIndex: 'item_name' },
@@ -222,6 +225,36 @@ export function PRDetailPage() {
           ]}
         />
       </Card>
+
+      {(canDecide || canSubmit || canSupplementQuote) && (
+        <div className="mobile-action-bar" style={{
+          display: 'none', position: 'fixed', bottom: 0, left: 0, right: 0,
+          padding: '12px 16px', background: token.colorBgContainer,
+          borderTop: `1px solid ${token.colorBorderSecondary}`,
+          zIndex: 100, boxShadow: token.boxShadowSecondary,
+        }}>
+          <Space style={{ width: '100%', justifyContent: 'center' }}>
+            {canSubmit && <Button type="primary" onClick={runSubmit} loading={busy} block>{t('button.submit_for_approval')}</Button>}
+            {canDecide && (
+              <>
+                <Button danger onClick={() => runDecision('reject')} loading={busy}>{t('button.reject')}</Button>
+                <Button type="primary" onClick={() => runDecision('approve')} loading={busy}>{t('button.approve')}</Button>
+              </>
+            )}
+            {canSupplementQuote && hasIncompleteItems && (
+              <Button type="primary" onClick={() => navigate(`/purchase-requisitions/${pr.id}/edit`)} block>
+                {t('pr.supplement_quote') || '补充报价'}
+              </Button>
+            )}
+          </Space>
+        </div>
+      )}
+
+      <style>{`
+        @media (max-width: 768px) {
+          .mobile-action-bar { display: flex !important; }
+        }
+      `}</style>
     </Space>
   )
 }
