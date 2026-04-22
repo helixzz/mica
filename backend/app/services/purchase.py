@@ -19,6 +19,7 @@ from app.models import (
     PRStatus,
     PurchaseOrder,
     PurchaseRequisition,
+    SKUPriceRecord,
     User,
     UserRole,
 )
@@ -326,6 +327,22 @@ async def convert_pr_to_po(db: AsyncSession, actor: User, pr_id: UUID) -> Purcha
         )
 
     pr.status = PRStatus.CONVERTED.value
+
+    for pr_item in pr.items:
+        if pr_item.item_id and pr_item.unit_price and pr_item.unit_price > 0:
+            db.add(
+                SKUPriceRecord(
+                    item_id=pr_item.item_id,
+                    supplier_id=supplier_id,
+                    price=pr_item.unit_price,
+                    currency=pr.currency or "CNY",
+                    quotation_date=datetime.now(UTC).date(),
+                    source_type="actual_po",
+                    source_ref=po_number,
+                    entered_by_id=actor.id,
+                )
+            )
+
     await _audit(
         db,
         actor,
