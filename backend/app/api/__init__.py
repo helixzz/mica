@@ -8,6 +8,7 @@ from app.api.v1 import (
     approval_rules,
     auth,
     authz,
+    classification,
     contracts,
     dashboard,
     documents,
@@ -43,3 +44,4 @@ api_router.include_router(admin.router)
 api_router.include_router(system_params_admin.router)
 api_router.include_router(dashboard.router)
 api_router.include_router(payment_schedule.router)
+api_router.include_router(classification.router)
