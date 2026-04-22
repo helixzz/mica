@@ -351,6 +351,52 @@ export interface SKUTrendPoint {
   source_type: string
 }
 
+export interface SKUPurchaseHistory {
+  date: string
+  supplier_name: string
+  unit_price: number
+  qty: number
+  amount: number
+  po_number: string
+  deviation_pct: number | null
+}
+
+export interface SKUPurchaseStats {
+  count: number
+  total_qty: number
+  total_amount: number
+  avg_price: number | null
+  median_price: number | null
+  min_price: number | null
+  max_price: number | null
+}
+
+export interface SKUMarketStats {
+  sample_count: number
+  avg_price: number
+  median_price: number
+  min_price: number
+  max_price: number
+  volatility_pct: number
+  current_price: number
+  current_vs_avg_pct: number
+  signal: 'below_avg' | 'above_avg' | 'at_avg'
+}
+
+export interface SKUSupplierComparison {
+  supplier_name: string
+  avg_price: number
+  count: number
+  last_date: string
+}
+
+export interface SKUInsights {
+  purchase_history: SKUPurchaseHistory[]
+  purchase_stats: SKUPurchaseStats
+  market_stats: SKUMarketStats | null
+  supplier_comparison: SKUSupplierComparison[]
+}
+
 export interface ContractAttachment {
   document_id: string
   role: string
@@ -758,6 +804,12 @@ export const api = {
   },
   async listSKUAnomalies(status?: string): Promise<SKUAnomaly[]> {
     const { data } = await client.get<SKUAnomaly[]>('/sku/anomalies', { params: { status } })
+    return data
+  },
+  async getSKUInsights(itemId: string, windowDays = 365): Promise<SKUInsights> {
+    const { data } = await client.get<SKUInsights>(`/sku/insights/${itemId}`, {
+      params: { window_days: windowDays },
+    })
     return data
   },
   async acknowledgeAnomaly(id: string, notes?: string): Promise<SKUAnomaly> {

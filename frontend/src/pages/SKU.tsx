@@ -29,6 +29,7 @@ import {
   type Item,
   type SKUAnomaly,
   type SKUBenchmark,
+  type SKUInsights,
   type SKUPriceRecord,
   type SKUTrendPoint,
   type Supplier,
@@ -47,6 +48,7 @@ export function SKUPage() {
   const [recordOpen, setRecordOpen] = useState(false)
   const [categories, setCategories] = useState<ClassificationItem[]>([])
   const [categoryFilter, setCategoryFilter] = useState<string | null>(null)
+  const [insights, setInsights] = useState<SKUInsights | null>(null)
 
   const load = () => {
     void api.items().then(setItems)
@@ -79,6 +81,12 @@ export function SKUPage() {
       setBenchmarks(newBenchmarks)
       setTrends(newTrends)
     })
+
+    if (selectedItems.length === 1) {
+      void api.getSKUInsights(selectedItems[0]).then(setInsights).catch(() => setInsights(null))
+    } else {
+      setInsights(null)
+    }
   }, [selectedItems])
 
   const itemMap = Object.fromEntries(items.map((i) => [i.id, i]))
@@ -251,8 +259,13 @@ export function SKUPage() {
           trends={trends}
           itemMap={itemMap}
           supplierMap={supplierMap}
+          purchasePoints={insights?.purchase_history || []}
         />
       </Card>
+
+      {insights && selectedItems.length === 1 && (
+        <InsightsPanel insights={insights} itemName={itemMap[selectedItems[0]]?.name || ''} />
+      )}
 
       <Card title="近期全部报价">
         <Table<SKUPriceRecord>
@@ -296,11 +309,13 @@ function PriceTrendChart({
   trends,
   itemMap,
   supplierMap,
+  purchasePoints,
 }: {
   selectedItems: string[]
   trends: Record<string, SKUTrendPoint[]>
   itemMap: Record<string, Item>
   supplierMap: Record<string, Supplier>
+  purchasePoints: { date: string; unit_price: number; po_number: string; supplier_name: string }[]
 }) {
   const chartData = useMemo(() => {
     const rows: { date: string; price: number; sku: string }[] = []
@@ -339,7 +354,7 @@ function PriceTrendChart({
         价格走势对比（{skuNames.length} 个 SKU）
       </Typography.Text>
       <svg viewBox={`0 0 800 320`} style={{ width: '100%', maxHeight: 400, border: '1px solid var(--color-border-default, #ddd)', borderRadius: 8, background: 'var(--color-bg-subtle, #fafafa)' }}>
-        <ChartContent data={chartData} skuNames={skuNames} width={800} height={320} />
+        <ChartContent data={chartData} skuNames={skuNames} width={800} height={320} purchasePoints={purchasePoints} />
       </svg>
       <div style={{ display: 'flex', flexWrap: 'wrap', gap: 12, marginTop: 8 }}>
         {skuNames.map((name, i) => (
@@ -358,11 +373,13 @@ function ChartContent({
   skuNames,
   width,
   height,
+  purchasePoints,
 }: {
   data: { date: string; price: number; sku: string }[]
   skuNames: string[]
   width: number
   height: number
+  purchasePoints: { date: string; unit_price: number; po_number: string; supplier_name: string }[]
 }) {
   const padding = { top: 20, right: 20, bottom: 40, left: 60 }
   const plotW = width - padding.left - padding.right
@@ -427,7 +444,142 @@ function ChartContent({
           </g>
         )
       })}
+
+      {purchasePoints.map((pp, i) => {
+        const dateStr = pp.date
+        if (!allDates.includes(dateStr)) return null
+        const x = xScale(dateStr)
+        const y = yScale(Number(pp.unit_price))
+        return (
+          <g key={`purchase-${i}`}>
+            <circle cx={x} cy={y} r={7} fill="#3B82F6" stroke="white" strokeWidth={2} opacity={0.9}>
+              <title>{`★ 采购成交\n${pp.po_number}\n${pp.date}: ¥${Number(pp.unit_price).toLocaleString()}\n${pp.supplier_name}`}</title>
+            </circle>
+            <text x={x} y={y - 12} textAnchor="middle" fontSize={9} fill="#3B82F6" fontWeight={600}>
+              ★
+            </text>
+          </g>
+        )
+      })}
     </g>
+  )
+}
+
+function InsightsPanel({ insights, itemName }: { insights: SKUInsights; itemName: string }) {
+  const { purchase_stats: ps, market_stats: ms, supplier_comparison: sc, purchase_history: ph } = insights
+
+  const signalMap: Record<string, { color: string; text: string }> = {
+    below_avg: { color: '#22C55E', text: '🟢 低于均价（买入时机）' },
+    above_avg: { color: '#EF4444', text: '🔴 高于均价（建议观望）' },
+    at_avg: { color: '#F59E0B', text: '🟡 接近均价' },
+  }
+
+  return (
+    <Space direction="vertical" size="middle" style={{ width: '100%' }}>
+      <Card size="small" title={`${itemName} — 价格分析`}>
+        <Row gutter={16}>
+          <Col span={6}>
+            <Statistic title="采购次数" value={ps.count} suffix="次" />
+          </Col>
+          <Col span={6}>
+            <Statistic title="采购均价" value={ps.avg_price ?? '-'} prefix="¥" precision={0} />
+          </Col>
+          <Col span={6}>
+            <Statistic title="采购中位数" value={ps.median_price ?? '-'} prefix="¥" precision={0} />
+          </Col>
+          <Col span={6}>
+            <Statistic title="采购总额" value={ps.total_amount} prefix="¥" precision={0} />
+          </Col>
+        </Row>
+      </Card>
+
+      {ms && (
+        <Card size="small" title="行情信号">
+          <Row gutter={16}>
+            <Col span={6}>
+              <Statistic title="当前行情" value={ms.current_price} prefix="¥" precision={0} />
+            </Col>
+            <Col span={6}>
+              <Statistic
+                title="vs 均价"
+                value={ms.current_vs_avg_pct}
+                suffix="%"
+                precision={1}
+                valueStyle={{ color: ms.current_vs_avg_pct > 0 ? '#EF4444' : '#22C55E' }}
+                prefix={ms.current_vs_avg_pct > 0 ? '+' : ''}
+              />
+            </Col>
+            <Col span={6}>
+              <Statistic
+                title="90日波动率"
+                value={ms.volatility_pct}
+                suffix="%"
+                valueStyle={ms.volatility_pct > 15 ? { color: '#EF4444' } : undefined}
+              />
+            </Col>
+            <Col span={6}>
+              <div style={{ marginTop: 8 }}>
+                <Tag color={signalMap[ms.signal]?.color || 'default'} style={{ fontSize: 14, padding: '4px 12px' }}>
+                  {signalMap[ms.signal]?.text || ms.signal}
+                </Tag>
+              </div>
+            </Col>
+          </Row>
+        </Card>
+      )}
+
+      {sc.length > 0 && (
+        <Card size="small" title="供应商价格对比">
+          {sc.map((s) => (
+            <div key={s.supplier_name} style={{ display: 'flex', alignItems: 'center', marginBottom: 8, gap: 12 }}>
+              <Typography.Text style={{ width: 180, flexShrink: 0 }}>{s.supplier_name}</Typography.Text>
+              <div style={{ flex: 1, background: '#f0f0f0', borderRadius: 4, height: 20, position: 'relative' }}>
+                <div
+                  style={{
+                    width: `${Math.min(100, (s.avg_price / Math.max(...sc.map((x) => x.avg_price))) * 100)}%`,
+                    background: '#8B5E3C',
+                    borderRadius: 4,
+                    height: '100%',
+                  }}
+                />
+              </div>
+              <Typography.Text strong style={{ width: 100, textAlign: 'right' }}>¥{s.avg_price.toLocaleString()}</Typography.Text>
+              <Tag>{s.count}次</Tag>
+            </div>
+          ))}
+        </Card>
+      )}
+
+      {ph.length > 0 && (
+        <Card size="small" title="采购历史明细">
+          <Table
+            dataSource={ph}
+            rowKey={(r) => `${r.po_number}-${r.date}`}
+            size="small"
+            pagination={false}
+            columns={[
+              { title: '日期', dataIndex: 'date', width: 110 },
+              { title: '供应商', dataIndex: 'supplier_name' },
+              { title: '单价', dataIndex: 'unit_price', align: 'right' as const, render: (v: number) => `¥${v.toLocaleString()}` },
+              { title: '数量', dataIndex: 'qty', align: 'right' as const },
+              { title: '金额', dataIndex: 'amount', align: 'right' as const, render: (v: number) => `¥${v.toLocaleString()}` },
+              { title: 'PO', dataIndex: 'po_number' },
+              {
+                title: '偏离行情',
+                dataIndex: 'deviation_pct',
+                align: 'right' as const,
+                render: (v: number | null) =>
+                  v !== null ? (
+                    <Tag color={v > 0 ? 'red' : v < -5 ? 'green' : 'default'}>
+                      {v > 0 ? '+' : ''}{v.toFixed(1)}%
+                    </Tag>
+                  ) : '-',
+              },
+            ]}
+          />
+        </Card>
+      )}
+    </Space>
   )
 }
 
