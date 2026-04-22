@@ -30,6 +30,7 @@ import { useTranslation } from 'react-i18next'
 import {
   api,
   type ClassificationItem,
+  flattenCategoryTree,
   type Item,
   type SKUAnomaly,
   type SKUBenchmark,
@@ -59,7 +60,7 @@ export function SKUPage() {
     void api.suppliers().then(setSuppliers)
     void api.listSKUAnomalies('new').then(setAnomalies)
     void api.listSKUPrices().then(setPrices)
-    void api.listProcurementCategories().then(setCategories)
+    void api.getCategoryTree().then((tree) => setCategories(flattenCategoryTree(tree)))
   }
 
   useEffect(load, [])
@@ -616,7 +617,7 @@ function ItemsPanel() {
 
   const load = () => {
     void api.items().then(setItems)
-    void api.listProcurementCategories().then(setCategories)
+    void api.getCategoryTree().then((tree) => setCategories(flattenCategoryTree(tree)))
   }
   useEffect(load, [])
 

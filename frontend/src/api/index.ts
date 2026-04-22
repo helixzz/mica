@@ -519,6 +519,17 @@ export interface ClassificationInput {
   sort_order?: number
 }
 
+export function flattenCategoryTree(tree: ClassificationTreeItem[]): ClassificationItem[] {
+  const result: ClassificationItem[] = []
+  for (const node of tree) {
+    result.push(node)
+    for (const child of node.children || []) {
+      result.push(child)
+    }
+  }
+  return result
+}
+
 export interface InvoiceExtractResult {
   invoice_number: string | null
   invoice_code: string | null

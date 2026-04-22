@@ -19,7 +19,7 @@ import { useEffect, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { useNavigate } from 'react-router-dom'
 
-import { api, type ClassificationItem, type Item, type PRItem, type Supplier } from '@/api'
+import { api, type ClassificationItem, flattenCategoryTree, type Item, type PRItem, type Supplier } from '@/api'
 import { extractError } from '@/api/client'
 import { AIStreamButton } from '@/components/AIStreamButton'
 
@@ -62,7 +62,7 @@ export function PRNewPage() {
     void api.items().then(setItems)
     void api.listCostCenters().then(setCostCenters)
     void api.listLookupValues('expense_type').then(setExpenseTypes)
-    void api.listProcurementCategories().then(setProcCategories)
+    void api.getCategoryTree().then((tree) => setProcCategories(flattenCategoryTree(tree)))
   }, [])
 
   const addLine = () => {
