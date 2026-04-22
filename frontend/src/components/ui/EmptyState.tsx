@@ -2,7 +2,17 @@ import React from 'react';
 import { Typography, Space, theme } from 'antd';
 import { useTranslation } from 'react-i18next';
 
+import otterEmpty from '@/assets/illustrations/otter-empty.svg';
+import otterSearch from '@/assets/illustrations/otter-search.svg';
+import otterWelcome from '@/assets/illustrations/otter-welcome.svg';
+
 const { Title, Text } = Typography;
+
+const ILLUSTRATIONS: Record<string, string> = {
+  empty: otterEmpty,
+  search: otterSearch,
+  welcome: otterWelcome,
+};
 
 export type IllustrationName = 'empty' | 'search' | 'welcome' | '404' | 'loading';
 
@@ -13,10 +23,6 @@ export interface EmptyStateProps {
   action?: React.ReactNode;
 }
 
-/**
- * EmptyState component for displaying when no data is available.
- * Uses custom otter illustrations.
- */
 export const EmptyState: React.FC<EmptyStateProps> = ({
   illustration = 'empty',
   title,
@@ -26,17 +32,7 @@ export const EmptyState: React.FC<EmptyStateProps> = ({
   const { token } = theme.useToken();
   const { t } = useTranslation();
 
-  // In a real app, we would import the SVGs dynamically or use a sprite map.
-  // For now, we'll use an img tag pointing to the public/assets folder.
-  // Assuming the build process copies src/assets to the output.
-  // A better approach for React is to import them as React components.
-  
-  // We will use a placeholder div if the image fails to load, but ideally
-  // these should be inline SVGs to inherit currentColor.
-  
-  const getIllustrationPath = () => {
-    return `/assets/illustrations/otter-${illustration}.svg`;
-  };
+  const src = ILLUSTRATIONS[illustration] || ILLUSTRATIONS.empty;
 
   return (
     <div
@@ -57,25 +53,17 @@ export const EmptyState: React.FC<EmptyStateProps> = ({
           width: 240,
           height: 240,
           marginBottom: token.marginLG,
-          color: token.colorTextTertiary, // For inline SVGs using currentColor
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'center',
         }}
       >
-        {/* We use an object tag to allow the SVG to inherit CSS variables if possible, 
-            or just an img tag. For best results with currentColor, inline SVG is needed.
-            Since we are generating SVGs that use CSS variables, img tag might not work 
-            for theming unless the SVG itself contains the CSS or uses currentColor.
-            We will assume the SVGs are designed to work as images or we will inline them later. */}
-        <img 
-          src={getIllustrationPath()} 
-          alt={illustration} 
+        <img
+          src={src}
+          alt={illustration}
           style={{ width: '100%', height: '100%', objectFit: 'contain' }}
           onError={(e) => {
-            // Fallback if image not found
             (e.target as HTMLImageElement).style.display = 'none';
-            (e.target as HTMLImageElement).parentElement!.innerHTML = `<div style="width: 120px; height: 120px; border-radius: 50%; background-color: ${token.colorFillAlter}; display: flex; align-items: center; justify-content: center;"><span style="font-size: 48px;">🦦</span></div>`;
           }}
         />
       </div>

@@ -200,3 +200,82 @@ pytest -m integration
 ## 里程碑
 
 见 [CHANGELOG.md](../CHANGELOG.md) 与 [README.md](../README.md) 的"版本路线"章节。
+
+## 测试（v0.6+）
+
+### Backend（pytest）
+
+```bash
+cd backend
+source .venv/bin/activate
+pytest tests/                         # 全量
+pytest tests/unit/test_approval.py -v # 单文件
+pytest --cov=app --cov-report=term    # 覆盖率
+```
+
+- `tests/conftest.py`：SAVEPOINT rollback pattern 保证每 test 隔离
+- `db_session`：空 DB（schema + migration seed）
+- `seeded_db_session`：含 `seed_dev_data` 的 5 个用户 + 主数据
+- `client`：httpx AsyncClient 走 FastAPI dependency_overrides
+
+测试数据库用 `mica_test`（第一次需手动创建：`docker exec mica-postgres psql -U mica -d postgres -c "CREATE DATABASE mica_test OWNER mica"`）。
+
+### Frontend（vitest）
+
+```bash
+cd frontend
+npm test          # 全量
+npm run test:watch # 监听
+npm run test:coverage # 覆盖率
+```
+
+- `vitest.config.ts`：jsdom + @vitest/coverage-v8
+- `src/test/setup.ts`：matchMedia / ResizeObserver / IntersectionObserver polyfills（AntD 5 依赖）
+- `src/test/utils.tsx`：`renderWithProviders`（ConfigProvider + MemoryRouter + I18nextProvider）
+
+### CI
+
+`.github/workflows/ci.yml` 有 5 个 job：backend lint / backend test + coverage / frontend lint + build / frontend test + coverage / docker build。
+覆盖率上传到 Codecov（双 flag：backend / frontend）。
+
+## 分类管理（v0.6.2+）
+
+### 添加新的分类维度
+
+如果是**纯枚举**（2-5 个值，不需要独有字段）：
+
+1. 在 `lookup_values` 表加 rows（`type='your_new_dimension'`），可通过 migration 或 Admin UI
+2. 前端调 `api.listLookupValues('your_new_dimension')` 获取下拉选项
+
+如果**有独有字段**（预算、层级、关联关系）：
+
+1. 新建独立表 + migration
+2. 新建 model + relationship
+3. 新建 API endpoint
+
+### 添加采购种类（L2 子分类）
+
+1. Admin → 分类管理 → 采购种类 → "添加" → 选择上级分类
+2. 或 API：`POST /admin/procurement-categories { code, label_zh, label_en, parent_id }`
+
+## Cerbos 授权（v0.6+）
+
+### 架构
+
+```
+backend ──(HTTP)──> cerbos sidecar (:3593)
+                    ├── purchase_requisition.yaml
+                    ├── purchase_order.yaml
+                    ├── payment_record.yaml
+                    └── invoice.yaml
+```
+
+### 添加新 resource 的字段权限
+
+1. 在 `deploy/cerbos-policies/` 加一个 YAML 文件，格式参照现有 4 个
+2. 在 `core/field_authz.py` 的 `FIELD_PERMISSIONS` dict 加对应项（作为 fallback）
+3. Cerbos 自动热加载（`watchForChanges: true`），不需要重启容器
+
+### Graceful fallback
+
+Cerbos 不可达时（如开发环境没启动 cerbos 容器），`cerbos_client.py` 自动降级到 `FIELD_PERMISSIONS` 静态 dict。零故障风险。
