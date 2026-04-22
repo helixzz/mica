@@ -1,3 +1,4 @@
+import { useTranslation } from 'react-i18next'
 import { CheckCircleOutlined, PlusOutlined } from '@ant-design/icons'
 import { Button, Card, Col, Descriptions, InputNumber, Modal, Row, Select, Space, Table, Tag, Typography, message } from 'antd'
 import { useEffect, useState } from 'react'

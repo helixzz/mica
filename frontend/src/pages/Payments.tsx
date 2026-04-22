@@ -5,6 +5,7 @@ import { useEffect, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 
 import { api, type PaymentRecord } from '@/api'
+import { fmtAmount } from '@/utils/format'
 import { getToken } from '@/api/client'
 
 export function PaymentsPage() {
@@ -38,6 +39,8 @@ export function PaymentsPage() {
     { title: t('field.installment_no'), dataIndex: 'installment_no' },
     { title: t('field.amount'), align: 'right', render: (_, r) => `${r.currency} ${Number(r.amount).toLocaleString(undefined, { maximumFractionDigits: 2 })}` },
     { title: t('field.status'), dataIndex: 'status',
+      filters: [{text:'pending',value:'pending'},{text:'confirmed',value:'confirmed'},{text:'cancelled',value:'cancelled'}],
+      onFilter: (value: any, record: any) => record.status === value,
       render: (s) => <Tag color={s === 'confirmed' ? 'success' : 'default'}>{t(`status.${s}` as 'status.pending')}</Tag> },
     { title: t('field.due_date'), dataIndex: 'due_date' },
     { title: t('field.payment_date'), dataIndex: 'payment_date' },

@@ -1,4 +1,4 @@
-import { ConfigProvider } from 'antd'
+import { App as AntApp, ConfigProvider } from 'antd'
 import enUS from 'antd/locale/en_US'
 import zhCN from 'antd/locale/zh_CN'
 import { StrictMode } from 'react'
@@ -19,9 +19,11 @@ function App() {
   return (
     <ThemeProvider>
       <ConfigProvider locale={antLocale}>
-        <BrowserRouter>
-          <AppRoutes />
-        </BrowserRouter>
+        <AntApp>
+          <BrowserRouter>
+            <AppRoutes />
+          </BrowserRouter>
+        </AntApp>
       </ConfigProvider>
     </ThemeProvider>
   )

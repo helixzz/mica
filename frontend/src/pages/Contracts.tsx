@@ -6,6 +6,7 @@ import { useTranslation } from 'react-i18next'
 import { Link } from 'react-router-dom'
 
 import { api, type Contract, type ContractExpiring, type ContractSearchHit } from '@/api'
+import { fmtAmount } from '@/utils/format'
 
 export function ContractsPage() {
   const { t } = useTranslation()
@@ -38,7 +39,9 @@ export function ContractsPage() {
       render: (v, r) => <Link to={`/contracts/${r.id}`}>{v}</Link>,
     },
     { title: t('field.title'), dataIndex: 'title' },
-    { title: t('field.status'), dataIndex: 'status', render: (s) => <Tag>{t(`status.${s}` as 'status.active')}</Tag> },
+    { title: t('field.status'), dataIndex: 'status',
+      filters: [{text:'active',value:'active'},{text:'superseded',value:'superseded'},{text:'terminated',value:'terminated'},{text:'expired',value:'expired'}],
+      onFilter: (value: any, record: any) => record.status === value, render: (s) => <Tag>{t(`status.${s}` as 'status.active')}</Tag> },
     { title: t('field.total_amount'), align: 'right', render: (_, r) => `${r.currency} ${r.total_amount}` },
     { title: t('field.signed_date'), dataIndex: 'signed_date' },
     { title: t('field.expiry_date'), dataIndex: 'expiry_date' },

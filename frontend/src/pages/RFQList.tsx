@@ -1,3 +1,4 @@
+import { useTranslation } from 'react-i18next'
 import { PlusOutlined } from '@ant-design/icons'
 import { Button, Space, Table, Tag, Typography } from 'antd'
 import { useEffect, useState } from 'react'
