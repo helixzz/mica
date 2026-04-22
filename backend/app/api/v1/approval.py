@@ -16,7 +16,18 @@ router = APIRouter()
 @router.get("/approval/pending", response_model=list[ApprovalTaskOut], tags=["approval"])
 async def my_pending(user: CurrentUser, db: Annotated[AsyncSession, Depends(get_db)]):
     tasks = await svc.list_pending_tasks_for_user(db, user.id)
-    return [ApprovalTaskOut.model_validate(t) for t in tasks]
+    result = []
+    for t in tasks:
+        out = ApprovalTaskOut.model_validate(t)
+        if t.instance:
+            out.biz_id = t.instance.biz_id
+            out.biz_number = t.instance.biz_number
+            out.biz_title = t.instance.title
+            out.biz_amount = t.instance.amount
+            if hasattr(t.instance, "submitter") and t.instance.submitter:
+                out.submitter_name = t.instance.submitter.display_name
+        result.append(out)
+    return result
 
 
 @router.get(

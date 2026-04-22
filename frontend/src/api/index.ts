@@ -296,6 +296,11 @@ export interface ApprovalTask {
   comment: string | null
   assigned_at: string
   acted_at: string | null
+  biz_id: string | null
+  biz_number: string | null
+  biz_title: string | null
+  biz_amount: number | null
+  submitter_name: string | null
 }
 
 export interface FieldManifest {
