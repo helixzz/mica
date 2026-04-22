@@ -94,7 +94,7 @@ async def delete_supplier(
 )
 async def create_item(
     payload: ItemCreate,
-    user: Annotated[CurrentUser, Depends(require_roles("admin", "procurement_mgr"))],
+    user: Annotated[CurrentUser, Depends(require_roles("admin", "procurement_mgr", "it_buyer"))],
     db: Annotated[AsyncSession, Depends(get_db)],
 ) -> ItemOut:
     item = await master_data_svc.create_item(db, user, payload)
@@ -105,7 +105,7 @@ async def create_item(
 async def update_item(
     item_id: UUID,
     payload: ItemUpdate,
-    user: Annotated[CurrentUser, Depends(require_roles("admin", "procurement_mgr"))],
+    user: Annotated[CurrentUser, Depends(require_roles("admin", "procurement_mgr", "it_buyer"))],
     db: Annotated[AsyncSession, Depends(get_db)],
 ) -> ItemOut:
     item = await master_data_svc.update_item(db, user, item_id, payload)
@@ -115,7 +115,7 @@ async def update_item(
 @router.delete("/items/{item_id}", status_code=status.HTTP_204_NO_CONTENT, tags=["master-data"])
 async def delete_item(
     item_id: UUID,
-    user: Annotated[CurrentUser, Depends(require_roles("admin", "procurement_mgr"))],
+    user: Annotated[CurrentUser, Depends(require_roles("admin", "procurement_mgr", "it_buyer"))],
     db: Annotated[AsyncSession, Depends(get_db)],
     hard: bool = False,
 ) -> Response:
