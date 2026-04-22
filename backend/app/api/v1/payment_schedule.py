@@ -92,7 +92,7 @@ async def execute_schedule_item(
     contract_id: UUID,
     installment_no: int,
     body: PaymentScheduleExecuteIn,
-    _user: Annotated[None, Depends(require_roles("admin", "finance_auditor"))],
+    _user: Annotated[None, Depends(require_roles("admin", "procurement_mgr", "finance_auditor"))],
     db: Annotated[AsyncSession, Depends(get_db)],
 ):
     item = await svc.execute_schedule_item(

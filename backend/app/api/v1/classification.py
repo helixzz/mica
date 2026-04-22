@@ -89,7 +89,7 @@ async def list_cost_centers(
 )
 async def create_cost_center(
     body: CostCenterIn,
-    _user: Annotated[None, Depends(require_roles("admin"))],
+    _user: Annotated[None, Depends(require_roles("admin", "procurement_mgr"))],
     db: Annotated[AsyncSession, Depends(get_db)],
 ):
     cc = await svc.create_cost_center(db, body.model_dump())
@@ -101,7 +101,7 @@ async def create_cost_center(
 async def update_cost_center(
     cc_id: UUID,
     body: CostCenterIn,
-    _user: Annotated[None, Depends(require_roles("admin"))],
+    _user: Annotated[None, Depends(require_roles("admin", "procurement_mgr"))],
     db: Annotated[AsyncSession, Depends(get_db)],
 ):
     cc = await svc.update_cost_center(db, cc_id, body.model_dump())
@@ -112,7 +112,7 @@ async def update_cost_center(
 @router.delete("/admin/cost-centers/{cc_id}", status_code=204, tags=["classification"])
 async def delete_cost_center(
     cc_id: UUID,
-    _user: Annotated[None, Depends(require_roles("admin"))],
+    _user: Annotated[None, Depends(require_roles("admin", "procurement_mgr"))],
     db: Annotated[AsyncSession, Depends(get_db)],
 ):
     await svc.delete_cost_center(db, cc_id)
@@ -150,7 +150,7 @@ async def get_category_tree(
 )
 async def create_procurement_category(
     body: ProcurementCategoryIn,
-    _user: Annotated[None, Depends(require_roles("admin"))],
+    _user: Annotated[None, Depends(require_roles("admin", "procurement_mgr"))],
     db: Annotated[AsyncSession, Depends(get_db)],
 ):
     cat = await svc.create_procurement_category(db, body.model_dump())
@@ -166,7 +166,7 @@ async def create_procurement_category(
 async def update_procurement_category(
     cat_id: UUID,
     body: ProcurementCategoryIn,
-    _user: Annotated[None, Depends(require_roles("admin"))],
+    _user: Annotated[None, Depends(require_roles("admin", "procurement_mgr"))],
     db: Annotated[AsyncSession, Depends(get_db)],
 ):
     cat = await svc.update_procurement_category(db, cat_id, body.model_dump())
@@ -177,7 +177,7 @@ async def update_procurement_category(
 @router.delete("/admin/procurement-categories/{cat_id}", status_code=204, tags=["classification"])
 async def delete_procurement_category(
     cat_id: UUID,
-    _user: Annotated[None, Depends(require_roles("admin"))],
+    _user: Annotated[None, Depends(require_roles("admin", "procurement_mgr"))],
     db: Annotated[AsyncSession, Depends(get_db)],
 ):
     await svc.delete_procurement_category(db, cat_id)
@@ -199,7 +199,7 @@ async def list_lookup_values(
 )
 async def create_lookup_value(
     body: LookupValueIn,
-    _user: Annotated[None, Depends(require_roles("admin"))],
+    _user: Annotated[None, Depends(require_roles("admin", "procurement_mgr"))],
     db: Annotated[AsyncSession, Depends(get_db)],
 ):
     lv = await svc.create_lookup_value(db, body.model_dump())
@@ -211,7 +211,7 @@ async def create_lookup_value(
 async def update_lookup_value(
     lv_id: UUID,
     body: LookupValueIn,
-    _user: Annotated[None, Depends(require_roles("admin"))],
+    _user: Annotated[None, Depends(require_roles("admin", "procurement_mgr"))],
     db: Annotated[AsyncSession, Depends(get_db)],
 ):
     lv = await svc.update_lookup_value(db, lv_id, body.model_dump())
@@ -222,7 +222,7 @@ async def update_lookup_value(
 @router.delete("/admin/lookup-values/{lv_id}", status_code=204, tags=["classification"])
 async def delete_lookup_value(
     lv_id: UUID,
-    _user: Annotated[None, Depends(require_roles("admin"))],
+    _user: Annotated[None, Depends(require_roles("admin", "procurement_mgr"))],
     db: Annotated[AsyncSession, Depends(get_db)],
 ):
     await svc.delete_lookup_value(db, lv_id)
