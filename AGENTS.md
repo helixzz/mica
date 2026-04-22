@@ -159,6 +159,25 @@ cd deploy
 - async session 只用 `selectinload()` 载关联，不用 `joinedload()`（与 async 兼容性更好）
 - 模型关系必须标明 `back_populates` 或 `viewonly`
 
+### 5.12 测试
+- Backend：`pytest` + `pytest-asyncio`（`asyncio_mode = "auto"`），测试在 `backend/tests/` 下
+- 单元测试放 `tests/unit/`，集成测试放 `tests/` 根目录
+- `conftest.py` 提供 `db_session`（空 DB + savepoint rollback）和 `seeded_db_session`（含 seed 数据）两种 fixture，选用取决于测试需要
+- 新增 service 函数**必须**伴随对应单元测试
+- Frontend：`vitest` + `@testing-library/react`，配置在 `vitest.config.ts`
+- 测试文件放在被测文件旁边（`*.test.ts(x)`）或 `__tests__/` 目录
+- UI 组件用 `renderWithProviders`（`src/test/utils.tsx`）包裹 ConfigProvider + Router + i18n
+- 跑测试：`cd backend && pytest tests/`、`cd frontend && npm test`
+- 覆盖率：`pytest --cov=app` / `npm run test:coverage`
+
+### 5.13 Cerbos 授权
+- 字段级读权限由 Cerbos sidecar 评估（`deploy/cerbos-policies/*.yaml`）
+- 新增 resource 的字段权限：在 `deploy/cerbos-policies/` 加对应 YAML，遵循现有 4 个文件的格式
+- `backend/app/core/cerbos_client.py` 封装 HTTP 调用，**不直接调 Cerbos API**
+- Cerbos 不可达时自动降级到 `core/field_authz.py` 的静态 `FIELD_PERMISSIONS` dict（零故障风险）
+- 修改权限规则后 Cerbos 自动热加载（`watchForChanges: true`），不需要重启容器
+- **不要**在业务代码里直接引用 `FIELD_PERMISSIONS` dict，统一走 `cerbos_client.check_field_access` / `filter_dict_via_cerbos`
+
 ## 6. 代码质量门禁
 
 ### 6.1 CI 检查（`.github/workflows/ci.yml`）
