@@ -91,7 +91,7 @@ export const darkTheme: ThemeConfig = {
       ...baseTheme.components?.Table,
       headerBg: tokens.color.neutral[900],
       rowHoverBg: tokens.color.neutral[900],
-      borderColor: tokens.color.neutral[800],
+      borderColor: tokens.color.border.dark.default,
     },
   },
 };

@@ -74,8 +74,8 @@ export const tokens = {
       },
       dark: {
         primary: '#F7F6F5',
-        secondary: '#CFCAC5',
-        tertiary: '#8F8881',
+        secondary: '#D5D0CB',
+        tertiary: '#9E9790',
         disabled: '#4F4943',
         inverse: '#0F0E0D',
       },
@@ -87,9 +87,9 @@ export const tokens = {
         strong: '#AFA9A3',
       },
       dark: {
-        subtle: '#2F2B27',
-        default: '#4F4943',
-        strong: '#6F6861',
+        subtle: '#3A3632',
+        default: '#5A544E',
+        strong: '#7A7369',
       },
     },
   },

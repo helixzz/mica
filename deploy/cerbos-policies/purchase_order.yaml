@@ -1,0 +1,24 @@
+---
+apiVersion: "api.cerbos.dev/v1"
+resourcePolicy:
+  version: "default"
+  resource: "purchase_order"
+  rules:
+    - actions: ["read:*"]
+      effect: EFFECT_ALLOW
+      roles: ["admin", "procurement_mgr", "finance_auditor"]
+
+    - actions: ["read:id", "read:po_number", "read:pr_id", "read:supplier_id",
+                "read:company_id", "read:status", "read:currency",
+                "read:total_amount", "read:qty_received", "read:source_type",
+                "read:source_ref", "read:created_by_id",
+                "read:created_at", "read:updated_at", "read:items"]
+      effect: EFFECT_ALLOW
+      roles: ["it_buyer"]
+
+    - actions: ["read:id", "read:po_number", "read:pr_id", "read:supplier_id",
+                "read:company_id", "read:status", "read:currency",
+                "read:total_amount", "read:qty_received",
+                "read:created_at", "read:updated_at", "read:items"]
+      effect: EFFECT_ALLOW
+      roles: ["dept_manager"]

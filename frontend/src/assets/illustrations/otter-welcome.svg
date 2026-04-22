@@ -1,50 +1,41 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 240 240" width="100%" height="100%">
   <defs>
     <style>
-      .primary { fill: var(--color-primary-500, #8B5E3C); }
-      .secondary { fill: var(--color-primary-200, #D8C3B1); }
-      .accent { fill: var(--color-primary-700, #543824); }
-      .bg { fill: var(--color-bg-subtle, #F7F6F5); }
-      .star { fill: var(--color-warning-500, #F59E0B); }
+      .pri { fill: var(--color-primary-500, #8B5E3C); }
+      .sec { fill: var(--color-primary-200, #D8C3B1); }
+      .acc { fill: var(--color-primary-700, #543824); }
+      .bg  { fill: var(--color-bg-subtle, #F7F6F5); }
+      .ln  { stroke: var(--color-primary-700, #543824); fill: none; stroke-linecap: round; stroke-linejoin: round; }
     </style>
   </defs>
-  
-  <!-- Background blob -->
-  <path class="bg" d="M120,20 C175,20 220,65 220,120 C220,175 175,220 120,220 C65,220 20,175 20,120 C20,65 65,20 120,20 Z" opacity="0.5" />
-  
-  <!-- Otter Body -->
-  <path class="primary" d="M80,180 C80,120 100,80 140,80 C180,80 200,120 200,180 C200,200 180,210 140,210 C100,210 80,200 80,180 Z" />
-  
-  <!-- Belly -->
-  <path class="secondary" d="M100,180 C100,140 120,110 140,110 C160,110 180,140 180,180 C180,190 160,200 140,200 C120,200 100,190 100,180 Z" />
-  
-  <!-- Head -->
-  <circle class="primary" cx="140" cy="90" r="35" />
-  
-  <!-- Snout -->
-  <ellipse class="secondary" cx="140" cy="100" rx="20" ry="15" />
-  
-  <!-- Nose -->
-  <circle class="accent" cx="140" cy="95" r="5" />
-  
-  <!-- Happy Eyes -->
-  <path class="accent" d="M120,85 Q125,80 130,85" fill="none" stroke="var(--color-primary-700, #543824)" stroke-width="3" stroke-linecap="round" />
-  <path class="accent" d="M150,85 Q155,80 160,85" fill="none" stroke="var(--color-primary-700, #543824)" stroke-width="3" stroke-linecap="round" />
-  
-  <!-- Ears -->
-  <circle class="primary" cx="105" cy="75" r="10" />
-  <circle class="primary" cx="175" cy="75" r="10" />
-  
-  <!-- Tail -->
-  <path class="primary" d="M80,180 C50,180 40,190 40,200 C40,210 60,205 90,200 Z" />
-  
-  <!-- Waving Arm -->
-  <path class="primary" d="M180,140 C200,120 210,100 220,110 C230,120 210,140 190,160 Z" />
-  
-  <!-- Other Arm -->
-  <path class="primary" d="M100,140 C80,140 70,150 70,160 C70,170 90,165 110,160 Z" />
-  
-  <!-- Sparkles -->
-  <path class="star" d="M190,60 L195,75 L210,80 L195,85 L190,100 L185,85 L170,80 L185,75 Z" />
-  <path class="star" d="M220,40 L222,48 L230,50 L222,52 L220,60 L218,52 L210,50 L218,48 Z" />
+  <ellipse class="bg" cx="120" cy="130" rx="90" ry="85" opacity="0.4" />
+  <ellipse class="pri" cx="120" cy="165" rx="45" ry="38" />
+  <ellipse class="sec" cx="120" cy="168" rx="30" ry="25" />
+  <circle class="pri" cx="120" cy="105" r="36" />
+  <circle class="pri" cx="90" cy="78" r="11" />
+  <circle class="sec" cx="90" cy="78" r="6" />
+  <circle class="pri" cx="150" cy="78" r="11" />
+  <circle class="sec" cx="150" cy="78" r="6" />
+  <ellipse class="sec" cx="120" cy="112" rx="22" ry="16" />
+  <ellipse class="acc" cx="120" cy="108" rx="5" ry="3.5" />
+  <path class="ln" d="M102,98 Q107,93 112,98" stroke-width="2.5" />
+  <path class="ln" d="M128,98 Q133,93 138,98" stroke-width="2.5" />
+  <path class="ln" d="M110,116 Q120,124 130,116" stroke-width="2" />
+  <path class="pri" d="M158,138 C170,125 180,110 175,105 C170,100 160,112 155,128 Z" />
+  <circle class="sec" cx="175" cy="103" r="8" />
+  <circle class="pri" cx="172" cy="100" r="2" />
+  <circle class="pri" cx="178" cy="100" r="2" />
+  <circle class="pri" cx="175" cy="106" r="2" />
+  <path class="pri" d="M82,148 C68,152 62,165 72,172 L88,164 Z" />
+  <circle class="sec" cx="90" cy="160" r="7" />
+  <ellipse class="acc" cx="100" cy="198" rx="14" ry="7" />
+  <ellipse class="acc" cx="140" cy="198" rx="14" ry="7" />
+  <path class="pri" d="M72,180 C55,185 48,198 58,205 C68,210 78,200 82,190 Z" />
+  <g class="acc" opacity="0.6">
+    <line x1="192" y1="95" x2="200" y2="90" stroke-width="2" stroke="var(--color-primary-500, #8B5E3C)" stroke-linecap="round" />
+    <line x1="190" y1="108" x2="198" y2="112" stroke-width="2" stroke="var(--color-primary-500, #8B5E3C)" stroke-linecap="round" />
+    <line x1="185" y1="85" x2="188" y2="78" stroke-width="2" stroke="var(--color-primary-500, #8B5E3C)" stroke-linecap="round" />
+    <circle cx="196" cy="82" r="2" fill="var(--color-primary-300, #C4A48A)" />
+    <circle cx="205" cy="100" r="1.5" fill="var(--color-primary-300, #C4A48A)" />
+  </g>
 </svg>
