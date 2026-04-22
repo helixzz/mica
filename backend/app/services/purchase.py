@@ -136,13 +136,17 @@ async def update_pr(
     if pr is None:
         raise HTTPException(404, "pr.not_found")
     if pr.requester_id != actor.id and actor.role not in (
-        UserRole.ADMIN.value, UserRole.IT_BUYER.value, UserRole.PROCUREMENT_MGR.value,
+        UserRole.ADMIN.value,
+        UserRole.IT_BUYER.value,
+        UserRole.PROCUREMENT_MGR.value,
     ):
         raise HTTPException(403, "insufficient_role")
     if pr.status == PRStatus.DRAFT.value:
         pass
     elif pr.status == "approved" and actor.role in (
-        UserRole.IT_BUYER.value, UserRole.PROCUREMENT_MGR.value, UserRole.ADMIN.value,
+        UserRole.IT_BUYER.value,
+        UserRole.PROCUREMENT_MGR.value,
+        UserRole.ADMIN.value,
     ):
         pass
     else:
