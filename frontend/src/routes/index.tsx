@@ -81,6 +81,7 @@ const RFQDetailPage = lazy(() => import('@/pages/RFQDetail'))
 const SuppliersPage = lazy(() => import('@/pages/Suppliers'))
 const SupplierDetailPage = lazy(() => import('@/pages/SupplierDetail'))
 const ItemDetailPage = lazy(() => import('@/pages/ItemDetail'))
+const ItemsPage = lazy(() => import('@/pages/Items'))
 
 function PageFallback() {
   return (
@@ -157,6 +158,7 @@ export function AppRoutes() {
           <Route path="/rfqs/:id" element={<RFQDetailPage />} />
           <Route path="/suppliers" element={<SuppliersPage />} />
           <Route path="/suppliers/:id" element={<SupplierDetailPage />} />
+          <Route path="/items" element={<ItemsPage />} />
           <Route path="/items/:id" element={<ItemDetailPage />} />
           <Route path="/admin" element={<AdminPage />} />
           <Route path="/search" element={<SearchResults />} />
