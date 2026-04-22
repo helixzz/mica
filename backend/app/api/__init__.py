@@ -13,6 +13,7 @@ from app.api.v1 import (
     dashboard,
     documents,
     flow,
+    import_excel,
     master_data,
     notifications,
     payment_schedule,
@@ -45,3 +46,4 @@ api_router.include_router(system_params_admin.router)
 api_router.include_router(dashboard.router)
 api_router.include_router(payment_schedule.router)
 api_router.include_router(classification.router)
+api_router.include_router(import_excel.router)
