@@ -54,6 +54,7 @@ export function PRDetailPage() {
   if (!pr) return <div>{t('message.loading')}</div>
 
   const canSubmit = pr.status === 'draft' && user?.id === pr.requester_id
+  const canEdit = pr.status === 'draft' && user?.id === pr.requester_id
   const canDecide =
     pr.status === 'submitted' && (user?.role === 'dept_manager' || user?.role === 'admin')
   const canConvert =
@@ -122,6 +123,11 @@ export function PRDetailPage() {
         </Space>
         <Space>
           <Button onClick={() => navigate('/purchase-requisitions')}>{t('button.back')}</Button>
+          {canEdit && (
+            <Button onClick={() => navigate(`/purchase-requisitions/${pr.id}/edit`)}>
+              {t('button.edit') || '编辑'}
+            </Button>
+          )}
           {canSubmit && (
             <Button type="primary" onClick={runSubmit} loading={busy}>
               {t('button.submit_for_approval')}

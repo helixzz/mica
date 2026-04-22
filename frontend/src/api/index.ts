@@ -79,6 +79,9 @@ export interface PurchaseRequisition {
   requester_id: string
   company_id: string
   department_id: string | null
+  cost_center_id: string | null
+  expense_type_id: string | null
+  procurement_category_id: string | null
   currency: string
   total_amount: string
   required_date: string | null

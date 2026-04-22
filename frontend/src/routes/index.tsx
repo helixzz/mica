@@ -53,6 +53,11 @@ const PRDetailPage = lazy(() =>
     default: m.PRDetailPage,
   })),
 )
+const PREditPage = lazy(() =>
+  import('@/pages/PurchaseRequisitions/PREdit').then((m) => ({
+    default: m.PREditPage,
+  })),
+)
 const PRListPage = lazy(() =>
   import('@/pages/PurchaseRequisitions/PRList').then((m) => ({
     default: m.PRListPage,
@@ -130,6 +135,7 @@ export function AppRoutes() {
           <Route path="/approvals" element={<ApprovalsPage />} />
           <Route path="/purchase-requisitions" element={<PRListPage />} />
           <Route path="/purchase-requisitions/new" element={<PRNewPage />} />
+          <Route path="/purchase-requisitions/:id/edit" element={<PREditPage />} />
           <Route path="/purchase-requisitions/:id" element={<PRDetailPage />} />
           <Route path="/purchase-orders" element={<POListPage />} />
           <Route path="/purchase-orders/:id" element={<PODetailPage />} />
