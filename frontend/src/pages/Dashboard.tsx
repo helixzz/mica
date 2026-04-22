@@ -3,16 +3,17 @@ import { useEffect, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { Link, useNavigate } from 'react-router-dom'
 import {
+  AppstoreOutlined,
+  AuditOutlined,
+  BellOutlined,
+  CheckCircleOutlined,
   ClockCircleOutlined,
   FileTextOutlined,
+  PlusOutlined,
+  SettingOutlined,
   ShoppingCartOutlined,
-  CheckCircleOutlined,
   WarningOutlined,
   AlertOutlined,
-  PlusOutlined,
-  AppstoreOutlined,
-  SettingOutlined,
-  BellOutlined,
 } from '@ant-design/icons'
 
 import {
@@ -77,8 +78,13 @@ export function DashboardPage() {
   const isDeptManager = role === 'dept_manager'
   const isProcurementMgr = role === 'procurement_mgr'
   const isFinanceAuditor = role === 'finance_auditor'
+  const isRequester = role === 'requester'
 
   const prsInProgress = prs.filter((pr) => pr.status === 'submitted' || pr.status === 'approved').length
+  const myPrs = prs.filter((pr) => pr.requester_id === user?.id)
+  const myDrafts = myPrs.filter((pr) => pr.status === 'draft').length
+  const myPending = myPrs.filter((pr) => pr.status === 'submitted').length
+  const myApproved = myPrs.filter((pr) => pr.status === 'approved').length
 
   return (
     <Space direction="vertical" size="large" style={{ width: '100%', paddingBottom: token.paddingXL }}>
@@ -276,13 +282,35 @@ export function DashboardPage() {
 
       <Section title={t('dashboard.quick_actions')}>
         <Space wrap size="middle">
-          <Button
-            type={isItBuyer ? 'primary' : 'default'}
-            icon={<PlusOutlined />}
-            onClick={() => navigate('/purchase-requisitions/new')}
-          >
-            {t('dashboard.new_pr')}
-          </Button>
+          {(isRequester || isItBuyer || role === 'admin') && (
+            <Button
+              type="primary"
+              icon={<PlusOutlined />}
+              onClick={() => navigate('/purchase-requisitions/new')}
+            >
+              {isRequester ? '提交采购需求' : t('dashboard.new_pr')}
+            </Button>
+          )}
+          {(isItBuyer || isProcurementMgr || role === 'admin') && (
+            <Button icon={<PlusOutlined />} onClick={() => navigate('/rfqs/new')}>
+              新建询价
+            </Button>
+          )}
+          {isRequester && (
+            <Button onClick={() => navigate('/purchase-requisitions')}>
+              我的采购申请 {myPrs.length > 0 ? `(${myPrs.length})` : ''}
+            </Button>
+          )}
+          {isDeptManager && (
+            <Button type="primary" icon={<AuditOutlined />} onClick={() => navigate('/approvals')}>
+              待审批 ({pending.length})
+            </Button>
+          )}
+          {isFinanceAuditor && (
+            <Button onClick={() => navigate('/payments')}>
+              付款管理
+            </Button>
+          )}
           <Button icon={<AppstoreOutlined />} onClick={() => navigate('/purchase-orders')}>
             {t('dashboard.view_all_pos')}
           </Button>
@@ -296,6 +324,16 @@ export function DashboardPage() {
           </Button>
         </Space>
       </Section>
+
+      {isRequester && myPrs.length > 0 && (
+        <Section title="我的采购进度">
+          <Row gutter={16}>
+            <Col span={8}><StatCard label="草稿" value={myDrafts} variant={myDrafts > 0 ? 'accent' : 'default'} /></Col>
+            <Col span={8}><StatCard label="待审批" value={myPending} /></Col>
+            <Col span={8}><StatCard label="已批准（待询价）" value={myApproved} variant={myApproved > 0 ? 'accent' : 'default'} /></Col>
+          </Row>
+        </Section>
+      )}
     </Space>
   )
 }
