@@ -88,10 +88,11 @@ services:
       - "127.0.0.1:3593:3593"
       - "127.0.0.1:3592:3592"
     healthcheck:
-      test: ["CMD", "wget", "-qO-", "http://localhost:3593/api/status"]
+      test: ["CMD", "/cerbos", "healthcheck"]
       interval: 10s
       timeout: 5s
       retries: 3
+      start_period: 5s
     restart: unless-stopped
 
 volumes:

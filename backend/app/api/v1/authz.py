@@ -1,6 +1,6 @@
 from fastapi import APIRouter
 
-from app.core.field_authz import build_field_manifest
+from app.core.cerbos_client import check_field_access
 from app.core.security import CurrentUser
 from app.schemas import FieldManifestOut
 
@@ -87,8 +87,15 @@ router_v1 = APIRouter()
 @router_v1.get("/authz/field-manifest/{resource}", response_model=FieldManifestOut, tags=["authz"])
 async def field_manifest(resource: str, user: CurrentUser):
     fields = ALL_FIELDS.get(resource, [])
-    manifest = build_field_manifest(resource, user.role, fields)
-    return FieldManifestOut(resource=manifest.resource, role=manifest.role, fields=manifest.fields)
+    allowed = await check_field_access(
+        principal_id=str(user.id),
+        principal_role=user.role,
+        resource_kind=resource,
+        resource_id="manifest",
+        fields=fields,
+    )
+    visibility = {f: (f in allowed) for f in fields}
+    return FieldManifestOut(resource=resource, role=user.role, fields=visibility)
 
 
 router = router_v1
