@@ -17,6 +17,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.config import get_settings
 from app.core.crypto import decrypt, encrypt
+from app.core.litellm_helpers import resolve_litellm_model
 from app.core.security import CurrentUser, hash_password, require_roles
 from app.db import get_db
 from app.models import (
@@ -226,19 +227,50 @@ async def test_ai_model_connection(
                 "error": None,
             }
 
-        from litellm import acompletion
-
-        kwargs: dict[str, Any] = {
-            "model": m.model_string,
-            "messages": [{"role": "user", "content": "ping"}],
-            "max_tokens": 8,
+        resolved_model = resolve_litellm_model(m.provider, m.model_string)
+        common_kwargs: dict[str, Any] = {
+            "model": resolved_model,
             "timeout": max(3, min(m.timeout_s, 30)),
         }
         if m.api_key_encrypted:
-            kwargs["api_key"] = decrypt(m.api_key_encrypted)
+            common_kwargs["api_key"] = decrypt(m.api_key_encrypted)
         if m.api_base:
-            kwargs["api_base"] = m.api_base
-        resp = cast(object, await acompletion(**kwargs))
+            common_kwargs["api_base"] = m.api_base
+
+        if m.modality == "embedding":
+            from litellm import aembedding
+
+            resp = cast(
+                object,
+                await aembedding(
+                    input=["ping"],
+                    encoding_format="float",
+                    **common_kwargs,
+                ),
+            )
+            latency_ms = int((time.monotonic() - start) * 1000)
+            data = getattr(resp, "data", None) or []
+            dim = 0
+            if data:
+                emb = getattr(data[0], "embedding", None) or data[0].get("embedding", [])  # type: ignore[union-attr]
+                dim = len(emb) if emb else 0
+            return {
+                "success": True,
+                "model_response": f"[embedding] dim={dim}",
+                "latency_ms": latency_ms,
+                "error": None,
+            }
+
+        from litellm import acompletion
+
+        resp = cast(
+            object,
+            await acompletion(
+                messages=[{"role": "user", "content": "ping"}],
+                max_tokens=8,
+                **common_kwargs,
+            ),
+        )
         latency_ms = int((time.monotonic() - start) * 1000)
         choices = getattr(resp, "choices", None)
         if isinstance(choices, list) and choices:
