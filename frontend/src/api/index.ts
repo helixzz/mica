@@ -961,6 +961,9 @@ export const api = {
   async deleteLookupValue(id: string): Promise<void> {
     await client.delete(`/admin/lookup-values/${id}`)
   },
+  async adminUploadFile(endpoint: string, formData: FormData): Promise<{ data: any }> {
+    return client.post(endpoint, formData, { headers: { 'Content-Type': 'multipart/form-data' } })
+  },
   async aiStream(
     feature_code: 'pr_description_polish' | 'sku_suggest',
     body: { draft?: string; query?: string },

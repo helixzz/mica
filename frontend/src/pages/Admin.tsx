@@ -17,6 +17,7 @@ import {
   Tabs,
   Tag,
   Typography,
+  Upload,
   message,
 } from 'antd'
 import { useEffect, useState } from 'react'
@@ -64,6 +65,7 @@ export function AdminPage() {
           { key: 'companies', label: '公司主体', children: <CompaniesTab /> },
           { key: 'system_params', label: '系统参数', children: <SystemParamsTab /> },
           { key: 'classification', label: '分类管理', children: <ClassificationTab /> },
+          { key: 'import', label: '数据导入', children: <ImportTab /> },
           { key: 'models', label: 'LLM 模型', children: <AIModelsPanel /> },
           { key: 'routings', label: 'AI 场景路由', children: <RoutingsPanel /> },
           { key: 'users', label: '用户管理', children: <UsersPanel /> },
@@ -512,6 +514,69 @@ function CompaniesTab() {
           </Form.Item>
         </Form>
       </Drawer>
+    </Space>
+  )
+}
+
+function ImportTab() {
+  const [result, setResult] = useState<{ created?: number; skipped?: number; errors?: string[] } | null>(null)
+  const [uploading, setUploading] = useState(false)
+
+  const doImport = async (endpoint: string, file: File) => {
+    setUploading(true)
+    setResult(null)
+    try {
+      const formData = new FormData()
+      formData.append('file', file)
+      const { data } = await api.adminUploadFile(endpoint, formData)
+      setResult(data)
+      void message.success(`导入完成：新增 ${data.created} 条${data.skipped ? `，跳过 ${data.skipped} 条` : ''}`)
+    } catch (e: any) {
+      void message.error(e?.response?.data?.detail || '导入失败')
+    } finally {
+      setUploading(false)
+    }
+  }
+
+  const importConfigs = [
+    {
+      key: 'suppliers',
+      title: '导入供应商',
+      desc: 'Excel 列：name（名称）、code（编码）、contact_name（联系人）、contact_phone（电话）、contact_email（邮箱）',
+      endpoint: '/admin/import/suppliers',
+    },
+    {
+      key: 'items',
+      title: '导入物料 / SKU',
+      desc: 'Excel 列：code（编码）、name（名称）、category（分类）、uom（单位）、specification（规格）',
+      endpoint: '/admin/import/items',
+    },
+    {
+      key: 'prices',
+      title: '导入报价 / 行情',
+      desc: 'Excel 列：item_code（物料编码）、price（价格）、date（日期 YYYY-MM-DD）、supplier（供应商名）、currency（币种）',
+      endpoint: '/admin/import/prices',
+    },
+  ]
+
+  return (
+    <Space direction="vertical" size="middle" style={{ width: '100%' }}>
+      {importConfigs.map((cfg) => (
+        <Card key={cfg.key} size="small" title={cfg.title}>
+          <Typography.Text type="secondary" style={{ display: 'block', marginBottom: 12, fontSize: 12 }}>{cfg.desc}</Typography.Text>
+          <Upload
+            accept=".xlsx,.xls"
+            beforeUpload={(file) => { void doImport(cfg.endpoint, file as unknown as File); return false }}
+            showUploadList={false}
+            maxCount={1}
+          >
+            <Button icon={<PlusOutlined />} loading={uploading}>选择 Excel 文件上传</Button>
+          </Upload>
+        </Card>
+      ))}
+      {result && result.errors && result.errors.length > 0 && (
+        <Alert type="warning" message={`${result.errors.length} 行有问题`} description={result.errors.slice(0, 10).join('\n')} showIcon />
+      )}
     </Space>
   )
 }
