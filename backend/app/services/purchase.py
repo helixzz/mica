@@ -86,8 +86,11 @@ async def create_pr(db: AsyncSession, actor: User, payload: PRCreateIn) -> Purch
         business_reason=payload.business_reason,
         status=PRStatus.DRAFT.value,
         requester_id=actor.id,
-        company_id=actor.company_id,
+        company_id=payload.company_id or actor.company_id,
         department_id=payload.department_id or actor.department_id,
+        cost_center_id=payload.cost_center_id,
+        expense_type_id=payload.expense_type_id,
+        procurement_category_id=payload.procurement_category_id,
         currency=payload.currency,
         required_date=payload.required_date,
     )
@@ -158,6 +161,14 @@ async def update_pr(
         pr.business_reason = payload.business_reason
     if payload.department_id is not None:
         pr.department_id = payload.department_id
+    if payload.company_id is not None:
+        pr.company_id = payload.company_id
+    if payload.cost_center_id is not None:
+        pr.cost_center_id = payload.cost_center_id
+    if payload.expense_type_id is not None:
+        pr.expense_type_id = payload.expense_type_id
+    if payload.procurement_category_id is not None:
+        pr.procurement_category_id = payload.procurement_category_id
     if payload.currency is not None:
         pr.currency = payload.currency
     if payload.required_date is not None:
