@@ -7,6 +7,27 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [v0.8.0] — 2026-04-23
+
+覆盖率硬阈值 + PO 回填 SKU + E2E CI + Bug 修复。
+
+### 新增
+
+- **覆盖率硬阈值**：CI 强制 backend ≥70%、frontend statements/lines ≥60%，低于阈值直接失败
+- **PO 成交价自动回填 SKU 价格库**：PR 转 PO 时，为每个有 item_id 的明细行自动创建 `SKUPriceRecord`（source_type=actual_po），使 SKU 行情库自动积累真实采购成交数据
+- **E2E 冒烟测试 CI**：Docker Compose 全栈启动 → 健康检查 → 登录 → 6 个核心 API 端点验证，作为 CI 流水线最终门禁
+
+### 修复
+
+- **PR 分类字段未保存**：`create_pr` 和 `update_pr` 遗漏 `company_id`、`cost_center_id`、`expense_type_id`、`procurement_category_id` 四个字段（与 v0.7.3 的 Item category_id bug 同一模式）
+
+### 测试
+
+- 249 backend tests（75% coverage）+ 44 frontend tests（89% statements）
+- 新增 export_excel（100%）、export_pdf（100%）、documents（73%）、system_params（82%）测试
+
+---
+
 ## [v0.7.3] — 2026-04-22
 
 i18n 全量覆盖 + 权限优化 + Bug 修复。
