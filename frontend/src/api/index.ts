@@ -381,6 +381,22 @@ export interface ContractExpiring {
   expiry_date: string | null
 }
 
+export interface TrendInfo {
+  current: number
+  previous: number
+  direction: 'up' | 'down' | 'flat'
+  delta_pct: string
+}
+
+export interface DashboardMetrics {
+  pr_count: TrendInfo
+  po_count: TrendInfo
+  po_total_amount: TrendInfo
+  pending_approvals: TrendInfo
+  expiring_contracts_30d: number
+  price_anomalies_pending: number
+}
+
 export interface InvoiceExtractResult {
   invoice_number: string | null
   invoice_code: string | null
@@ -693,6 +709,14 @@ export const api = {
   async listExpiringContracts(within_days = 30): Promise<ContractExpiring[]> {
     const { data } = await client.get<ContractExpiring[]>('/contracts-expiring', {
       params: { within_days },
+    })
+    return data
+  },
+  async getDashboardMetrics(
+    compare_to: 'last_month' | 'last_week' = 'last_month',
+  ): Promise<DashboardMetrics> {
+    const { data } = await client.get<DashboardMetrics>('/dashboard/metrics', {
+      params: { compare_to },
     })
     return data
   },

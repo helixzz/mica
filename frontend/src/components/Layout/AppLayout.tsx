@@ -6,11 +6,14 @@ import {
   BarChartOutlined,
   CarOutlined,
   DashboardOutlined,
+  DesktopOutlined,
   DollarOutlined,
   FileTextOutlined,
   LogoutOutlined,
+  MoonOutlined,
   SettingOutlined,
   SolutionOutlined,
+  SunOutlined,
   MenuOutlined,
 } from '@ant-design/icons';
 import { Avatar, Dropdown, Layout, Menu, Space, Tag, Typography, theme, Button, Drawer } from 'antd';
@@ -53,9 +56,9 @@ export function AppLayout() {
   };
 
   const getThemeIcon = () => {
-    if (mode === 'light') return '☀️';
-    if (mode === 'dark') return '🌙';
-    return '💻';
+    if (mode === 'light') return <SunOutlined />;
+    if (mode === 'dark') return <MoonOutlined />;
+    return <DesktopOutlined />;
   };
 
   const menuItems = [
@@ -147,10 +150,8 @@ export function AppLayout() {
             type="text"
             onClick={toggleTheme}
             title={t('theme.toggle')}
-            style={{ fontSize: 16, display: 'flex', alignItems: 'center', justifyContent: 'center' }}
-          >
-            {getThemeIcon()}
-          </Button>
+            icon={getThemeIcon()}
+          />
           {user && (
             <Dropdown
               menu={{

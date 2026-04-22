@@ -18,9 +18,10 @@ import {
 import {
   api,
   type ApprovalTask,
+  type ContractExpiring,
+  type DashboardMetrics,
   type PRListItem,
   type PurchaseOrder,
-  type ContractExpiring,
   type SKUAnomaly,
 } from '@/api'
 import { useAuth } from '@/auth/useAuth'
@@ -40,6 +41,7 @@ export function DashboardPage() {
   const [pending, setPending] = useState<ApprovalTask[]>([])
   const [contracts, setContracts] = useState<ContractExpiring[]>([])
   const [anomalies, setAnomalies] = useState<SKUAnomaly[]>([])
+  const [metrics, setMetrics] = useState<DashboardMetrics | null>(null)
   const [currentTime, setCurrentTime] = useState(new Date())
 
   useEffect(() => {
@@ -55,12 +57,14 @@ export function DashboardPage() {
       api.myPendingApprovals().catch(() => []),
       api.listExpiringContracts(30).catch(() => []),
       api.listSKUAnomalies('pending').catch(() => []),
-    ]).then(([prsData, posData, pendingData, contractsData, anomaliesData]) => {
+      api.getDashboardMetrics('last_month').catch(() => null),
+    ]).then(([prsData, posData, pendingData, contractsData, anomaliesData, metricsData]) => {
       setPrs(prsData)
       setPos(posData)
       setPending(pendingData)
       setContracts(contractsData)
       setAnomalies(anomaliesData)
+      setMetrics(metricsData)
       setLoading(false)
     })
   }, [])
@@ -99,6 +103,14 @@ export function DashboardPage() {
             icon={<FileTextOutlined />}
             loading={loading}
             variant={isItBuyer ? 'accent' : 'default'}
+            trend={
+              metrics && metrics.pr_count.direction !== 'flat'
+                ? {
+                    direction: metrics.pr_count.direction,
+                    delta: metrics.pr_count.delta_pct,
+                  }
+                : undefined
+            }
           />
         </Col>
         <Col xs={24} sm={12} lg={6}>
@@ -107,6 +119,14 @@ export function DashboardPage() {
             value={pos.length}
             icon={<ShoppingCartOutlined />}
             loading={loading}
+            trend={
+              metrics && metrics.po_count.direction !== 'flat'
+                ? {
+                    direction: metrics.po_count.direction,
+                    delta: metrics.po_count.delta_pct,
+                  }
+                : undefined
+            }
           />
         </Col>
         <Col xs={24} sm={12} lg={6}>
@@ -116,6 +136,14 @@ export function DashboardPage() {
             icon={<CheckCircleOutlined />}
             loading={loading}
             variant={isDeptManager || (pending.length > 0 && !isItBuyer) ? 'accent' : 'default'}
+            trend={
+              metrics && metrics.pending_approvals.direction !== 'flat'
+                ? {
+                    direction: metrics.pending_approvals.direction,
+                    delta: metrics.pending_approvals.delta_pct,
+                  }
+                : undefined
+            }
           />
         </Col>
         <Col xs={24} sm={12} lg={6}>
@@ -125,6 +153,14 @@ export function DashboardPage() {
             icon={<WarningOutlined />}
             loading={loading}
             variant={isFinanceAuditor || isProcurementMgr ? 'accent' : 'default'}
+            trend={
+              metrics && metrics.po_total_amount.direction !== 'flat'
+                ? {
+                    direction: metrics.po_total_amount.direction,
+                    delta: metrics.po_total_amount.delta_pct,
+                  }
+                : undefined
+            }
           />
         </Col>
       </Row>

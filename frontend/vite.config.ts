@@ -22,6 +22,45 @@ export default defineConfig({
   build: {
     outDir: 'dist',
     sourcemap: false,
-    chunkSizeWarningLimit: 800,
+    chunkSizeWarningLimit: 1500,
+    rollupOptions: {
+      output: {
+        manualChunks(id: string) {
+          if (id.includes('node_modules/antd/') || id.includes('@ant-design/')) {
+            return 'antd'
+          }
+          if (
+            id.includes('node_modules/react/') ||
+            id.includes('node_modules/react-dom/') ||
+            id.includes('node_modules/scheduler/')
+          ) {
+            return 'react-vendor'
+          }
+          if (
+            id.includes('node_modules/react-router') ||
+            id.includes('node_modules/@remix-run/')
+          ) {
+            return 'router'
+          }
+          if (
+            id.includes('node_modules/i18next') ||
+            id.includes('node_modules/react-i18next')
+          ) {
+            return 'i18n'
+          }
+          if (id.includes('node_modules/dayjs')) {
+            return 'dayjs'
+          }
+          if (id.includes('node_modules/axios')) {
+            return 'axios'
+          }
+          if (id.includes('node_modules/zustand')) {
+            return 'zustand'
+          }
+          return undefined
+        },
+      },
+    },
   },
 })
+
