@@ -1,5 +1,5 @@
-site_name: Mica 用户手册
-site_description: 觅采采购管理系统 · 使用指南
+site_name: Mica 觅采 · 文档中心
+site_description: 觅采采购管理系统 · 用户手册 & 管理员指南
 site_author: Mica Contributors
 site_url: https://helixzz.github.io/mica/
 repo_url: https://github.com/helixzz/mica
@@ -47,13 +47,17 @@ theme:
 
 nav:
   - 首页: README.md
-  - 概述: 00-introduction.md
-  - 角色与权限: 01-roles-and-permissions.md
-  - 全局业务工作流: 02-global-workflow.md
-  - 各角色工作流: 03-per-role-workflow.md
-  - 功能参考: 04-features.md
-  - 常见问题: 05-faq.md
-  - 流程图集: _diagrams.md
+  - 用户手册:
+    - 概述: 00-introduction.md
+    - 角色与权限: 01-roles-and-permissions.md
+    - 全局业务工作流: 02-global-workflow.md
+    - 各角色工作流: 03-per-role-workflow.md
+    - 功能参考: 04-features.md
+    - 常见问题: 05-faq.md
+  - 管理员指南:
+    - 部署 · 配置 · 运维: admin-guide.md
+  - 附录:
+    - 流程图集: _diagrams.md
 
 markdown_extensions:
   - admonition
