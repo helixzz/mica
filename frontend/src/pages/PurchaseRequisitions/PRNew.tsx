@@ -196,7 +196,7 @@ export function PRNewPage() {
         <Space direction="vertical" size={0} style={{ width: '100%' }}>
           <Select
             style={{ width: '100%' }}
-            placeholder={isRequester ? '选择你需要采购的物料' : t('placeholder.select_item')}
+            placeholder={isRequester ? t('pr.select_item_requester') : t('placeholder.select_item')}
             value={r.item_id ?? undefined}
             onChange={(v) => onItemSelect(r.key, v)}
             options={items.map((it) => ({ value: it.id, label: `${it.code} · ${it.name}` }))}
@@ -206,8 +206,8 @@ export function PRNewPage() {
           />
           {r.item_id && refPrices[r.item_id] && (
             <Typography.Text type="secondary" style={{ fontSize: 11 }}>
-              参考：最近 ¥{refPrices[r.item_id].latest_price?.toLocaleString() ?? '-'}
-              {refPrices[r.item_id].avg_price ? ` · 均价 ¥${refPrices[r.item_id].avg_price?.toLocaleString()}` : ''}
+              {t('sku.ref_latest')}: ¥{refPrices[r.item_id].latest_price?.toLocaleString() ?? '-'}
+              {refPrices[r.item_id].avg_price ? ` · ${t('sku.ref_avg')}: ¥${refPrices[r.item_id].avg_price?.toLocaleString()}` : ''}
             </Typography.Text>
           )}
         </Space>
@@ -259,7 +259,7 @@ export function PRNewPage() {
       title: isRequester ? (
         <Space direction="vertical" size={0}>
           <span>{t('field.unit_price')}</span>
-          <Typography.Text type="secondary" style={{ fontSize: 10, fontWeight: 'normal' }}>可选 · 询价后由采购员决定</Typography.Text>
+          <Typography.Text type="secondary" style={{ fontSize: 10, fontWeight: 'normal' }}>{t('pr.price_optional')}</Typography.Text>
         </Space>
       ) : (
         t('field.unit_price')
@@ -271,7 +271,7 @@ export function PRNewPage() {
           value={r.unit_price || undefined}
           onChange={(v) => updateLine(r.key, 'unit_price', Number(v ?? 0))}
           style={{ width: '100%' }}
-          placeholder={isRequester ? '询价后填写' : undefined}
+          placeholder={isRequester ? t('pr.price_placeholder') : undefined}
         />
       ),
     },
@@ -308,14 +308,14 @@ export function PRNewPage() {
         <Alert
           type="info"
           showIcon
-          message="填写采购需求"
+          message={t('pr.guide_title')}
           description={
             <ul style={{ margin: '4px 0 0', paddingLeft: 20, fontSize: 13 }}>
-              <li><b>标题</b>：简要描述你需要采购什么（如"Q3 新员工笔记本"）</li>
-              <li><b>公司主体 / 成本中心 / 开支类型</b>：必填，用于财务归属</li>
-              <li><b>明细行</b>：选择物料和数量即可，系统会显示参考价格供你预估</li>
-              <li><b>价格和供应商</b>：<b>无需填写</b>——提交后由采购员询价确定</li>
-              <li><b>业务说明</b>：说明采购理由，审批人会看到这段文字</li>
+              <li>{t('pr.guide_title_field')}</li>
+              <li>{t('pr.guide_required_fields')}</li>
+              <li>{t('pr.guide_items')}</li>
+              <li>{t('pr.guide_price')}</li>
+              <li>{t('pr.guide_reason')}</li>
             </ul>
           }
         />
@@ -346,23 +346,23 @@ export function PRNewPage() {
           </Row>
           <Row gutter={16}>
             <Col span={6}>
-              <Form.Item label="公司主体" name="company_id" rules={[{ required: true, message: '请选择公司主体' }]}>
+              <Form.Item label={t('pr.company_label')} name="company_id" rules={[{ required: true, message: t('validation.select_company') }]}>
                 <Select
-                  placeholder="选择公司主体"
+                  placeholder={t('pr.select_company')}
                   options={companies.map((c) => ({ value: c.id, label: c.name_zh }))}
                 />
               </Form.Item>
             </Col>
             <Col span={6}>
-              <Form.Item label="成本中心" name="cost_center_id" rules={[{ required: true, message: '请选择成本中心' }]}>
+              <Form.Item label={t('pr.cost_center_label')} name="cost_center_id" rules={[{ required: true, message: t('validation.select_cost_center') }]}>
                 <Select
-                  placeholder="选择成本中心"
+                  placeholder={t('pr.select_cost_center')}
                   options={costCenters.map((c) => ({ value: c.id, label: c.label_zh }))}
                 />
               </Form.Item>
             </Col>
             <Col span={6}>
-              <Form.Item label="开支类型" name="expense_type_id" rules={[{ required: true, message: '请选择开支类型' }]}>
+              <Form.Item label={t('pr.expense_type_label')} name="expense_type_id" rules={[{ required: true, message: t('validation.select_expense_type') }]}>
                 <Select
                   placeholder="CapEx / OpEx"
                   options={expenseTypes.map((e) => ({ value: e.id, label: e.label_zh }))}
@@ -370,12 +370,12 @@ export function PRNewPage() {
               </Form.Item>
             </Col>
             <Col span={6}>
-              <Form.Item label="采购种类" name="procurement_category_id">
+              <Form.Item label={t('pr.category_label')} name="procurement_category_id">
                 <Select
                   allowClear
                   showSearch
                   optionFilterProp="label"
-                  placeholder="选择采购种类"
+                  placeholder={t('pr.select_category')}
                   options={procCategories.map((c) => ({
                     value: c.id,
                     label: (c.level ?? 1) === 2 ? `  └ ${c.label_zh}` : c.label_zh,

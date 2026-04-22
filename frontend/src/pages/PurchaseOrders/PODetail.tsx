@@ -543,11 +543,11 @@ function InvoiceModal({ open, po, onClose, onDone, busy, setBusy }: ModalProps) 
           }
           if (ex.seller_tax_id) setTaxNumber(ex.seller_tax_id)
           setExtractMsg(
-            `AI 来源: ${ex.raw_extract_source} · 置信度 ${(ex.confidence * 100).toFixed(0)}%`
+            `${t('po.ai_source')}: ${ex.raw_extract_source} · ${t('po.confidence')} ${(ex.confidence * 100).toFixed(0)}%`
           )
         }
       } catch (e) {
-        setExtractMsg(`AI 失败: ${extractError(e).detail}`)
+        setExtractMsg(`${t('po.ai_failed')}: ${extractError(e).detail}`)
       } finally {
         setExtracting(false)
       }
@@ -567,7 +567,7 @@ function InvoiceModal({ open, po, onClose, onDone, busy, setBusy }: ModalProps) 
       return
     }
     if (attachments.length === 0) {
-      void message.error('必须上传至少一份发票文件 / At least one invoice file required')
+      void message.error(t('po.invoice_file_required'))
       return
     }
     try {
@@ -583,7 +583,7 @@ function InvoiceModal({ open, po, onClose, onDone, busy, setBusy }: ModalProps) 
       })
       const warns = result.validations.filter((v) => v.severity === 'warn')
       if (warns.length > 0) {
-        const details = warns.map((w) => `行 ${w.line_no}: ${w.message} (超额 ${w.overage})`).join('; ')
+        const details = warns.map((w) => t('po.line_overage', { line: w.line_no, msg: w.message, overage: w.overage })).join('; ')
         void message.warning(`${t('message.invoice_recorded')} (${warns.length} warnings: ${details})`, 8)
       } else {
         void message.success(t('message.invoice_recorded'))
@@ -601,15 +601,14 @@ function InvoiceModal({ open, po, onClose, onDone, busy, setBusy }: ModalProps) 
       <Form layout="vertical">
         <Row gutter={12}>
           <Col span={24}>
-            <Form.Item label="上传发票文件（PDF / OFD / XML / 图片）— 必需">
+            <Form.Item label={t('po.upload_invoice_label')}>
               <Upload
                 accept=".pdf,.ofd,.xml,.jpg,.jpeg,.png,.tiff"
                 beforeUpload={handleUpload}
                 showUploadList={false}
                 maxCount={1}
               >
-                <Button icon={<UploadOutlined />} loading={extracting}>
-                  选择文件自动识别 / Upload & Extract
+                <Button icon={<UploadOutlined />} loading={extracting}>{t('po.upload_extract')}
                 </Button>
               </Upload>
               {extractMsg && (

@@ -100,7 +100,7 @@ export function SKUPage() {
   const ackAnomaly = async (id: string) => {
     try {
       await api.acknowledgeAnomaly(id)
-      void message.success('已确认')
+      void message.success(t('sku.confirmed'))
       load()
     } catch (e) {
       void message.error(extractError(e).detail)
@@ -109,22 +109,22 @@ export function SKUPage() {
 
   const anomalyCols: ColumnsType<SKUAnomaly> = [
     {
-      title: '物料',
+      title: t('sku.item_col'),
       dataIndex: 'item_id',
       render: (id: string) => itemMap[id]?.name || id.slice(0, 8),
     },
     {
-      title: '基准均价',
+      title: t('sku.benchmark_avg'),
       dataIndex: 'baseline_avg_price',
       align: 'right',
     },
     {
-      title: '本次价格',
+      title: t('sku.this_price'),
       dataIndex: 'observed_price',
       align: 'right',
     },
     {
-      title: '偏离',
+      title: t('sku.deviation'),
       dataIndex: 'deviation_pct',
       render: (v: string) => {
         const n = Number(v)
@@ -137,7 +137,7 @@ export function SKUPage() {
       },
     },
     {
-      title: '严重度',
+      title: t('sku.severity'),
       dataIndex: 'severity',
       render: (v: string) => (
         <Tag color={v === 'critical' ? 'error' : 'warning'} icon={<WarningOutlined />}>
@@ -148,33 +148,32 @@ export function SKUPage() {
     {
       title: '',
       render: (_, r) => (
-        <Button size="small" icon={<CheckOutlined />} onClick={() => ackAnomaly(r.id)}>
-          已知悉
+        <Button size="small" icon={<CheckOutlined />} onClick={() => ackAnomaly(r.id)}>{t('sku.acknowledged')}
         </Button>
       ),
     },
   ]
 
   const priceCols: ColumnsType<SKUPriceRecord> = [
-    { title: '日期', dataIndex: 'quotation_date' },
+    { title: t('sku.date_col'), dataIndex: 'quotation_date' },
     {
-      title: '物料',
+      title: t('sku.item_col'),
       dataIndex: 'item_id',
       render: (id: string) => itemMap[id]?.name || id.slice(0, 8),
     },
     {
-      title: '供应商',
+      title: t('sku.supplier_col'),
       dataIndex: 'supplier_id',
       render: (id: string | null) => (id ? supplierMap[id]?.name : '-'),
     },
     {
-      title: '价格',
+      title: t('sku.price_col'),
       dataIndex: 'price',
       align: 'right',
       render: (v: string, r) => `${r.currency} ${v}`,
     },
     {
-      title: '来源',
+      title: t('sku.source_col'),
       dataIndex: 'source_type',
       render: (v: string) => <Tag>{v}</Tag>,
     },
@@ -182,8 +181,7 @@ export function SKUPage() {
 
   return (
     <Space direction="vertical" size="large" style={{ width: '100%' }}>
-      <Typography.Title level={3} style={{ margin: 0 }}>
-        SKU 行情库
+      <Typography.Title level={3} style={{ margin: 0 }}>{t('sku.title')}
       </Typography.Title>
 
       <Tabs
@@ -191,12 +189,11 @@ export function SKUPage() {
         items={[
           {
             key: 'market',
-            label: <Space><LineChartOutlined />行情分析</Space>,
+            label: <Space><LineChartOutlined />{t('sku.market_analysis_tab')}</Space>,
             children: (
               <Space direction="vertical" size="large" style={{ width: '100%' }}>
                 <div style={{ display: 'flex', justifyContent: 'flex-end' }}>
-                  <Button type="primary" icon={<PlusOutlined />} onClick={() => setRecordOpen(true)}>
-                    录入报价
+                  <Button type="primary" icon={<PlusOutlined />} onClick={() => setRecordOpen(true)}>{t('sku.record_price')}
                   </Button>
                 </div>
 
@@ -204,7 +201,7 @@ export function SKUPage() {
         <Alert
           type="warning"
           showIcon
-          message={`检测到 ${anomalies.length} 条价格异常待处理`}
+          message={t('sku.anomaly_alert', { count: anomalies.length })}
           description={
             <Table<SKUAnomaly>
               rowKey="id"
@@ -218,12 +215,12 @@ export function SKUPage() {
         />
       )}
 
-      <Card title={<Space><LineChartOutlined />选择物料对比价格走势</Space>}>
+      <Card title={<Space><LineChartOutlined />{t('sku.select_to_compare')}</Space>}>
         <Space style={{ marginBottom: 12 }} wrap>
           <Select
             style={{ width: 200 }}
             allowClear
-            placeholder="按分类筛选"
+            placeholder={t('sku.filter_by_category')}
             value={categoryFilter}
             onChange={setCategoryFilter}
             options={categories.map((c) => ({
@@ -234,7 +231,7 @@ export function SKUPage() {
           <Select
             mode="multiple"
             style={{ width: 520 }}
-            placeholder="选择一个或多个 SKU 进行价格走势对比"
+            placeholder={t('sku.select_sku_placeholder')}
             value={selectedItems}
             onChange={setSelectedItems}
             options={items
@@ -257,9 +254,9 @@ export function SKUPage() {
                 <Col key={itemId} xs={24} md={12} lg={8} style={{ marginBottom: 12 }}>
                   <Card size="small" title={name} type="inner">
                     <Row gutter={8}>
-                      <Col span={8}><Statistic title="均价" value={bm.avg_price} valueStyle={{ fontSize: 14 }} /></Col>
-                      <Col span={8}><Statistic title="最低" value={bm.min_price} valueStyle={{ fontSize: 14 }} /></Col>
-                      <Col span={8}><Statistic title="最高" value={bm.max_price} valueStyle={{ fontSize: 14 }} /></Col>
+                      <Col span={8}><Statistic title={t('sku.avg')} value={bm.avg_price} valueStyle={{ fontSize: 14 }} /></Col>
+                      <Col span={8}><Statistic title={t('sku.min')} value={bm.min_price} valueStyle={{ fontSize: 14 }} /></Col>
+                      <Col span={8}><Statistic title={t('sku.max')} value={bm.max_price} valueStyle={{ fontSize: 14 }} /></Col>
                     </Row>
                   </Card>
                 </Col>
@@ -281,7 +278,7 @@ export function SKUPage() {
         <InsightsPanel insights={insights} itemName={itemMap[selectedItems[0]]?.name || ''} />
       )}
 
-      <Card title="近期全部报价">
+      <Card title={t('sku.recent_prices')}>
         <Table<SKUPriceRecord>
           rowKey="id"
           dataSource={prices}
@@ -337,6 +334,7 @@ function PriceTrendChart({
   supplierMap: Record<string, Supplier>
   purchasePoints: { date: string; unit_price: number; po_number: string; supplier_name: string }[]
 }) {
+  const { t } = useTranslation()
   const chartData = useMemo(() => {
     const rows: { date: string; price: number; sku: string }[] = []
     selectedItems.forEach((itemId) => {
@@ -353,7 +351,7 @@ function PriceTrendChart({
   if (selectedItems.length === 0) {
     return (
       <div style={{ marginTop: 24, textAlign: 'center', padding: '40px 0' }}>
-        <Empty description="选择一个或多个 SKU 查看价格走势对比" />
+        <Empty description={t('sku.trend_empty')} />
       </div>
     )
   }
@@ -361,7 +359,7 @@ function PriceTrendChart({
   if (chartData.length === 0) {
     return (
       <div style={{ marginTop: 24, textAlign: 'center', padding: '40px 0' }}>
-        <Empty description="所选 SKU 暂无历史报价数据" />
+        <Empty description={t('sku.no_price_data')} />
       </div>
     )
   }
@@ -371,7 +369,7 @@ function PriceTrendChart({
   return (
     <div style={{ marginTop: 24, minHeight: 360 }}>
       <Typography.Text type="secondary" style={{ display: 'block', marginBottom: 8 }}>
-        价格走势对比（{skuNames.length} 个 SKU）
+        {t('sku.trend_title', { count: skuNames.length })}
       </Typography.Text>
       <svg viewBox={`0 0 800 320`} style={{ width: '100%', maxHeight: 400, border: '1px solid var(--color-border-default, #ddd)', borderRadius: 8, background: 'var(--color-bg-subtle, #fafafa)' }}>
         <ChartContent data={chartData} skuNames={skuNames} width={800} height={320} purchasePoints={purchasePoints} />
@@ -401,6 +399,7 @@ function ChartContent({
   height: number
   purchasePoints: { date: string; unit_price: number; po_number: string; supplier_name: string }[]
 }) {
+  const { t } = useTranslation()
   const padding = { top: 20, right: 20, bottom: 40, left: 60 }
   const plotW = width - padding.left - padding.right
   const plotH = height - padding.top - padding.bottom
@@ -473,7 +472,7 @@ function ChartContent({
         return (
           <g key={`purchase-${i}`}>
             <circle cx={x} cy={y} r={7} fill="#3B82F6" stroke="white" strokeWidth={2} opacity={0.9}>
-              <title>{`★ 采购成交\n${pp.po_number}\n${pp.date}: ¥${Number(pp.unit_price).toLocaleString()}\n${pp.supplier_name}`}</title>
+              <title>{`★ PO ${pp.po_number}\n${pp.date}: ¥${Number(pp.unit_price).toLocaleString()}\n${pp.supplier_name}`}</title>
             </circle>
             <text x={x} y={y - 12} textAnchor="middle" fontSize={9} fill="#3B82F6" fontWeight={600}>
               ★
@@ -486,42 +485,43 @@ function ChartContent({
 }
 
 function InsightsPanel({ insights, itemName }: { insights: SKUInsights; itemName: string }) {
+  const { t } = useTranslation()
   const { purchase_stats: ps, market_stats: ms, supplier_comparison: sc, purchase_history: ph } = insights
 
   const signalMap: Record<string, { color: string; text: string }> = {
-    below_avg: { color: '#22C55E', text: '🟢 低于均价（买入时机）' },
-    above_avg: { color: '#EF4444', text: '🔴 高于均价（建议观望）' },
-    at_avg: { color: '#F59E0B', text: '🟡 接近均价' },
+    below_avg: { color: '#22C55E', text: t('sku.buy_signal_below') },
+    above_avg: { color: '#EF4444', text: t('sku.buy_signal_above') },
+    at_avg: { color: '#F59E0B', text: t('sku.buy_signal_at') },
   }
 
   return (
     <Space direction="vertical" size="middle" style={{ width: '100%' }}>
-      <Card size="small" title={`${itemName} — 价格分析`}>
+      <Card size="small" title={`${itemName} — ${t('sku.price_analysis')}`}>
         <Row gutter={16}>
           <Col span={6}>
-            <Statistic title="采购次数" value={ps.count} suffix="次" />
+            <Statistic title={t('sku.purchase_count')} value={ps.count} suffix={t('sku.times')} />
           </Col>
           <Col span={6}>
-            <Statistic title="采购均价" value={ps.avg_price ?? '-'} prefix="¥" precision={0} />
+            <Statistic title={t('sku.purchase_avg')} value={ps.avg_price ?? '-'} prefix="¥" precision={0} />
           </Col>
           <Col span={6}>
-            <Statistic title="采购中位数" value={ps.median_price ?? '-'} prefix="¥" precision={0} />
+            <Statistic title={t('sku.purchase_median')} value={ps.median_price ?? '-'} prefix="¥" precision={0} />
           </Col>
           <Col span={6}>
-            <Statistic title="采购总额" value={ps.total_amount} prefix="¥" precision={0} />
+            <Statistic title={t('sku.purchase_total')} value={ps.total_amount} prefix="¥" precision={0} />
           </Col>
         </Row>
       </Card>
 
       {ms && (
-        <Card size="small" title="行情信号">
+        <Card size="small" title={t('sku.market_signal')}>
           <Row gutter={16}>
             <Col span={6}>
-              <Statistic title="当前行情" value={ms.current_price} prefix="¥" precision={0} />
+              <Statistic title={t('sku.current_price')} value={ms.current_price} prefix="¥" precision={0} />
             </Col>
             <Col span={6}>
               <Statistic
-                title="vs 均价"
+                title={t('sku.vs_avg')}
                 value={ms.current_vs_avg_pct}
                 suffix="%"
                 precision={1}
@@ -531,7 +531,7 @@ function InsightsPanel({ insights, itemName }: { insights: SKUInsights; itemName
             </Col>
             <Col span={6}>
               <Statistic
-                title="90日波动率"
+                title={t('sku.volatility')}
                 value={ms.volatility_pct}
                 suffix="%"
                 valueStyle={ms.volatility_pct > 15 ? { color: '#EF4444' } : undefined}
@@ -549,7 +549,7 @@ function InsightsPanel({ insights, itemName }: { insights: SKUInsights; itemName
       )}
 
       {sc.length > 0 && (
-        <Card size="small" title="供应商价格对比">
+        <Card size="small" title={t('sku.supplier_comparison')}>
           {sc.map((s) => (
             <div key={s.supplier_name} style={{ display: 'flex', alignItems: 'center', marginBottom: 8, gap: 12 }}>
               <Typography.Text style={{ width: 180, flexShrink: 0 }}>{s.supplier_name}</Typography.Text>
@@ -564,28 +564,28 @@ function InsightsPanel({ insights, itemName }: { insights: SKUInsights; itemName
                 />
               </div>
               <Typography.Text strong style={{ width: 100, textAlign: 'right' }}>¥{s.avg_price.toLocaleString()}</Typography.Text>
-              <Tag>{s.count}次</Tag>
+              <Tag>{s.count} {t('sku.times')}</Tag>
             </div>
           ))}
         </Card>
       )}
 
       {ph.length > 0 && (
-        <Card size="small" title="采购历史明细">
+        <Card size="small" title={t('sku.purchase_history')}>
           <Table
             dataSource={ph}
             rowKey={(r) => `${r.po_number}-${r.date}`}
             size="small"
             pagination={false}
             columns={[
-              { title: '日期', dataIndex: 'date', width: 110 },
-              { title: '供应商', dataIndex: 'supplier_name' },
-              { title: '单价', dataIndex: 'unit_price', align: 'right' as const, render: (v: number) => `¥${v.toLocaleString()}` },
-              { title: '数量', dataIndex: 'qty', align: 'right' as const },
-              { title: '金额', dataIndex: 'amount', align: 'right' as const, render: (v: number) => `¥${v.toLocaleString()}` },
+              { title: t('sku.date_col'), dataIndex: 'date', width: 110 },
+              { title: t('sku.supplier_col'), dataIndex: 'supplier_name' },
+              { title: t('field.unit_price'), dataIndex: 'unit_price', align: 'right' as const, render: (v: number) => `¥${v.toLocaleString()}` },
+              { title: t('field.qty'), dataIndex: 'qty', align: 'right' as const },
+              { title: t('field.amount'), dataIndex: 'amount', align: 'right' as const, render: (v: number) => `¥${v.toLocaleString()}` },
               { title: 'PO', dataIndex: 'po_number' },
               {
-                title: '偏离行情',
+                title: t('sku.deviation'),
                 dataIndex: 'deviation_pct',
                 align: 'right' as const,
                 render: (v: number | null) =>
@@ -616,6 +616,7 @@ function RecordPriceModal({
   onClose: () => void
   onDone: () => void
 }) {
+  const { t } = useTranslation()
   const [form] = Form.useForm()
   const [busy, setBusy] = useState(false)
 
@@ -640,11 +641,11 @@ function RecordPriceModal({
       })
       if (anomaly) {
         void message.warning(
-          `已录入，但检测到价格异常：偏离基准 ${Number(anomaly.deviation_pct).toFixed(2)}%`,
+          t('sku.anomaly_warning', { pct: Number(anomaly.deviation_pct).toFixed(2) }),
           6
         )
       } else {
-        void message.success('价格已录入')
+        void message.success(t('sku.price_recorded'))
       }
       onDone()
     } catch (e) {
@@ -655,16 +656,16 @@ function RecordPriceModal({
   }
 
   return (
-    <Modal title="录入报价" open={open} onCancel={onClose} onOk={submit} confirmLoading={busy} width={560}>
+    <Modal title={t('sku.record_price_title')} open={open} onCancel={onClose} onOk={submit} confirmLoading={busy} width={560}>
       <Form form={form} layout="vertical">
-        <Form.Item name="item_id" label="物料 SKU" rules={[{ required: true }]}>
+        <Form.Item name="item_id" label={t('sku.item_sku_label')} rules={[{ required: true }]}>
           <Select
             showSearch
             optionFilterProp="label"
             options={items.map((i) => ({ value: i.id, label: `${i.code} · ${i.name}` }))}
           />
         </Form.Item>
-        <Form.Item name="supplier_id" label="供应商">
+        <Form.Item name="supplier_id" label={t('field.supplier')}>
           <Select
             allowClear
             showSearch
@@ -674,23 +675,23 @@ function RecordPriceModal({
         </Form.Item>
         <Row gutter={12}>
           <Col span={12}>
-            <Form.Item name="price" label="价格（CNY）" rules={[{ required: true }]}>
+            <Form.Item name="price" label={t('sku.price_cny')} rules={[{ required: true }]}>
               <InputNumber min={0} style={{ width: '100%' }} />
             </Form.Item>
           </Col>
           <Col span={12}>
-            <Form.Item name="quotation_date" label="报价日期" rules={[{ required: true }]}>
+            <Form.Item name="quotation_date" label={t('sku.quotation_date')} rules={[{ required: true }]}>
               <DatePicker style={{ width: '100%' }} />
             </Form.Item>
           </Col>
         </Row>
-        <Form.Item name="source_type" label="来源">
+        <Form.Item name="source_type" label={t('sku.source_type')}>
           <Select
             options={[
-              { value: 'manual', label: '手工录入' },
-              { value: 'quote', label: '供应商报价' },
-              { value: 'actual_po', label: '实际订单' },
-              { value: 'market_research', label: '市场调研' },
+              { value: 'manual', label: t('sku.source_manual') },
+              { value: 'quote', label: t('sku.source_quote') },
+              { value: 'actual_po', label: t('sku.source_actual_po') },
+              { value: 'market_research', label: t('sku.source_market') },
             ]}
           />
         </Form.Item>

@@ -39,15 +39,15 @@ export function PRListPage() {
       <div style={{ padding: 8 }}>
         <Input
           ref={searchInput}
-          placeholder={`搜索${dataIndex}`}
+          placeholder={t('button.search')}
           value={selectedKeys[0]}
           onChange={(e) => setSelectedKeys(e.target.value ? [e.target.value] : [])}
           onPressEnter={() => confirm()}
           style={{ marginBottom: 8, display: 'block' }}
         />
         <Space>
-          <Button type="primary" onClick={() => confirm()} icon={<SearchOutlined />} size="small">搜索</Button>
-          <Button onClick={() => { clearFilters?.(); confirm() }} size="small">重置</Button>
+          <Button type="primary" onClick={() => confirm()} icon={<SearchOutlined />} size="small">{t('button.search')}</Button>
+          <Button onClick={() => { clearFilters?.(); confirm() }} size="small">{t('button.reset')}</Button>
         </Space>
       </div>
     ),
@@ -107,7 +107,7 @@ export function PRListPage() {
         dataSource={rows}
         columns={columns}
         loading={loading}
-        pagination={{ pageSize: 20, showSizeChanger: true, showTotal: (total) => `共 ${total} 条` }}
+        pagination={{ pageSize: 20, showSizeChanger: true, showTotal: (total) => t('item.total_count', { total }) }}
         size="small"
       />
     </Space>

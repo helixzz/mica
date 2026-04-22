@@ -159,17 +159,14 @@ export function PRDetailPage() {
           )}
           {canSupplementQuote && hasIncompleteItems && (
             <>
-              <Button type="primary" onClick={() => navigate(`/purchase-requisitions/${pr.id}/edit`)}>
-                补充报价（供应商+价格）
+              <Button type="primary" onClick={() => navigate(`/purchase-requisitions/${pr.id}/edit`)}>{t('pr.supplement_quote')}
               </Button>
-              <Typography.Text type="warning" style={{ fontSize: 12 }}>
-                部分明细行缺少供应商或价格，请先补充后再转 PO
+              <Typography.Text type="warning" style={{ fontSize: 12 }}>{t('pr.incomplete_items_warning')}
               </Typography.Text>
             </>
           )}
           {canSupplementQuote && !hasIncompleteItems && (
-            <Button onClick={() => navigate(`/purchase-requisitions/${pr.id}/edit`)}>
-              修改报价
+            <Button onClick={() => navigate(`/purchase-requisitions/${pr.id}/edit`)}>{t('pr.modify_quote')}
             </Button>
           )}
         </Space>
@@ -243,7 +240,7 @@ export function PRDetailPage() {
             )}
             {canSupplementQuote && hasIncompleteItems && (
               <Button type="primary" onClick={() => navigate(`/purchase-requisitions/${pr.id}/edit`)} block>
-                {t('pr.supplement_quote') || '补充报价'}
+                {t('pr.supplement_quote')}
               </Button>
             )}
           </Space>

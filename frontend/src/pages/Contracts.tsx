@@ -53,8 +53,8 @@ export function ContractsPage() {
 
       <Card>
         <Input.Search
-          placeholder="搜索合同标题 / 编号 / 扫描件 OCR 文本"
-          enterButton={<Button icon={<SearchOutlined />} type="primary">检索</Button>}
+          placeholder={t('contract.search_placeholder')}
+          enterButton={<Button icon={<SearchOutlined />} type="primary">{t('contract.search_btn')}</Button>}
           value={query}
           onChange={(e) => setQuery(e.target.value)}
           onSearch={doSearch}
@@ -69,24 +69,24 @@ export function ContractsPage() {
             size="small"
             columns={[
               {
-                title: '合同号',
+                title: t('field.contract_number'),
                 dataIndex: 'contract_number',
                 render: (v, r) => <Link to={`/contracts/${r.id}`}>{v}</Link>,
               },
-              { title: '标题', dataIndex: 'title' },
+              { title: t('field.title'), dataIndex: 'title' },
               {
-                title: '匹配位置',
+                title: t('contract.match_col'),
                 dataIndex: 'matched_in',
                 render: (v: string[]) => v.map((m, i) => <Tag key={i}>{m.slice(0, 60)}</Tag>),
               },
-              { title: '到期日', dataIndex: 'expiry_date' },
+              { title: t('field.expiry_date'), dataIndex: 'expiry_date' },
             ]}
           />
         )}
       </Card>
 
       {expiring.length > 0 && (
-        <Card title={`30 天内到期的合同（${expiring.length}）`} style={{ background: '#fff7e6', borderColor: '#ffd591' }}>
+        <Card title={t('contract.expiring_title', { count: expiring.length })} style={{ background: '#fff7e6', borderColor: '#ffd591' }}>
           <Table
             rowKey="id"
             dataSource={expiring}
@@ -94,19 +94,19 @@ export function ContractsPage() {
             size="small"
             columns={[
               {
-                title: '合同号',
+                title: t('field.contract_number'),
                 dataIndex: 'contract_number',
                 render: (v, r) => <Link to={`/contracts/${r.id}`}>{v}</Link>,
               },
-              { title: '标题', dataIndex: 'title' },
-              { title: '到期日', dataIndex: 'expiry_date' },
-              { title: '金额', render: (_, r) => `${r.currency} ${r.total_amount}`, align: 'right' },
+              { title: t('field.title'), dataIndex: 'title' },
+              { title: t('field.expiry_date'), dataIndex: 'expiry_date' },
+              { title: t('field.amount'), render: (_, r) => `${r.currency} ${r.total_amount}`, align: 'right' },
             ]}
           />
         </Card>
       )}
 
-      <Card title="全部合同">
+      <Card title={t('contract.all_title')}>
         <Table<Contract> rowKey="id" dataSource={rows} columns={columns} loading={loading} pagination={{ pageSize: 20 }} />
       </Card>
     </Space>

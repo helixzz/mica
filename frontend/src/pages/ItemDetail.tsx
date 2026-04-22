@@ -1,9 +1,11 @@
 import { Button, Card, Descriptions, Space, Tag, Typography } from 'antd'
 import { useEffect, useState } from 'react'
+import { useTranslation } from 'react-i18next'
 import { useNavigate, useParams } from 'react-router-dom'
 import { api, type Item } from '@/api'
 
 export default function ItemDetailPage() {
+  const { t } = useTranslation()
   const { id } = useParams<{ id: string }>()
   const navigate = useNavigate()
   const [item, setItem] = useState<Item | null>(null)
@@ -15,22 +17,22 @@ export default function ItemDetailPage() {
     })
   }, [id])
 
-  if (!item) return <div>加载中...</div>
+  if (!item) return <div>{t('message.loading')}</div>
 
   return (
     <Space direction="vertical" size="large" style={{ width: '100%' }}>
       <div style={{ display: 'flex', justifyContent: 'space-between' }}>
         <Typography.Title level={3} style={{ margin: 0 }}>{item.name}</Typography.Title>
-        <Button onClick={() => navigate('/sku')}>返回 SKU 行情库</Button>
+        <Button onClick={() => navigate('/sku')}>{t('supplier.back_to_sku')}</Button>
       </div>
       <Card>
         <Descriptions bordered size="small" column={2}>
-          <Descriptions.Item label="编码">{item.code}</Descriptions.Item>
-          <Descriptions.Item label="名称">{item.name}</Descriptions.Item>
-          <Descriptions.Item label="分类">{item.category || '-'}</Descriptions.Item>
-          <Descriptions.Item label="单位">{item.uom}</Descriptions.Item>
-          <Descriptions.Item label="规格" span={2}>{item.specification || '-'}</Descriptions.Item>
-          <Descriptions.Item label="状态"><Tag color={item.is_active !== false ? 'success' : 'default'}>{item.is_active !== false ? '启用' : '停用'}</Tag></Descriptions.Item>
+          <Descriptions.Item label={t('item.code')}>{item.code}</Descriptions.Item>
+          <Descriptions.Item label={t('field.item_name')}>{item.name}</Descriptions.Item>
+          <Descriptions.Item label={t('item.category_label')}>{item.category || '-'}</Descriptions.Item>
+          <Descriptions.Item label={t('field.uom')}>{item.uom}</Descriptions.Item>
+          <Descriptions.Item label={t('field.specification')} span={2}>{item.specification || '-'}</Descriptions.Item>
+          <Descriptions.Item label={t('field.status')}><Tag color={item.is_active !== false ? 'success' : 'default'}>{item.is_active !== false ? t('item.active') : t('item.inactive')}</Tag></Descriptions.Item>
         </Descriptions>
       </Card>
     </Space>

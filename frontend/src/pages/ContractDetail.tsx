@@ -102,9 +102,9 @@ export function ContractDetailPage() {
       const doc = await api.uploadDocument(file, 'contract')
       const res = await api.attachContractDocument(id, doc.id, true)
       if (res.ocr_chars > 0) {
-        void message.success(`附件已上传 · OCR 提取 ${res.ocr_chars} 字符`)
+        void message.success(t('contract.attachment_uploaded_ocr', { chars: res.ocr_chars }))
       } else {
-        void message.success('附件已上传（无 OCR 文本）')
+        void message.success(t('contract.attachment_uploaded'))
       }
       void load()
     } catch (e) {
@@ -144,7 +144,7 @@ export function ContractDetailPage() {
         trigger_description: item.trigger_description,
       }))
       await api.createPaymentSchedule(id, items)
-      void message.success('付款计划已保存')
+      void message.success(t('contract.schedule_saved'))
       setDrawerOpen(false)
       form.resetFields()
       void loadSchedule()
@@ -156,16 +156,16 @@ export function ContractDetailPage() {
   const handleExecute = (item: PaymentScheduleItem) => {
     if (!id) return
     Modal.confirm({
-      title: `执行付款: ${item.label}`,
-      content: `确认支付 ¥${item.planned_amount}？`,
-      okText: '确认执行',
-      cancelText: '取消',
+      title: t('contract.execute_title', { name: item.label }),
+      content: t('contract.confirm_execute', { amount: item.planned_amount }),
+      okText: t('contract.confirm_execute_ok'),
+      cancelText: t('button.cancel'),
       onOk: async () => {
         try {
           await api.executeScheduleItem(id, item.installment_no, {
             payment_method: 'bank_transfer',
           })
-          void message.success('付款已执行')
+          void message.success(t('contract.payment_executed'))
           void loadSchedule()
         } catch (e) {
           void message.error(extractError(e).detail)
@@ -177,15 +177,15 @@ export function ContractDetailPage() {
   const handleDelete = (item: PaymentScheduleItem) => {
     if (!id) return
     Modal.confirm({
-      title: `删除计划: ${item.label}`,
-      content: '确认删除该期付款计划？',
-      okText: '删除',
+      title: t('contract.delete_title', { name: item.label }),
+      content: t('contract.confirm_delete_schedule'),
+      okText: t('button.delete'),
       okType: 'danger',
-      cancelText: '取消',
+      cancelText: t('button.cancel'),
       onOk: async () => {
         try {
           await api.deleteScheduleItem(id, item.installment_no)
-          void message.success('已删除')
+          void message.success(t('message.deleted'))
           void loadSchedule()
         } catch (e) {
           void message.error(extractError(e).detail)
@@ -197,10 +197,10 @@ export function ContractDetailPage() {
   if (!contract) return <div>{t('message.loading')}</div>
 
   const scheduleColumns: ColumnsType<PaymentScheduleItem> = [
-    { title: '期次', dataIndex: 'installment_no', width: 60 },
-    { title: '名称', dataIndex: 'label' },
+    { title: t('field.installment_no'), dataIndex: 'installment_no', width: 60 },
+    { title: t('contract.installment_label'), dataIndex: 'label' },
     {
-      title: '触发条件',
+      title: t('contract.trigger_type'),
       dataIndex: 'trigger_type',
       render: (v: string, r) => (
         <Space direction="vertical" size={0}>
@@ -214,30 +214,30 @@ export function ContractDetailPage() {
       ),
     },
     {
-      title: '计划日期',
+      title: t('contract.planned_date'),
       dataIndex: 'planned_date',
       render: (v: string | null) => v || '-',
     },
     {
-      title: '计划金额',
+      title: t('contract.planned_amount'),
       dataIndex: 'planned_amount',
       align: 'right' as const,
       render: (v: string) => `¥${Number(v).toLocaleString()}`,
     },
     {
-      title: '状态',
+      title: t('field.status'),
       dataIndex: 'status',
       render: (v: string) => <StatusTag status={v} />,
     },
     {
-      title: '实际金额',
+      title: t('field.amount'),
       dataIndex: 'actual_amount',
       align: 'right' as const,
       render: (v: string | null) => (v ? `¥${Number(v).toLocaleString()}` : '-'),
     },
-    { title: '实际日期', dataIndex: 'actual_date', render: (v: string | null) => v || '-' },
+    { title: t('field.actual_date'), dataIndex: 'actual_date', render: (v: string | null) => v || '-' },
     {
-      title: '操作',
+      title: t('common.actions'),
       key: 'actions',
       width: 150,
       render: (_: unknown, record: PaymentScheduleItem) => (
@@ -249,8 +249,7 @@ export function ContractDetailPage() {
                 type="primary"
                 icon={<SendOutlined />}
                 onClick={() => handleExecute(record)}
-              >
-                执行
+              >{t('contract.execute')}
               </Button>
               <Button
                 size="small"
@@ -269,7 +268,7 @@ export function ContractDetailPage() {
   const tabItems = [
     {
       key: 'info',
-      label: '基本信息',
+      label: t('contract.basic_info'),
       children: (
         <Space direction="vertical" size="large" style={{ width: '100%' }}>
           <Card>
@@ -287,7 +286,7 @@ export function ContractDetailPage() {
               <Descriptions.Item label={t('field.expiry_date')}>
                 {contract.expiry_date || '-'}
               </Descriptions.Item>
-              <Descriptions.Item label="版本">v{contract.current_version}</Descriptions.Item>
+              <Descriptions.Item label={t('contract.version')}>v{contract.current_version}</Descriptions.Item>
               {contract.notes && (
                 <Descriptions.Item label={t('field.notes')} span={2}>
                   {contract.notes}
@@ -297,7 +296,7 @@ export function ContractDetailPage() {
           </Card>
 
           <Card
-            title="合同扫描件归档"
+            title={t('contract.scan_archive')}
             extra={
               <Upload
                 accept=".pdf,.ofd,.xml,.jpg,.jpeg,.png,.tiff"
@@ -305,8 +304,7 @@ export function ContractDetailPage() {
                 showUploadList={false}
                 maxCount={1}
               >
-                <Button type="primary" icon={<UploadOutlined />} loading={uploading}>
-                  上传扫描件（自动 OCR）
+                <Button type="primary" icon={<UploadOutlined />} loading={uploading}>{t('contract.upload_scan')}
                 </Button>
               </Upload>
             }
@@ -323,7 +321,7 @@ export function ContractDetailPage() {
                         </Typography.Text>
                         <Space>
                           <Tag color={a.has_ocr ? 'success' : 'default'}>
-                            OCR {a.has_ocr ? `${a.ocr_chars} chars` : '无'}
+                            OCR {a.has_ocr ? `${a.ocr_chars} chars` : '-'}
                           </Tag>
                           <Tag>{a.role}</Tag>
                         </Space>
@@ -332,8 +330,7 @@ export function ContractDetailPage() {
                           icon={<DownloadOutlined />}
                           onClick={() => download(a.document_id, a.original_filename)}
                           block
-                        >
-                          下载
+                        >{t('common.download')}
                         </Button>
                       </Space>
                     </Card>
@@ -342,7 +339,7 @@ export function ContractDetailPage() {
               </Row>
             ) : (
               <Typography.Text type="secondary">
-                暂无扫描件。点击右上角上传 PDF / OFD / XML / 图片，系统会自动 OCR 识别便于后续全文检索。
+                {t('contract.upload_hint')}
               </Typography.Text>
             )}
           </Card>
@@ -353,10 +350,9 @@ export function ContractDetailPage() {
       key: 'schedule',
       label: (
         <Space>
-          <ClockCircleOutlined />
-          付款计划
+          <ClockCircleOutlined />{t('contract.payment_schedule')}
           {schedule && schedule.items.length > 0 && (
-            <Tag>{schedule.items.length} 期</Tag>
+            <Tag>{t('contract.installments_count', { count: schedule.items.length })}</Tag>
           )}
         </Space>
       ),
@@ -367,7 +363,7 @@ export function ContractDetailPage() {
               <Row gutter={16}>
                 <Col span={6}>
                   <Statistic
-                    title="合同总额"
+                    title={t('contract.contract_total')}
                     value={Number(schedule.contract_total)}
                     prefix="¥"
                     precision={2}
@@ -375,7 +371,7 @@ export function ContractDetailPage() {
                 </Col>
                 <Col span={6}>
                   <Statistic
-                    title="计划总额"
+                    title={t('contract.planned_total')}
                     value={Number(schedule.planned_total)}
                     prefix="¥"
                     precision={2}
@@ -384,7 +380,7 @@ export function ContractDetailPage() {
                 </Col>
                 <Col span={6}>
                   <Statistic
-                    title="已付总额"
+                    title={t('contract.paid_total')}
                     value={Number(schedule.paid_total)}
                     prefix="¥"
                     precision={2}
@@ -393,7 +389,7 @@ export function ContractDetailPage() {
                 </Col>
                 <Col span={6}>
                   <Statistic
-                    title="待付余额"
+                    title={t('contract.remaining')}
                     value={Number(schedule.remaining)}
                     prefix="¥"
                     precision={2}
@@ -403,8 +399,8 @@ export function ContractDetailPage() {
               {schedule.total_mismatch && (
                 <Alert
                   type="warning"
-                  message="计划总额与合同总额不一致"
-                  description={`合同总额 ¥${Number(schedule.contract_total).toLocaleString()}，计划总额 ¥${Number(schedule.planned_total).toLocaleString()}`}
+                  message={t('contract.mismatch_warning')}
+                  description={`${t('contract.contract_total')} ¥${Number(schedule.contract_total).toLocaleString()} / ${t('contract.planned_total')} ¥${Number(schedule.planned_total).toLocaleString()}`}
                   showIcon
                 />
               )}
@@ -412,7 +408,7 @@ export function ContractDetailPage() {
           )}
 
           <Card
-            title="付款明细"
+            title={t('contract.schedule_details')}
             extra={
               <Button
                 type="primary"
@@ -423,8 +419,7 @@ export function ContractDetailPage() {
                   })
                   setDrawerOpen(true)
                 }}
-              >
-                新建付款计划
+              >{t('contract.new_schedule')}
               </Button>
             }
           >
@@ -435,7 +430,7 @@ export function ContractDetailPage() {
               loading={scheduleLoading}
               pagination={false}
               size="small"
-              locale={{ emptyText: '暂无付款计划。点击右上角"新建付款计划"开始创建。' }}
+              locale={{ emptyText: t('contract.no_schedule_hint') }}
             />
           </Card>
         </Space>
@@ -458,15 +453,14 @@ export function ContractDetailPage() {
       <Tabs items={tabItems} defaultActiveKey="info" />
 
       <Drawer
-        title="新建付款计划"
+        title={t('contract.new_schedule')}
         width={640}
         open={drawerOpen}
         onClose={() => setDrawerOpen(false)}
         footer={
           <Space style={{ float: 'right' }}>
-            <Button onClick={() => setDrawerOpen(false)}>取消</Button>
-            <Button type="primary" onClick={() => form.submit()}>
-              保存
+            <Button onClick={() => setDrawerOpen(false)}>{t('button.cancel')}</Button>
+            <Button type="primary" onClick={() => form.submit()}>{t('button.save')}
             </Button>
           </Space>
         }
@@ -475,8 +469,8 @@ export function ContractDetailPage() {
           type="info"
           showIcon
           style={{ marginBottom: 16 }}
-          message="各期计划金额之和应等于合同总额"
-          description={`当前合同总额: ¥${Number(contract.total_amount).toLocaleString()}`}
+          message={t('contract.plan_amount_hint')}
+          description={t('contract.current_total_hint', { amount: Number(contract.total_amount).toLocaleString() })}
         />
         <Form form={form} onFinish={handleAddSchedule} layout="vertical">
           <Form.List name="items">
@@ -486,11 +480,10 @@ export function ContractDetailPage() {
                   <Card
                     key={field.key}
                     size="small"
-                    title={`第 ${idx + 1} 期`}
+                    title={t('contract.installment_n', { n: idx + 1 })}
                     extra={
                       fields.length > 1 && (
-                        <Button size="small" danger onClick={() => remove(field.name)}>
-                          删除
+                        <Button size="small" danger onClick={() => remove(field.name)}>{t('button.delete')}
                         </Button>
                       )
                     }
@@ -501,17 +494,17 @@ export function ContractDetailPage() {
                         <Form.Item
                           {...field}
                           name={[field.name, 'label']}
-                          label="名称"
+                          label={t('contract.installment_label')}
                           rules={[{ required: true }]}
                         >
-                          <Input placeholder="首付30% / 验收款 / 质保金" />
+                          <Input placeholder={t('contract.label_placeholder')} />
                         </Form.Item>
                       </Col>
                       <Col span={12}>
                         <Form.Item
                           {...field}
                           name={[field.name, 'planned_amount']}
-                          label="计划金额"
+                          label={t('contract.planned_amount')}
                           rules={[{ required: true }]}
                         >
                           <InputNumber
@@ -528,7 +521,7 @@ export function ContractDetailPage() {
                         <Form.Item
                           {...field}
                           name={[field.name, 'planned_date']}
-                          label="计划日期"
+                          label={t('contract.planned_date')}
                         >
                           <DatePicker style={{ width: '100%' }} />
                         </Form.Item>
@@ -537,15 +530,15 @@ export function ContractDetailPage() {
                         <Form.Item
                           {...field}
                           name={[field.name, 'trigger_type']}
-                          label="触发条件"
+                          label={t('contract.trigger_type')}
                           initialValue="fixed_date"
                         >
                           <Select
                             options={[
-                              { value: 'fixed_date', label: '固定日期' },
-                              { value: 'milestone', label: '里程碑' },
-                              { value: 'invoice_received', label: '收到发票后' },
-                              { value: 'acceptance', label: '验收合格后' },
+                              { value: 'fixed_date', label: t('contract.trigger_fixed_date') },
+                              { value: 'milestone', label: t('contract.trigger_milestone') },
+                              { value: 'invoice_received', label: t('contract.trigger_invoice') },
+                              { value: 'acceptance', label: t('contract.trigger_acceptance') },
                             ]}
                           />
                         </Form.Item>
@@ -554,14 +547,13 @@ export function ContractDetailPage() {
                     <Form.Item
                       {...field}
                       name={[field.name, 'trigger_description']}
-                      label="条件说明（可选）"
+                      label={t('contract.trigger_desc')}
                     >
-                      <Input placeholder="如：设备安装调试完成 / 质保期满 12 个月" />
+                      <Input placeholder={t('contract.trigger_desc_placeholder')} />
                     </Form.Item>
                   </Card>
                 ))}
-                <Button type="dashed" onClick={() => add()} block icon={<PlusOutlined />}>
-                  添加一期
+                <Button type="dashed" onClick={() => add()} block icon={<PlusOutlined />}>{t('contract.add_installment')}
                 </Button>
               </>
             )}
