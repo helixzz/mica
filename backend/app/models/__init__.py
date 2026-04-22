@@ -34,6 +34,7 @@ JSONValue = Any
 
 class UserRole(StrEnum):
     ADMIN = "admin"
+    REQUESTER = "requester"
     IT_BUYER = "it_buyer"
     DEPT_MANAGER = "dept_manager"
     FINANCE_AUDITOR = "finance_auditor"
@@ -347,8 +348,8 @@ class PRItem(Base, TimestampMixin):
     )
     qty: Mapped[Decimal] = mapped_column(Numeric(18, 4), nullable=False)
     uom: Mapped[str] = mapped_column(String(16), default="EA", nullable=False)
-    unit_price: Mapped[Decimal] = mapped_column(
-        Numeric(18, 4), default=Decimal("0"), nullable=False
+    unit_price: Mapped[Decimal | None] = mapped_column(
+        Numeric(18, 4), default=Decimal("0"), nullable=True
     )
     amount: Mapped[Decimal] = mapped_column(Numeric(18, 4), default=Decimal("0"), nullable=False)
 
