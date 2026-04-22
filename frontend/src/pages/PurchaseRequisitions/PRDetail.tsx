@@ -15,6 +15,7 @@ import { useNavigate, useParams } from 'react-router-dom'
 
 import { api, type PurchaseRequisition, type Supplier } from '@/api'
 import { extractError } from '@/api/client'
+import { fmtPrice } from '@/utils/format'
 import { useAuth } from '@/auth/useAuth'
 
 const statusColors: Record<string, string> = {
@@ -176,7 +177,7 @@ export function PRDetailPage() {
         <Descriptions bordered size="small" column={2}>
           <Descriptions.Item label={t('field.title')}>{pr.title}</Descriptions.Item>
           <Descriptions.Item label={t('field.total_amount')}>
-            {pr.currency} {pr.total_amount}
+            {fmtPrice(pr.total_amount, pr.currency + ' ')}
           </Descriptions.Item>
           <Descriptions.Item label={t('field.business_reason')} span={2}>
             {pr.business_reason || '-'}

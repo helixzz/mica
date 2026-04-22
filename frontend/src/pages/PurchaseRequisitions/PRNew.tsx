@@ -422,7 +422,7 @@ export function PRNewPage() {
                 <strong>{t('field.total_amount')}</strong>
               </Table.Summary.Cell>
               <Table.Summary.Cell index={1} align="right">
-                <strong>{total.toFixed(2)}</strong>
+                <strong>{total > 0 ? `¥${total.toLocaleString(undefined, { maximumFractionDigits: 2 })}` : '-'}</strong>
               </Table.Summary.Cell>
               <Table.Summary.Cell index={2} />
             </Table.Summary.Row>
