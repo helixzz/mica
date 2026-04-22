@@ -35,27 +35,27 @@ export async function listNotifications(opts: ListNotificationsParams = {}): Pro
   if (opts.before_id) params.append('before_id', opts.before_id);
 
   const qs = params.toString();
-  const url = `/api/v1/notifications${qs ? `?${qs}` : ''}`;
+  const url = `/notifications${qs ? `?${qs}` : ''}`;
   const res = await client.get(url);
   return res.data;
 }
 
 export async function getUnreadCount(): Promise<{ total: number; by_category: Record<string, number> }> {
-  const res = await client.get('/api/v1/notifications/unread-count');
+  const res = await client.get('/notifications/unread-count');
   return res.data;
 }
 
 export async function markRead(params: { ids?: string[]; all?: boolean }): Promise<{ updated: number }> {
-  const res = await client.post('/api/v1/notifications/mark-read', params);
+  const res = await client.post('/notifications/mark-read', params);
   return res.data;
 }
 
 export async function getSubscriptions(): Promise<NotificationSubscription[]> {
-  const res = await client.get('/api/v1/notifications/subscriptions');
+  const res = await client.get('/notifications/subscriptions');
   return res.data;
 }
 
 export async function updateSubscription(category: string, payload: { in_app_enabled: boolean; email_enabled: boolean }): Promise<NotificationSubscription> {
-  const res = await client.put(`/api/v1/notifications/subscriptions/${category}`, payload);
+  const res = await client.put(`/notifications/subscriptions/${category}`, payload);
   return res.data;
 }
