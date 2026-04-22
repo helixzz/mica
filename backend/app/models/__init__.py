@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 # pyright: reportUnannotatedClassAttribute=false, reportAny=false, reportExplicitAny=false, reportUnknownLambdaType=false, reportUnknownMemberType=false, reportUnknownVariableType=false, reportUnknownArgumentType=false, reportDeprecated=false
-from datetime import date, datetime
+from datetime import UTC, date, datetime
 from decimal import Decimal
 from enum import StrEnum
 from typing import Any
@@ -1104,3 +1104,104 @@ class ApproverDelegation(Base, TimestampMixin):
         Index("ix_approver_delegations_from_user", "from_user_id"),
         Index("ix_approver_delegations_to_user", "to_user_id"),
     )
+
+
+class RFQStatus(StrEnum):
+    DRAFT = "draft"
+    SENT = "sent"
+    QUOTING = "quoting"
+    EVALUATION = "evaluation"
+    AWARDED = "awarded"
+    CLOSED = "closed"
+    CANCELLED = "cancelled"
+
+
+class RFQ(Base, TimestampMixin):
+    __tablename__ = "rfqs"
+
+    id: Mapped[UUID] = mapped_column(PGUUID(as_uuid=True), primary_key=True, default=new_uuid)
+    rfq_number: Mapped[str] = mapped_column(String(32), unique=True, nullable=False)
+    title: Mapped[str] = mapped_column(String(255), nullable=False)
+    status: Mapped[str] = mapped_column(String(32), default=RFQStatus.DRAFT.value, nullable=False)
+    pr_id: Mapped[UUID | None] = mapped_column(
+        PGUUID(as_uuid=True), ForeignKey("purchase_requisitions.id", ondelete="SET NULL")
+    )
+    deadline: Mapped[date | None] = mapped_column(Date)
+    notes: Mapped[str | None] = mapped_column(Text)
+    created_by_id: Mapped[UUID] = mapped_column(
+        PGUUID(as_uuid=True), ForeignKey("users.id"), nullable=False
+    )
+    company_id: Mapped[UUID] = mapped_column(
+        PGUUID(as_uuid=True), ForeignKey("companies.id"), nullable=False
+    )
+    awarded_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+
+    items: Mapped[list[RFQItem]] = relationship(back_populates="rfq", cascade="all, delete-orphan")
+    suppliers: Mapped[list[RFQSupplier]] = relationship(
+        back_populates="rfq", cascade="all, delete-orphan"
+    )
+    quotes: Mapped[list[RFQQuote]] = relationship(
+        back_populates="rfq", cascade="all, delete-orphan"
+    )
+    created_by: Mapped[User] = relationship()
+
+
+class RFQItem(Base, TimestampMixin):
+    __tablename__ = "rfq_items"
+
+    id: Mapped[UUID] = mapped_column(PGUUID(as_uuid=True), primary_key=True, default=new_uuid)
+    rfq_id: Mapped[UUID] = mapped_column(
+        PGUUID(as_uuid=True), ForeignKey("rfqs.id", ondelete="CASCADE"), nullable=False
+    )
+    item_id: Mapped[UUID | None] = mapped_column(PGUUID(as_uuid=True), ForeignKey("items.id"))
+    item_name: Mapped[str] = mapped_column(String(255), nullable=False)
+    specification: Mapped[str | None] = mapped_column(Text)
+    qty: Mapped[Decimal] = mapped_column(Numeric(18, 4), nullable=False)
+    uom: Mapped[str] = mapped_column(String(16), default="EA", nullable=False)
+
+    rfq: Mapped[RFQ] = relationship(back_populates="items")
+
+
+class RFQSupplier(Base, TimestampMixin):
+    __tablename__ = "rfq_suppliers"
+
+    id: Mapped[UUID] = mapped_column(PGUUID(as_uuid=True), primary_key=True, default=new_uuid)
+    rfq_id: Mapped[UUID] = mapped_column(
+        PGUUID(as_uuid=True), ForeignKey("rfqs.id", ondelete="CASCADE"), nullable=False
+    )
+    supplier_id: Mapped[UUID] = mapped_column(
+        PGUUID(as_uuid=True), ForeignKey("suppliers.id"), nullable=False
+    )
+    status: Mapped[str] = mapped_column(String(32), default="invited", nullable=False)
+    invited_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), default=lambda: datetime.now(UTC)
+    )
+    responded_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+
+    rfq: Mapped[RFQ] = relationship(back_populates="suppliers")
+    supplier: Mapped[Supplier] = relationship()
+
+
+class RFQQuote(Base, TimestampMixin):
+    __tablename__ = "rfq_quotes"
+
+    id: Mapped[UUID] = mapped_column(PGUUID(as_uuid=True), primary_key=True, default=new_uuid)
+    rfq_id: Mapped[UUID] = mapped_column(
+        PGUUID(as_uuid=True), ForeignKey("rfqs.id", ondelete="CASCADE"), nullable=False
+    )
+    rfq_item_id: Mapped[UUID] = mapped_column(
+        PGUUID(as_uuid=True), ForeignKey("rfq_items.id", ondelete="CASCADE"), nullable=False
+    )
+    supplier_id: Mapped[UUID] = mapped_column(
+        PGUUID(as_uuid=True), ForeignKey("suppliers.id"), nullable=False
+    )
+    unit_price: Mapped[Decimal] = mapped_column(Numeric(18, 4), nullable=False)
+    currency: Mapped[str] = mapped_column(String(3), default="CNY", nullable=False)
+    delivery_days: Mapped[int | None] = mapped_column(Integer)
+    valid_until: Mapped[date | None] = mapped_column(Date)
+    notes: Mapped[str | None] = mapped_column(Text)
+    is_selected: Mapped[bool] = mapped_column(default=False, nullable=False)
+
+    rfq: Mapped[RFQ] = relationship(back_populates="quotes")
+    rfq_item: Mapped[RFQItem] = relationship()
+    supplier: Mapped[Supplier] = relationship()

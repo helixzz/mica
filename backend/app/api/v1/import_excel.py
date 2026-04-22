@@ -11,7 +11,7 @@ from openpyxl import load_workbook
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.core.security import require_roles
+from app.core.security import CurrentUser, require_roles
 from app.db import get_db, new_uuid
 from app.models import Item, SKUPriceRecord, Supplier
 
@@ -171,3 +171,63 @@ async def import_prices(
 
     await db.commit()
     return {"created": created, "errors": errors}
+
+
+@router.get("/admin/import/template/{kind}", tags=["import"])
+async def download_template(
+    kind: str,
+    _user: CurrentUser,
+):
+    from fastapi.responses import StreamingResponse
+    from openpyxl import Workbook
+
+    templates = {
+        "suppliers": {
+            "filename": "供应商导入模板.xlsx",
+            "headers": ["name", "code", "contact_name", "contact_phone", "contact_email"],
+            "headers_zh": ["名称（必填）", "编码", "联系人", "电话", "邮箱"],
+            "sample": ["戴尔（中国）有限公司", "DELL-CN", "张三", "13800138000", "zhang@dell.com"],
+        },
+        "items": {
+            "filename": "物料导入模板.xlsx",
+            "headers": ["code", "name", "category", "uom", "specification"],
+            "headers_zh": ["编码（必填）", "名称（必填）", "分类", "单位", "规格"],
+            "sample": ["SRV-MEM-128GB", "128GB RDIMM DDR5", "memory", "EA", "128GB 2Rx4 DDR5-6400"],
+        },
+        "prices": {
+            "filename": "报价导入模板.xlsx",
+            "headers": ["item_code", "price", "date", "supplier", "currency"],
+            "headers_zh": [
+                "物料编码（必填）",
+                "价格（必填）",
+                "日期(YYYY-MM-DD)",
+                "供应商名",
+                "币种",
+            ],
+            "sample": ["SRV-MEM-96GB", "3200", "2026-04-22", "戴尔（中国）有限公司", "CNY"],
+        },
+    }
+    tpl = templates.get(kind)
+    if not tpl:
+        from fastapi import HTTPException
+
+        raise HTTPException(404, "template.not_found")
+
+    wb = Workbook()
+    ws = wb.active
+    ws.title = "数据"
+    for col, (_h, hz) in enumerate(zip(tpl["headers"], tpl["headers_zh"], strict=True), 1):
+        cell = ws.cell(row=1, column=col, value=hz)
+        cell.font = cell.font.copy(bold=True)
+    for col, val in enumerate(tpl["sample"], 1):
+        ws.cell(row=2, column=col, value=val)
+
+    buf = io.BytesIO()
+    wb.save(buf)
+    buf.seek(0)
+
+    return StreamingResponse(
+        buf,
+        media_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+        headers={"Content-Disposition": f'attachment; filename="{tpl["filename"]}"'},
+    )

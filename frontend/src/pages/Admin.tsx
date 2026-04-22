@@ -542,20 +542,23 @@ function ImportTab() {
     {
       key: 'suppliers',
       title: '导入供应商',
-      desc: 'Excel 列：name（名称）、code（编码）、contact_name（联系人）、contact_phone（电话）、contact_email（邮箱）',
+      desc: 'Excel 列：名称（必填）、编码、联系人、电话、邮箱',
       endpoint: '/admin/import/suppliers',
+      templateKind: 'suppliers',
     },
     {
       key: 'items',
       title: '导入物料 / SKU',
-      desc: 'Excel 列：code（编码）、name（名称）、category（分类）、uom（单位）、specification（规格）',
+      desc: 'Excel 列：编码（必填）、名称（必填）、分类、单位、规格',
       endpoint: '/admin/import/items',
+      templateKind: 'items',
     },
     {
       key: 'prices',
       title: '导入报价 / 行情',
-      desc: 'Excel 列：item_code（物料编码）、price（价格）、date（日期 YYYY-MM-DD）、supplier（供应商名）、currency（币种）',
+      desc: 'Excel 列：物料编码（必填）、价格（必填）、日期(YYYY-MM-DD)、供应商名、币种',
       endpoint: '/admin/import/prices',
+      templateKind: 'prices',
     },
   ]
 
@@ -564,14 +567,17 @@ function ImportTab() {
       {importConfigs.map((cfg) => (
         <Card key={cfg.key} size="small" title={cfg.title}>
           <Typography.Text type="secondary" style={{ display: 'block', marginBottom: 12, fontSize: 12 }}>{cfg.desc}</Typography.Text>
-          <Upload
-            accept=".xlsx,.xls"
-            beforeUpload={(file) => { void doImport(cfg.endpoint, file as unknown as File); return false }}
-            showUploadList={false}
-            maxCount={1}
-          >
-            <Button icon={<PlusOutlined />} loading={uploading}>选择 Excel 文件上传</Button>
-          </Upload>
+          <Space>
+            <Button href={`/api/v1/admin/import/template/${cfg.templateKind}`} target="_blank">下载模板</Button>
+            <Upload
+              accept=".xlsx,.xls"
+              beforeUpload={(file) => { void doImport(cfg.endpoint, file as unknown as File); return false }}
+              showUploadList={false}
+              maxCount={1}
+            >
+              <Button type="primary" icon={<PlusOutlined />} loading={uploading}>上传数据</Button>
+            </Upload>
+          </Space>
         </Card>
       ))}
       {result && result.errors && result.errors.length > 0 && (
