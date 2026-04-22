@@ -26,6 +26,6 @@ export async function searchAll(query: string, opts?: { types?: string[]; limit?
     params.append('limit', opts.limit.toString());
   }
   
-  const response = await client.get<SearchResponse>(`/api/v1/search?${params.toString()}`);
+  const response = await client.get<SearchResponse>(`/search?${params.toString()}`);
   return response.data;
 }

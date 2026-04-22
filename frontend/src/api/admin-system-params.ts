@@ -19,21 +19,21 @@ export interface SystemParameter {
 }
 
 export async function listSystemParams(): Promise<SystemParameter[]> {
-  const response = await client.get('/api/v1/admin/system-params');
+  const response = await client.get('/admin/system-params');
   return response.data;
 }
 
 export async function getSystemParam(key: string): Promise<SystemParameter> {
-  const response = await client.get(`/api/v1/admin/system-params/${key}`);
+  const response = await client.get(`/admin/system-params/${key}`);
   return response.data;
 }
 
 export async function updateSystemParam(key: string, value: unknown): Promise<SystemParameter> {
-  const response = await client.put(`/api/v1/admin/system-params/${key}`, { value });
+  const response = await client.put(`/admin/system-params/${key}`, { value });
   return response.data;
 }
 
 export async function resetSystemParam(key: string): Promise<SystemParameter> {
-  const response = await client.post(`/api/v1/admin/system-params/${key}/reset`);
+  const response = await client.post(`/admin/system-params/${key}/reset`);
   return response.data;
 }
