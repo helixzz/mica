@@ -75,6 +75,9 @@ const ShipmentsPage = lazy(() =>
 const SKUPage = lazy(() =>
   import('@/pages/SKU').then((m) => ({ default: m.SKUPage })),
 )
+const RFQListPage = lazy(() => import('@/pages/RFQList'))
+const RFQNewPage = lazy(() => import('@/pages/RFQNew'))
+const RFQDetailPage = lazy(() => import('@/pages/RFQDetail'))
 
 function PageFallback() {
   return (
@@ -146,6 +149,9 @@ export function AppRoutes() {
           <Route path="/invoices" element={<InvoicesPage />} />
           <Route path="/invoices/:id" element={<InvoiceDetailPage />} />
           <Route path="/sku" element={<SKUPage />} />
+          <Route path="/rfqs" element={<RFQListPage />} />
+          <Route path="/rfqs/new" element={<RFQNewPage />} />
+          <Route path="/rfqs/:id" element={<RFQDetailPage />} />
           <Route path="/admin" element={<AdminPage />} />
           <Route path="/search" element={<SearchResults />} />
           <Route path="/notifications" element={<NotificationCenter />} />

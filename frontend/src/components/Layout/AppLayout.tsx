@@ -71,6 +71,7 @@ export function AppLayout() {
     { key: '/payments', icon: <BankOutlined />, label: <Link to="/payments" onClick={() => setMobileMenuOpen(false)}>{t('nav.payments')}</Link> },
     { key: '/invoices', icon: <DollarOutlined />, label: <Link to="/invoices" onClick={() => setMobileMenuOpen(false)}>{t('nav.invoices')}</Link> },
     { key: '/sku', icon: <BarChartOutlined />, label: <Link to="/sku" onClick={() => setMobileMenuOpen(false)}>{t('nav.sku')}</Link> },
+    { key: '/rfqs', icon: <SolutionOutlined />, label: <Link to="/rfqs" onClick={() => setMobileMenuOpen(false)}>询价管理</Link> },
     ...(user?.role === 'admin'
       ? [{ key: '/admin', icon: <SettingOutlined />, label: <Link to="/admin" onClick={() => setMobileMenuOpen(false)}>系统管理</Link> }]
       : []),

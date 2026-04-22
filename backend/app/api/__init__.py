@@ -18,6 +18,7 @@ from app.api.v1 import (
     notifications,
     payment_schedule,
     purchase,
+    rfq,
     saml,
     search,
     sku,
@@ -47,3 +48,4 @@ api_router.include_router(dashboard.router)
 api_router.include_router(payment_schedule.router)
 api_router.include_router(classification.router)
 api_router.include_router(import_excel.router)
+api_router.include_router(rfq.router)
