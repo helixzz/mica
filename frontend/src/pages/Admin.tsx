@@ -1,4 +1,4 @@
-import { DeleteOutlined, ExperimentOutlined, InfoCircleOutlined, PlusOutlined, ThunderboltOutlined } from '@ant-design/icons'
+import { DeleteOutlined, ExperimentOutlined, InfoCircleOutlined, PlusOutlined, ThunderboltOutlined, AppstoreOutlined } from '@ant-design/icons'
 import {
   Alert,
   Button,
@@ -62,6 +62,7 @@ export function AdminPage() {
         items={[
           { key: 'system', label: '系统信息', children: <SystemInfoPanel /> },
           { key: 'system_params', label: '系统参数', children: <SystemParamsTab /> },
+          { key: 'classification', label: '分类管理', children: <ClassificationTab /> },
           { key: 'models', label: 'LLM 模型', children: <AIModelsPanel /> },
           { key: 'routings', label: 'AI 场景路由', children: <RoutingsPanel /> },
           { key: 'users', label: '用户管理', children: <UsersPanel /> },
@@ -461,6 +462,155 @@ function AuditPanel() {
         { title: 'Comment', dataIndex: 'comment', ellipsis: true },
       ]}
     />
+  )
+}
+
+function ClassificationTab() {
+  const [costCenters, setCostCenters] = useState<any[]>([])
+  const [categories, setCategories] = useState<any[]>([])
+  const [expenseTypes, setExpenseTypes] = useState<any[]>([])
+  const [adding, setAdding] = useState<string | null>(null)
+  const [form] = Form.useForm()
+
+  const load = () => {
+    void api.listCostCenters().then(setCostCenters)
+    void api.getCategoryTree().then(setCategories)
+    void api.listLookupValues('expense_type').then(setExpenseTypes)
+  }
+  useEffect(load, [])
+
+  const handleAdd = async (dimension: string) => {
+    try {
+      const values = form.getFieldsValue()
+      if (dimension === 'cost_center') {
+        await api.createCostCenter(values)
+      } else if (dimension === 'category') {
+        await api.createProcurementCategory(values)
+      } else {
+        await api.createLookupValue({ ...values, type: 'expense_type' })
+      }
+      void message.success('已添加')
+      form.resetFields()
+      setAdding(null)
+      load()
+    } catch (e: any) {
+      void message.error(e?.response?.data?.detail || '创建失败')
+    }
+  }
+
+  const handleDelete = async (dimension: string, id: string) => {
+    try {
+      if (dimension === 'cost_center') await api.deleteCostCenter(id)
+      else if (dimension === 'category') await api.deleteProcurementCategory(id)
+      else await api.deleteLookupValue(id)
+      void message.success('已停用')
+      load()
+    } catch (e: any) {
+      void message.error(e?.response?.data?.detail || '操作失败')
+    }
+  }
+
+  const renderList = (dimension: string, items: any[], title: string) => (
+    <Card
+      size="small"
+      title={<Space><AppstoreOutlined />{title}</Space>}
+      extra={<Button size="small" icon={<PlusOutlined />} onClick={() => { setAdding(dimension); form.resetFields() }}>添加</Button>}
+      style={{ marginBottom: 16 }}
+    >
+      <Table
+        dataSource={items}
+        rowKey="id"
+        size="small"
+        pagination={false}
+        columns={[
+          { title: '编码', dataIndex: 'code', width: 120 },
+          { title: '中文名称', dataIndex: 'label_zh' },
+          { title: '英文名称', dataIndex: 'label_en' },
+          { title: '排序', dataIndex: 'sort_order', width: 60 },
+          {
+            title: '',
+            width: 60,
+            render: (_: unknown, r: any) => (
+              <Button size="small" danger icon={<DeleteOutlined />} onClick={() => handleDelete(dimension, r.id)} />
+            ),
+          },
+        ]}
+      />
+    </Card>
+  )
+
+  const renderCategoryTree = () => (
+    <Card
+      size="small"
+      title={<Space><AppstoreOutlined />采购种类（2 级层级）</Space>}
+      extra={<Button size="small" icon={<PlusOutlined />} onClick={() => { setAdding('category'); form.resetFields() }}>添加</Button>}
+      style={{ marginBottom: 16 }}
+    >
+      {categories.map((cat: any) => (
+        <div key={cat.id}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '6px 0', borderBottom: '1px solid #f0f0f0' }}>
+            <Space>
+              <Tag color="blue">L1</Tag>
+              <Typography.Text strong>{cat.label_zh}</Typography.Text>
+              <Typography.Text type="secondary">{cat.code}</Typography.Text>
+            </Space>
+            <Button size="small" danger icon={<DeleteOutlined />} onClick={() => handleDelete('category', cat.id)} />
+          </div>
+          {(cat.children || []).map((child: any) => (
+            <div key={child.id} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '4px 0 4px 32px', borderBottom: '1px solid #fafafa' }}>
+              <Space>
+                <Tag>L2</Tag>
+                <Typography.Text>{child.label_zh}</Typography.Text>
+                <Typography.Text type="secondary">{child.code}</Typography.Text>
+              </Space>
+              <Button size="small" danger icon={<DeleteOutlined />} onClick={() => handleDelete('category', child.id)} />
+            </div>
+          ))}
+        </div>
+      ))}
+      {categories.length === 0 && <Typography.Text type="secondary">暂无分类</Typography.Text>}
+    </Card>
+  )
+
+  return (
+    <Space direction="vertical" size="middle" style={{ width: '100%' }}>
+      {renderList('cost_center', costCenters, '成本中心')}
+      {renderCategoryTree()}
+      {renderList('expense_type', expenseTypes, '开支类型')}
+
+      <Modal
+        title={adding === 'cost_center' ? '添加成本中心' : adding === 'category' ? '添加采购种类' : '添加开支类型'}
+        open={!!adding}
+        onCancel={() => setAdding(null)}
+        onOk={() => adding && handleAdd(adding)}
+        okText="保存"
+        cancelText="取消"
+      >
+        <Form form={form} layout="vertical">
+          <Form.Item name="code" label="编码" rules={[{ required: true }]}>
+            <Input placeholder="如 CC-IT / laptop / capex" />
+          </Form.Item>
+          <Form.Item name="label_zh" label="中文名称" rules={[{ required: true }]}>
+            <Input placeholder="信息技术部 / 笔记本电脑 / 资本性支出" />
+          </Form.Item>
+          <Form.Item name="label_en" label="英文名称" rules={[{ required: true }]}>
+            <Input placeholder="IT Department / Laptops / CapEx" />
+          </Form.Item>
+          <Form.Item name="sort_order" label="排序" initialValue={0}>
+            <InputNumber style={{ width: '100%' }} />
+          </Form.Item>
+          {adding === 'category' && (
+            <Form.Item name="parent_id" label="上级分类（留空为一级）">
+              <Select
+                allowClear
+                placeholder="选择上级分类（一级）"
+                options={categories.map((c: any) => ({ value: c.id, label: c.label_zh }))}
+              />
+            </Form.Item>
+          )}
+        </Form>
+      </Modal>
+    </Space>
   )
 }
 

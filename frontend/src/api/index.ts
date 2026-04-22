@@ -448,6 +448,29 @@ export interface PaymentForecast {
   grand_paid: string
 }
 
+export interface ClassificationItem {
+  id: string
+  code: string
+  label_zh: string
+  label_en: string
+  sort_order: number
+  is_active: boolean
+  parent_id?: string | null
+  level?: number
+  type?: string
+}
+
+export interface ClassificationTreeItem extends ClassificationItem {
+  children: ClassificationItem[]
+}
+
+export interface ClassificationInput {
+  code: string
+  label_zh: string
+  label_en: string
+  sort_order?: number
+}
+
 export interface InvoiceExtractResult {
   invoice_number: string | null
   invoice_code: string | null
@@ -806,6 +829,43 @@ export const api = {
       params: { months },
     })
     return data
+  },
+  async listCostCenters(): Promise<ClassificationItem[]> {
+    const { data } = await client.get<ClassificationItem[]>('/cost-centers')
+    return data
+  },
+  async listProcurementCategories(): Promise<ClassificationItem[]> {
+    const { data } = await client.get<ClassificationItem[]>('/procurement-categories')
+    return data
+  },
+  async getCategoryTree(): Promise<ClassificationTreeItem[]> {
+    const { data } = await client.get<ClassificationTreeItem[]>('/procurement-categories/tree')
+    return data
+  },
+  async listLookupValues(type: string): Promise<ClassificationItem[]> {
+    const { data } = await client.get<ClassificationItem[]>('/lookup-values', { params: { type } })
+    return data
+  },
+  async createCostCenter(body: ClassificationInput): Promise<ClassificationItem> {
+    const { data } = await client.post<ClassificationItem>('/admin/cost-centers', body)
+    return data
+  },
+  async deleteCostCenter(id: string): Promise<void> {
+    await client.delete(`/admin/cost-centers/${id}`)
+  },
+  async createProcurementCategory(body: ClassificationInput & { parent_id?: string }): Promise<ClassificationItem> {
+    const { data } = await client.post<ClassificationItem>('/admin/procurement-categories', body)
+    return data
+  },
+  async deleteProcurementCategory(id: string): Promise<void> {
+    await client.delete(`/admin/procurement-categories/${id}`)
+  },
+  async createLookupValue(body: ClassificationInput & { type: string }): Promise<ClassificationItem> {
+    const { data } = await client.post<ClassificationItem>('/admin/lookup-values', body)
+    return data
+  },
+  async deleteLookupValue(id: string): Promise<void> {
+    await client.delete(`/admin/lookup-values/${id}`)
   },
   async aiStream(
     feature_code: 'pr_description_polish' | 'sku_suggest',
