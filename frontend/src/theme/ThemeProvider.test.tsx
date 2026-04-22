@@ -1,11 +1,35 @@
-import { act, renderHook } from '@testing-library/react'
+import { act, render, renderHook } from '@testing-library/react'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
-import { ReactNode } from 'react'
+import { Component, ReactNode } from 'react'
 import { ThemeProvider, useTheme } from './ThemeProvider'
 
 const wrapper = ({ children }: { children: ReactNode }) => (
   <ThemeProvider>{children}</ThemeProvider>
 )
+
+class ErrorBoundary extends Component<
+  { children: ReactNode; onError: (error: Error) => void },
+  { hasError: boolean }
+> {
+  state = { hasError: false }
+
+  static getDerivedStateFromError() {
+    return { hasError: true }
+  }
+
+  componentDidCatch(error: Error) {
+    this.props.onError(error)
+  }
+
+  render() {
+    return this.state.hasError ? null : this.props.children
+  }
+}
+
+function HookProbe() {
+  useTheme()
+  return null
+}
 
 beforeEach(() => {
   localStorage.clear()
@@ -87,17 +111,21 @@ describe('<ThemeProvider /> and useTheme', () => {
     const spy = vi.spyOn(console, 'error').mockImplementation(() => {})
     let thrown: unknown
 
+    render(
+      <ErrorBoundary onError={(error) => {
+        thrown = error
+      }}>
+        <HookProbe />
+      </ErrorBoundary>,
+    )
+
     try {
-      renderHook(() => useTheme())
-    } catch (error) {
-      thrown = error
+      expect(thrown).toBeInstanceOf(Error)
+      expect((thrown as Error).message).toMatch(
+        /useTheme must be used within a ThemeProvider/,
+      )
     } finally {
       spy.mockRestore()
     }
-
-    expect(thrown).toBeInstanceOf(Error)
-    expect((thrown as Error).message).toMatch(
-      /useTheme must be used within a ThemeProvider/,
-    )
   })
 })
