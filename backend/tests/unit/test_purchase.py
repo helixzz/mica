@@ -10,6 +10,7 @@ from sqlalchemy.orm import selectinload
 
 from app.models import (
     ApprovalInstance,
+    Item,
     POStatus,
     PRStatus,
     PurchaseRequisition,
@@ -23,6 +24,10 @@ from app.services import purchase as purchase_svc
 
 async def _get_user(db, username: str = "alice") -> User:
     return (await db.execute(select(User).where(User.username == username))).scalar_one()
+
+
+async def _get_item(db) -> Item:
+    return (await db.execute(select(Item).where(Item.is_active.is_(True)).limit(1))).scalar_one()
 
 
 async def _get_supplier(db, code: str = "SUP-DELL") -> Supplier:
@@ -469,3 +474,43 @@ async def test_convert_pr_to_po_assigns_sequential_po_numbers(seeded_db_session)
     po2 = await purchase_svc.convert_pr_to_po(db, actor, pr2.id)
 
     assert int(po2.po_number.split("-")[-1]) == int(po1.po_number.split("-")[-1]) + 1
+
+
+async def test_convert_pr_to_po_auto_fills_sku_price_records(seeded_db_session):
+    db = seeded_db_session
+    actor = await _get_user(db, "alice")
+    supplier = await _get_supplier(db)
+    item = await _get_item(db)
+    payload = PRCreateIn(
+        title="SKU Auto-fill Test",
+        business_reason="Testing",
+        currency="CNY",
+        items=[
+            PRItemIn(
+                line_no=1,
+                item_id=item.id,
+                item_name=item.name,
+                qty=Decimal("5"),
+                unit_price=Decimal("200"),
+                supplier_id=supplier.id,
+            )
+        ],
+    )
+    pr = await purchase_svc.create_pr(db, actor, payload)
+    await _mark_pr_approved(db, pr)
+
+    po = await purchase_svc.convert_pr_to_po(db, actor, pr.id)
+
+    from app.models import SKUPriceRecord
+    records = (
+        await db.execute(
+            select(SKUPriceRecord).where(
+                SKUPriceRecord.source_ref == po.po_number,
+                SKUPriceRecord.source_type == "actual_po",
+            )
+        )
+    ).scalars().all()
+    assert len(records) == 1
+    assert records[0].item_id == item.id
+    assert records[0].supplier_id == supplier.id
+    assert records[0].price == Decimal("200")
