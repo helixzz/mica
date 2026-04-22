@@ -201,6 +201,7 @@ class ItemUpdate(BaseModel):
     uom: str | None = Field(default=None, min_length=1, max_length=16)
     specification: str | None = None
     requires_serial: bool | None = None
+    is_active: bool | None = None
 
     @field_validator("code")
     @classmethod

@@ -309,6 +309,7 @@ async def create_item(db: AsyncSession, actor: User, payload: ItemCreate) -> Ite
         code=payload.code,
         name=payload.name,
         category=payload.category,
+        category_id=payload.category_id,
         uom=payload.uom,
         specification=payload.specification,
         requires_serial=payload.requires_serial,
@@ -326,6 +327,7 @@ async def create_item(db: AsyncSession, actor: User, payload: ItemCreate) -> Ite
                 "code": payload.code,
                 "name": payload.name,
                 "category": payload.category,
+                "category_id": str(payload.category_id) if payload.category_id else None,
                 "uom": payload.uom,
                 "specification": payload.specification,
                 "requires_serial": payload.requires_serial,
@@ -368,6 +370,14 @@ async def update_item(db: AsyncSession, actor: User, item_id: UUID, payload: Ite
     if "requires_serial" in payload.model_fields_set and payload.requires_serial is not None:
         _record_change(diff, "requires_serial", item.requires_serial, payload.requires_serial)
         item.requires_serial = payload.requires_serial
+    if "category_id" in payload.model_fields_set:
+        old_val = str(item.category_id) if item.category_id else None
+        new_val = str(payload.category_id) if payload.category_id else None
+        _record_change(diff, "category_id", old_val, new_val)
+        item.category_id = payload.category_id
+    if "is_active" in payload.model_fields_set and payload.is_active is not None:
+        _record_change(diff, "is_active", item.is_active, payload.is_active)
+        item.is_active = payload.is_active
     if diff:
         await db.flush()
         await _audit(
