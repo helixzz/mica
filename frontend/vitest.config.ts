@@ -18,6 +18,12 @@ export default defineConfig({
     coverage: {
       provider: 'v8',
       reporter: ['text', 'html', 'lcov'],
+      thresholds: {
+        statements: 60,
+        branches: 50,
+        functions: 50,
+        lines: 60,
+      },
       exclude: [
         '**/*.d.ts',
         '**/node_modules/**',
