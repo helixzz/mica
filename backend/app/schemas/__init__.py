@@ -182,6 +182,7 @@ class ItemCreate(BaseModel):
     code: str = Field(..., min_length=1, max_length=64)
     name: str = Field(..., min_length=1, max_length=255)
     category: str | None = Field(default=None, max_length=64)
+    category_id: UUID | None = None
     uom: str = Field(default="EA", min_length=1, max_length=16)
     specification: str | None = None
     requires_serial: bool = False
@@ -196,6 +197,7 @@ class ItemUpdate(BaseModel):
     code: str | None = Field(default=None, min_length=1, max_length=64)
     name: str | None = Field(default=None, min_length=1, max_length=255)
     category: str | None = Field(default=None, max_length=64)
+    category_id: UUID | None = None
     uom: str | None = Field(default=None, min_length=1, max_length=16)
     specification: str | None = None
     requires_serial: bool | None = None
@@ -214,6 +216,7 @@ class ItemOut(BaseModel):
     code: str
     name: str
     category: str | None = None
+    category_id: UUID | None = None
     uom: str
     specification: str | None = None
     requires_serial: bool = False
