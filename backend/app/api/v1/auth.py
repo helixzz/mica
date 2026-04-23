@@ -131,8 +131,12 @@ async def get_login_options(
 async def list_companies(
     _user: CurrentUser,
     db: Annotated[AsyncSession, Depends(get_db)],
+    include_inactive: bool = False,
 ) -> list[CompanyOut]:
-    result = await db.execute(select(Company).where(Company.is_active == True))  # noqa: E712
+    stmt = select(Company).order_by(Company.code)
+    if not include_inactive:
+        stmt = stmt.where(Company.is_active.is_(True))
+    result = await db.execute(stmt)
     return [CompanyOut.model_validate(c) for c in result.scalars().all()]
 
 
