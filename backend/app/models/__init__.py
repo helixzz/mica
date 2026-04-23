@@ -578,7 +578,9 @@ class Shipment(Base, TimestampMixin):
         back_populates="shipment", cascade="all, delete-orphan", order_by="ShipmentItem.line_no"
     )
     documents: Mapped[list[ShipmentDocument]] = relationship(
-        back_populates="shipment", cascade="all, delete-orphan", order_by="ShipmentDocument.display_order"
+        back_populates="shipment",
+        cascade="all, delete-orphan",
+        order_by="ShipmentDocument.display_order",
     )
 
     __table_args__ = (UniqueConstraint("po_id", "batch_no"),)

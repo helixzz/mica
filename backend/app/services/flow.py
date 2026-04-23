@@ -232,9 +232,7 @@ async def update_shipment(
             changes[field_name] = {"old": str(old_val), "new": str(new_val)}
             setattr(shipment, field_name, new_val)
     if changes:
-        await _audit_write(
-            db, actor, "shipment.updated", "shipment", str(shipment_id), changes
-        )
+        await _audit_write(db, actor, "shipment.updated", "shipment", str(shipment_id), changes)
         await db.commit()
     result = await db.execute(
         select(Shipment).where(Shipment.id == shipment_id).options(selectinload(Shipment.items))
@@ -247,7 +245,11 @@ async def delete_shipment(db: AsyncSession, actor: User, shipment_id: UUID) -> N
     if shipment is None:
         raise HTTPException(404, "shipment.not_found")
     await _audit_write(
-        db, actor, "shipment.deleted", "shipment", str(shipment_id),
+        db,
+        actor,
+        "shipment.deleted",
+        "shipment",
+        str(shipment_id),
         {"shipment_number": shipment.shipment_number},
     )
     await db.delete(shipment)
@@ -264,11 +266,17 @@ async def attach_document_to_shipment(
     if doc is None:
         raise HTTPException(404, "document.not_found")
     link = ShipmentDocument(
-        shipment_id=shipment_id, document_id=document_id, role=role,
+        shipment_id=shipment_id,
+        document_id=document_id,
+        role=role,
     )
     db.add(link)
     await _audit_write(
-        db, actor, "shipment.document.attached", "shipment", str(shipment_id),
+        db,
+        actor,
+        "shipment.document.attached",
+        "shipment",
+        str(shipment_id),
         {"document_id": str(document_id), "filename": doc.original_filename},
     )
     await db.commit()
@@ -296,9 +304,7 @@ async def list_shipment_documents(db: AsyncSession, shipment_id: UUID) -> list[d
     ]
 
 
-async def remove_shipment_document(
-    db: AsyncSession, shipment_id: UUID, document_id: UUID
-) -> None:
+async def remove_shipment_document(db: AsyncSession, shipment_id: UUID, document_id: UUID) -> None:
     link = await db.get(ShipmentDocument, (shipment_id, document_id))
     if link is None:
         raise HTTPException(404, "shipment_document.not_found")

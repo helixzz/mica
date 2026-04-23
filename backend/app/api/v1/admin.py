@@ -507,7 +507,12 @@ async def reset_user_password(
 class UserUpdateIn(BaseModel):
     display_name: str | None = None
     email: str | None = None
-    role: Literal["admin", "requester", "it_buyer", "dept_manager", "finance_auditor", "procurement_mgr"] | None = None
+    role: (
+        Literal[
+            "admin", "requester", "it_buyer", "dept_manager", "finance_auditor", "procurement_mgr"
+        ]
+        | None
+    ) = None
     company_id: UUID | None = None
     department_id: UUID | None = None
     preferred_locale: str | None = None
