@@ -6,7 +6,7 @@ from uuid import uuid4
 
 from sqlalchemy import select
 
-from app.models import Contract, ContractDocument, ContractStatus, Document, POStatus, PurchaseOrder, PurchaseRequisition, Supplier, User
+from app.models import Contract, ContractDocument, ContractStatus, ContractVersion, Document, POStatus, PurchaseOrder, PurchaseRequisition, Supplier, User
 from app.services import contracts as svc
 
 
@@ -288,6 +288,40 @@ async def test_to_dict_converts_contract_document_and_document_to_plain_dict(see
         "content_type": "application/pdf",
         "file_size": 2048,
     }
+
+
+async def test_list_contract_versions_returns_descending_history(seeded_db_session):
+    actor = await _user(seeded_db_session)
+    supplier = await _supplier(seeded_db_session)
+    contract = await _create_contract(
+        seeded_db_session,
+        actor=actor,
+        supplier=supplier,
+        contract_number=f"CT-{_suffix()}",
+        title="Versioned Contract",
+        expiry_date=date.today() + timedelta(days=30),
+    )
+    seeded_db_session.add_all([
+        ContractVersion(
+            contract_id=contract.id,
+            version_number=1,
+            change_type="created",
+            snapshot_json={"title": "Versioned Contract", "current_version": 1},
+            changed_by_id=actor.id,
+        ),
+        ContractVersion(
+            contract_id=contract.id,
+            version_number=2,
+            change_type="updated",
+            snapshot_json={"title": "Versioned Contract v2", "current_version": 2},
+            changed_by_id=actor.id,
+        ),
+    ])
+    await seeded_db_session.flush()
+
+    rows = await svc.list_contract_versions(seeded_db_session, contract.id)
+
+    assert [row.version_number for row in rows] == [2, 1]
 
 
 async def test_list_contract_documents_returns_documents_for_contract_in_order(seeded_db_session):

@@ -29,6 +29,7 @@ from app.models import (
     Supplier,
     User,
 )
+from app.services import contracts as contract_svc
 
 
 def _as_decimal(v) -> Decimal:
@@ -97,6 +98,13 @@ async def create_contract(
         notes=notes,
     )
     db.add(contract)
+    await db.flush()
+    await contract_svc.create_contract_version(
+        db,
+        contract=contract,
+        actor=actor,
+        change_type="created",
+    )
     await _audit_write(
         db,
         actor,
