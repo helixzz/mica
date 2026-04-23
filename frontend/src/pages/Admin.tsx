@@ -26,6 +26,11 @@ import { useTranslation } from 'react-i18next'
 import { api } from '@/api'
 import { extractError } from '@/api/client'
 import { useAuth } from '@/auth/useAuth'
+import {
+  createDefaultApprovalRuleForm,
+  mapApprovalRuleFormToPayload,
+  mapApprovalRuleToForm,
+} from './admin/approvalRuleForm'
 import { SystemParamsTab } from './admin/SystemParamsTab'
 
 type AIModelRow = {
@@ -257,7 +262,7 @@ function AIModelDrawer({
             </Typography.Text>
           }
         />
-        <Form.Item label={t('admin.model_name')} name="name" rules={[{ required: true }]}>
+        <Form.Item label={t('admin.model_name')} name="name" help={t('admin.model_name_help')} rules={[{ required: true }]}>
           <Input placeholder="qwen-max / gpt-4o / glm-4.7 / ..." />
         </Form.Item>
         <Form.Item
@@ -276,22 +281,22 @@ function AIModelDrawer({
         >
           <Input placeholder="zai-org/glm-4.7 · deepseek-chat · openai/gpt-4o" />
         </Form.Item>
-        <Form.Item label="Modality" name="modality">
+        <Form.Item label="Modality" name="modality" help={t('admin.modality_help')}>
           <Select options={[
             { value: 'text' }, { value: 'vision' }, { value: 'ocr' }, { value: 'embedding' },
           ]} />
         </Form.Item>
-        <Form.Item label="API Base" name="api_base">
+        <Form.Item label="API Base" name="api_base" help={t('admin.api_base_help')}>
           <Input placeholder={t('admin.api_base_placeholder')} />
         </Form.Item>
         <Form.Item label="API Key" name="api_key" help={initial ? t('admin.api_key_help_edit') : t('admin.api_key_help_new')}>
           <Input.Password />
         </Form.Item>
         <Space>
-          <Form.Item label="Timeout (s)" name="timeout_s">
+          <Form.Item label="Timeout (s)" name="timeout_s" help={t('admin.timeout_help')}>
             <InputNumber min={1} max={300} />
           </Form.Item>
-          <Form.Item label="Priority" name="priority">
+          <Form.Item label="Priority" name="priority" help={t('admin.priority_help')}>
             <InputNumber />
           </Form.Item>
           <Form.Item label={t('common.enabled')} name="is_active" valuePropName="checked">
@@ -316,8 +321,6 @@ function RoutingsPanel() {
       .finally(() => setLoading(false))
   }
   useEffect(load, [])
-
-  const modelMap = Object.fromEntries(models.map((m) => [m.id, m.name]))
 
   const changePrimary = async (feature_code: string, primary_model_id: string | null, current: Record<string, unknown>) => {
     await api.adminUpsertRouting(feature_code, {
@@ -471,21 +474,70 @@ function ApprovalRulesTab() {
   const { t } = useTranslation()
   const [rules, setRules] = useState<any[]>([])
   const [drawerOpen, setDrawerOpen] = useState(false)
+  const [editingRule, setEditingRule] = useState<any | null>(null)
   const [form] = Form.useForm()
+  const roleOptions = [
+    { value: 'dept_manager', label: t('role.dept_manager') },
+    { value: 'procurement_mgr', label: t('role.procurement_mgr') },
+    { value: 'finance_auditor', label: t('role.finance_auditor') },
+    { value: 'it_buyer', label: t('role.it_buyer') },
+    { value: 'admin', label: t('role.admin') },
+  ]
 
   useEffect(() => {
     void api.adminListApprovalRules?.()?.then(setRules).catch(() => {})
   }, [])
 
+  const reloadRules = () => {
+    void api.adminListApprovalRules?.()?.then(setRules).catch(() => {})
+  }
+
+  const openCreate = () => {
+    setEditingRule(null)
+    form.resetFields()
+    form.setFieldsValue(createDefaultApprovalRuleForm(t('admin.default_stage_name')))
+    setDrawerOpen(true)
+  }
+
+  const openEdit = (rule: any) => {
+    setEditingRule(rule)
+    form.resetFields()
+    form.setFieldsValue(mapApprovalRuleToForm(rule, t('admin.default_stage_name')))
+    setDrawerOpen(true)
+  }
+
+  const deleteRule = (rule: any) => {
+    Modal.confirm({
+      title: `${t('button.delete')} ${rule.name}?`,
+      okText: t('button.delete'),
+      okType: 'danger',
+      cancelText: t('button.cancel'),
+      onOk: async () => {
+        try {
+          await api.adminDeleteApprovalRule?.(rule.id)
+          void message.success(t('message.deleted'))
+          reloadRules()
+        } catch (e: any) {
+          void message.error(e?.response?.data?.detail || t('error.unexpected'))
+        }
+      },
+    })
+  }
+
   const handleSave = async () => {
     try {
-      const values = form.getFieldsValue()
-      const stages = JSON.parse(values.stages_json || '[]')
-      await api.adminCreateApprovalRule?.({ ...values, stages })
+      const values = await form.validateFields()
+      const payload = mapApprovalRuleFormToPayload(values)
+      if (editingRule) {
+        await api.adminUpdateApprovalRule?.(editingRule.id, payload)
+      } else {
+        await api.adminCreateApprovalRule?.(payload)
+      }
       void message.success(t('message.saved'))
       setDrawerOpen(false)
       form.resetFields()
-      void api.adminListApprovalRules?.()?.then(setRules).catch(() => {})
+      setEditingRule(null)
+      reloadRules()
     } catch (e: any) {
       void message.error(e?.response?.data?.detail || t('error.save_failed'))
     }
@@ -495,28 +547,96 @@ function ApprovalRulesTab() {
     <Space direction="vertical" size="middle" style={{ width: '100%' }}>
       <div style={{ display: 'flex', justifyContent: 'space-between' }}>
         <Typography.Text type="secondary">{rules.length} {t('admin.rule_count')}</Typography.Text>
-        <Button type="primary" icon={<PlusOutlined />} onClick={() => { form.resetFields(); setDrawerOpen(true) }}>{t('admin.new_rule')}</Button>
+        <Button type="primary" icon={<PlusOutlined />} onClick={openCreate}>{t('admin.new_rule')}</Button>
       </div>
       <Table dataSource={rules} rowKey="id" size="small" pagination={false} columns={[
         { title: t('admin.biz_type'), dataIndex: 'biz_type' },
         { title: t('admin.amount_range'), render: (_: unknown, r: any) => `${r.amount_min ?? 0} - ${r.amount_max ?? '∞'}` },
-        { title: t('admin.stage_count'), render: (_: unknown, r: any) => Array.isArray(r.stages) ? r.stages.length : '-' },
+        {
+          title: t('admin.stage_count'),
+          render: (_: unknown, r: any) => Array.isArray(r.stages) ? r.stages.length : '-'
+        },
+        {
+          title: t('admin.stages_preview'),
+          render: (_: unknown, r: any) => Array.isArray(r.stages)
+            ? r.stages.map((stage: any) => stage.stage_name).join(' → ')
+            : '-',
+        },
         { title: t('admin.priority'), dataIndex: 'priority' },
         { title: t('admin.enabled'), dataIndex: 'is_active', render: (v: boolean) => <Tag color={v ? 'success' : 'default'}>{v ? t('common.yes') : t('common.no')}</Tag> },
+        {
+          title: t('common.actions'),
+          render: (_: unknown, r: any) => (
+            <Space>
+              <Button size="small" onClick={() => openEdit(r)}>{t('button.edit')}</Button>
+              <Button size="small" danger onClick={() => deleteRule(r)}>{t('button.delete')}</Button>
+            </Space>
+          ),
+        },
       ]} />
-      <Drawer title={t('admin.edit_rule_title')} width={560} open={drawerOpen} onClose={() => setDrawerOpen(false)} footer={
-        <Space style={{ float: 'right' }}><Button onClick={() => setDrawerOpen(false)}>{t('button.cancel')}</Button><Button type="primary" onClick={handleSave}>{t('button.save')}</Button></Space>
+      <Drawer title={editingRule ? t('admin.edit_rule_title_existing', { name: editingRule.name }) : t('admin.edit_rule_title')} width={560} open={drawerOpen} onClose={() => { setDrawerOpen(false); setEditingRule(null) }} footer={
+        <Space style={{ float: 'right' }}><Button onClick={() => { setDrawerOpen(false); setEditingRule(null) }}>{t('button.cancel')}</Button><Button type="primary" onClick={handleSave}>{t('button.save')}</Button></Space>
       }>
         <Form form={form} layout="vertical">
-          <Form.Item name="biz_type" label={t('admin.biz_type')} rules={[{ required: true }]}>
+          <Form.Item name="name" label={t('field.title')} help={t('admin.rule_name_help')} rules={[{ required: true }]}>
+            <Input placeholder={t('admin.rule_name_placeholder')} />
+          </Form.Item>
+          <Form.Item name="biz_type" label={t('admin.biz_type')} help={t('admin.biz_type_help')} rules={[{ required: true }]}>
             <Select options={[{ value: 'purchase_requisition', label: t('admin.purchase_requisition_opt') }]} />
           </Form.Item>
-          <Form.Item name="amount_min" label={t('admin.min_amount')}><InputNumber style={{ width: '100%' }} min={0} /></Form.Item>
-          <Form.Item name="amount_max" label={t('admin.max_amount')}><InputNumber style={{ width: '100%' }} min={0} /></Form.Item>
-          <Form.Item name="priority" label={t('admin.priority')} initialValue={100}><InputNumber style={{ width: '100%' }} /></Form.Item>
-          <Form.Item name="stages_json" label={t('admin.stages_json_help')} rules={[{ required: true }]} help='格式: [{"role":"dept_manager","label":"部门审批"},{"role":"procurement_mgr","label":"采购经理审批"}]'>
-            <Input.TextArea rows={6} placeholder={t('admin.stages_placeholder')} />
+          <Form.Item name="amount_min" label={t('admin.min_amount')} help={t('admin.min_amount_help')}><InputNumber style={{ width: '100%' }} min={0} /></Form.Item>
+          <Form.Item name="amount_max" label={t('admin.max_amount')} help={t('admin.max_amount_help')}><InputNumber style={{ width: '100%' }} min={0} /></Form.Item>
+          <Form.Item name="priority" label={t('admin.priority')} help={t('admin.priority_help')} initialValue={100}><InputNumber style={{ width: '100%' }} /></Form.Item>
+          <Form.Item name="is_active" label={t('admin.enabled')} valuePropName="checked" initialValue={true}>
+            <Switch />
           </Form.Item>
+          <Typography.Text strong>{t('admin.stages_editor_title')}</Typography.Text>
+          <Typography.Text type="secondary" style={{ display: 'block', marginBottom: 12 }}>
+            {t('admin.stages_editor_help')}
+          </Typography.Text>
+          <Form.List name="stages">
+            {(fields, { add, remove }) => (
+              <Space direction="vertical" size="middle" style={{ width: '100%' }}>
+                {fields.map((field, index) => (
+                  <Card
+                    key={field.key}
+                    size="small"
+                    title={t('admin.stage_n', { n: index + 1 })}
+                    extra={fields.length > 1 ? <Button danger size="small" onClick={() => remove(field.name)}>{t('button.delete')}</Button> : null}
+                  >
+                    {(() => {
+                      const { key: _fieldKey, ...restField } = field
+                      return (
+                        <>
+                    <Form.Item
+                      {...restField}
+                      name={[field.name, 'stage_name']}
+                      label={t('contract.installment_label')}
+                      help={t('admin.stage_name_help')}
+                      rules={[{ required: true }]}
+                    >
+                      <Input placeholder={t('admin.stage_name_placeholder')} />
+                    </Form.Item>
+                    <Form.Item
+                      {...restField}
+                      name={[field.name, 'approver_role']}
+                      label={t('field.role')}
+                      help={t('admin.stage_role_help')}
+                      rules={[{ required: true }]}
+                    >
+                      <Select options={roleOptions} />
+                    </Form.Item>
+                        </>
+                      )
+                    })()}
+                  </Card>
+                ))}
+                <Button type="dashed" icon={<PlusOutlined />} onClick={() => add({ stage_name: '', approver_role: 'dept_manager' })} block>
+                  {t('admin.add_stage')}
+                </Button>
+              </Space>
+            )}
+          </Form.List>
         </Form>
       </Drawer>
     </Space>
@@ -562,9 +682,9 @@ function CompaniesTab() {
         <Space style={{ float: 'right' }}><Button onClick={() => setDrawerOpen(false)}>{t('button.cancel')}</Button><Button type="primary" onClick={handleSave}>{t('button.save')}</Button></Space>
       }>
         <Form form={form} layout="vertical">
-          <Form.Item name="code" label={t('admin.code_label')} rules={[{ required: true }]}><Input placeholder="DEMO" /></Form.Item>
-          <Form.Item name="name_zh" label={t('admin.name_zh_label')} rules={[{ required: true }]}><Input placeholder="觅采科技有限公司" /></Form.Item>
-          <Form.Item name="name_en" label={t('admin.name_en_label')}><Input placeholder="Mica Technology Co., Ltd." /></Form.Item>
+          <Form.Item name="code" label={t('admin.code_label')} help={t('admin.company_code_help')} rules={[{ required: true }]}><Input placeholder="DEMO" /></Form.Item>
+          <Form.Item name="name_zh" label={t('admin.name_zh_label')} help={t('admin.company_name_zh_help')} rules={[{ required: true }]}><Input placeholder="觅采科技有限公司" /></Form.Item>
+          <Form.Item name="name_en" label={t('admin.name_en_label')} help={t('admin.company_name_en_help')}><Input placeholder="Mica Technology Co., Ltd." /></Form.Item>
           <Form.Item name="default_currency" label={t('admin.currency_label')} initialValue="CNY">
             <Select options={[{ value: 'CNY' }, { value: 'USD' }, { value: 'EUR' }, { value: 'HKD' }, { value: 'JPY' }]} />
           </Form.Item>
