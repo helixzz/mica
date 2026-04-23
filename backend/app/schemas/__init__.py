@@ -47,7 +47,7 @@ class UserOut(BaseModel):
     company_id: UUID
     department_id: UUID | None = None
     preferred_locale: str
-    is_enabled: bool
+    is_active: bool
     is_deleted: bool
 
 
