@@ -508,6 +508,7 @@
     "add_stage": "Add Stage",
     "purchase_requisition_opt": "Purchase Requisition",
     "new_company_entity": "New Company Entity",
+    "edit_company": "Edit Company: {{name}}",
     "code_col": "Code",
     "name_zh_col": "Chinese Name",
     "name_en_col": "English Name",

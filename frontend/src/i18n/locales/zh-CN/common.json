@@ -508,6 +508,7 @@
     "add_stage": "添加阶段",
     "purchase_requisition_opt": "采购申请",
     "new_company_entity": "新增公司主体",
+    "edit_company": "编辑公司：{{name}}",
     "code_col": "编码",
     "name_zh_col": "中文名称",
     "name_en_col": "英文名称",
