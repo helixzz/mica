@@ -116,7 +116,7 @@ async def test_delete_cost_center_soft_delete_hides_from_active_list(seeded_db_s
     }
     all_codes = {
         cost_center.code
-        for cost_center in await svc.list_cost_centers(seeded_db_session, active_only=False)
+        for cost_center in await svc.list_cost_centers(seeded_db_session, enabled_only=False, include_deleted=True)
     }
     assert created.code not in active_codes
     assert created.code in all_codes
