@@ -7,6 +7,29 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [v0.8.3] — 2026-04-23
+
+SAML SSO + 审批规则编辑器 + 合同版本管理 + 表单引导 + i18n 插值 Bug 修复。
+
+### 新增
+
+- **SAML SSO 完整能力**：admin 可配置 `auth.saml.*` 系统参数，支持 IdP metadata/login/ACS、JIT 自动建用户、可选用户组→角色映射；登录页 SSO 按钮 + `/sso-callback` token 回调
+- **审批规则结构化编辑器**：Form.List 阶段编辑器替代原始 JSON，支持创建/编辑/删除规则，表格内阶段预览
+- **合同版本管理基础**：`contract_versions` 表 + 创建时自动快照 + `GET /contracts/{id}/versions` + 详情页"版本历史"Tab
+- **表单填写引导**：PR / RFQ / PO / 合同 / SKU / 物料 / Admin 所有高频表单新增 help 文案
+
+### 修复
+
+- **i18n 插值变量未生效**：26 个翻译 key 使用 `{var}` 单大括号而非 react-i18next 要求的 `{{var}}` 双大括号，导致物料总数、合同期次、SKU 异常数等动态文本显示为原始变量名
+
+### 改进
+
+- **运维**：docker-compose.yml 改用 `/data` bind mount（支持独立数据盘）；所有容器 `restart: unless-stopped`
+
+### 测试
+
+- 15 个 SAML backend 测试 + 5 个 frontend SSO 测试 + 3 个审批规则 helper 测试 + 2 个合同版本测试
+
 ## [v0.8.2] — 2026-04-23
 
 审批规则结构化编辑 + 合同版本管理基础 + 表单引导第二波。
