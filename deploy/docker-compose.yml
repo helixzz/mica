@@ -10,7 +10,7 @@ services:
       POSTGRES_USER: ${POSTGRES_USER:-mica}
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-mica}
     volumes:
-      - postgres_data:/var/lib/postgresql/data
+      - ${DATA_DIR:-/data}/postgres:/var/lib/postgresql/data
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-mica} -d ${POSTGRES_DB:-mica}"]
       interval: 10s
@@ -36,7 +36,7 @@ services:
       APP_ENV: ${APP_ENV:-development}
       MEDIA_ROOT: /app/media
     volumes:
-      - mica_media:/app/media
+      - ${DATA_DIR:-/data}/media:/app/media
     command: ["alembic", "upgrade", "head"]
 
   backend:
@@ -54,7 +54,7 @@ services:
       CORS_ALLOW_ALL: ${CORS_ALLOW_ALL:-true}
       MEDIA_ROOT: /app/media
     volumes:
-      - mica_media:/app/media
+      - ${DATA_DIR:-/data}/media:/app/media
     ports:
       - "${BACKEND_BIND:-0.0.0.0}:${BACKEND_PORT:-8000}:8000"
 
@@ -70,6 +70,7 @@ services:
 
   nginx:
     image: nginx:alpine
+    restart: unless-stopped
     depends_on:
       - backend
       - frontend
@@ -95,8 +96,4 @@ services:
       start_period: 5s
     restart: unless-stopped
 
-volumes:
-  postgres_data:
-    name: mica_postgres_data
-  mica_media:
-    name: mica_media
+# No named volumes — all persistent data lives on /data bind mounts
