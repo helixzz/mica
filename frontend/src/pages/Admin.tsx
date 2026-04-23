@@ -650,7 +650,7 @@ function CompaniesTab() {
   const [editingCompany, setEditingCompany] = useState<any | null>(null)
   const [form] = Form.useForm()
 
-  const load = () => { void api.companies().then(setCompanies) }
+  const load = () => { void api.companies(true).then(setCompanies) }
   useEffect(load, [])
 
   const openCreate = () => {
@@ -823,7 +823,7 @@ function ClassificationTab() {
   const [form] = Form.useForm()
 
   const load = () => {
-    void api.listCostCenters().then(setCostCenters)
+    void api.listCostCenters(true).then(setCostCenters)
     void api.getCategoryTree().then(setCategories)
     void api.listLookupValues('expense_type').then(setExpenseTypes)
   }
@@ -949,7 +949,9 @@ function ClassificationTab() {
                     </Button>
                   </>
                 )}
-                <Button size="small" danger icon={<DeleteOutlined />} onClick={() => handleDelete(dimension, r.id)} />
+                {dimension !== 'cost_center' && (
+                  <Button size="small" danger icon={<DeleteOutlined />} onClick={() => handleDelete(dimension, r.id)} />
+                )}
               </Space>
             ),
           },

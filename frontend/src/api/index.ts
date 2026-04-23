@@ -594,8 +594,8 @@ export const api = {
     const { data } = await client.get<User>('/auth/me')
     return data
   },
-  async companies(): Promise<Company[]> {
-    const { data } = await client.get<Company[]>('/companies')
+  async companies(includeInactive = false): Promise<Company[]> {
+    const { data } = await client.get<Company[]>('/companies', { params: includeInactive ? { include_inactive: true } : {} })
     return data
   },
   async createCompany(body: { code: string; name_zh: string; name_en?: string; default_currency?: string }): Promise<Company> {
@@ -953,8 +953,8 @@ export const api = {
     })
     return data
   },
-  async listCostCenters(): Promise<ClassificationItem[]> {
-    const { data } = await client.get<ClassificationItem[]>('/cost-centers')
+  async listCostCenters(includeInactive = false): Promise<ClassificationItem[]> {
+    const { data } = await client.get<ClassificationItem[]>('/cost-centers', { params: includeInactive ? { active: false } : {} })
     return data
   },
   async listProcurementCategories(): Promise<ClassificationItem[]> {
