@@ -849,6 +849,26 @@ export const api = {
     const { data } = await client.get('/admin/users')
     return data as Record<string, unknown>[]
   },
+  async adminCreateUser(body: {
+    username: string
+    email: string
+    display_name: string
+    password: string
+    role: string
+    company_id: string
+    department_id?: string | null
+    preferred_locale?: string
+  }): Promise<Record<string, unknown>> {
+    const { data } = await client.post('/admin/users', body)
+    return data as Record<string, unknown>
+  },
+  async adminUpdateUser(userId: string, body: Record<string, unknown>): Promise<Record<string, unknown>> {
+    const { data } = await client.patch(`/admin/users/${userId}`, body)
+    return data as Record<string, unknown>
+  },
+  async adminResetPassword(userId: string, newPassword: string): Promise<void> {
+    await client.post(`/admin/users/${userId}/reset-password`, { new_password: newPassword })
+  },
   async adminAuditLogs(params: { since_days?: number; event_type_prefix?: string } = {}): Promise<Record<string, unknown>[]> {
     const { data } = await client.get('/admin/audit-logs', { params })
     return data as Record<string, unknown>[]
