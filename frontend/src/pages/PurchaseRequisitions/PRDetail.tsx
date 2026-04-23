@@ -16,7 +16,7 @@ import { useNavigate, useParams } from 'react-router-dom'
 
 import { api, type PurchaseRequisition, type Supplier } from '@/api'
 import { extractError } from '@/api/client'
-import { fmtPrice } from '@/utils/format'
+import { fmtAmount } from '@/utils/format'
 import { useAuth } from '@/auth/useAuth'
 
 const statusColors: Record<string, string> = {
@@ -176,7 +176,7 @@ export function PRDetailPage() {
         <Descriptions bordered size="small" column={2}>
           <Descriptions.Item label={t('field.title')}>{pr.title}</Descriptions.Item>
           <Descriptions.Item label={t('field.total_amount')}>
-            {fmtPrice(pr.total_amount, pr.currency + ' ')}
+            {fmtAmount(pr.total_amount, pr.currency)}
           </Descriptions.Item>
           <Descriptions.Item label={t('field.business_reason')} span={2}>
             {pr.business_reason || '-'}
@@ -217,8 +217,8 @@ export function PRDetailPage() {
             },
             { title: t('field.qty'), dataIndex: 'qty', align: 'right' },
             { title: t('field.uom'), dataIndex: 'uom', width: 80 },
-            { title: t('field.unit_price'), dataIndex: 'unit_price', align: 'right' },
-            { title: t('field.amount'), dataIndex: 'amount', align: 'right' },
+            { title: t('field.unit_price'), dataIndex: 'unit_price', align: 'right', render: (v: string) => fmtAmount(v) },
+            { title: t('field.amount'), dataIndex: 'amount', align: 'right', render: (v: string) => fmtAmount(v) },
           ]}
         />
       </Card>

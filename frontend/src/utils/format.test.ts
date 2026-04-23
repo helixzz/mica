@@ -8,11 +8,11 @@ describe('fmtPrice', () => {
   })
 
   it('formats string values', () => {
-    expect(fmtPrice('1234.5')).toBe('¥1,234.5')
+    expect(fmtPrice('1234.5')).toBe('¥1,234.50')
   })
 
   it('supports custom currency symbols', () => {
-    expect(fmtPrice(99.9, '$')).toBe('$99.9')
+    expect(fmtPrice(99.9, '$')).toBe('$99.90')
   })
 
   it('returns a dash for null values', () => {
@@ -34,11 +34,11 @@ describe('fmtAmount', () => {
   })
 
   it('formats string values', () => {
-    expect(fmtAmount('1234.5')).toBe('¥1,234.5')
+    expect(fmtAmount('1234.5')).toBe('¥1,234.50')
   })
 
   it('supports custom currency codes', () => {
-    expect(fmtAmount(99.9, 'USD')).toBe('USD 99.9')
+    expect(fmtAmount(99.9, 'USD')).toBe('USD 99.90')
   })
 
   it('returns a dash for null values', () => {

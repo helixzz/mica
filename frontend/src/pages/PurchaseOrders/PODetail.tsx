@@ -36,6 +36,7 @@ import {
 } from '@/api'
 import { extractError } from '@/api/client'
 import { getToken } from '@/api/client'
+import { fmtAmount } from '@/utils/format'
 
 function statusTag(s: string): string {
   return s
@@ -118,13 +119,13 @@ export function PODetailPage() {
       <Card>
         <Descriptions bordered size="small" column={3}>
           <Descriptions.Item label={t('field.total_amount')}>
-            {po.currency} {po.total_amount}
+            {fmtAmount(po.total_amount, po.currency)}
           </Descriptions.Item>
           <Descriptions.Item label={t('field.amount_invoiced')}>
-            {po.currency} {po.amount_invoiced}
+            {fmtAmount(po.amount_invoiced, po.currency)}
           </Descriptions.Item>
           <Descriptions.Item label={t('field.amount_paid')}>
-            {po.currency} {po.amount_paid}
+            {fmtAmount(po.amount_paid, po.currency)}
           </Descriptions.Item>
           <Descriptions.Item label={t('field.created_at')} span={3}>
             {new Date(po.created_at).toLocaleString()}
@@ -168,8 +169,8 @@ export function PODetailPage() {
                   { title: t('field.qty_received'), dataIndex: 'qty_received', align: 'right', width: 110 },
                   { title: t('field.qty_invoiced'), dataIndex: 'qty_invoiced', align: 'right', width: 110 },
                   { title: t('field.uom'), dataIndex: 'uom', width: 60 },
-                  { title: t('field.unit_price'), dataIndex: 'unit_price', align: 'right', width: 110 },
-                  { title: t('field.amount'), dataIndex: 'amount', align: 'right', width: 110 },
+                   { title: t('field.unit_price'), dataIndex: 'unit_price', align: 'right', width: 110, render: (v: string) => fmtAmount(v) },
+                   { title: t('field.amount'), dataIndex: 'amount', align: 'right', width: 110, render: (v: string) => fmtAmount(v) },
                 ]}
               />
             ),
@@ -209,7 +210,7 @@ export function PODetailPage() {
                           { title: t('field.item_name'), dataIndex: 'item_name' },
                           { title: t('field.qty_shipped'), dataIndex: 'qty_shipped', align: 'right' },
                           { title: t('field.qty_received'), dataIndex: 'qty_received', align: 'right' },
-                          { title: t('field.unit_price'), dataIndex: 'unit_price', align: 'right' },
+                           { title: t('field.unit_price'), dataIndex: 'unit_price', align: 'right', render: (v: string) => fmtAmount(v) },
                         ]}
                       />
                     ),
@@ -235,7 +236,7 @@ export function PODetailPage() {
                   columns={[
                     { title: t('field.payment_number'), dataIndex: 'payment_number' },
                     { title: t('field.installment_no'), dataIndex: 'installment_no', width: 80 },
-                    { title: t('field.amount'), dataIndex: 'amount', align: 'right' },
+                     { title: t('field.amount'), dataIndex: 'amount', align: 'right', render: (v: string) => fmtAmount(v) },
                     { title: t('field.due_date'), dataIndex: 'due_date' },
                     { title: t('field.payment_date'), dataIndex: 'payment_date' },
                     { title: t('field.status'), dataIndex: 'status',
@@ -278,9 +279,9 @@ export function PODetailPage() {
                     { title: t('field.internal_number'), dataIndex: 'internal_number' },
                     { title: t('field.invoice_number'), dataIndex: 'invoice_number' },
                     { title: t('field.invoice_date'), dataIndex: 'invoice_date' },
-                    { title: t('field.subtotal'), dataIndex: 'subtotal', align: 'right' },
-                    { title: t('field.tax_amount'), dataIndex: 'tax_amount', align: 'right' },
-                    { title: t('field.total_amount'), dataIndex: 'total_amount', align: 'right' },
+                     { title: t('field.subtotal'), dataIndex: 'subtotal', align: 'right', render: (v: string) => fmtAmount(v) },
+                     { title: t('field.tax_amount'), dataIndex: 'tax_amount', align: 'right', render: (v: string) => fmtAmount(v) },
+                     { title: t('field.total_amount'), dataIndex: 'total_amount', align: 'right', render: (v: string) => fmtAmount(v) },
                     { title: t('field.status'), dataIndex: 'status',
                       render: (s: string) => <Tag>{t(`status.${s}` as 'status.draft')}</Tag> },
                   ]}

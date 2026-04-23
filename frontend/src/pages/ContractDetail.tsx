@@ -45,6 +45,7 @@ import {
   type PaymentScheduleSummary,
 } from '@/api'
 import { extractError } from '@/api/client'
+import { fmtAmount } from '@/utils/format'
 
 function StatusTag({ status }: { status: string }) {
   const colorMap: Record<string, string> = {
@@ -160,7 +161,7 @@ export function ContractDetailPage() {
     if (!id) return
     Modal.confirm({
       title: t('contract.execute_title', { name: item.label }),
-      content: t('contract.confirm_execute', { amount: item.planned_amount }),
+      content: t('contract.confirm_execute', { amount: fmtAmount(item.planned_amount, contract?.currency ?? '') }),
       okText: t('contract.confirm_execute_ok'),
       cancelText: t('button.cancel'),
       onOk: async () => {
@@ -228,7 +229,7 @@ export function ContractDetailPage() {
             <Descriptions bordered size="small" column={2}>
               <Descriptions.Item label={t('field.title')}>{contract.title}</Descriptions.Item>
               <Descriptions.Item label={t('field.total_amount')}>
-                {contract.currency} {contract.total_amount}
+                {fmtAmount(contract.total_amount, contract.currency)}
               </Descriptions.Item>
               <Descriptions.Item label={t('field.signed_date')}>
                 {contract.signed_date || '-'}
@@ -353,7 +354,7 @@ export function ContractDetailPage() {
                 <Alert
                   type="warning"
                   message={t('contract.mismatch_warning')}
-                  description={`${t('contract.contract_total')} ¥${Number(schedule.contract_total).toLocaleString()} / ${t('contract.planned_total')} ¥${Number(schedule.planned_total).toLocaleString()}`}
+                  description={`${t('contract.contract_total')} ${fmtAmount(schedule.contract_total, contract.currency)} / ${t('contract.planned_total')} ${fmtAmount(schedule.planned_total, contract.currency)}`}
                   showIcon
                 />
               )}
@@ -408,7 +409,7 @@ export function ContractDetailPage() {
             { title: t('contract.version_col'), dataIndex: 'version_number', width: 80, render: (v: number) => `v${v}` },
             { title: t('contract.change_type_col'), dataIndex: 'change_type', width: 120, render: (v: string) => <Tag>{v}</Tag> },
             { title: t('field.title'), render: (_: unknown, r: ContractVersion) => (r.snapshot_json as Record<string, unknown>)?.title as string || '-' },
-            { title: t('field.total_amount'), render: (_: unknown, r: ContractVersion) => (r.snapshot_json as Record<string, unknown>)?.total_amount as string || '-', align: 'right' as const },
+             { title: t('field.total_amount'), render: (_: unknown, r: ContractVersion) => fmtAmount((r.snapshot_json as Record<string, unknown>)?.total_amount as string, contract.currency), align: 'right' as const },
             { title: t('contract.change_reason_col'), dataIndex: 'change_reason', render: (v: string | null) => v || '-' },
             { title: t('field.created_at'), dataIndex: 'created_at', render: (v: string) => new Date(v).toLocaleString() },
           ]}
@@ -449,7 +450,7 @@ export function ContractDetailPage() {
           showIcon
           style={{ marginBottom: 16 }}
           message={t('contract.plan_amount_hint')}
-          description={t('contract.current_total_hint', { amount: Number(contract.total_amount).toLocaleString() })}
+           description={t('contract.current_total_hint', { amount: fmtAmount(contract.total_amount, contract.currency) })}
         />
         <Form form={form} onFinish={handleAddSchedule} layout="vertical">
           <Typography.Text type="secondary" style={{ display: 'block', marginBottom: 12 }}>

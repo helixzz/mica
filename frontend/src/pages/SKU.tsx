@@ -40,6 +40,7 @@ import {
   type Supplier,
 } from '@/api'
 import { extractError } from '@/api/client'
+import { fmtAmount } from '@/utils/format'
 
 export function SKUPage() {
   const { t } = useTranslation()
@@ -117,11 +118,13 @@ export function SKUPage() {
       title: t('sku.benchmark_avg'),
       dataIndex: 'baseline_avg_price',
       align: 'right',
+      render: (v: string) => fmtAmount(v),
     },
     {
       title: t('sku.this_price'),
       dataIndex: 'observed_price',
       align: 'right',
+      render: (v: string) => fmtAmount(v),
     },
     {
       title: t('sku.deviation'),
@@ -170,7 +173,7 @@ export function SKUPage() {
       title: t('sku.price_col'),
       dataIndex: 'price',
       align: 'right',
-      render: (v: string, r) => `${r.currency} ${v}`,
+      render: (v: string) => fmtAmount(v),
     },
     {
       title: t('sku.source_col'),
@@ -254,9 +257,9 @@ export function SKUPage() {
                 <Col key={itemId} xs={24} md={12} lg={8} style={{ marginBottom: 12 }}>
                   <Card size="small" title={name} type="inner">
                     <Row gutter={8}>
-                      <Col span={8}><Statistic title={t('sku.avg')} value={bm.avg_price} valueStyle={{ fontSize: 14 }} /></Col>
-                      <Col span={8}><Statistic title={t('sku.min')} value={bm.min_price} valueStyle={{ fontSize: 14 }} /></Col>
-                      <Col span={8}><Statistic title={t('sku.max')} value={bm.max_price} valueStyle={{ fontSize: 14 }} /></Col>
+                      <Col span={8}><Statistic title={t('sku.avg')} value={bm.avg_price} prefix="¥" precision={2} valueStyle={{ fontSize: 14 }} /></Col>
+                      <Col span={8}><Statistic title={t('sku.min')} value={bm.min_price} prefix="¥" precision={2} valueStyle={{ fontSize: 14 }} /></Col>
+                      <Col span={8}><Statistic title={t('sku.max')} value={bm.max_price} prefix="¥" precision={2} valueStyle={{ fontSize: 14 }} /></Col>
                     </Row>
                   </Card>
                 </Col>
@@ -502,13 +505,13 @@ function InsightsPanel({ insights, itemName }: { insights: SKUInsights; itemName
             <Statistic title={t('sku.purchase_count')} value={ps.count} suffix={t('sku.times')} />
           </Col>
           <Col span={6}>
-            <Statistic title={t('sku.purchase_avg')} value={ps.avg_price ?? '-'} prefix="¥" precision={0} />
+            <Statistic title={t('sku.purchase_avg')} value={ps.avg_price ?? '-'} prefix="¥" precision={2} />
           </Col>
           <Col span={6}>
-            <Statistic title={t('sku.purchase_median')} value={ps.median_price ?? '-'} prefix="¥" precision={0} />
+            <Statistic title={t('sku.purchase_median')} value={ps.median_price ?? '-'} prefix="¥" precision={2} />
           </Col>
           <Col span={6}>
-            <Statistic title={t('sku.purchase_total')} value={ps.total_amount} prefix="¥" precision={0} />
+            <Statistic title={t('sku.purchase_total')} value={ps.total_amount} prefix="¥" precision={2} />
           </Col>
         </Row>
       </Card>
@@ -517,7 +520,7 @@ function InsightsPanel({ insights, itemName }: { insights: SKUInsights; itemName
         <Card size="small" title={t('sku.market_signal')}>
           <Row gutter={16}>
             <Col span={6}>
-              <Statistic title={t('sku.current_price')} value={ms.current_price} prefix="¥" precision={0} />
+              <Statistic title={t('sku.current_price')} value={ms.current_price} prefix="¥" precision={2} />
             </Col>
             <Col span={6}>
               <Statistic
@@ -563,7 +566,7 @@ function InsightsPanel({ insights, itemName }: { insights: SKUInsights; itemName
                   }}
                 />
               </div>
-              <Typography.Text strong style={{ width: 100, textAlign: 'right' }}>¥{s.avg_price.toLocaleString()}</Typography.Text>
+               <Typography.Text strong style={{ width: 100, textAlign: 'right' }}>{fmtAmount(s.avg_price)}</Typography.Text>
               <Tag>{s.count} {t('sku.times')}</Tag>
             </div>
           ))}
@@ -580,9 +583,9 @@ function InsightsPanel({ insights, itemName }: { insights: SKUInsights; itemName
             columns={[
               { title: t('sku.date_col'), dataIndex: 'date', width: 110 },
               { title: t('sku.supplier_col'), dataIndex: 'supplier_name' },
-              { title: t('field.unit_price'), dataIndex: 'unit_price', align: 'right' as const, render: (v: number) => `¥${v.toLocaleString()}` },
+               { title: t('field.unit_price'), dataIndex: 'unit_price', align: 'right' as const, render: (v: number) => fmtAmount(v) },
               { title: t('field.qty'), dataIndex: 'qty', align: 'right' as const },
-              { title: t('field.amount'), dataIndex: 'amount', align: 'right' as const, render: (v: number) => `¥${v.toLocaleString()}` },
+               { title: t('field.amount'), dataIndex: 'amount', align: 'right' as const, render: (v: number) => fmtAmount(v) },
               { title: 'PO', dataIndex: 'po_number' },
               {
                 title: t('sku.deviation'),
