@@ -7,6 +7,20 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [v0.9.4] — 2026-04-23
+
+### 新增
+
+- **登录页 SSO 优先体验**：当系统启用 SAML SSO 时，登录页优先展示"通过 SSO 登录"按钮，本地账号密码登录隐藏在"使用本地账号登录"链接后面；未启用 SSO 时界面不变
+- **交货批次 CRUD + 附件上传**：交货批次列表页从只读升级为完整管理界面，支持编辑状态/物流信息、删除批次；新增附件管理功能，可上传序列号清单、签收单、发货单等文件
+- **ShipmentDocument 模型**：新增 `shipment_documents` 关联表（migration 0016），支持交货批次与文档的多对多关联
+- **交货批次 API**：`PATCH /shipments/{id}`（更新）、`DELETE /shipments/{id}`（删除）、`POST/GET/DELETE /shipments/{id}/attachments`（附件管理）
+- **SSO 配置指南**：管理员手册新增详细的 SAML SSO 配置章节，涵盖 ADFS 和 Microsoft Entra ID（原 Azure AD）的分步配置说明和参数示例
+
+### 修复
+
+- **系统管理页面横向溢出**：在 1366×1024 等窄屏下，Tab 标题和内容超出屏幕且无横向滚动条；修复 Content 区域 overflow 处理 + 移除重复的部门管理 Tab
+
 ## [v0.9.3] — 2026-04-23
 
 ### 新增

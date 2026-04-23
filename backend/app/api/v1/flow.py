@@ -18,8 +18,10 @@ from app.schemas import (
     PaymentOut,
     POProgressOut,
     SerialNumberIn,
+    ShipmentAttachIn,
     ShipmentCreateIn,
     ShipmentOut,
+    ShipmentUpdate,
 )
 from app.services import export_excel, flow
 
@@ -99,6 +101,68 @@ async def record_serials(
         db, user, shipment_item_id, [s.model_dump() for s in payload]
     )
     return [{"id": str(e.id), "serial_number": e.serial_number} for e in entries]
+
+
+@router.patch("/shipments/{shipment_id}", response_model=ShipmentOut, tags=["flow"])
+async def update_shipment(
+    shipment_id: UUID,
+    payload: ShipmentUpdate,
+    user: CurrentUser,
+    db: Annotated[AsyncSession, Depends(get_db)],
+):
+    s = await flow.update_shipment(db, user, shipment_id, payload)
+    return ShipmentOut.model_validate(s)
+
+
+@router.delete("/shipments/{shipment_id}", status_code=status.HTTP_204_NO_CONTENT, tags=["flow"])
+async def delete_shipment(
+    shipment_id: UUID,
+    user: CurrentUser,
+    db: Annotated[AsyncSession, Depends(get_db)],
+) -> Response:
+    await flow.delete_shipment(db, user, shipment_id)
+    return Response(status_code=status.HTTP_204_NO_CONTENT)
+
+
+@router.post("/shipments/{shipment_id}/attachments", status_code=201, tags=["flow"])
+async def attach_shipment_document(
+    shipment_id: UUID,
+    payload: ShipmentAttachIn,
+    user: CurrentUser,
+    db: Annotated[AsyncSession, Depends(get_db)],
+):
+    link = await flow.attach_document_to_shipment(
+        db, user, shipment_id, payload.document_id, payload.role
+    )
+    return {
+        "shipment_id": str(link.shipment_id),
+        "document_id": str(link.document_id),
+        "role": link.role,
+    }
+
+
+@router.get("/shipments/{shipment_id}/attachments", tags=["flow"])
+async def list_shipment_attachments(
+    shipment_id: UUID,
+    user: CurrentUser,
+    db: Annotated[AsyncSession, Depends(get_db)],
+):
+    return await flow.list_shipment_documents(db, shipment_id)
+
+
+@router.delete(
+    "/shipments/{shipment_id}/attachments/{document_id}",
+    status_code=status.HTTP_204_NO_CONTENT,
+    tags=["flow"],
+)
+async def remove_shipment_attachment(
+    shipment_id: UUID,
+    document_id: UUID,
+    user: CurrentUser,
+    db: Annotated[AsyncSession, Depends(get_db)],
+) -> Response:
+    await flow.remove_shipment_document(db, shipment_id, document_id)
+    return Response(status_code=status.HTTP_204_NO_CONTENT)
 
 
 @router.post(

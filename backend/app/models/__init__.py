@@ -577,8 +577,30 @@ class Shipment(Base, TimestampMixin):
     items: Mapped[list[ShipmentItem]] = relationship(
         back_populates="shipment", cascade="all, delete-orphan", order_by="ShipmentItem.line_no"
     )
+    documents: Mapped[list[ShipmentDocument]] = relationship(
+        back_populates="shipment", cascade="all, delete-orphan", order_by="ShipmentDocument.display_order"
+    )
 
     __table_args__ = (UniqueConstraint("po_id", "batch_no"),)
+
+
+class ShipmentDocument(Base):
+    __tablename__ = "shipment_documents"
+
+    shipment_id: Mapped[UUID] = mapped_column(
+        PGUUID(as_uuid=True), ForeignKey("shipments.id", ondelete="CASCADE"), primary_key=True
+    )
+    document_id: Mapped[UUID] = mapped_column(
+        PGUUID(as_uuid=True), ForeignKey("documents.id", ondelete="RESTRICT"), primary_key=True
+    )
+    role: Mapped[str] = mapped_column(String(32), default="attachment", nullable=False)
+    display_order: Mapped[int] = mapped_column(Integer, default=0, nullable=False)
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), default=lambda: datetime.now(UTC), nullable=False
+    )
+
+    shipment: Mapped[Shipment] = relationship(back_populates="documents")
+    document: Mapped[Document] = relationship()
 
 
 class ShipmentItem(Base, TimestampMixin):

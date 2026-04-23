@@ -24,6 +24,7 @@ from app.models import (
     PurchaseOrder,
     SerialNumberEntry,
     Shipment,
+    ShipmentDocument,
     ShipmentItem,
     ShipmentStatus,
     Supplier,
@@ -212,6 +213,97 @@ async def list_shipments(db: AsyncSession, po_id: UUID | None = None) -> list[Sh
     if po_id:
         stmt = stmt.where(Shipment.po_id == po_id)
     return list((await db.execute(stmt)).scalars().all())
+
+
+async def update_shipment(
+    db: AsyncSession, actor: User, shipment_id: UUID, payload: object
+) -> Shipment:
+    from app.schemas import ShipmentUpdate
+
+    shipment = await db.get(Shipment, shipment_id)
+    if shipment is None:
+        raise HTTPException(404, "shipment.not_found")
+    assert isinstance(payload, ShipmentUpdate)
+    changes: dict[str, object] = {}
+    for field_name in payload.model_fields_set:
+        new_val = getattr(payload, field_name)
+        old_val = getattr(shipment, field_name)
+        if old_val != new_val:
+            changes[field_name] = {"old": str(old_val), "new": str(new_val)}
+            setattr(shipment, field_name, new_val)
+    if changes:
+        await _audit_write(
+            db, actor, "shipment.updated", "shipment", str(shipment_id), changes
+        )
+        await db.commit()
+    result = await db.execute(
+        select(Shipment).where(Shipment.id == shipment_id).options(selectinload(Shipment.items))
+    )
+    return result.scalar_one()
+
+
+async def delete_shipment(db: AsyncSession, actor: User, shipment_id: UUID) -> None:
+    shipment = await db.get(Shipment, shipment_id)
+    if shipment is None:
+        raise HTTPException(404, "shipment.not_found")
+    await _audit_write(
+        db, actor, "shipment.deleted", "shipment", str(shipment_id),
+        {"shipment_number": shipment.shipment_number},
+    )
+    await db.delete(shipment)
+    await db.commit()
+
+
+async def attach_document_to_shipment(
+    db: AsyncSession, actor: User, shipment_id: UUID, document_id: UUID, role: str = "attachment"
+) -> ShipmentDocument:
+    shipment = await db.get(Shipment, shipment_id)
+    if shipment is None:
+        raise HTTPException(404, "shipment.not_found")
+    doc = await db.get(Document, document_id)
+    if doc is None:
+        raise HTTPException(404, "document.not_found")
+    link = ShipmentDocument(
+        shipment_id=shipment_id, document_id=document_id, role=role,
+    )
+    db.add(link)
+    await _audit_write(
+        db, actor, "shipment.document.attached", "shipment", str(shipment_id),
+        {"document_id": str(document_id), "filename": doc.original_filename},
+    )
+    await db.commit()
+    return link
+
+
+async def list_shipment_documents(db: AsyncSession, shipment_id: UUID) -> list[dict]:
+    stmt = (
+        select(ShipmentDocument, Document)
+        .join(Document, ShipmentDocument.document_id == Document.id)
+        .where(ShipmentDocument.shipment_id == shipment_id)
+        .order_by(ShipmentDocument.display_order)
+    )
+    rows = (await db.execute(stmt)).all()
+    return [
+        {
+            "document_id": str(sd.document_id),
+            "role": sd.role,
+            "original_filename": d.original_filename,
+            "content_type": d.content_type,
+            "file_size": d.file_size,
+            "created_at": sd.created_at.isoformat() if sd.created_at else None,
+        }
+        for sd, d in rows
+    ]
+
+
+async def remove_shipment_document(
+    db: AsyncSession, shipment_id: UUID, document_id: UUID
+) -> None:
+    link = await db.get(ShipmentDocument, (shipment_id, document_id))
+    if link is None:
+        raise HTTPException(404, "shipment_document.not_found")
+    await db.delete(link)
+    await db.commit()
 
 
 async def record_serial_numbers(

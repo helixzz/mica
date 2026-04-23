@@ -237,6 +237,7 @@ export function AppLayout() {
             maxWidth: 1440,
             margin: '0 auto',
             width: '100%',
+            overflow: 'hidden',
           }}
         >
           <Outlet />
