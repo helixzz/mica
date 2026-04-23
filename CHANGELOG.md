@@ -7,6 +7,26 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [v0.9.0] — 2026-04-23
+
+主数据实体 `is_active` 拆分为 `is_enabled`（业务启停）+ `is_deleted`（软删除），消除长期语义歧义。
+
+### 破坏性变更
+
+- **7 个主数据表 schema 变更**：`companies`、`departments`、`cost_centers`、`procurement_categories`、`lookup_values`、`suppliers`、`items` 的 `is_active` 列替换为 `is_enabled`（业务启停）+ `is_deleted`（软删除）
+- **API 响应字段变更**：上述实体的 Output schema 返回 `is_enabled` + `is_deleted` 替代 `is_active`；Update schema 接受 `is_enabled` 替代 `is_active`
+- 不影响：`users.is_active`、`ai_models.is_active`、`approval_rules.is_active`、`approver_delegations.is_active` 保持不变
+
+### 新增
+
+- Migration 0015：自动从 `is_active` 回填 `is_enabled`/`is_deleted`，无需手工数据迁移
+
+### 改进
+
+- Admin 管理页面操作语义清晰化：编辑 / 启用·停用 / 删除 三个操作各司其职，不再混淆
+- 业务表单（PR 创建选公司/成本中心/供应商等）只显示 `is_enabled=true AND is_deleted=false` 的条目
+- Admin 列表显示所有未删除条目（含已停用的），可视化区分状态
+
 ## [v0.8.8] — 2026-04-23
 
 ### 修复
