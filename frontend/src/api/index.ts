@@ -30,7 +30,8 @@ export interface Company {
   name_en: string | null
   default_locale: string
   default_currency: string
-  is_active: boolean
+  is_enabled: boolean
+  is_deleted: boolean
 }
 
 export interface Department {
@@ -48,6 +49,8 @@ export interface Supplier {
   contact_name: string | null
   contact_phone: string | null
   contact_email: string | null
+  is_enabled: boolean
+  is_deleted: boolean
 }
 
 export interface Item {
@@ -59,7 +62,8 @@ export interface Item {
   uom: string
   specification: string | null
   requires_serial: boolean
-  is_active: boolean
+  is_enabled: boolean
+  is_deleted: boolean
 }
 
 export interface PRItem {
@@ -602,7 +606,7 @@ export const api = {
     const { data } = await client.post<Company>('/companies', body)
     return data
   },
-  async updateCompany(id: string, body: { name_zh?: string; name_en?: string; default_currency?: string; is_active?: boolean }): Promise<Company> {
+  async updateCompany(id: string, body: { name_zh?: string; name_en?: string; default_currency?: string; is_enabled?: boolean }): Promise<Company> {
     const { data } = await client.patch<Company>(`/companies/${id}`, body)
     return data
   },
@@ -627,7 +631,7 @@ export const api = {
   },
   async updateItem(id: string, body: {
     name?: string; category?: string; uom?: string;
-    specification?: string; requires_serial?: boolean; is_active?: boolean; category_id?: string;
+    specification?: string; requires_serial?: boolean; is_enabled?: boolean; category_id?: string;
   }): Promise<Item> {
     const { data } = await client.patch<Item>(`/items/${id}`, body)
     return data

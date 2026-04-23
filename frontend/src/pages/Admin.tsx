@@ -693,8 +693,8 @@ function CompaniesTab() {
 
   const toggleActive = async (company: any) => {
     try {
-      await api.updateCompany(company.id, { is_active: !company.is_active })
-      void message.success(company.is_active ? t('admin.deactivated') : t('common.updated'))
+      await api.updateCompany(company.id, { is_enabled: !company.is_enabled })
+      void message.success(company.is_enabled ? t('admin.deactivated') : t('common.updated'))
       load()
     } catch (e: any) {
       void message.error(e?.response?.data?.detail || t('admin.operation_failed'))
@@ -712,15 +712,15 @@ function CompaniesTab() {
         { title: t('admin.name_zh_col'), dataIndex: 'name_zh' },
         { title: t('admin.name_en_col'), dataIndex: 'name_en', render: (v: string | null) => v || '-' },
         { title: t('admin.default_currency'), dataIndex: 'default_currency', width: 80 },
-        { title: t('admin.status_col'), dataIndex: 'is_active', width: 70, render: (v: boolean) => <Tag color={v !== false ? 'success' : 'default'}>{v !== false ? t('common.enabled') : t('common.disabled')}</Tag> },
+        { title: t('admin.status_col'), dataIndex: 'is_enabled', width: 70, render: (v: boolean) => <Tag color={v !== false ? 'success' : 'default'}>{v !== false ? t('common.enabled') : t('common.disabled')}</Tag> },
         {
           title: t('common.actions'),
           width: 150,
           render: (_: unknown, r: any) => (
             <Space>
               <Button size="small" onClick={() => openEdit(r)}>{t('button.edit')}</Button>
-              <Button size="small" danger={r.is_active !== false} onClick={() => toggleActive(r)}>
-                {r.is_active !== false ? t('common.disabled') : t('common.enabled')}
+              <Button size="small" danger={r.is_enabled !== false} onClick={() => toggleActive(r)}>
+                {r.is_enabled !== false ? t('common.disabled') : t('common.enabled')}
               </Button>
             </Space>
           ),
@@ -882,9 +882,9 @@ function ClassificationTab() {
         label_zh: item.label_zh,
         label_en: item.label_en,
         sort_order: item.sort_order,
-        is_active: !item.is_active,
+        is_enabled: !item.is_enabled,
       })
-      void message.success(item.is_active ? t('admin.deactivated') : t('common.updated'))
+      void message.success(item.is_enabled ? t('admin.deactivated') : t('common.updated'))
       load()
     } catch (e: any) {
       void message.error(e?.response?.data?.detail || t('admin.operation_failed'))
@@ -923,7 +923,7 @@ function ClassificationTab() {
             ? [
                 {
                   title: t('admin.status_col'),
-                  dataIndex: 'is_active',
+                  dataIndex: 'is_enabled',
                   width: 70,
                   render: (v: boolean) => (
                     <Tag color={v !== false ? 'success' : 'default'}>
@@ -943,10 +943,10 @@ function ClassificationTab() {
                     <Button size="small" onClick={() => openEdit(r)}>{t('button.edit')}</Button>
                     <Button
                       size="small"
-                      danger={r.is_active !== false}
+                      danger={r.is_enabled !== false}
                       onClick={() => handleToggleActive(r)}
                     >
-                      {r.is_active !== false ? t('common.disabled') : t('common.enabled')}
+                      {r.is_enabled !== false ? t('common.disabled') : t('common.enabled')}
                     </Button>
                   </>
                 )}
