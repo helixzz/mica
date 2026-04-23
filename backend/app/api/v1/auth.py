@@ -15,7 +15,15 @@ from app.core.security import (
 from app.db import get_db
 from app.i18n import detect_locale, t
 from app.models import Company, Department, User
-from app.schemas import CompanyOut, DepartmentOut, LoginRequest, TokenResponse, UserOut
+from app.schemas import (
+    CompanyOut,
+    DepartmentOut,
+    LoginOptionsResponse,
+    LoginRequest,
+    TokenResponse,
+    UserOut,
+)
+from app.services.saml_config import SAML_LOGIN_URL, is_saml_login_available
 from app.services.system_params import system_params
 
 settings = get_settings()
@@ -104,6 +112,19 @@ async def login_json(
 @router.get("/auth/me", response_model=UserOut, tags=["auth"])
 async def get_me(user: CurrentUser) -> UserOut:
     return UserOut.model_validate(user)
+
+
+@router.get("/auth/login-options", response_model=LoginOptionsResponse, tags=["auth"])
+async def get_login_options(
+    request: Request,
+    db: Annotated[AsyncSession, Depends(get_db)],
+) -> LoginOptionsResponse:
+    locale = detect_locale(request)
+    saml_enabled = await is_saml_login_available(db, request, locale)
+    return LoginOptionsResponse(
+        saml_enabled=saml_enabled,
+        saml_login_url=SAML_LOGIN_URL if saml_enabled else None,
+    )
 
 
 @router.get("/companies", response_model=list[CompanyOut], tags=["org"])

@@ -390,6 +390,19 @@ class ContractOut(BaseModel):
     created_at: datetime
 
 
+class ContractVersionOut(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
+    id: UUID
+    contract_id: UUID
+    version_number: int
+    change_type: str
+    change_reason: str | None
+    snapshot_json: dict[str, JSONValue]
+    changed_by_id: UUID | None
+    created_at: datetime
+
+
 class ShipmentItemIn(BaseModel):
     po_item_id: UUID
     qty_shipped: Decimal = Field(..., gt=0)
@@ -815,6 +828,11 @@ class SystemParameterOut(BaseModel):
 
 class SystemParameterUpdate(BaseModel):
     value: JSONValue
+
+
+class LoginOptionsResponse(BaseModel):
+    saml_enabled: bool
+    saml_login_url: str | None = None
 
 
 class SearchHit(BaseModel):

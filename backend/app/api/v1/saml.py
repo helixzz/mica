@@ -1,52 +1,187 @@
-"""SAML SSO endpoints (scaffolded, not wired to production ADFS yet).
+"""SAML SSO endpoints."""
 
-Dev-mode: returns a helpful placeholder indicating how to configure SAML.
-The local password login at /auth/login remains the primary dev flow.
-"""
-
-import os
 from typing import Annotated
+from urllib.parse import quote
 
 from fastapi import APIRouter, Depends, HTTPException, Request
+from fastapi.responses import RedirectResponse, Response
+from onelogin.saml2.auth import OneLogin_Saml2_Auth
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.core.security import create_access_token
 from app.db import get_db
+from app.i18n import detect_locale, t
+from app.models import AuditLog
+from app.services.saml_config import build_onelogin_settings, get_saml_config
+from app.services.saml_jit import upsert_saml_user
+from app.services.system_params import system_params
 
 router = APIRouter()
 
 
 @router.get("/saml/metadata", tags=["saml"])
-async def saml_metadata() -> dict:
-    return {
-        "status": "not_configured",
-        "message": (
-            "SAML is scaffolded but not configured. "
-            "To enable ADFS SAML: set SAML_ENABLED=true and provide IdP metadata "
-            "(entityId, SSO URL, x509 cert) in environment variables, then install "
-            "python3-saml in the backend image."
-        ),
-        "sp_entity_id_suggestion": os.environ.get(
-            "SAML_SP_ENTITY_ID", "https://mica.example/saml/metadata"
-        ),
-        "sp_acs_suggestion": os.environ.get("SAML_SP_ACS", "https://mica.example/saml/acs"),
-    }
+async def saml_metadata(
+    request: Request,
+    db: Annotated[AsyncSession, Depends(get_db)],
+) -> Response:
+    locale = detect_locale(request)
+    config = await get_saml_config(db, request, locale)
+    if not config.enabled:
+        raise HTTPException(503, t("saml.not_enabled", locale))
+    try:
+        saml_settings = build_onelogin_settings(config)
+        metadata = saml_settings.get_sp_metadata()
+        errors = saml_settings.validate_metadata(metadata)
+    except HTTPException:
+        raise
+    except Exception as exc:
+        await _write_saml_system_audit(
+            db,
+            event_type="auth.sso.misconfigured",
+            metadata={"reason": str(exc)},
+        )
+        await db.commit()
+        raise HTTPException(500, t("saml.misconfigured", locale)) from exc
+    if errors:
+        await _write_saml_system_audit(
+            db,
+            event_type="auth.sso.misconfigured",
+            metadata={"errors": errors},
+        )
+        await db.commit()
+        raise HTTPException(500, t("saml.metadata_invalid", locale))
+    return Response(content=metadata, media_type="text/xml")
 
 
 @router.get("/saml/login", tags=["saml"])
-async def saml_login_init() -> dict:
-    if os.environ.get("SAML_ENABLED", "false").lower() != "true":
-        raise HTTPException(
-            503,
-            "saml.not_enabled",
+async def saml_login_init(
+    request: Request,
+    db: Annotated[AsyncSession, Depends(get_db)],
+) -> RedirectResponse:
+    locale = detect_locale(request)
+    config = await get_saml_config(db, request, locale)
+    if not config.enabled:
+        raise HTTPException(503, t("saml.not_enabled", locale))
+    relay_state = _validated_relay_state(request.query_params.get("next"), locale)
+    try:
+        auth = OneLogin_Saml2_Auth(
+            _build_onelogin_request(request),
+            old_settings=config.to_onelogin_settings(),
         )
-    return {"status": "pending_implementation"}
+        redirect_url = auth.login(return_to=relay_state)
+    except HTTPException:
+        raise
+    except Exception as exc:
+        await _write_saml_system_audit(
+            db,
+            event_type="auth.sso.misconfigured",
+            metadata={"reason": str(exc)},
+        )
+        await db.commit()
+        raise HTTPException(500, t("saml.misconfigured", locale)) from exc
+    return RedirectResponse(url=redirect_url, status_code=302)
 
 
 @router.post("/saml/acs", tags=["saml"])
 async def saml_acs(
     request: Request,
     db: Annotated[AsyncSession, Depends(get_db)],
-) -> dict:
-    if os.environ.get("SAML_ENABLED", "false").lower() != "true":
-        raise HTTPException(503, "saml.not_enabled")
-    raise HTTPException(501, "saml.not_implemented")
+) -> RedirectResponse:
+    locale = detect_locale(request)
+    config = await get_saml_config(db, request, locale)
+    if not config.enabled:
+        raise HTTPException(503, t("saml.not_enabled", locale))
+    form_data = await request.form()
+    if "SAMLResponse" not in form_data:
+        raise HTTPException(400, t("saml.invalid_response", locale))
+
+    try:
+        auth = OneLogin_Saml2_Auth(
+            _build_onelogin_request(request, form_data),
+            old_settings=config.to_onelogin_settings(),
+        )
+        auth.process_response()
+        errors = auth.get_errors()
+        if errors or not auth.is_authenticated():
+            raise HTTPException(403, t("saml.authentication_failed", locale))
+        attributes = auth.get_attributes()
+        external_id = auth.get_nameid()
+        user = await upsert_saml_user(
+            db,
+            config=config,
+            external_id=external_id,
+            attributes=attributes,
+            locale=locale,
+        )
+    except HTTPException as exc:
+        if exc.status_code >= 500:
+            await _write_saml_system_audit(
+                db,
+                event_type="auth.sso.misconfigured",
+                metadata={"detail": str(exc.detail)},
+            )
+            await db.commit()
+        raise
+    except Exception as exc:
+        await _write_saml_system_audit(
+            db,
+            event_type="auth.sso.misconfigured",
+            metadata={"reason": str(exc)},
+        )
+        await db.commit()
+        raise HTTPException(500, t("saml.misconfigured", locale)) from exc
+
+    access_token_ttl_minutes = int(
+        await system_params.get_int_or(db, "auth.access_token_expire_minutes", 480)
+    )
+    token = create_access_token(
+        str(user.id),
+        extra={"role": user.role},
+        expire_minutes=access_token_ttl_minutes,
+    )
+    next_path = _validated_relay_state(form_data.get("RelayState"), locale)
+    await db.commit()
+    location = f"/sso-callback#token={quote(token)}&next={quote(next_path)}"
+    return RedirectResponse(url=location, status_code=302)
+
+
+def _build_onelogin_request(request: Request, form_data=None) -> dict[str, object]:
+    host = request.url.hostname or request.headers.get("host", "localhost")
+    return {
+        "https": "on" if request.url.scheme == "https" else "off",
+        "http_host": host,
+        "server_port": request.url.port or (443 if request.url.scheme == "https" else 80),
+        "script_name": request.url.path,
+        "query_string": request.url.query,
+        "get_data": dict(request.query_params),
+        "post_data": dict(form_data) if form_data is not None else {},
+        "lowercase_urlencoding": True,
+    }
+
+
+def _validated_relay_state(value: object, locale: str) -> str:
+    if not isinstance(value, str) or not value.strip():
+        return "/dashboard"
+    relay_state = value.strip()
+    if not relay_state.startswith("/") or relay_state.startswith("//") or "://" in relay_state:
+        raise HTTPException(400, t("saml.invalid_relay_state", locale))
+    return relay_state
+
+
+async def _write_saml_system_audit(
+    db: AsyncSession,
+    *,
+    event_type: str,
+    metadata: dict[str, object],
+) -> None:
+    db.add(
+        AuditLog(
+            actor_id=None,
+            actor_name=None,
+            event_type=event_type,
+            resource_type="auth_provider",
+            resource_id="saml",
+            metadata_json=metadata,
+            comment=event_type,
+        )
+    )

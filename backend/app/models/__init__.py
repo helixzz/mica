@@ -240,7 +240,10 @@ class User(Base, TimestampMixin):
 
     __table_args__ = (
         CheckConstraint(
-            "role IN ('admin','it_buyer','dept_manager','finance_auditor','procurement_mgr')",
+            (
+                "role IN "
+                "('admin','requester','it_buyer','dept_manager','finance_auditor','procurement_mgr')"
+            ),
             name="valid_role",
         ),
     )
@@ -464,6 +467,35 @@ class Contract(Base, TimestampMixin):
         back_populates="contract",
         cascade="all, delete-orphan",
         order_by="PaymentSchedule.installment_no",
+    )
+    versions: Mapped[list[ContractVersion]] = relationship(
+        back_populates="contract",
+        cascade="all, delete-orphan",
+        order_by="ContractVersion.version_number",
+    )
+
+
+class ContractVersion(Base, TimestampMixin):
+    __tablename__ = "contract_versions"
+
+    id: Mapped[UUID] = mapped_column(PGUUID(as_uuid=True), primary_key=True, default=new_uuid)
+    contract_id: Mapped[UUID] = mapped_column(
+        PGUUID(as_uuid=True),
+        ForeignKey("contracts.id", ondelete="CASCADE"),
+        nullable=False,
+    )
+    version_number: Mapped[int] = mapped_column(Integer, nullable=False)
+    change_type: Mapped[str] = mapped_column(String(32), default="created", nullable=False)
+    change_reason: Mapped[str | None] = mapped_column(Text)
+    snapshot_json: Mapped[dict[str, JSONValue]] = mapped_column(JSONB, nullable=False)
+    changed_by_id: Mapped[UUID | None] = mapped_column(PGUUID(as_uuid=True), ForeignKey("users.id"))
+
+    contract: Mapped[Contract] = relationship(back_populates="versions")
+    changed_by: Mapped[User | None] = relationship()
+
+    __table_args__ = (
+        UniqueConstraint("contract_id", "version_number"),
+        Index("ix_contract_versions_contract_id", "contract_id"),
     )
 
 
