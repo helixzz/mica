@@ -111,7 +111,7 @@ class SamlConfig:
                 "logoutRequestSigned": False,
                 "logoutResponseSigned": False,
                 "wantAssertionsSigned": True,
-                "wantMessagesSigned": True,
+                "wantMessagesSigned": False,
                 "wantAssertionsEncrypted": False,
                 "wantNameIdEncrypted": False,
                 "signatureAlgorithm": "http://www.w3.org/2001/04/xmldsig-more#rsa-sha256",
