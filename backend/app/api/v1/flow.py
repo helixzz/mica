@@ -5,11 +5,13 @@ from fastapi import APIRouter, Depends, status
 from fastapi.responses import Response
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.core.security import CurrentUser
+from app.core.security import CurrentUser, require_roles
 from app.db import get_db
 from app.schemas import (
     ContractCreateIn,
     ContractOut,
+    ContractStatusIn,
+    ContractUpdateIn,
     InvoiceCreateIn,
     InvoiceListOut,
     InvoiceOut,
@@ -35,6 +37,7 @@ async def create_contract(
     payload: ContractCreateIn,
     user: CurrentUser,
     db: Annotated[AsyncSession, Depends(get_db)],
+    _role: Annotated[None, Depends(require_roles("admin", "procurement_mgr", "it_buyer"))],
 ):
     c = await flow.create_contract(
         db,
@@ -57,6 +60,42 @@ async def list_contracts(
     po_id: UUID | None = None,
 ):
     return [ContractOut.model_validate(c) for c in await flow.list_contracts(db, po_id)]
+
+
+@router.patch("/contracts/{contract_id}", response_model=ContractOut, tags=["flow"])
+async def update_contract(
+    contract_id: UUID,
+    payload: ContractUpdateIn,
+    user: CurrentUser,
+    db: Annotated[AsyncSession, Depends(get_db)],
+    _role: Annotated[None, Depends(require_roles("admin", "procurement_mgr", "it_buyer"))],
+):
+    updates = payload.model_dump(exclude_unset=True)
+    c = await flow.update_contract(db, user, contract_id, updates)
+    return ContractOut.model_validate(c)
+
+
+@router.patch("/contracts/{contract_id}/status", response_model=ContractOut, tags=["flow"])
+async def change_contract_status(
+    contract_id: UUID,
+    payload: ContractStatusIn,
+    user: CurrentUser,
+    db: Annotated[AsyncSession, Depends(get_db)],
+    _role: Annotated[None, Depends(require_roles("admin", "procurement_mgr"))],
+):
+    c = await flow.transition_contract_status(db, user, contract_id, payload.status, payload.reason)
+    return ContractOut.model_validate(c)
+
+
+@router.delete("/contracts/{contract_id}", status_code=status.HTTP_204_NO_CONTENT, tags=["flow"])
+async def delete_contract(
+    contract_id: UUID,
+    user: CurrentUser,
+    db: Annotated[AsyncSession, Depends(get_db)],
+    _role: Annotated[None, Depends(require_roles("admin"))],
+) -> Response:
+    await flow.delete_contract(db, user, contract_id)
+    return Response(status_code=status.HTTP_204_NO_CONTENT)
 
 
 @router.post(

@@ -377,6 +377,21 @@ class ContractCreateIn(BaseModel):
     notes: str | None = None
 
 
+class ContractUpdateIn(BaseModel):
+    title: str | None = None
+    total_amount: Decimal | None = None
+    signed_date: date | None = None
+    effective_date: date | None = None
+    expiry_date: date | None = None
+    notes: str | None = None
+    change_reason: str | None = None
+
+
+class ContractStatusIn(BaseModel):
+    status: str
+    reason: str | None = None
+
+
 class ContractOut(BaseModel):
     model_config = ConfigDict(from_attributes=True)
     id: UUID
@@ -888,7 +903,8 @@ class PaymentScheduleItemOut(BaseModel):
     model_config = ConfigDict(from_attributes=True)
 
     id: UUID
-    contract_id: UUID
+    contract_id: UUID | None = None
+    po_id: UUID | None = None
     installment_no: int
     label: str
     planned_amount: Decimal

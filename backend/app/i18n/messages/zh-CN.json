@@ -58,6 +58,9 @@
     }
   },
   "contract.not_found": "合同不存在",
+  "contract.not_editable_in_status": "当前状态下合同不可编辑",
+  "contract.invalid_status_transition": "不允许的合同状态变更",
+  "contract.cannot_delete_with_paid_schedule": "已存在已付款记录，合同无法删除",
   "schedule_item.not_found": "付款计划期次不存在",
   "schedule_item.cannot_delete_paid": "已付款的计划不能删除",
   "schedule_item.already_paid": "该期已付款，不能重复执行",
