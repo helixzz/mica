@@ -49,6 +49,32 @@ cd deploy
 - 付款到期默认天数
 - 等共 15+ 项
 
+#### SAML / ADFS 单点登录配置（v0.8.1+）
+
+管理员现在可以直接在 **系统参数 System Parameters** 中配置 `auth.saml.*` 键，无需改 `.env` 或重新构建镜像。
+
+推荐配置顺序：
+
+1. 先填写：
+   - `auth.saml.idp.entity_id`
+   - `auth.saml.idp.sso_url`
+   - `auth.saml.idp.x509_cert`
+2. 再确认自动建用户默认值：
+   - `auth.saml.jit.default_role`
+   - `auth.saml.jit.default_company_code`
+   - `auth.saml.jit.default_department_code`（可选）
+3. 如需按用户组自动分配角色，再打开：
+   - `auth.saml.group_mapping_enabled=true`
+   - `auth.saml.group_mapping=[...]`
+4. 最后才启用：
+   - `auth.saml.enabled=true`
+
+!!! tip "启用前先自检"
+    建议先访问登录页，确认已出现 **通过 SSO 登录 Sign in with SSO** 按钮；若按钮未出现，通常说明 `auth.saml.*` 关键参数仍不完整或格式无效。
+
+!!! warning "默认角色"
+    当组映射未开启，或用户组没有命中任何规则时，系统会把自动创建的用户降级到最低权限默认角色（当前为 `requester`）。
+
 ### 分类管理
 
 维护三个分类维度，所有采购申请和物料都会引用：

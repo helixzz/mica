@@ -9,7 +9,7 @@
 - **Mica（觅采）** — 企业内部采购管理系统（Internal Procurement Management System）
 - **规模**：单公司 < 100 员工、月 < 300 单的 IT 部门内部使用
 - **License**：Apache 2.0
-- **状态**：v0.8.0（2026-04-23）· [CHANGELOG.md](./CHANGELOG.md) · [Release](https://github.com/helixzz/mica/releases/tag/v0.8.0)
+- **状态**：v0.8.2（2026-04-23）· [CHANGELOG.md](./CHANGELOG.md) · [Release](https://github.com/helixzz/mica/releases/tag/v0.8.2)
 - **设计准则**：效率优先 > 扩展性 > 标准化管控
 - **仓库**：`git@github.com:helixzz/mica.git`（main 分支）
 
@@ -177,6 +177,13 @@ cd deploy
 - Cerbos 不可达时自动降级到 `core/field_authz.py` 的静态 `FIELD_PERMISSIONS` dict（零故障风险）
 - 修改权限规则后 Cerbos 自动热加载（`watchForChanges: true`），不需要重启容器
 - **不要**在业务代码里直接引用 `FIELD_PERMISSIONS` dict，统一走 `cerbos_client.check_field_access` / `filter_dict_via_cerbos`
+
+### 5.14 SAML SSO
+- SAML 配置统一通过 `system_parameters` 的 `auth.saml.*` 键管理，不再依赖写死在环境变量里的 IdP 参数
+- 登录入口：`GET /api/v1/auth/login-options` → `GET /api/v1/saml/login` → `POST /api/v1/saml/acs`
+- 首次 SAML 登录支持 JIT 自动建用户；若命中已有本地邮箱账号，则自动关联为 `auth_provider="saml"`
+- 组映射可选：`auth.saml.group_mapping_enabled=true` 时，按 `auth.saml.group_mapping` JSON 顺序匹配用户组 → 本地角色/部门
+- 未开启组映射或无匹配时，自动创建用户必须回退到最低权限默认角色（当前 `requester`）
 
 ## 6. 代码质量门禁
 

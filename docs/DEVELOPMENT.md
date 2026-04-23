@@ -155,6 +155,53 @@ pytest -m integration
 
 参见 [ADR 0003](./adr/0003-system-parameters.md)。
 
+## 配置 SAML SSO（v0.8.1+）
+
+Mica 的 SAML/ADFS 集成通过 `system_parameters` 中的 `auth.saml.*` 键进行管理员可视化配置。
+
+### 关键参数
+
+- `auth.saml.enabled`
+- `auth.saml.idp.entity_id`
+- `auth.saml.idp.sso_url`
+- `auth.saml.idp.slo_url`
+- `auth.saml.idp.x509_cert`
+- `auth.saml.sp.entity_id`
+- `auth.saml.sp.acs_url`
+- `auth.saml.attr.email`
+- `auth.saml.attr.display_name`
+- `auth.saml.attr.groups`
+- `auth.saml.jit.enabled`
+- `auth.saml.jit.default_role`
+- `auth.saml.jit.default_company_code`
+- `auth.saml.jit.default_department_code`
+- `auth.saml.group_mapping_enabled`
+- `auth.saml.group_mapping`
+
+### 运行机制
+
+1. 管理员在 **Admin → System Parameters** 中维护 `auth.saml.*` 参数。
+2. 登录页调用 `/api/v1/auth/login-options`，若 `saml_enabled=true` 则显示 “通过 SSO 登录”。
+3. 用户点击后进入 `/api/v1/saml/login`，由后端发起 SAML AuthnRequest。
+4. IdP 回调 `/api/v1/saml/acs` 后：
+   - 校验签名与响应
+   - 按属性名提取邮箱 / 显示名 / 用户组
+   - JIT 自动建用户或关联已有本地邮箱账号
+   - 生成 JWT 并跳转到 `/sso-callback#token=...`
+5. 前端 `SsoCallbackPage` 保存 token、加载当前用户并跳回业务页。
+
+### 组映射格式
+
+```json
+[
+  {"group": "Finance", "role": "finance_auditor", "department_code": "FIN"},
+  {"group": "IT Managers", "role": "dept_manager", "department_code": "IT"}
+]
+```
+
+- first match wins
+- 未开启组映射或未命中时，自动创建用户回退到 `auth.saml.jit.default_role`
+
 ## 添加审批规则（v0.5+）
 
 多级串签通过 `approval_rules` 表配置：

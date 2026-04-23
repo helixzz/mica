@@ -116,9 +116,9 @@ docker compose logs -f postgres     # 仅数据库
 - **数据库迁移失败**：`docker compose logs migrate`
 - **前端白屏**：打开浏览器开发者工具 → Network，检查 `/api/v1/auth/me` 是否 200
 
-## 已知限制（v0.6）
+## 已知限制（v0.8.1）
 
-- ADFS SAML 仅有骨架，开发环境仍用本地密码登录
+- SAML/ADFS 已具备管理员配置、登录入口、JIT 自动建用户与组映射基础能力，但真实企业对接仍需要可用的 IdP 测试环境与正式证书/元数据
 - LLM 默认 `demo-mock` 模式（无真实密钥时返回演示文本）；管理员可在 Admin 控制台配置真实模型 + API Key
 - 搜索引擎当前使用 `pg_trgm + tsvector`（轻量中文分词）；更高精度的 `zhparser` 方案在 v0.7+ 规划
 - 飞书集成骨架已就绪但未接通真实 App ID/Secret（v0.7 路线图）

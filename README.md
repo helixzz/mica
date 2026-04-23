@@ -10,7 +10,7 @@
 </p>
 
 <p align="center">
-  <a href="https://github.com/helixzz/mica/releases/tag/v0.8.0"><img src="https://img.shields.io/badge/version-0.8.0-8B5E3C?style=flat-square" alt="Version" /></a>
+  <a href="https://github.com/helixzz/mica/releases/tag/v0.8.2"><img src="https://img.shields.io/badge/version-0.8.2-8B5E3C?style=flat-square" alt="Version" /></a>
   <a href="https://github.com/helixzz/mica/actions/workflows/ci.yml"><img src="https://img.shields.io/github/actions/workflow/status/helixzz/mica/ci.yml?branch=main&style=flat-square&label=CI" alt="CI" /></a>
   <a href="https://codecov.io/gh/helixzz/mica"><img src="https://img.shields.io/codecov/c/github/helixzz/mica?style=flat-square&label=coverage" alt="Coverage" /></a>
   <a href="LICENSE"><img src="https://img.shields.io/badge/license-Apache%202.0-blue?style=flat-square" alt="License" /></a>
@@ -65,7 +65,8 @@
 
 ### 🌐 国际化 & 品牌
 
-- **中 / 英双语**：602 个翻译 key，0 硬编码字符串，浏览器自动检测 + 手动切换
+- **中 / 英双语**：持续双语同步，覆盖 SSO、管理员配置与表单填写引导场景
+- **SAML SSO 基础能力**：管理员可在系统参数中配置 ADFS / 通用 SAML IdP，支持 SSO 登录、自动建用户与可选组映射
 - **水獭棕品牌色系** `#8B5E3C`：浅色 / 暗色双主题 + 响应式布局 + 移动端适配
 - **Inter + JetBrains Mono 字体**：专业阅读体验
 
@@ -79,7 +80,7 @@
 | **授权** | Cerbos sidecar（4 resource policies + graceful fallback） |
 | **AI** | LiteLLM SDK（OpenAI / DeepSeek / GLM / 通义等兼容接口） |
 | **国际化** | react-i18next（前端）· 自研消息字典（后端） |
-| **测试** | pytest 249 tests · vitest 44 tests · GitHub Actions CI · Codecov |
+| **测试** | pytest 264 tests · vitest 49 tests · GitHub Actions CI · Codecov |
 | **部署** | Docker Compose v2 · Nginx · 一键脚本（备份/恢复/升级/健康检查） |
 
 ## 快速开始
@@ -135,8 +136,8 @@ mica/
 | v0.5 | ✅ | UI 品牌化 · 通知中心 · 全局搜索 · 系统参数 · PDF/Excel 导出 · 运维脚手架 |
 | v0.6 | ✅ | 测试 114 个 · 代码分割 -97% · Cerbos 授权 · 付款计划 · 采购分类体系 |
 | **v0.7** | ✅ | **RFQ 询价 · Excel 导入 · 角色化 Dashboard · i18n 全覆盖 · 权限优化** |
-| **v0.8** | ✅ | **覆盖率硬阈值 · PO 回填 SKU 价格库 · E2E CI 冒烟测试 · PR 分类 Bug 修复** |
-| v0.9 | 🚧 | 审批可视化编辑器 · 合同版本管理 · 飞书集成（待 App ID） |
+| **v0.8** | ✅ | **覆盖率硬阈值 · PO 回填 SKU 价格库 · E2E CI 冒烟测试 · PR 分类 Bug 修复 · SAML SSO 基础能力 · 表单填写引导（第一波）** |
+| v0.9 | 🚧 | 审批可视化编辑器 · 合同版本管理 · 更完整的表单引导覆盖 · 飞书集成（待 App ID） |
 
 > 完整变更记录见 [CHANGELOG.md](CHANGELOG.md) · 所有 Release 见 [GitHub Releases](https://github.com/helixzz/mica/releases)
 
