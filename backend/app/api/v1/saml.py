@@ -1,5 +1,6 @@
 """SAML SSO endpoints."""
 
+import logging
 from typing import Annotated
 from urllib.parse import quote
 
@@ -15,6 +16,8 @@ from app.models import AuditLog
 from app.services.saml_config import build_onelogin_settings, get_saml_config
 from app.services.saml_jit import upsert_saml_user
 from app.services.system_params import system_params
+
+logger = logging.getLogger(__name__)
 
 router = APIRouter()
 
@@ -103,6 +106,14 @@ async def saml_acs(
         auth.process_response()
         errors = auth.get_errors()
         if errors or not auth.is_authenticated():
+            reason = auth.get_last_error_reason() or "; ".join(errors)
+            logger.warning("SAML ACS validation failed: %s", reason)
+            await _write_saml_system_audit(
+                db,
+                event_type="auth.sso.validation_failed",
+                metadata={"errors": errors, "reason": reason},
+            )
+            await db.commit()
             raise HTTPException(403, t("saml.authentication_failed", locale))
         attributes = auth.get_attributes()
         external_id = auth.get_nameid()
