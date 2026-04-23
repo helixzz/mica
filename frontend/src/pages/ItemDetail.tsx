@@ -32,7 +32,7 @@ export default function ItemDetailPage() {
           <Descriptions.Item label={t('item.category_label')}>{item.category || '-'}</Descriptions.Item>
           <Descriptions.Item label={t('field.uom')}>{item.uom}</Descriptions.Item>
           <Descriptions.Item label={t('field.specification')} span={2}>{item.specification || '-'}</Descriptions.Item>
-          <Descriptions.Item label={t('field.status')}><Tag color={item.is_active !== false ? 'success' : 'default'}>{item.is_active !== false ? t('item.active') : t('item.inactive')}</Tag></Descriptions.Item>
+          <Descriptions.Item label={t('field.status')}><Tag color={item.is_enabled !== false ? 'success' : 'default'}>{item.is_enabled !== false ? t('item.active') : t('item.inactive')}</Tag></Descriptions.Item>
         </Descriptions>
       </Card>
     </Space>

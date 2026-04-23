@@ -71,7 +71,7 @@ export default function ItemsPage() {
         { title: t('item.category_label'), dataIndex: 'category_id', render: (v: string | null) => { if (!v) return <Tag>{t('item.uncategorized')}</Tag>; const cat = categoryMap[v]; return cat ? <Tag color="blue">{cat.label_zh}</Tag> : '-' } },
         { title: t('field.uom'), dataIndex: 'uom', width: 60 },
         { title: t('field.specification'), dataIndex: 'specification', ellipsis: true },
-        { title: t('item.status_col'), dataIndex: 'is_active', width: 70, render: (v: boolean) => <Tag color={v !== false ? 'success' : 'default'}>{v !== false ? t('item.active') : t('item.inactive')}</Tag> },
+        { title: t('item.status_col'), dataIndex: 'is_enabled', width: 70, render: (v: boolean) => <Tag color={v !== false ? 'success' : 'default'}>{v !== false ? t('item.active') : t('item.inactive')}</Tag> },
         { title: t('item.actions_col'), width: 120, render: (_: unknown, r: Item) => (
           <Space>
             <Button size="small" icon={<EditOutlined />} onClick={() => { setEditingItem(r); form.setFieldsValue(r); setDrawerOpen(true) }} />
@@ -89,7 +89,7 @@ export default function ItemsPage() {
           <Form.Item name="uom" label={t('item.uom_label')} help={t('item.uom_help')} initialValue="EA"><Select options={[{ value: 'EA', label: 'EA' }, { value: 'SET', label: 'SET' }, { value: 'PCS', label: 'PCS' }, { value: 'LICENSE', label: 'LICENSE' }, { value: 'HOUR', label: 'HOUR' }]} /></Form.Item>
           <Form.Item name="specification" label={t('item.spec_label')} help={t('item.spec_help')}><Input.TextArea rows={3} /></Form.Item>
           <Form.Item name="requires_serial" label={t('item.serial_required')} valuePropName="checked"><Switch /></Form.Item>
-          {editingItem && <Form.Item name="is_active" label={t('item.active_label')} valuePropName="checked"><Switch /></Form.Item>}
+          {editingItem && <Form.Item name="is_enabled" label={t('item.active_label')} valuePropName="checked"><Switch /></Form.Item>}
         </Form>
       </Drawer>
     </Space>
