@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [v0.8.4] — 2026-04-23
+
+### 修复
+
+- **LLM 模型删除 500 错误**：删除被 AI 场景路由引用的模型时触发外键约束冲突（`ai_feature_routing.primary_model_id` FK）。修复后删除前自动将引用该模型的路由 `primary_model_id` 置空，并从 `fallback_model_ids` 数组中移除。
+
 ## [v0.8.3] — 2026-04-23
 
 SAML SSO + 审批规则编辑器 + 合同版本管理 + 表单引导 + i18n 插值 Bug 修复。
