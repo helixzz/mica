@@ -15,6 +15,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     libxmlsec1-openssl \
     pkg-config \
     curl \
+    fonts-wqy-microhei \
     && rm -rf /var/lib/apt/lists/*
 
 COPY pyproject.toml ./

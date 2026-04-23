@@ -1,5 +1,4 @@
 # pyright: reportUnknownParameterType=false, reportMissingParameterType=false, reportUnknownMemberType=false, reportUnknownArgumentType=false, reportUnknownVariableType=false, reportUnusedCallResult=false, reportUnusedImport=false, reportPrivateUsage=false
-from datetime import date
 from decimal import Decimal
 from uuid import uuid4
 
@@ -121,13 +120,95 @@ def test_fmt_money_formats_supported_numeric_inputs(amount, currency, expected):
 
 
 def test_ensure_cjk_font_is_idempotent(monkeypatch):
-    monkeypatch.setattr(svc, "_CJK_FONT_REGISTERED", False)
+    monkeypatch.setattr(svc, "_FONT_FAMILY", None)
 
     first = svc._ensure_cjk_font()
     second = svc._ensure_cjk_font()
 
-    assert first == second == "STSong-Light"
-    assert svc._CJK_FONT_REGISTERED is True
+    assert first == second
+    assert first in {"MicaCJK", "STSong-Light"}
+    assert svc._FONT_FAMILY == first
+
+
+def test_ensure_cjk_font_falls_back_when_noto_missing(monkeypatch):
+    monkeypatch.setattr(svc, "_FONT_FAMILY", None)
+    monkeypatch.setattr(svc, "_first_existing", lambda _paths: None)
+
+    assert svc._ensure_cjk_font() == "STSong-Light"
+
+
+def test_esc_escapes_xml_special_chars():
+    assert svc._esc("A & B <c>") == "A &amp; B &lt;c&gt;"
+    assert svc._esc(None) == ""
+    assert svc._esc(42) == "42"
+
+
+@pytest.mark.parametrize(
+    ("value", "expected"),
+    [
+        (Decimal("1.00"), "1"),
+        (Decimal("1.50"), "1.5"),
+        (Decimal("1.234"), "1.23"),
+        (Decimal("12345"), "12,345"),
+        (None, "0"),
+    ],
+)
+def test_fmt_qty_strips_trailing_zeros(value, expected):
+    assert svc._fmt_qty(value) == expected
+
+
+async def test_render_po_pdf_handles_xml_special_chars_in_item_name(seeded_db_session):
+    actor = await _user(seeded_db_session)
+    supplier = await _minimal_supplier(seeded_db_session)
+    pr = PurchaseRequisition(
+        pr_number=f"PR-PDF-{_suffix()}",
+        title="XML safety",
+        business_reason="ensure <b>, &, > do not break Paragraph parsing",
+        status="approved",
+        requester_id=actor.id,
+        company_id=actor.company_id,
+        department_id=actor.department_id,
+        currency="CNY",
+        total_amount=Decimal("0"),
+    )
+    seeded_db_session.add(pr)
+    await seeded_db_session.flush()
+
+    po = PurchaseOrder(
+        po_number=f"PO-PDF-{_suffix()}",
+        pr_id=pr.id,
+        supplier_id=supplier.id,
+        company_id=actor.company_id,
+        status=POStatus.CONFIRMED.value,
+        currency="CNY",
+        total_amount=Decimal("100.00"),
+        amount_paid=Decimal("0"),
+        amount_invoiced=Decimal("0"),
+        created_by_id=actor.id,
+    )
+    seeded_db_session.add(po)
+    await seeded_db_session.flush()
+
+    seeded_db_session.add(
+        POItem(
+            po_id=po.id,
+            line_no=1,
+            item_name="Router <model X> & cable",
+            specification="Ports > 24, tag <b>bold</b>",
+            qty=Decimal("1"),
+            qty_received=Decimal("0"),
+            qty_invoiced=Decimal("0"),
+            uom="EA",
+            unit_price=Decimal("100.00"),
+            amount=Decimal("100.00"),
+        )
+    )
+    await seeded_db_session.flush()
+
+    content = await svc.render_po_pdf(seeded_db_session, po.id)
+
+    assert content.startswith(b"%PDF-")
+    assert content.rstrip().endswith(b"%%EOF")
 
 
 async def test_render_po_pdf_returns_pdf_bytes_for_populated_po(seeded_db_session):
