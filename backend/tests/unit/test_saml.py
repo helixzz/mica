@@ -17,8 +17,8 @@ from app.services.saml_jit import upsert_saml_user
 class _FakeRequest:
     def __init__(self, *, base_url: str = "http://testserver/") -> None:
         self.base_url = base_url
-        self.url = type("Url", (), {"scheme": "http", "hostname": "testserver", "port": 80})()
-        self.headers: dict[str, str] = {}
+        self.url = type("Url", (), {"scheme": "http", "hostname": "testserver", "port": 80, "netloc": "testserver", "path": "", "query": ""})()
+        self.headers: dict[str, str] = {"host": "testserver"}
 
 
 async def _get_user(db, username: str) -> User:

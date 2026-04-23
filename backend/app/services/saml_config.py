@@ -144,7 +144,10 @@ def _normalize_x509_cert(value: str | None) -> str:
 
 def _absolute_url(request: Request, path: str) -> str:
     scheme = request.headers.get("x-forwarded-proto", request.url.scheme)
-    host = request.headers.get("x-forwarded-host", request.headers.get("host", request.url.netloc))
+    host = request.headers.get(
+        "x-forwarded-host",
+        request.headers.get("host", getattr(request.url, "netloc", "localhost")),
+    )
     return f"{scheme}://{host}{path}"
 
 
