@@ -409,6 +409,7 @@
     "file_size": "大小"
   },
   "pr": {
+    "items_required": "提交审批前请至少填写一项物料",
     "guide_title": "填写采购需求",
     "guide_title_field": "标题：简要描述你需要采购什么",
     "guide_required_fields": "公司主体 / 成本中心 / 开支类型：必填，用于财务归属",

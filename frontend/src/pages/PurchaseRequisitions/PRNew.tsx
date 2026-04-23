@@ -146,8 +146,9 @@ export function PRNewPage() {
   const onFinish = async (saveOnly: boolean) => {
     try {
       const values = await form.validateFields()
-      if (lines.length === 0 || lines.some((l) => !l.item_name)) {
-        void message.error(t('error.unexpected'))
+      const validLines = lines.filter((l) => l.item_name.trim())
+      if (!saveOnly && validLines.length === 0) {
+        void message.error(t('pr.items_required'))
         return
       }
       setSubmitting(true)
@@ -160,7 +161,7 @@ export function PRNewPage() {
         cost_center_id: values.cost_center_id || null,
         expense_type_id: values.expense_type_id || null,
         procurement_category_id: values.procurement_category_id || null,
-        items: lines.map<PRItem>((l) => ({
+        items: validLines.map<PRItem>((l) => ({
           line_no: l.line_no,
           item_id: l.item_id,
           item_name: l.item_name,
