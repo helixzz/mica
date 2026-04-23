@@ -56,8 +56,8 @@ export function PRDetailPage() {
 
   if (!pr) return <div>{t('message.loading')}</div>
 
-  const canSubmit = pr.status === 'draft' && user?.id === pr.requester_id
-  const canEdit = pr.status === 'draft' && user?.id === pr.requester_id
+  const canSubmit = (pr.status === 'draft' || pr.status === 'returned') && user?.id === pr.requester_id
+  const canEdit = (pr.status === 'draft' || pr.status === 'returned') && user?.id === pr.requester_id
   const canDecide =
     pr.status === 'submitted' && (user?.role === 'dept_manager' || user?.role === 'admin')
   const isBuyer = user?.role === 'it_buyer' || user?.role === 'procurement_mgr' || user?.role === 'admin'
