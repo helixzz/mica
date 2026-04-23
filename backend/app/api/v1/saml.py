@@ -146,11 +146,18 @@ async def saml_acs(
 
 
 def _build_onelogin_request(request: Request, form_data=None) -> dict[str, object]:
-    host = request.url.hostname or request.headers.get("host", "localhost")
+    scheme = request.headers.get("x-forwarded-proto", request.url.scheme)
+    host = request.headers.get("x-forwarded-host", request.headers.get("host", "localhost"))
+    if ":" in host:
+        hostname, port_str = host.rsplit(":", 1)
+        port = int(port_str) if port_str.isdigit() else (443 if scheme == "https" else 80)
+    else:
+        hostname = host
+        port = 443 if scheme == "https" else 80
     return {
-        "https": "on" if request.url.scheme == "https" else "off",
-        "http_host": host,
-        "server_port": request.url.port or (443 if request.url.scheme == "https" else 80),
+        "https": "on" if scheme == "https" else "off",
+        "http_host": hostname,
+        "server_port": port,
         "script_name": request.url.path,
         "query_string": request.url.query,
         "get_data": dict(request.query_params),

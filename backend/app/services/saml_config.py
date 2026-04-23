@@ -143,7 +143,9 @@ def _normalize_x509_cert(value: str | None) -> str:
 
 
 def _absolute_url(request: Request, path: str) -> str:
-    return f"{str(request.base_url).rstrip('/')}{path}"
+    scheme = request.headers.get("x-forwarded-proto", request.url.scheme)
+    host = request.headers.get("x-forwarded-host", request.headers.get("host", request.url.netloc))
+    return f"{scheme}://{host}{path}"
 
 
 def _unique_candidates(primary: str, fallbacks: list[str]) -> list[str]:
