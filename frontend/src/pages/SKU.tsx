@@ -658,14 +658,17 @@ function RecordPriceModal({
   return (
     <Modal title={t('sku.record_price_title')} open={open} onCancel={onClose} onOk={submit} confirmLoading={busy} width={560}>
       <Form form={form} layout="vertical">
-        <Form.Item name="item_id" label={t('sku.item_sku_label')} rules={[{ required: true }]}>
+        <Typography.Text type="secondary" style={{ display: 'block', marginBottom: 12 }}>
+          {t('sku.record_price_form_help')}
+        </Typography.Text>
+        <Form.Item name="item_id" label={t('sku.item_sku_label')} help={t('sku.item_help')} rules={[{ required: true }]}>
           <Select
             showSearch
             optionFilterProp="label"
             options={items.map((i) => ({ value: i.id, label: `${i.code} · ${i.name}` }))}
           />
         </Form.Item>
-        <Form.Item name="supplier_id" label={t('field.supplier')}>
+        <Form.Item name="supplier_id" label={t('field.supplier')} help={t('sku.supplier_help')}>
           <Select
             allowClear
             showSearch
@@ -675,17 +678,17 @@ function RecordPriceModal({
         </Form.Item>
         <Row gutter={12}>
           <Col span={12}>
-            <Form.Item name="price" label={t('sku.price_cny')} rules={[{ required: true }]}>
+            <Form.Item name="price" label={t('sku.price_cny')} help={t('sku.price_help')} rules={[{ required: true }]}> 
               <InputNumber min={0} style={{ width: '100%' }} />
             </Form.Item>
           </Col>
           <Col span={12}>
-            <Form.Item name="quotation_date" label={t('sku.quotation_date')} rules={[{ required: true }]}>
+            <Form.Item name="quotation_date" label={t('sku.quotation_date')} help={t('sku.quotation_date_help')} rules={[{ required: true }]}> 
               <DatePicker style={{ width: '100%' }} />
             </Form.Item>
           </Col>
         </Row>
-        <Form.Item name="source_type" label={t('sku.source_type')}>
+        <Form.Item name="source_type" label={t('sku.source_type')} help={t('sku.source_type_help')}>
           <Select
             options={[
               { value: 'manual', label: t('sku.source_manual') },

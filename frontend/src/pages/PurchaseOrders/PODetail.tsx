@@ -369,6 +369,9 @@ function ShipmentModal({ open, po, onClose, onDone, busy, setBusy }: ModalProps)
   return (
     <Modal title={t('button.record_shipment')} open={open} onCancel={onClose} onOk={submit} confirmLoading={busy} width={800}>
       <Space direction="vertical" style={{ width: '100%' }}>
+        <Typography.Text type="secondary">
+          {t('po.shipment_help')}
+        </Typography.Text>
         <Row gutter={12}>
           <Col span={8}>
             <Input placeholder={t('field.carrier')} value={carrier} onChange={(e) => setCarrier(e.target.value)} />
@@ -449,14 +452,17 @@ function PaymentModal({ open, po, onClose, onDone, busy, setBusy }: ModalProps) 
   return (
     <Modal title={t('button.record_payment')} open={open} onCancel={onClose} onOk={submit} confirmLoading={busy} width={600}>
       <Form layout="vertical">
+        <Typography.Text type="secondary" style={{ display: 'block', marginBottom: 12 }}>
+          {t('po.payment_help')}
+        </Typography.Text>
         <Row gutter={12}>
           <Col span={12}>
-            <Form.Item label={t('field.amount')} required>
+            <Form.Item label={t('field.amount')} help={t('po.payment_amount_help')} required>
               <InputNumber min={0} value={amount} onChange={(v) => setAmount(Number(v ?? 0))} style={{ width: '100%' }} />
             </Form.Item>
           </Col>
           <Col span={12}>
-            <Form.Item label={t('field.payment_method')}>
+            <Form.Item label={t('field.payment_method')} help={t('po.payment_method_help')}>
               <Select
                 value={method}
                 onChange={setMethod}
@@ -471,17 +477,17 @@ function PaymentModal({ open, po, onClose, onDone, busy, setBusy }: ModalProps) 
         </Row>
         <Row gutter={12}>
           <Col span={12}>
-            <Form.Item label={t('field.due_date')}>
+            <Form.Item label={t('field.due_date')} help={t('po.payment_due_date_help')}>
               <DatePicker value={dueDate} onChange={setDueDate} style={{ width: '100%' }} />
             </Form.Item>
           </Col>
           <Col span={12}>
-            <Form.Item label={t('field.payment_date')}>
+            <Form.Item label={t('field.payment_date')} help={t('po.payment_date_help')}>
               <DatePicker value={payDate} onChange={setPayDate} style={{ width: '100%' }} />
             </Form.Item>
           </Col>
         </Row>
-        <Form.Item label={t('field.transaction_ref')}>
+        <Form.Item label={t('field.transaction_ref')} help={t('po.payment_ref_help')}>
           <Input value={txRef} onChange={(e) => setTxRef(e.target.value)} />
         </Form.Item>
       </Form>
@@ -598,6 +604,9 @@ function InvoiceModal({ open, po, onClose, onDone, busy, setBusy }: ModalProps) 
 
   return (
     <Modal title={t('button.record_invoice')} open={open} onCancel={onClose} onOk={submit} confirmLoading={busy} width={960}>
+      <Typography.Text type="secondary" style={{ display: 'block', marginBottom: 12 }}>
+        {t('po.invoice_help')}
+      </Typography.Text>
       <Form layout="vertical">
         <Row gutter={12}>
           <Col span={24}>

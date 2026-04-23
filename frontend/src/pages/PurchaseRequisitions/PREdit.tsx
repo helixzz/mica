@@ -1,5 +1,5 @@
 import { DeleteOutlined, PlusOutlined } from '@ant-design/icons'
-import { Alert, Button, Card, Col, DatePicker, Form, Input, InputNumber, Row, Select, Space, Table, Typography, message } from 'antd'
+import { Button, Card, Col, DatePicker, Form, Input, InputNumber, Row, Select, Space, Table, Typography, message } from 'antd'
 import dayjs from 'dayjs'
 import { useEffect, useState } from 'react'
 import { useTranslation } from 'react-i18next'
@@ -233,7 +233,7 @@ export function PREditPage() {
         <Form form={form} layout="vertical">
           <Row gutter={16}>
             <Col span={12}>
-              <Form.Item label={t('field.title')} name="title" rules={[{ required: true }]}>
+              <Form.Item label={t('field.title')} name="title" help={t('pr.title_help')} rules={[{ required: true }]}>
                 <Input />
               </Form.Item>
             </Col>
@@ -250,31 +250,34 @@ export function PREditPage() {
           </Row>
           <Row gutter={16}>
             <Col span={6}>
-              <Form.Item label={t('pr.company_label')} name="company_id" rules={[{ required: true }]}>
+              <Form.Item label={t('pr.company_label')} name="company_id" help={t('pr.company_help')} rules={[{ required: true }]}>
                 <Select options={companies.map((c) => ({ value: c.id, label: c.name_zh }))} />
               </Form.Item>
             </Col>
             <Col span={6}>
-              <Form.Item label={t('pr.cost_center_label')} name="cost_center_id" rules={[{ required: true }]}>
+              <Form.Item label={t('pr.cost_center_label')} name="cost_center_id" help={t('pr.cost_center_help')} rules={[{ required: true }]}>
                 <Select options={costCenters.map((c) => ({ value: c.id, label: c.label_zh }))} />
               </Form.Item>
             </Col>
             <Col span={6}>
-              <Form.Item label={t('pr.expense_type_label')} name="expense_type_id" rules={[{ required: true }]}>
+              <Form.Item label={t('pr.expense_type_label')} name="expense_type_id" help={t('pr.expense_type_help')} rules={[{ required: true }]}>
                 <Select options={expenseTypes.map((e) => ({ value: e.id, label: e.label_zh }))} />
               </Form.Item>
             </Col>
             <Col span={6}>
-              <Form.Item label={t('pr.category_label')} name="procurement_category_id">
+              <Form.Item label={t('pr.category_label')} name="procurement_category_id" help={t('pr.category_help')}>
                 <Select allowClear showSearch optionFilterProp="label" options={procCategories.map((c) => ({ value: c.id, label: (c.level ?? 1) === 2 ? `  └ ${c.label_zh}` : c.label_zh }))} />
               </Form.Item>
             </Col>
           </Row>
-          <Form.Item label={t('field.business_reason')} name="business_reason">
+          <Form.Item label={t('field.business_reason')} name="business_reason" help={t('pr.business_reason_help')}>
             <Input.TextArea rows={3} />
           </Form.Item>
         </Form>
 
+        <Typography.Text type="secondary" style={{ display: 'block', marginBottom: 12 }}>
+          {t('pr.line_items_help')}
+        </Typography.Text>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }}>
           <Typography.Text strong>{t('pr.line_items')}</Typography.Text>
           <Button icon={<PlusOutlined />} onClick={addLine}>{t('pr.add_line')}</Button>
