@@ -176,12 +176,16 @@ async def test_update_existing_param_writes_audit_log_and_invalidates_cache(svc,
         str(actor.id),
     )
     audit = (
-        await seeded_db_session.execute(
-            select(AuditLog)
-            .where(AuditLog.resource_id == "approval.amount_threshold_cny")
-            .order_by(AuditLog.occurred_at.desc())
+        (
+            await seeded_db_session.execute(
+                select(AuditLog)
+                .where(AuditLog.resource_id == "approval.amount_threshold_cny")
+                .order_by(AuditLog.occurred_at.desc())
+            )
         )
-    ).scalars().first()
+        .scalars()
+        .first()
+    )
 
     assert updated.value == 120000
     assert updated.updated_by_id == actor.id
@@ -254,15 +258,19 @@ async def test_reset_restores_default_and_writes_audit_log(svc, seeded_db_sessio
 
     reset = await svc.reset(seeded_db_session, "approval.amount_threshold_cny", str(actor.id))
     audit = (
-        await seeded_db_session.execute(
-            select(AuditLog)
-            .where(
-                AuditLog.resource_id == "approval.amount_threshold_cny",
-                AuditLog.event_type == "admin.system_parameter.reset",
+        (
+            await seeded_db_session.execute(
+                select(AuditLog)
+                .where(
+                    AuditLog.resource_id == "approval.amount_threshold_cny",
+                    AuditLog.event_type == "admin.system_parameter.reset",
+                )
+                .order_by(AuditLog.occurred_at.desc())
             )
-            .order_by(AuditLog.occurred_at.desc())
         )
-    ).scalars().first()
+        .scalars()
+        .first()
+    )
 
     assert reset.value == 100000
     assert await svc.get_int(seeded_db_session, "approval.amount_threshold_cny") == 100000

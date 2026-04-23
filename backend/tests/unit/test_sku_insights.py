@@ -6,7 +6,16 @@ from uuid import uuid4
 
 from sqlalchemy import select
 
-from app.models import Item, POItem, POStatus, PurchaseOrder, PurchaseRequisition, SKUPriceRecord, Supplier, User
+from app.models import (
+    Item,
+    POItem,
+    POStatus,
+    PurchaseOrder,
+    PurchaseRequisition,
+    SKUPriceRecord,
+    Supplier,
+    User,
+)
 from app.services import sku_insights as svc
 
 

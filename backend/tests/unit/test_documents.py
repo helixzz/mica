@@ -124,7 +124,9 @@ async def test_create_download_token_persists_token_and_respects_custom_ttl(seed
 
 
 @pytest.mark.parametrize("deleted", [False, True])
-async def test_create_download_token_rejects_missing_or_deleted_document(seeded_db_session, deleted):
+async def test_create_download_token_rejects_missing_or_deleted_document(
+    seeded_db_session, deleted
+):
     actor = await _user(seeded_db_session)
     document_id = uuid4()
     if deleted:

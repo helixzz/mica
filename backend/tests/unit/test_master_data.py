@@ -392,7 +392,7 @@ async def test_update_item_updates_category_id_and_records_string_diff(seeded_db
     assert diff["category_id"]["new"] == str(target_category.id)
 
 
-async def test_update_item_updates_is_active(seeded_db_session):
+async def test_update_item_updates_is_enabled(seeded_db_session):
     actor = await _user(seeded_db_session, "alice")
     item = await _item_by_code(seeded_db_session, "SKU-MON-U2723")
 

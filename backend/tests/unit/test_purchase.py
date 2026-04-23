@@ -27,7 +27,7 @@ async def _get_user(db, username: str = "alice") -> User:
 
 
 async def _get_item(db) -> Item:
-    return (await db.execute(select(Item).where(Item.is_active.is_(True)).limit(1))).scalar_one()
+    return (await db.execute(select(Item).where(Item.is_deleted.is_(False)).limit(1))).scalar_one()
 
 
 async def _get_supplier(db, code: str = "SUP-DELL") -> Supplier:
@@ -502,14 +502,19 @@ async def test_convert_pr_to_po_auto_fills_sku_price_records(seeded_db_session):
     po = await purchase_svc.convert_pr_to_po(db, actor, pr.id)
 
     from app.models import SKUPriceRecord
+
     records = (
-        await db.execute(
-            select(SKUPriceRecord).where(
-                SKUPriceRecord.source_ref == po.po_number,
-                SKUPriceRecord.source_type == "actual_po",
+        (
+            await db.execute(
+                select(SKUPriceRecord).where(
+                    SKUPriceRecord.source_ref == po.po_number,
+                    SKUPriceRecord.source_type == "actual_po",
+                )
             )
         )
-    ).scalars().all()
+        .scalars()
+        .all()
+    )
     assert len(records) == 1
     assert records[0].item_id == item.id
     assert records[0].supplier_id == supplier.id
