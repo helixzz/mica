@@ -48,7 +48,6 @@ class UserOut(BaseModel):
     department_id: UUID | None = None
     preferred_locale: str
     is_active: bool
-    is_deleted: bool
 
 
 class CompanyCreate(BaseModel):
