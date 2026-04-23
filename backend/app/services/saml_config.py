@@ -76,9 +76,9 @@ class SamlConfig:
         return _unique_candidates(self.groups_attribute, GROUP_FALLBACKS)
 
     def to_onelogin_settings(self) -> dict[str, object]:
-        allow_single_label_domains = _host_is_single_label(self.sp_entity_id) or _host_is_single_label(
-            self.sp_acs_url
-        )
+        allow_single_label_domains = _host_is_single_label(
+            self.sp_entity_id
+        ) or _host_is_single_label(self.sp_acs_url)
         idp: dict[str, object] = {
             "entityId": self.idp_entity_id,
             "singleSignOnService": {
@@ -216,19 +216,33 @@ async def get_saml_config(
     sp_acs_url = _normalize_optional_string(
         await system_params.get(session, "auth.saml.sp.acs_url", "")
     ) or _absolute_url(request, SAML_ACS_URL)
-    email_attribute = _normalize_optional_string(
-        await system_params.get(session, "auth.saml.attr.email", EMAIL_FALLBACKS[0])
-    ) or EMAIL_FALLBACKS[0]
-    display_name_attribute = _normalize_optional_string(
-        await system_params.get(session, "auth.saml.attr.display_name", DISPLAY_NAME_FALLBACKS[0])
-    ) or DISPLAY_NAME_FALLBACKS[0]
-    groups_attribute = _normalize_optional_string(
-        await system_params.get(session, "auth.saml.attr.groups", GROUP_FALLBACKS[0])
-    ) or GROUP_FALLBACKS[0]
+    email_attribute = (
+        _normalize_optional_string(
+            await system_params.get(session, "auth.saml.attr.email", EMAIL_FALLBACKS[0])
+        )
+        or EMAIL_FALLBACKS[0]
+    )
+    display_name_attribute = (
+        _normalize_optional_string(
+            await system_params.get(
+                session, "auth.saml.attr.display_name", DISPLAY_NAME_FALLBACKS[0]
+            )
+        )
+        or DISPLAY_NAME_FALLBACKS[0]
+    )
+    groups_attribute = (
+        _normalize_optional_string(
+            await system_params.get(session, "auth.saml.attr.groups", GROUP_FALLBACKS[0])
+        )
+        or GROUP_FALLBACKS[0]
+    )
     jit_enabled = bool(await system_params.get(session, "auth.saml.jit.enabled", True))
-    default_role = _normalize_optional_string(
-        await system_params.get(session, "auth.saml.jit.default_role", UserRole.REQUESTER.value)
-    ) or UserRole.REQUESTER.value
+    default_role = (
+        _normalize_optional_string(
+            await system_params.get(session, "auth.saml.jit.default_role", UserRole.REQUESTER.value)
+        )
+        or UserRole.REQUESTER.value
+    )
     default_company_code = _normalize_optional_string(
         await system_params.get(session, "auth.saml.jit.default_company_code", "")
     )
@@ -238,9 +252,12 @@ async def get_saml_config(
     group_mapping_enabled = bool(
         await system_params.get(session, "auth.saml.group_mapping_enabled", False)
     )
-    group_mapping_raw = _normalize_optional_string(
-        await system_params.get(session, "auth.saml.group_mapping", "[]")
-    ) or "[]"
+    group_mapping_raw = (
+        _normalize_optional_string(
+            await system_params.get(session, "auth.saml.group_mapping", "[]")
+        )
+        or "[]"
+    )
 
     config = SamlConfig(
         enabled=enabled,
@@ -276,14 +293,20 @@ def build_onelogin_settings(config: SamlConfig) -> OneLogin_Saml2_Settings:
     return OneLogin_Saml2_Settings(config.to_onelogin_settings())
 
 
-async def resolve_default_company(session: AsyncSession, config: SamlConfig, locale: str) -> Company:
+async def resolve_default_company(
+    session: AsyncSession, config: SamlConfig, locale: str
+) -> Company:
     if config.default_company_code:
         company = (
-            await session.execute(select(Company).where(Company.code == config.default_company_code))
+            await session.execute(
+                select(Company).where(Company.code == config.default_company_code)
+            )
         ).scalar_one_or_none()
         if company is not None:
             return company
-    companies = list((await session.execute(select(Company).where(Company.is_active.is_(True)))).scalars())
+    companies = list(
+        (await session.execute(select(Company).where(Company.is_active.is_(True)))).scalars()
+    )
     if len(companies) == 1:
         return companies[0]
     raise HTTPException(500, t("saml.default_company_required", locale))

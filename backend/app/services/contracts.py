@@ -276,10 +276,14 @@ async def create_contract_version(
 
 async def list_contract_versions(db: AsyncSession, contract_id: UUID) -> list[ContractVersion]:
     rows = (
-        await db.execute(
-            select(ContractVersion)
-            .where(ContractVersion.contract_id == contract_id)
-            .order_by(desc(ContractVersion.version_number), desc(ContractVersion.created_at))
+        (
+            await db.execute(
+                select(ContractVersion)
+                .where(ContractVersion.contract_id == contract_id)
+                .order_by(desc(ContractVersion.version_number), desc(ContractVersion.created_at))
+            )
         )
-    ).scalars().all()
+        .scalars()
+        .all()
+    )
     return list(rows)
