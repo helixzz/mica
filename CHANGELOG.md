@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [v0.8.5] — 2026-04-23
+
+### 修复
+
+- **公司主体无法编辑/停用**：Admin 公司主体 Tab 仅支持新建。新增编辑（修改名称/币种）和启用/停用操作，复用已有 `PATCH /companies/{id}` 后端端点。
+
 ## [v0.8.4] — 2026-04-23
 
 ### 修复
