@@ -16,6 +16,7 @@ export function LoginPage() {
   const [error, setError] = useState<string | null>(null)
   const [samlEnabled, setSamlEnabled] = useState(false)
   const [samlLoginUrl, setSamlLoginUrl] = useState<string | null>(null)
+  const [showLocalLogin, setShowLocalLogin] = useState(false)
 
   useEffect(() => {
     let active = true
@@ -53,6 +54,8 @@ export function LoginPage() {
     window.location.assign(samlLoginUrl)
   }
 
+  const ssoAvailable = samlEnabled && !!samlLoginUrl
+
   return (
     <div
       style={{
@@ -77,44 +80,64 @@ export function LoginPage() {
               <Typography.Text type="secondary">{t('app.tagline')}</Typography.Text>
             )}
           </div>
+          
           {error && <Alert type="error" message={error} showIcon />}
-          <Form layout="vertical" onFinish={onFinish} autoComplete="on">
-            <Form.Item
-              label={t('field.username')}
-              name="username"
-              rules={[{ required: true }]}
-            >
-              <Input
-                prefix={<UserOutlined />}
-                placeholder={t('placeholder.enter_username')}
-                autoFocus
-              />
-            </Form.Item>
-            <Form.Item
-              label={t('field.password')}
-              name="password"
-              rules={[{ required: true }]}
-            >
-              <Input.Password
-                prefix={<LockOutlined />}
-                placeholder={t('placeholder.enter_password')}
-              />
-            </Form.Item>
-            <Button type="primary" htmlType="submit" block loading={loading} size="large">
-              {t('button.submit')}
-            </Button>
-          </Form>
-          {samlEnabled && samlLoginUrl && (
+
+          {ssoAvailable && !showLocalLogin && (
             <>
-              <Divider>{t('auth.or_continue_with', 'or continue with')}</Divider>
-              <Button block size="large" onClick={onSsoLogin}>
-                {t('auth.sign_in_with_sso', 'Sign in with SSO')}
+              <Button type="primary" size="large" block onClick={onSsoLogin}>
+                {t('auth.sign_in_with_sso')}
               </Button>
+              <Typography.Link 
+                onClick={() => setShowLocalLogin(true)}
+                style={{ display: 'block', textAlign: 'center' }}
+              >
+                {t('auth.use_local_account')}
+              </Typography.Link>
             </>
           )}
-          <Typography.Text type="secondary" style={{ fontSize: 12, display: 'block', textAlign: 'center' }}>
-            Dev: alice / bob / carol / dave / admin · password: MicaDev2026!
-          </Typography.Text>
+
+          {(!ssoAvailable || showLocalLogin) && (
+            <>
+              {ssoAvailable && (
+                <Typography.Link
+                  onClick={() => setShowLocalLogin(false)} 
+                  style={{ display: 'block', textAlign: 'center' }}
+                >
+                  {t('auth.back_to_sso')}
+                </Typography.Link>
+              )}
+              <Form layout="vertical" onFinish={onFinish} autoComplete="on">
+                <Form.Item
+                  label={t('field.username')}
+                  name="username"
+                  rules={[{ required: true }]}
+                >
+                  <Input
+                    prefix={<UserOutlined />}
+                    placeholder={t('placeholder.enter_username')}
+                    autoFocus
+                  />
+                </Form.Item>
+                <Form.Item
+                  label={t('field.password')}
+                  name="password"
+                  rules={[{ required: true }]}
+                >
+                  <Input.Password
+                    prefix={<LockOutlined />}
+                    placeholder={t('placeholder.enter_password')}
+                  />
+                </Form.Item>
+                <Button type="primary" htmlType="submit" block loading={loading} size="large">
+                  {t('button.submit')}
+                </Button>
+              </Form>
+              <Typography.Text type="secondary" style={{ fontSize: 12, display: 'block', textAlign: 'center' }}>
+                Dev: alice / bob / carol / dave / admin · password: MicaDev2026!
+              </Typography.Text>
+            </>
+          )}
         </Space>
       </Card>
     </div>

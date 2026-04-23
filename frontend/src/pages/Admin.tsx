@@ -60,16 +60,17 @@ export function AdminPage() {
   }
 
   return (
-    <Space direction="vertical" size="large" style={{ width: '100%' }}>
+    <Space direction="vertical" size="large" style={{ width: '100%', minWidth: 0 }}>
       <Typography.Title level={3} style={{ margin: 0 }}>
         {t('admin.admin_console')}
       </Typography.Title>
       <Tabs
         destroyInactiveTabPane
+        tabPosition="top"
+        style={{ minWidth: 0 }}
         items={[
           { key: 'system', label: t('admin.system_info'), children: <SystemInfoPanel /> },
           { key: 'companies', label: t('admin.companies'), children: <CompaniesTab /> },
-          { key: 'departments', label: t('admin.departments'), children: <DepartmentsTab /> },
           { key: 'departments', label: t('admin.departments'), children: <DepartmentsTab /> },
           { key: 'system_params', label: t('admin.system_params'), children: <SystemParamsTab /> },
           { key: 'approval_rules', label: t('admin.approval_rules'), children: <ApprovalRulesTab /> },

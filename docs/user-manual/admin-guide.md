@@ -49,31 +49,209 @@ cd deploy
 - 付款到期默认天数
 - 等共 15+ 项
 
-#### SAML / ADFS 单点登录配置（v0.8.1+）
+### SAML SSO 单点登录配置（v0.8.1+）
 
-管理员现在可以直接在 **系统参数 System Parameters** 中配置 `auth.saml.*` 键，无需改 `.env` 或重新构建镜像。
+Mica 支持通过 SAML 2.0 协议接入企业身份提供商（IdP），实现单点登录。以下说明如何对接 **ADFS** 和 **Microsoft Entra ID**（原 Azure AD）。
 
-推荐配置顺序：
+所有配置均在 **系统管理 → 系统参数** 中完成，无需修改配置文件或重启服务。
 
-1. 先填写：
-   - `auth.saml.idp.entity_id`
-   - `auth.saml.idp.sso_url`
-   - `auth.saml.idp.x509_cert`
-2. 再确认自动建用户默认值：
-   - `auth.saml.jit.default_role`
-   - `auth.saml.jit.default_company_code`
-   - `auth.saml.jit.default_department_code`（可选）
-3. 如需按用户组自动分配角色，再打开：
-   - `auth.saml.group_mapping_enabled=true`
-   - `auth.saml.group_mapping=[...]`
-4. 最后才启用：
-   - `auth.saml.enabled=true`
+#### 概览：需要配置的参数
 
-!!! tip "启用前先自检"
-    建议先访问登录页，确认已出现 **通过 SSO 登录 Sign in with SSO** 按钮；若按钮未出现，通常说明 `auth.saml.*` 关键参数仍不完整或格式无效。
+| 参数键 | 含义 | 必填 |
+|:---|:---|:---|
+| `auth.saml.enabled` | 是否启用 SAML SSO 登录 | 是（最后开启） |
+| `auth.saml.idp.entity_id` | IdP 的 Entity ID / 颁发者标识 | 是 |
+| `auth.saml.idp.sso_url` | IdP 的 SSO 登录地址 | 是 |
+| `auth.saml.idp.slo_url` | IdP 的单点登出地址 | 否 |
+| `auth.saml.idp.x509_cert` | IdP 签名证书（PEM 格式） | 是 |
+| `auth.saml.sp.entity_id` | Mica 作为 SP 的 Entity ID | 否（自动推导） |
+| `auth.saml.sp.acs_url` | Mica 的 ACS 回调地址 | 否（自动推导） |
+| `auth.saml.attr.email` | 邮箱属性名 | 否（有默认值） |
+| `auth.saml.attr.display_name` | 显示名属性名 | 否（有默认值） |
+| `auth.saml.attr.groups` | 用户组属性名 | 否（组映射时需要） |
+| `auth.saml.jit.default_role` | 自动创建用户的默认角色 | 否（默认 requester） |
+| `auth.saml.jit.default_company_code` | 自动创建用户的默认公司编码 | 否 |
+| `auth.saml.group_mapping_enabled` | 是否启用组→角色自动映射 | 否 |
+| `auth.saml.group_mapping` | 组映射规则 JSON | 否 |
+
+#### 方案 A：对接 ADFS (Active Directory Federation Services)
+
+**前置条件**：Windows Server 上已安装并配置 ADFS，可以访问 ADFS 管理控制台。
+
+##### 第 1 步：在 ADFS 中添加信赖方信任
+
+1. 打开 **ADFS 管理** → **信赖方信任** → **添加信赖方信任**
+2. 选择 **声明感知** → **手动输入信赖方数据**
+3. 显示名称填 `Mica`
+4. 跳过令牌加密证书（Mica 不要求加密）
+5. 配置 URL：
+   - 勾选 **启用对 SAML 2.0 WebSSO 协议的支持**
+   - 信赖方 SAML 2.0 SSO 服务 URL 填：`https://<your-mica-domain>/api/v1/saml/acs`
+6. 信赖方信任标识符（Entity ID）填：`https://<your-mica-domain>/api/v1/saml/metadata`
+   - 点击 **添加**
+7. 访问控制策略选 **允许所有人**（或按需选择）
+8. 完成向导
+
+##### 第 2 步：配置 ADFS 声明规则
+
+编辑刚创建的信赖方信任 → **颁发转换规则** → 添加以下规则：
+
+**规则 1 — 发送 LDAP 属性**（类型：以声明方式发送 LDAP 属性）
+- LDAP 属性 → 传出声明类型：
+  - `E-Mail-Addresses` → `E-Mail Address`
+  - `Display-Name` → `Name`
+  - `Token-Groups - Unqualified Names` → `Group`（如需组映射）
+
+**规则 2 — 转换 NameID**（类型：转换传入声明）
+- 传入声明类型：`E-Mail Address`
+- 传出声明类型：`Name ID`
+- 传出名称 ID 格式：`电子邮件`
+
+##### 第 3 步：获取 ADFS 参数
+
+| 需要的值 | 在哪里找 |
+|:---|:---|
+| Entity ID | 通常是 `http://adfs.yourcompany.com/adfs/services/trust` |
+| SSO URL | 通常是 `https://adfs.yourcompany.com/adfs/ls/` |
+| SLO URL | 通常是 `https://adfs.yourcompany.com/adfs/ls/?wa=wsignout1.0` |
+| X.509 证书 | ADFS 管理 → 服务 → 证书 → 令牌签名 → 查看证书 → 详细信息 → 复制到文件（Base-64 编码 .cer） |
+
+用文本编辑器打开导出的 `.cer` 文件，复制 `-----BEGIN CERTIFICATE-----` 和 `-----END CERTIFICATE-----` 之间的内容（含这两行）。
+
+##### 第 4 步：在 Mica 中填写参数
+
+进入 **系统管理 → 系统参数**，搜索 `auth.saml`，依次填写：
+
+```
+auth.saml.idp.entity_id = http://adfs.yourcompany.com/adfs/services/trust
+auth.saml.idp.sso_url   = https://adfs.yourcompany.com/adfs/ls/
+auth.saml.idp.slo_url   = https://adfs.yourcompany.com/adfs/ls/?wa=wsignout1.0
+auth.saml.idp.x509_cert = -----BEGIN CERTIFICATE-----
+MIIDXTCCAkWgAwIBAgIJ...（实际证书内容）
+-----END CERTIFICATE-----
+```
+
+属性映射（ADFS 默认值通常可用）：
+
+```
+auth.saml.attr.email        = http://schemas.xmlsoap.org/ws/2005/05/identity/claims/emailaddress
+auth.saml.attr.display_name = http://schemas.xmlsoap.org/ws/2005/05/identity/claims/name
+auth.saml.attr.groups       = http://schemas.xmlsoap.org/claims/Group
+```
+
+#### 方案 B：对接 Microsoft Entra ID（原 Azure AD）
+
+**前置条件**：拥有 Entra ID 租户的全局管理员或应用程序管理员权限。
+
+##### 第 1 步：在 Entra ID 中创建企业应用程序
+
+1. 登录 [Entra ID 管理中心](https://entra.microsoft.com)
+2. 导航到 **企业应用程序** → **新建应用程序** → **创建自己的应用程序**
+3. 名称填 `Mica`，选择 **集成未在库中找到的其他应用程序**
+4. 创建后，进入该应用 → **单一登录** → 选择 **SAML**
+
+##### 第 2 步：配置 SAML 基本设置
+
+在 **基本 SAML 配置** 中编辑：
+
+| 字段 | 值 |
+|:---|:---|
+| 标识符 (Entity ID) | `https://<your-mica-domain>/api/v1/saml/metadata` |
+| 回复 URL (ACS) | `https://<your-mica-domain>/api/v1/saml/acs` |
+| 登录 URL | `https://<your-mica-domain>/login` |
+
+##### 第 3 步：配置属性和声明
+
+点击 **属性和声明** → **编辑**，确保以下声明存在：
+
+| 声明名称 | 源属性 |
+|:---|:---|
+| `http://schemas.xmlsoap.org/ws/2005/05/identity/claims/emailaddress` | user.mail |
+| `http://schemas.xmlsoap.org/ws/2005/05/identity/claims/name` | user.displayname |
+
+如需组映射，额外添加组声明：
+- 点击 **添加组声明** → 选择 **安全组** → 源属性选 **显示名称**
+
+##### 第 4 步：下载证书和获取参数
+
+在应用的 **SAML 签名证书** 区域：
+- 下载 **证书 (Base64)**
+
+在 **设置 Mica** 区域可以看到：
+- **登录 URL** → 对应 `auth.saml.idp.sso_url`
+- **Microsoft Entra 标识符** → 对应 `auth.saml.idp.entity_id`
+- **注销 URL** → 对应 `auth.saml.idp.slo_url`
+
+##### 第 5 步：在 Mica 中填写参数
+
+```
+auth.saml.idp.entity_id = https://sts.windows.net/<tenant-id>/
+auth.saml.idp.sso_url   = https://login.microsoftonline.com/<tenant-id>/saml2
+auth.saml.idp.slo_url   = https://login.microsoftonline.com/<tenant-id>/saml2
+auth.saml.idp.x509_cert = -----BEGIN CERTIFICATE-----
+MIIC8DCCAdigAwIBAgIQ...（Entra ID 下载的 Base64 证书内容）
+-----END CERTIFICATE-----
+```
+
+属性映射（Entra ID 默认值）：
+
+```
+auth.saml.attr.email        = http://schemas.xmlsoap.org/ws/2005/05/identity/claims/emailaddress
+auth.saml.attr.display_name = http://schemas.xmlsoap.org/ws/2005/05/identity/claims/name
+auth.saml.attr.groups       = http://schemas.microsoft.com/ws/2008/06/identity/claims/groups
+```
+
+> **注意**：Entra ID 默认发送组的 Object ID 而非显示名称。如果用显示名称做映射，请确保在 Entra ID 的组声明配置中选择了 **显示名称** 作为源属性。
+
+##### 第 6 步：分配用户
+
+在 Entra ID 企业应用的 **用户和组** 页面，添加需要 SSO 登录 Mica 的用户或用户组。
+
+#### 通用配置：自动创建用户 (JIT)
+
+首次通过 SSO 登录的用户，如果本地不存在，Mica 会自动创建账号。控制行为的参数：
+
+```
+auth.saml.jit.default_role          = requester
+auth.saml.jit.default_company_code  = DEMO
+auth.saml.jit.default_department_code =     （留空则不分配部门）
+```
+
+#### 通用配置：用户组→角色自动映射（可选）
+
+开启后，系统根据 IdP 传回的用户组信息自动分配角色和部门：
+
+```
+auth.saml.group_mapping_enabled = true
+auth.saml.group_mapping = [
+  { "group": "IT-Procurement", "role": "it_buyer", "department_code": "IT" },
+  { "group": "Finance", "role": "finance_auditor", "department_code": "FIN" },
+  { "group": "Procurement-Managers", "role": "procurement_mgr" },
+  { "group": "Department-Heads", "role": "dept_manager" }
+]
+```
+
+映射按数组顺序匹配，命中第一条即停止。未命中任何规则的用户回退到 `jit.default_role`。
+
+#### 最后一步：启用 SSO
+
+确认以上参数都配置正确后：
+
+```
+auth.saml.enabled = true
+```
+
+刷新登录页面，应看到 **通过 SSO 登录** 按钮优先展示。本地登录入口仍可通过点击"使用本地账号登录"链接访问。
+
+!!! tip "启用前自检清单"
+    - [ ] `auth.saml.idp.entity_id` 已填写且与 IdP 端一致
+    - [ ] `auth.saml.idp.sso_url` 已填写且可访问
+    - [ ] `auth.saml.idp.x509_cert` 已粘贴完整 PEM 证书（含 BEGIN/END 行）
+    - [ ] `auth.saml.jit.default_company_code` 指向一个已存在的公司编码
+    - [ ] 在 IdP 端已正确配置 Mica 的 ACS URL 和 Entity ID
 
 !!! warning "默认角色"
-    当组映射未开启，或用户组没有命中任何规则时，系统会把自动创建的用户降级到最低权限默认角色（当前为 `requester`）。
+    当组映射未开启，或用户组没有命中任何规则时，系统会把自动创建的用户分配为最低权限默认角色（当前为 `requester`）。管理员可在用户管理中手动调整。
 
 ### 分类管理
 

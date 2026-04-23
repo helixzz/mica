@@ -767,6 +767,23 @@ export const api = {
     const { data } = await client.post<Shipment>('/shipments', payload)
     return data
   },
+  async updateShipment(id: string, body: Record<string, unknown>): Promise<Shipment> {
+    const { data } = await client.patch<Shipment>(`/shipments/${id}`, body)
+    return data
+  },
+  async deleteShipment(id: string): Promise<void> {
+    await client.delete(`/shipments/${id}`)
+  },
+  async listShipmentAttachments(shipmentId: string): Promise<{ document_id: string; role: string; original_filename: string; content_type: string; file_size: number; created_at: string }[]> {
+    const { data } = await client.get(`/shipments/${shipmentId}/attachments`)
+    return data as any
+  },
+  async attachShipmentDocument(shipmentId: string, documentId: string, role = 'attachment'): Promise<void> {
+    await client.post(`/shipments/${shipmentId}/attachments`, { document_id: documentId, role })
+  },
+  async removeShipmentAttachment(shipmentId: string, documentId: string): Promise<void> {
+    await client.delete(`/shipments/${shipmentId}/attachments/${documentId}`)
+  },
   async listPayments(po_id?: string): Promise<PaymentRecord[]> {
     const { data } = await client.get<PaymentRecord[]>('/payments', { params: { po_id } })
     return data

@@ -452,6 +452,20 @@ class ShipmentOut(BaseModel):
     items: list[ShipmentItemOut]
 
 
+class ShipmentUpdate(BaseModel):
+    status: str | None = None
+    carrier: str | None = None
+    tracking_number: str | None = None
+    expected_date: date | None = None
+    actual_date: date | None = None
+    notes: str | None = None
+
+
+class ShipmentAttachIn(BaseModel):
+    document_id: UUID
+    role: str = "attachment"
+
+
 class SerialNumberIn(BaseModel):
     serial_number: str = Field(..., min_length=1, max_length=128)
     manufacturer: str | None = None

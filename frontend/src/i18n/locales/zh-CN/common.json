@@ -153,7 +153,9 @@
     "sign_in_with_sso": "通过 SSO 登录",
     "sso_missing_token": "缺少 SSO 登录令牌",
     "sso_login_failed": "SSO 登录失败",
-    "signing_in": "正在为你登录..."
+    "signing_in": "正在为你登录...",
+    "use_local_account": "使用本地账号登录",
+    "back_to_sso": "← 返回 SSO 登录"
   },
   "message": {
     "welcome": "欢迎，{{name}}",
@@ -388,6 +390,21 @@
     "deleted": "供应商已删除",
     "updated": "供应商已更新",
     "status": "状态"
+  },
+  "shipment": {
+    "edit": "编辑交货批次：{{number}}",
+    "count": "批交货",
+    "items_count": "行项",
+    "notes": "备注",
+    "confirm_delete": "确认删除该交货批次？",
+    "deleted": "交货批次已删除",
+    "updated": "交货批次已更新",
+    "attachments": "附件 — {{number}}",
+    "upload_attachment": "上传附件",
+    "attachment_added": "附件已添加",
+    "attachment_hint": "可上传序列号清单、签收单、发货单等文件",
+    "filename": "文件名",
+    "file_size": "大小"
   },
   "pr": {
     "guide_title": "填写采购需求",

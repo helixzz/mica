@@ -153,7 +153,9 @@
     "sign_in_with_sso": "Sign in with SSO",
     "sso_missing_token": "Missing SSO token",
     "sso_login_failed": "SSO login failed",
-    "signing_in": "Signing you in..."
+    "signing_in": "Signing you in...",
+    "use_local_account": "Sign in with local account",
+    "back_to_sso": "← Back to SSO login"
   },
   "message": {
     "welcome": "Welcome, {{name}}",
@@ -388,6 +390,21 @@
     "deleted": "Supplier deleted",
     "updated": "Supplier updated",
     "status": "Status"
+  },
+  "shipment": {
+    "edit": "Edit Shipment: {{number}}",
+    "count": "shipments",
+    "items_count": "Items",
+    "notes": "Notes",
+    "confirm_delete": "Delete this shipment?",
+    "deleted": "Shipment deleted",
+    "updated": "Shipment updated",
+    "attachments": "Attachments — {{number}}",
+    "upload_attachment": "Upload Attachment",
+    "attachment_added": "Attachment added",
+    "attachment_hint": "Upload serial number lists, delivery notes, signing receipts, etc.",
+    "filename": "Filename",
+    "file_size": "Size"
   },
   "pr": {
     "guide_title": "Fill in Purchase Request",
