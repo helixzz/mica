@@ -509,6 +509,9 @@ async def update_company(
     if "default_currency" in payload.model_fields_set and payload.default_currency is not None:
         _record_change(diff, "default_currency", company.default_currency, payload.default_currency)
         company.default_currency = payload.default_currency
+    if "is_active" in payload.model_fields_set and payload.is_active is not None:
+        _record_change(diff, "is_active", company.is_active, payload.is_active)
+        company.is_active = payload.is_active
     if diff:
         await db.flush()
         await _audit(
