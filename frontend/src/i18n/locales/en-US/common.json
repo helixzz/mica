@@ -448,6 +448,7 @@
     "enabled": "Enabled",
     "stages_json_help": "Approval Stages (JSON)",
     "add_cost_center": "Add Cost Center",
+    "edit_cost_center": "Edit Cost Center",
     "add_expense_type": "Add Expense Type",
     "add_category": "Add Procurement Category",
     "import_suppliers": "Import Suppliers",

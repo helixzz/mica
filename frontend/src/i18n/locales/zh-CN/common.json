@@ -448,6 +448,7 @@
     "enabled": "启用",
     "stages_json_help": "审批阶段（JSON）",
     "add_cost_center": "添加成本中心",
+    "edit_cost_center": "编辑成本中心",
     "add_expense_type": "添加开支类型",
     "add_category": "添加采购种类",
     "import_suppliers": "导入供应商",
