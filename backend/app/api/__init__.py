@@ -18,6 +18,7 @@ from app.api.v1 import (
     notifications,
     payment_schedule,
     purchase,
+    recycle_bin,
     rfq,
     saml,
     search,
@@ -49,3 +50,4 @@ api_router.include_router(payment_schedule.router)
 api_router.include_router(classification.router)
 api_router.include_router(import_excel.router)
 api_router.include_router(rfq.router)
+api_router.include_router(recycle_bin.router)

@@ -11,10 +11,14 @@ from app.db import new_uuid
 from app.models import CostCenter, LookupValue, ProcurementCategory
 
 
-async def list_cost_centers(db: AsyncSession, active_only: bool = True) -> list[CostCenter]:
+async def list_cost_centers(
+    db: AsyncSession, *, enabled_only: bool = True, include_deleted: bool = False
+) -> list[CostCenter]:
     q = select(CostCenter).order_by(CostCenter.sort_order)
-    if active_only:
-        q = q.where(CostCenter.is_deleted.is_(False), CostCenter.is_enabled.is_(True))
+    if not include_deleted:
+        q = q.where(CostCenter.is_deleted.is_(False))
+    if enabled_only:
+        q = q.where(CostCenter.is_enabled.is_(True))
     return list((await db.execute(q)).scalars().all())
 
 
