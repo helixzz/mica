@@ -7,6 +7,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [v0.8.7] — 2026-04-23
+
+### 修复
+
+- **禁用公司主体后从列表消失**：`GET /companies` 端点硬编码 `is_active=True` 过滤。新增 `include_inactive` 查询参数，Admin 页传 `true` 显示全部（业务表单下拉仍只显示活跃公司）
+- **成本中心"删除"实为停用但行为不一致**：后端 `delete_cost_center` 实际是软删除（`is_active=False`），但 UI 用垃圾桶图标且停用后条目消失。修复：成本中心改为编辑/启用/停用操作（去掉误导性垃圾桶图标），Admin 列表请求包含已停用条目，状态列可见
+
 ## [v0.8.6] — 2026-04-23
 
 ### 修复
