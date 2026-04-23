@@ -17,6 +17,8 @@ import {
   Tag,
   Row,
   Col,
+  Select,
+  Alert,
 } from 'antd';
 import {
   SearchOutlined,
@@ -127,6 +129,23 @@ export const SystemParamsTab: React.FC = () => {
   };
 
   const renderInputWidget = (param: SystemParameter) => {
+    if (param.key === 'auth.saml.group_mapping' || param.key === 'auth.saml.idp.x509_cert') {
+      return <Input.TextArea rows={8} placeholder={String(param.default_value)} />;
+    }
+    if (param.key === 'auth.saml.jit.default_role') {
+      return (
+        <Select
+          options={[
+            { value: 'requester', label: t('role.requester', 'Requester') },
+            { value: 'it_buyer', label: t('role.it_buyer') },
+            { value: 'dept_manager', label: t('role.dept_manager') },
+            { value: 'finance_auditor', label: t('role.finance_auditor') },
+            { value: 'procurement_mgr', label: t('role.procurement_mgr') },
+            { value: 'admin', label: t('role.admin') },
+          ]}
+        />
+      );
+    }
     switch (param.data_type) {
       case 'int':
       case 'float':
@@ -204,6 +223,16 @@ export const SystemParamsTab: React.FC = () => {
                           <Text strong>
                             {i18n.language === 'zh-CN' ? param.description_zh : param.description_en}
                           </Text>
+                          {param.key.startsWith('auth.saml.') && (
+                            <Tooltip
+                              title={t(
+                                `admin.saml_help.${param.key}`,
+                                i18n.language === 'zh-CN' ? param.description_zh : param.description_en
+                              )}
+                            >
+                              <InfoCircleOutlined />
+                            </Tooltip>
+                          )}
                           {param.value !== param.default_value && (
                             <Tag color="warning">{t('admin.system_params.modified', 'Modified')}</Tag>
                           )}
@@ -280,6 +309,17 @@ export const SystemParamsTab: React.FC = () => {
                 {String(editingParam.default_value)} {editingParam.unit || ''}
               </Text>
             </div>
+            {editingParam.key.startsWith('auth.saml.') && (
+              <Alert
+                style={{ marginTop: 12 }}
+                type="info"
+                showIcon
+                message={t(
+                  `admin.saml_help.${editingParam.key}`,
+                  i18n.language === 'zh-CN' ? editingParam.description_zh : editingParam.description_en
+                )}
+              />
+            )}
           </Form>
         )}
       </Modal>

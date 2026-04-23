@@ -18,6 +18,11 @@ export interface TokenResponse {
   expires_in: number
 }
 
+export interface LoginOptionsResponse {
+  saml_enabled: boolean
+  saml_login_url: string | null
+}
+
 export interface Company {
   id: string
   code: string
@@ -154,6 +159,17 @@ export interface Contract {
   effective_date: string | null
   expiry_date: string | null
   notes: string | null
+  created_at: string
+}
+
+export interface ContractVersion {
+  id: string
+  contract_id: string
+  version_number: number
+  change_type: string
+  change_reason: string | null
+  snapshot_json: Record<string, unknown>
+  changed_by_id: string | null
   created_at: string
 }
 
@@ -570,6 +586,10 @@ export const api = {
     const { data } = await client.post<TokenResponse>('/auth/login/json', { username, password })
     return data
   },
+  async loginOptions(): Promise<LoginOptionsResponse> {
+    const { data } = await client.get<LoginOptionsResponse>('/auth/login-options')
+    return data
+  },
   async me(): Promise<User> {
     const { data } = await client.get<User>('/auth/me')
     return data
@@ -669,6 +689,10 @@ export const api = {
   },
   async listContracts(po_id?: string): Promise<Contract[]> {
     const { data } = await client.get<Contract[]>('/contracts', { params: { po_id } })
+    return data
+  },
+  async listContractVersions(contractId: string): Promise<ContractVersion[]> {
+    const { data } = await client.get<ContractVersion[]>(`/contracts/${contractId}/versions`)
     return data
   },
   async createContract(payload: {
@@ -976,6 +1000,13 @@ export const api = {
   async adminCreateApprovalRule(body: any): Promise<any> {
     const { data } = await client.post('/approval-rules', body)
     return data
+  },
+  async adminUpdateApprovalRule(id: string, body: any): Promise<any> {
+    const { data } = await client.put(`/approval-rules/${id}`, body)
+    return data
+  },
+  async adminDeleteApprovalRule(id: string): Promise<void> {
+    await client.delete(`/approval-rules/${id}`)
   },
   async aiStream(
     feature_code: 'pr_description_polish' | 'sku_suggest',

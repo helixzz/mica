@@ -1,9 +1,10 @@
 import { LockOutlined, UserOutlined } from '@ant-design/icons'
-import { Alert, Button, Card, Form, Input, Space, Typography } from 'antd'
-import { useState } from 'react'
+import { Alert, Button, Card, Divider, Form, Input, Space, Typography } from 'antd'
+import { useEffect, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { useNavigate } from 'react-router-dom'
 
+import { api } from '@/api'
 import { LanguageSwitcher } from '@/components/LanguageSwitcher'
 import { useAuth } from '@/auth/useAuth'
 import { extractError } from '@/api/client'
@@ -13,6 +14,28 @@ export function LoginPage() {
   const { login, loading } = useAuth()
   const navigate = useNavigate()
   const [error, setError] = useState<string | null>(null)
+  const [samlEnabled, setSamlEnabled] = useState(false)
+  const [samlLoginUrl, setSamlLoginUrl] = useState<string | null>(null)
+
+  useEffect(() => {
+    let active = true
+    void api
+      .loginOptions()
+      .then((options) => {
+        if (!active) return
+        setSamlEnabled(options.saml_enabled)
+        setSamlLoginUrl(options.saml_login_url)
+      })
+      .catch(() => {
+        if (!active) return
+        setSamlEnabled(false)
+        setSamlLoginUrl(null)
+      })
+
+    return () => {
+      active = false
+    }
+  }, [])
 
   const onFinish = async (values: { username: string; password: string }) => {
     setError(null)
@@ -23,6 +46,11 @@ export function LoginPage() {
       const err = extractError(e)
       setError(err.detail || t('error.login_failed'))
     }
+  }
+
+  const onSsoLogin = () => {
+    if (!samlLoginUrl) return
+    window.location.assign(samlLoginUrl)
   }
 
   return (
@@ -76,6 +104,14 @@ export function LoginPage() {
               {t('button.submit')}
             </Button>
           </Form>
+          {samlEnabled && samlLoginUrl && (
+            <>
+              <Divider>{t('auth.or_continue_with', 'or continue with')}</Divider>
+              <Button block size="large" onClick={onSsoLogin}>
+                {t('auth.sign_in_with_sso', 'Sign in with SSO')}
+              </Button>
+            </>
+          )}
           <Typography.Text type="secondary" style={{ fontSize: 12, display: 'block', textAlign: 'center' }}>
             Dev: alice / bob / carol / dave / admin · password: MicaDev2026!
           </Typography.Text>
