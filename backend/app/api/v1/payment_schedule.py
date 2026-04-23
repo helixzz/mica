@@ -21,19 +21,19 @@ from app.services import payment_schedule as svc
 
 router = APIRouter(tags=["payment-schedule"])
 
+_SCHEDULE_WRITE_ROLES = ("admin", "procurement_mgr", "finance_auditor")
+
 
 @router.get(
     "/contracts/{contract_id}/payment-schedule",
     response_model=PaymentScheduleSummaryOut,
 )
-async def list_payment_schedule(
+async def list_contract_payment_schedule(
     contract_id: UUID,
     _user: CurrentUser,
     db: Annotated[AsyncSession, Depends(get_db)],
 ):
-    contract = await svc.get_contract_with_schedules(db, contract_id)
-    items = list(contract.schedules)
-    return svc.build_summary(contract, items)
+    return await svc.build_summary_for(db, contract_id=contract_id)
 
 
 @router.post(
@@ -41,13 +41,15 @@ async def list_payment_schedule(
     response_model=list[PaymentScheduleItemOut],
     status_code=201,
 )
-async def create_payment_schedule(
+async def create_contract_payment_schedule(
     contract_id: UUID,
     body: PaymentScheduleIn,
-    _user: Annotated[None, Depends(require_roles("admin", "procurement_mgr", "finance_auditor"))],
+    _user: Annotated[None, Depends(require_roles(*_SCHEDULE_WRITE_ROLES))],
     db: Annotated[AsyncSession, Depends(get_db)],
 ):
-    items = await svc.replace_schedule(db, contract_id, [i.model_dump() for i in body.items])
+    items = await svc.replace_schedule(
+        db, [i.model_dump() for i in body.items], contract_id=contract_id
+    )
     await db.commit()
     return items
 
@@ -56,15 +58,18 @@ async def create_payment_schedule(
     "/contracts/{contract_id}/payment-schedule/{installment_no}",
     response_model=PaymentScheduleItemOut,
 )
-async def update_schedule_item(
+async def update_contract_schedule_item(
     contract_id: UUID,
     installment_no: int,
     body: PaymentScheduleItemUpdate,
-    _user: Annotated[None, Depends(require_roles("admin", "procurement_mgr", "finance_auditor"))],
+    _user: Annotated[None, Depends(require_roles(*_SCHEDULE_WRITE_ROLES))],
     db: Annotated[AsyncSession, Depends(get_db)],
 ):
     item = await svc.update_schedule_item(
-        db, contract_id, installment_no, body.model_dump(exclude_none=True)
+        db,
+        installment_no,
+        body.model_dump(exclude_none=True),
+        contract_id=contract_id,
     )
     await db.commit()
     return item
@@ -74,13 +79,13 @@ async def update_schedule_item(
     "/contracts/{contract_id}/payment-schedule/{installment_no}",
     status_code=204,
 )
-async def delete_schedule_item(
+async def delete_contract_schedule_item(
     contract_id: UUID,
     installment_no: int,
-    _user: Annotated[None, Depends(require_roles("admin", "procurement_mgr", "finance_auditor"))],
+    _user: Annotated[None, Depends(require_roles(*_SCHEDULE_WRITE_ROLES))],
     db: Annotated[AsyncSession, Depends(get_db)],
 ):
-    await svc.delete_schedule_item(db, contract_id, installment_no)
+    await svc.delete_schedule_item(db, installment_no, contract_id=contract_id)
     await db.commit()
 
 
@@ -88,21 +93,21 @@ async def delete_schedule_item(
     "/contracts/{contract_id}/payment-schedule/{installment_no}/execute",
     response_model=PaymentScheduleItemOut,
 )
-async def execute_schedule_item(
+async def execute_contract_schedule_item(
     contract_id: UUID,
     installment_no: int,
     body: PaymentScheduleExecuteIn,
-    _user: Annotated[None, Depends(require_roles("admin", "procurement_mgr", "finance_auditor"))],
+    _user: Annotated[None, Depends(require_roles(*_SCHEDULE_WRITE_ROLES))],
     db: Annotated[AsyncSession, Depends(get_db)],
 ):
     item = await svc.execute_schedule_item(
         db,
-        contract_id,
         installment_no,
         payment_method=body.payment_method,
         transaction_ref=body.transaction_ref,
         invoice_id=body.invoice_id,
         amount_override=body.amount,
+        contract_id=contract_id,
     )
     await db.commit()
     return item
@@ -112,14 +117,114 @@ async def execute_schedule_item(
     "/contracts/{contract_id}/payment-schedule/{installment_no}/link-invoice",
     response_model=PaymentScheduleItemOut,
 )
-async def link_invoice_to_schedule(
+async def link_invoice_to_contract_schedule(
     contract_id: UUID,
     installment_no: int,
     body: PaymentScheduleLinkInvoiceIn,
-    _user: Annotated[None, Depends(require_roles("admin", "procurement_mgr", "finance_auditor"))],
+    _user: Annotated[None, Depends(require_roles(*_SCHEDULE_WRITE_ROLES))],
     db: Annotated[AsyncSession, Depends(get_db)],
 ):
-    item = await svc.link_invoice(db, contract_id, installment_no, body.invoice_id)
+    item = await svc.link_invoice(db, installment_no, body.invoice_id, contract_id=contract_id)
+    await db.commit()
+    return item
+
+
+@router.get(
+    "/purchase-orders/{po_id}/payment-schedule",
+    response_model=PaymentScheduleSummaryOut,
+)
+async def list_po_payment_schedule(
+    po_id: UUID,
+    _user: CurrentUser,
+    db: Annotated[AsyncSession, Depends(get_db)],
+):
+    return await svc.build_summary_for(db, po_id=po_id)
+
+
+@router.post(
+    "/purchase-orders/{po_id}/payment-schedule",
+    response_model=list[PaymentScheduleItemOut],
+    status_code=201,
+)
+async def create_po_payment_schedule(
+    po_id: UUID,
+    body: PaymentScheduleIn,
+    _user: Annotated[None, Depends(require_roles(*_SCHEDULE_WRITE_ROLES))],
+    db: Annotated[AsyncSession, Depends(get_db)],
+):
+    items = await svc.replace_schedule(db, [i.model_dump() for i in body.items], po_id=po_id)
+    await db.commit()
+    return items
+
+
+@router.put(
+    "/purchase-orders/{po_id}/payment-schedule/{installment_no}",
+    response_model=PaymentScheduleItemOut,
+)
+async def update_po_schedule_item(
+    po_id: UUID,
+    installment_no: int,
+    body: PaymentScheduleItemUpdate,
+    _user: Annotated[None, Depends(require_roles(*_SCHEDULE_WRITE_ROLES))],
+    db: Annotated[AsyncSession, Depends(get_db)],
+):
+    item = await svc.update_schedule_item(
+        db, installment_no, body.model_dump(exclude_none=True), po_id=po_id
+    )
+    await db.commit()
+    return item
+
+
+@router.delete(
+    "/purchase-orders/{po_id}/payment-schedule/{installment_no}",
+    status_code=204,
+)
+async def delete_po_schedule_item(
+    po_id: UUID,
+    installment_no: int,
+    _user: Annotated[None, Depends(require_roles(*_SCHEDULE_WRITE_ROLES))],
+    db: Annotated[AsyncSession, Depends(get_db)],
+):
+    await svc.delete_schedule_item(db, installment_no, po_id=po_id)
+    await db.commit()
+
+
+@router.post(
+    "/purchase-orders/{po_id}/payment-schedule/{installment_no}/execute",
+    response_model=PaymentScheduleItemOut,
+)
+async def execute_po_schedule_item(
+    po_id: UUID,
+    installment_no: int,
+    body: PaymentScheduleExecuteIn,
+    _user: Annotated[None, Depends(require_roles(*_SCHEDULE_WRITE_ROLES))],
+    db: Annotated[AsyncSession, Depends(get_db)],
+):
+    item = await svc.execute_schedule_item(
+        db,
+        installment_no,
+        payment_method=body.payment_method,
+        transaction_ref=body.transaction_ref,
+        invoice_id=body.invoice_id,
+        amount_override=body.amount,
+        po_id=po_id,
+    )
+    await db.commit()
+    return item
+
+
+@router.patch(
+    "/purchase-orders/{po_id}/payment-schedule/{installment_no}/link-invoice",
+    response_model=PaymentScheduleItemOut,
+)
+async def link_invoice_to_po_schedule(
+    po_id: UUID,
+    installment_no: int,
+    body: PaymentScheduleLinkInvoiceIn,
+    _user: Annotated[None, Depends(require_roles(*_SCHEDULE_WRITE_ROLES))],
+    db: Annotated[AsyncSession, Depends(get_db)],
+):
+    item = await svc.link_invoice(db, installment_no, body.invoice_id, po_id=po_id)
     await db.commit()
     return item
 
