@@ -43,7 +43,7 @@ async def test_list_cost_centers_returns_seeded_active_rows(seeded_db_session):
     cost_centers = await svc.list_cost_centers(seeded_db_session)
 
     assert len(cost_centers) >= 4
-    assert all(cost_center.is_active is True for cost_center in cost_centers)
+    assert all(cost_center.is_enabled is True for cost_center in cost_centers)
     assert [cost_center.code for cost_center in cost_centers[:4]] == [
         "CC-IT",
         "CC-ADMIN",
@@ -66,7 +66,7 @@ async def test_create_cost_center_success(seeded_db_session):
     )
 
     assert created.code == code
-    assert created.is_active is True
+    assert created.is_enabled is True
 
     persisted = await _cost_center_by_code(seeded_db_session, code)
     assert persisted.id == created.id
@@ -109,9 +109,11 @@ async def test_delete_cost_center_soft_delete_hides_from_active_list(seeded_db_s
 
     refreshed = await seeded_db_session.get(CostCenter, created.id)
     assert refreshed is not None
-    assert refreshed.is_active is False
+    assert refreshed.is_deleted is True
 
-    active_codes = {cost_center.code for cost_center in await svc.list_cost_centers(seeded_db_session)}
+    active_codes = {
+        cost_center.code for cost_center in await svc.list_cost_centers(seeded_db_session)
+    }
     all_codes = {
         cost_center.code
         for cost_center in await svc.list_cost_centers(seeded_db_session, active_only=False)
@@ -140,7 +142,7 @@ async def test_list_procurement_categories_flat_returns_seeded_rows(seeded_db_se
     categories = await svc.list_procurement_categories(seeded_db_session, flat=True)
 
     assert len(categories) >= 10
-    assert all(category.is_active is True for category in categories)
+    assert all(category.is_enabled is True for category in categories)
     assert any(category.code == "server" and category.level == 1 for category in categories)
     assert any(category.code == "memory" and category.level == 2 for category in categories)
 
@@ -236,7 +238,7 @@ async def test_delete_procurement_category_soft_delete_filters_active_list(seede
 
     refreshed = await seeded_db_session.get(ProcurementCategory, category.id)
     assert refreshed is not None
-    assert refreshed.is_active is False
+    assert refreshed.is_deleted is True
 
     active_codes = {
         procurement_category.code
@@ -291,7 +293,7 @@ async def test_list_lookup_values_returns_seeded_expense_types(seeded_db_session
     values = await svc.list_lookup_values(seeded_db_session, "expense_type")
 
     assert [value.code for value in values] == ["capex", "opex"]
-    assert all(value.is_active is True for value in values)
+    assert all(value.is_enabled is True for value in values)
 
 
 async def test_create_lookup_value_success(seeded_db_session):
@@ -310,7 +312,7 @@ async def test_create_lookup_value_success(seeded_db_session):
 
     assert created.code == code
     assert created.type == "expense_type"
-    assert created.is_active is True
+    assert created.is_enabled is True
 
     persisted = await _lookup_value(seeded_db_session, type_="expense_type", code=code)
     assert persisted.id == created.id
@@ -355,7 +357,7 @@ async def test_delete_lookup_value_soft_delete_filters_active_list(seeded_db_ses
 
     refreshed = await seeded_db_session.get(LookupValue, created.id)
     assert refreshed is not None
-    assert refreshed.is_active is False
+    assert refreshed.is_deleted is True
 
     active_codes = {
         lookup_value.code

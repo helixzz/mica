@@ -47,7 +47,8 @@ class UserOut(BaseModel):
     company_id: UUID
     department_id: UUID | None = None
     preferred_locale: str
-    is_active: bool
+    is_enabled: bool
+    is_deleted: bool
 
 
 class CompanyCreate(BaseModel):
@@ -69,7 +70,7 @@ class CompanyUpdate(BaseModel):
     name_en: str | None = Field(default=None, max_length=255)
     default_locale: str | None = Field(default=None, min_length=2, max_length=10)
     default_currency: str | None = Field(default=None, min_length=3, max_length=3)
-    is_active: bool | None = None
+    is_enabled: bool | None = None
 
     @field_validator("code")
     @classmethod
@@ -87,7 +88,8 @@ class CompanyOut(BaseModel):
     name_en: str | None = None
     default_locale: str
     default_currency: str
-    is_active: bool
+    is_enabled: bool
+    is_deleted: bool
     created_at: datetime
     updated_at: datetime
 
@@ -127,7 +129,8 @@ class DepartmentOut(BaseModel):
     name_zh: str
     name_en: str | None = None
     parent_id: UUID | None = None
-    is_active: bool
+    is_enabled: bool
+    is_deleted: bool
     created_at: datetime
     updated_at: datetime
 
@@ -174,7 +177,8 @@ class SupplierOut(BaseModel):
     contact_phone: str | None = None
     contact_email: str | None = None
     notes: str | None = None
-    is_active: bool
+    is_enabled: bool
+    is_deleted: bool
     created_at: datetime
     updated_at: datetime
 
@@ -202,7 +206,7 @@ class ItemUpdate(BaseModel):
     uom: str | None = Field(default=None, min_length=1, max_length=16)
     specification: str | None = None
     requires_serial: bool | None = None
-    is_active: bool | None = None
+    is_enabled: bool | None = None
 
     @field_validator("code")
     @classmethod

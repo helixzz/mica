@@ -135,7 +135,7 @@ async def list_companies(
 ) -> list[CompanyOut]:
     stmt = select(Company).order_by(Company.code)
     if not include_inactive:
-        stmt = stmt.where(Company.is_active.is_(True))
+        stmt = stmt.where(Company.is_deleted.is_(False), Company.is_enabled.is_(True))
     result = await db.execute(stmt)
     return [CompanyOut.model_validate(c) for c in result.scalars().all()]
 
@@ -148,7 +148,8 @@ async def list_departments(
     result = await db.execute(
         select(Department).where(
             Department.company_id == user.company_id,
-            Department.is_active == True,  # noqa: E712
+            Department.is_deleted.is_(False),
+            Department.is_enabled.is_(True),
         )
     )
     return [DepartmentOut.model_validate(d) for d in result.scalars().all()]

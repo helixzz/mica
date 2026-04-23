@@ -33,7 +33,9 @@ async def list_suppliers(
     db: Annotated[AsyncSession, Depends(get_db)],
 ) -> list[SupplierOut]:
     result = await db.execute(
-        select(Supplier).where(Supplier.is_active.is_(True)).order_by(Supplier.name)
+        select(Supplier)
+        .where(Supplier.is_deleted.is_(False), Supplier.is_enabled.is_(True))
+        .order_by(Supplier.name)
     )
     return [SupplierOut.model_validate(s) for s in result.scalars().all()]
 
@@ -43,7 +45,11 @@ async def list_items(
     _user: CurrentUser,
     db: Annotated[AsyncSession, Depends(get_db)],
 ) -> list[ItemOut]:
-    result = await db.execute(select(Item).where(Item.is_active.is_(True)).order_by(Item.name))
+    result = await db.execute(
+        select(Item)
+        .where(Item.is_deleted.is_(False), Item.is_enabled.is_(True))
+        .order_by(Item.name)
+    )
     return [ItemOut.model_validate(i) for i in result.scalars().all()]
 
 

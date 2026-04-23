@@ -33,7 +33,10 @@ async def ai_stream(
         items = (
             (
                 await db.execute(
-                    select(Item).where(Item.is_active.is_(True)).order_by(Item.name).limit(30)
+                    select(Item)
+                    .where(Item.is_deleted.is_(False), Item.is_enabled.is_(True))
+                    .order_by(Item.name)
+                    .limit(30)
                 )
             )
             .scalars()
