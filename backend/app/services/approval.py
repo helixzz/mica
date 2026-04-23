@@ -87,7 +87,7 @@ async def _resolve_user_for_role(
     )
     if approver_role == UserRole.DEPT_MANAGER.value and submitter.department_id:
         stmt = stmt.where(User.department_id == submitter.department_id)
-    result = (await db.execute(stmt)).scalar_one_or_none()
+    result = (await db.execute(stmt)).scalars().first()
     if result:
         return result
 
@@ -96,7 +96,7 @@ async def _resolve_user_for_role(
             User.role == UserRole.ADMIN.value,
             User.is_active.is_(True),
         )
-        admin = (await db.execute(admin_stmt)).scalar_one_or_none()
+        admin = (await db.execute(admin_stmt)).scalars().first()
         if admin:
             return admin
 
