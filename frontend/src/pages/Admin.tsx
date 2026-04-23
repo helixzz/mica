@@ -65,6 +65,7 @@ export function AdminPage() {
         {t('admin.admin_console')}
       </Typography.Title>
       <Tabs
+        destroyInactiveTabPane
         items={[
           { key: 'system', label: t('admin.system_info'), children: <SystemInfoPanel /> },
           { key: 'companies', label: t('admin.companies'), children: <CompaniesTab /> },
@@ -867,7 +868,7 @@ function ClassificationTab() {
       if (dimension === 'cost_center') await api.deleteCostCenter(id)
       else if (dimension === 'category') await api.deleteProcurementCategory(id)
       else await api.deleteLookupValue(id)
-      void message.success(t('admin.deactivated'))
+      void message.success(t('message.deleted'))
       load()
     } catch (e: any) {
       void message.error(e?.response?.data?.detail || t('admin.operation_failed'))
@@ -934,7 +935,7 @@ function ClassificationTab() {
             : []),
           {
             title: t('common.actions'),
-            width: dimension === 'cost_center' ? 180 : 60,
+            width: dimension === 'cost_center' ? 240 : 60,
             render: (_: unknown, r: any) => (
               <Space>
                 {dimension === 'cost_center' && (
@@ -949,9 +950,7 @@ function ClassificationTab() {
                     </Button>
                   </>
                 )}
-                {dimension !== 'cost_center' && (
-                  <Button size="small" danger icon={<DeleteOutlined />} onClick={() => handleDelete(dimension, r.id)} />
-                )}
+                <Button size="small" danger icon={<DeleteOutlined />} onClick={() => handleDelete(dimension, r.id)} />
               </Space>
             ),
           },
