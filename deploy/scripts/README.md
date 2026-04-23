@@ -12,6 +12,8 @@
 | `restore.sh` | 从 backup 归档恢复（破坏性，双重确认） | `./restore.sh backups/mica-*.tar.gz --yes-i-know` |
 | `upgrade.sh` | backup → build → migrate → up → 健康检查，失败自动回滚 | `./upgrade.sh --tag v0.5.0` |
 | `logs.sh` | `docker compose logs` 的便捷封装 | `./logs.sh backend --tail 50` |
+| `enable-tls.sh` | 启用 HTTPS：验证证书 → 安装 → 切换 Nginx → 重启 | `./enable-tls.sh --cert server.crt --key server.key` |
+| `disable-tls.sh` | 恢复为纯 HTTP 模式 | `./disable-tls.sh` |
 
 既有的 `dev-up.sh` / `dev-down.sh` 保持不变。
 
