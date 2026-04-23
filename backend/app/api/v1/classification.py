@@ -83,9 +83,12 @@ class LookupValueIn(BaseModel):
 async def list_cost_centers(
     _user: CurrentUser,
     db: Annotated[AsyncSession, Depends(get_db)],
-    active: bool = True,
+    enabled_only: bool = True,
+    include_deleted: bool = False,
 ):
-    return await svc.list_cost_centers(db, active_only=active)
+    return await svc.list_cost_centers(
+        db, enabled_only=enabled_only, include_deleted=include_deleted
+    )
 
 
 @router.post(

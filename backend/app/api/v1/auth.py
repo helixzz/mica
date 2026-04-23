@@ -131,11 +131,14 @@ async def get_login_options(
 async def list_companies(
     _user: CurrentUser,
     db: Annotated[AsyncSession, Depends(get_db)],
-    include_inactive: bool = False,
+    include_disabled: bool = False,
+    include_deleted: bool = False,
 ) -> list[CompanyOut]:
     stmt = select(Company).order_by(Company.code)
-    if not include_inactive:
-        stmt = stmt.where(Company.is_deleted.is_(False), Company.is_enabled.is_(True))
+    if not include_deleted:
+        stmt = stmt.where(Company.is_deleted.is_(False))
+    if not include_disabled:
+        stmt = stmt.where(Company.is_enabled.is_(True))
     result = await db.execute(stmt)
     return [CompanyOut.model_validate(c) for c in result.scalars().all()]
 
