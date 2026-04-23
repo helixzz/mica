@@ -78,6 +78,7 @@ export function AdminPage() {
           { key: 'users', label: t('admin.users'), children: <UsersPanel /> },
           { key: 'ai_logs', label: t('admin.ai_logs'), children: <AILogsPanel /> },
           { key: 'audit', label: t('admin.audit'), children: <AuditPanel /> },
+          { key: 'recycle_bin', label: t('admin.recycle_bin'), children: <RecycleBinPanel /> },
         ]}
       />
     </Space>
@@ -701,6 +702,24 @@ function CompaniesTab() {
     }
   }
 
+  const handleDeleteCompany = (company: any) => {
+    Modal.confirm({
+      title: `${t('button.delete')} ${company.name_zh}?`,
+      okText: t('button.delete'),
+      okType: 'danger',
+      cancelText: t('button.cancel'),
+      onOk: async () => {
+        try {
+          await api.deleteCompany(company.id)
+          void message.success(t('message.deleted'))
+          load()
+        } catch (e: any) {
+          void message.error(e?.response?.data?.detail || t('admin.operation_failed'))
+        }
+      },
+    })
+  }
+
   return (
     <Space direction="vertical" size="middle" style={{ width: '100%' }}>
       <div style={{ display: 'flex', justifyContent: 'space-between' }}>
@@ -715,13 +734,14 @@ function CompaniesTab() {
         { title: t('admin.status_col'), dataIndex: 'is_enabled', width: 70, render: (v: boolean) => <Tag color={v !== false ? 'success' : 'default'}>{v !== false ? t('common.enabled') : t('common.disabled')}</Tag> },
         {
           title: t('common.actions'),
-          width: 150,
+          width: 220,
           render: (_: unknown, r: any) => (
             <Space>
               <Button size="small" onClick={() => openEdit(r)}>{t('button.edit')}</Button>
               <Button size="small" danger={r.is_enabled !== false} onClick={() => toggleActive(r)}>
                 {r.is_enabled !== false ? t('common.disabled') : t('common.enabled')}
               </Button>
+              <Button size="small" danger icon={<DeleteOutlined />} onClick={() => handleDeleteCompany(r)} />
             </Space>
           ),
         },
@@ -1032,6 +1052,81 @@ function ClassificationTab() {
           )}
         </Form>
       </Modal>
+    </Space>
+  )
+}
+
+
+function RecycleBinPanel() {
+  const { t } = useTranslation()
+  const [items, setItems] = useState<{ entity_type: string; entity_id: string; code: string; label: string; deleted_at: string | null }[]>([])
+  const [loading, setLoading] = useState(false)
+
+  const load = () => {
+    setLoading(true)
+    api.listRecycleBin().then(setItems).finally(() => setLoading(false))
+  }
+  useEffect(load, [])
+
+  const entityTypeLabels: Record<string, string> = {
+    company: t('field.company'),
+    department: t('field.department'),
+    cost_center: t('field.cost_center'),
+    procurement_category: t('field.procurement_category'),
+    lookup_value: t('field.expense_type'),
+    supplier: t('field.supplier'),
+    item: t('field.item_name'),
+  }
+
+  const restore = async (entityType: string, entityId: string) => {
+    try {
+      await api.restoreFromRecycleBin(entityType, entityId)
+      void message.success(t('admin.restored'))
+      load()
+    } catch (e: any) {
+      void message.error(e?.response?.data?.detail || t('admin.operation_failed'))
+    }
+  }
+
+  return (
+    <Space direction="vertical" size="middle" style={{ width: '100%' }}>
+      <Typography.Text type="secondary">
+        {t('admin.recycle_bin_hint')}
+      </Typography.Text>
+      <Table
+        rowKey={(r) => `${r.entity_type}-${r.entity_id}`}
+        dataSource={items}
+        loading={loading}
+        pagination={{ pageSize: 20 }}
+        locale={{ emptyText: t('admin.recycle_bin_empty') }}
+        columns={[
+          {
+            title: t('admin.entity_type'),
+            dataIndex: 'entity_type',
+            width: 120,
+            render: (v: string) => <Tag>{entityTypeLabels[v] || v}</Tag>,
+            filters: Object.entries(entityTypeLabels).map(([k, v]) => ({ text: v, value: k })),
+            onFilter: (value: any, record: any) => record.entity_type === value,
+          },
+          { title: t('admin.code_col'), dataIndex: 'code', width: 140 },
+          { title: t('field.title'), dataIndex: 'label' },
+          {
+            title: t('admin.deleted_at'),
+            dataIndex: 'deleted_at',
+            width: 180,
+            render: (v: string | null) => v ? new Date(v).toLocaleString() : '-',
+          },
+          {
+            title: t('common.actions'),
+            width: 100,
+            render: (_: unknown, r: any) => (
+              <Button size="small" type="primary" onClick={() => restore(r.entity_type, r.entity_id)}>
+                {t('admin.restore')}
+              </Button>
+            ),
+          },
+        ]}
+      />
     </Space>
   )
 }
