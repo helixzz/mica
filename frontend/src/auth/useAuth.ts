@@ -8,6 +8,7 @@ interface AuthState {
   loading: boolean
   initialized: boolean
   login: (username: string, password: string) => Promise<void>
+  loginWithToken: (token: string) => Promise<void>
   logout: () => void
   loadMe: () => Promise<void>
 }
@@ -25,6 +26,18 @@ export const useAuth = create<AuthState>((set) => ({
       set({ user: me, loading: false, initialized: true })
     } catch (e) {
       set({ loading: false })
+      throw e
+    }
+  },
+  loginWithToken: async (token) => {
+    set({ loading: true })
+    try {
+      setToken(token)
+      const me = await api.me()
+      set({ user: me, loading: false, initialized: true })
+    } catch (e) {
+      clearToken()
+      set({ user: null, loading: false, initialized: true })
       throw e
     }
   },

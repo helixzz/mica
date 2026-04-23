@@ -34,6 +34,9 @@ const InvoicesPage = lazy(() =>
 const LoginPage = lazy(() =>
   import('@/pages/Login').then((m) => ({ default: m.LoginPage })),
 )
+const SsoCallbackPage = lazy(() =>
+  import('@/pages/SsoCallback').then((m) => ({ default: m.SsoCallbackPage })),
+)
 const NotificationCenter = lazy(() => import('@/pages/NotificationCenter'))
 const PaymentsPage = lazy(() =>
   import('@/pages/Payments').then((m) => ({ default: m.PaymentsPage })),
@@ -130,6 +133,7 @@ export function AppRoutes() {
     <Suspense fallback={<PageFallback />}>
       <Routes>
         <Route path="/login" element={<LoginPage />} />
+        <Route path="/sso-callback" element={<SsoCallbackPage />} />
         <Route
           element={
             <Protected>
