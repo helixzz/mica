@@ -1,10 +1,10 @@
 import { DeleteOutlined, EditOutlined, PaperClipOutlined, PlusOutlined, UploadOutlined } from '@ant-design/icons'
-import { Button, Drawer, Form, Input, Modal, Select, Space, Table, Tag, Typography, Upload, message } from 'antd'
+import { Button, Drawer, Form, Input, InputNumber, Modal, Select, Space, Table, Tag, Typography, Upload, message } from 'antd'
 import type { ColumnsType } from 'antd/es/table'
 import { useEffect, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 
-import { api, type Shipment } from '@/api'
+import { api, type PurchaseOrder, type Shipment } from '@/api'
 
 const STATUS_COLORS: Record<string, string> = {
   pending: 'default',
@@ -26,11 +26,68 @@ export function ShipmentsPage() {
   const [attachments, setAttachments] = useState<any[]>([])
   const [form] = Form.useForm()
 
+  const [createOpen, setCreateOpen] = useState(false)
+  const [poList, setPoList] = useState<PurchaseOrder[]>([])
+  const [selectedPO, setSelectedPO] = useState<PurchaseOrder | null>(null)
+  const [createLines, setCreateLines] = useState<{ po_item_id: string; qty_shipped: number }[]>([])
+  const [createCarrier, setCreateCarrier] = useState('')
+  const [createTracking, setCreateTracking] = useState('')
+  const [createActualDate, setCreateActualDate] = useState('')
+  const [createBusy, setCreateBusy] = useState(false)
+
   const load = () => {
     setLoading(true)
     api.listShipments().then(setRows).finally(() => setLoading(false))
   }
   useEffect(load, [])
+
+  const openCreate = async () => {
+    setSelectedPO(null)
+    setCreateLines([])
+    setCreateCarrier('')
+    setCreateTracking('')
+    setCreateActualDate(new Date().toISOString().slice(0, 10))
+    try {
+      const pos = await api.listPOs()
+      setPoList(pos)
+    } catch { setPoList([]) }
+    setCreateOpen(true)
+  }
+
+  const onSelectPO = async (poId: string) => {
+    try {
+      const po = await api.getPO(poId)
+      setSelectedPO(po)
+      setCreateLines(po.items.map(i => ({
+        po_item_id: i.id,
+        qty_shipped: Math.max(0, Number(i.qty) - Number(i.qty_received || 0)),
+      })))
+    } catch {
+      setSelectedPO(null)
+      setCreateLines([])
+    }
+  }
+
+  const handleCreate = async () => {
+    if (!selectedPO) return
+    setCreateBusy(true)
+    try {
+      await api.createShipment({
+        po_id: selectedPO.id,
+        items: createLines.filter(l => l.qty_shipped > 0),
+        carrier: createCarrier || null,
+        tracking_number: createTracking || null,
+        actual_date: createActualDate || null,
+      })
+      void message.success(t('message.shipment_recorded'))
+      setCreateOpen(false)
+      load()
+    } catch (e: any) {
+      void message.error(e?.response?.data?.detail || t('error.save_failed'))
+    } finally {
+      setCreateBusy(false)
+    }
+  }
 
   const openEdit = (s: Shipment) => {
     setEditingShipment(s)
@@ -138,7 +195,10 @@ export function ShipmentsPage() {
     <Space direction="vertical" size="large" style={{ width: '100%' }}>
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
         <Typography.Title level={3} style={{ margin: 0 }}>{t('nav.shipments')}</Typography.Title>
-        <Typography.Text type="secondary">{rows.length} {t('shipment.count')}</Typography.Text>
+        <Space>
+          <Typography.Text type="secondary">{rows.length} {t('shipment.count')}</Typography.Text>
+          <Button type="primary" icon={<PlusOutlined />} onClick={openCreate}>{t('shipment.new')}</Button>
+        </Space>
       </div>
       <Table<Shipment>
         rowKey="id"
@@ -223,6 +283,61 @@ export function ShipmentsPage() {
           />
         </Space>
       </Drawer>
+
+      <Modal
+        title={t('shipment.new')}
+        open={createOpen}
+        onCancel={() => setCreateOpen(false)}
+        onOk={handleCreate}
+        confirmLoading={createBusy}
+        okButtonProps={{ disabled: !selectedPO || createLines.every(l => l.qty_shipped <= 0) }}
+        width={800}
+      >
+        <Space direction="vertical" style={{ width: '100%' }} size="middle">
+          <Select
+            placeholder={t('shipment.select_po')}
+            style={{ width: '100%' }}
+            showSearch
+            optionFilterProp="label"
+            value={selectedPO?.id}
+            onChange={onSelectPO}
+            options={poList.map(po => ({ value: po.id, label: `${po.po_number} — ¥${Number(po.total_amount).toFixed(2)}` }))}
+          />
+          {selectedPO && (
+            <>
+              <Space>
+                <Input placeholder={t('field.carrier')} value={createCarrier} onChange={e => setCreateCarrier(e.target.value)} style={{ width: 200 }} />
+                <Input placeholder={t('field.tracking_number')} value={createTracking} onChange={e => setCreateTracking(e.target.value)} style={{ width: 200 }} />
+                <Input type="date" value={createActualDate} onChange={e => setCreateActualDate(e.target.value)} style={{ width: 160 }} />
+              </Space>
+              <Typography.Text type="secondary">{t('po.shipment_help')}</Typography.Text>
+              <Table
+                rowKey="id"
+                size="small"
+                pagination={false}
+                dataSource={selectedPO.items}
+                columns={[
+                  { title: t('field.line_no'), dataIndex: 'line_no', width: 60 },
+                  { title: t('field.item_name'), dataIndex: 'item_name' },
+                  { title: t('field.qty'), dataIndex: 'qty', align: 'right' as const, width: 90 },
+                  { title: t('field.qty_received'), dataIndex: 'qty_received', align: 'right' as const, width: 100 },
+                  {
+                    title: t('field.qty_shipped'), width: 140,
+                    render: (_: unknown, r: any, idx: number) => (
+                      <InputNumber
+                        min={0}
+                        value={createLines[idx]?.qty_shipped}
+                        onChange={v => setCreateLines(ls => ls.map((x, i) => i === idx ? { ...x, qty_shipped: Number(v ?? 0) } : x))}
+                        style={{ width: '100%' }}
+                      />
+                    ),
+                  },
+                ]}
+              />
+            </>
+          )}
+        </Space>
+      </Modal>
     </Space>
   )
 }

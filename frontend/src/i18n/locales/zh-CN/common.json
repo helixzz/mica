@@ -392,6 +392,8 @@
     "status": "状态"
   },
   "shipment": {
+    "new": "新增交货批次",
+    "select_po": "选择采购订单",
     "edit": "编辑交货批次：{{number}}",
     "count": "批交货",
     "items_count": "行项",

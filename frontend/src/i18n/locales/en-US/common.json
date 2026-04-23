@@ -392,6 +392,8 @@
     "status": "Status"
   },
   "shipment": {
+    "new": "New Shipment",
+    "select_po": "Select Purchase Order",
     "edit": "Edit Shipment: {{number}}",
     "count": "shipments",
     "items_count": "Items",
