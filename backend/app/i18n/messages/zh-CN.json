@@ -6,6 +6,21 @@
     "invalid_token": "登录已过期，请重新登录",
     "insufficient_role": "权限不足"
   },
+  "saml": {
+    "not_enabled": "SAML 单点登录尚未启用",
+    "misconfigured": "SAML 配置不完整或无效",
+    "invalid_response": "SAML 响应无效",
+    "authentication_failed": "SAML 身份验证失败",
+    "missing_email": "SAML 响应中缺少邮箱属性",
+    "jit_disabled": "未找到对应用户，且未启用自动创建",
+    "invalid_relay_state": "无效的 SAML 跳转地址",
+    "metadata_invalid": "生成的 SAML 元数据无效",
+    "default_company_required": "启用 SAML 自动建用户前必须配置默认公司",
+    "default_department_not_found": "SAML 默认部门不存在",
+    "default_role_invalid": "SAML 默认角色无效",
+    "group_mapping_invalid": "SAML 用户组映射配置无效",
+    "missing_external_id": "SAML 响应中缺少外部身份标识"
+  },
   "common": {
     "not_found": "资源不存在",
     "validation_error": "数据校验失败",

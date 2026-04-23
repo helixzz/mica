@@ -6,6 +6,21 @@
     "invalid_token": "Session expired, please log in again",
     "insufficient_role": "Insufficient permissions"
   },
+  "saml": {
+    "not_enabled": "SAML single sign-on is not enabled",
+    "misconfigured": "SAML configuration is incomplete or invalid",
+    "invalid_response": "Invalid SAML response",
+    "authentication_failed": "SAML authentication failed",
+    "missing_email": "SAML response is missing the email attribute",
+    "jit_disabled": "No matching user was found and JIT provisioning is disabled",
+    "invalid_relay_state": "Invalid SAML relay state",
+    "metadata_invalid": "Generated SAML metadata is invalid",
+    "default_company_required": "A default company must be configured before enabling SAML JIT provisioning",
+    "default_department_not_found": "Configured SAML default department was not found",
+    "default_role_invalid": "Configured SAML default role is invalid",
+    "group_mapping_invalid": "Configured SAML group mapping is invalid",
+    "missing_external_id": "SAML response is missing the external identity"
+  },
   "common": {
     "not_found": "Resource not found",
     "validation_error": "Validation failed",

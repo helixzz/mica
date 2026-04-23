@@ -5,13 +5,14 @@ import copy
 import json
 from decimal import Decimal, InvalidOperation
 from typing import cast
+from urllib.parse import urlparse
 from uuid import UUID
 
 from fastapi import HTTPException
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.models import AuditLog, JSONValue, SystemParameter, User
+from app.models import AuditLog, JSONValue, SystemParameter, User, UserRole
 
 _MISSING = object()
 _FLOAT_LIKE = (int, float, str)
@@ -98,6 +99,51 @@ class SystemParamsService:
             raise HTTPException(400, f"system_parameter.below_min:{key}")
         if max_value is not None and numeric_value > self._to_decimal(max_value, key):
             raise HTTPException(400, f"system_parameter.above_max:{key}")
+
+    async def _validate_custom_rules(
+        self,
+        session: AsyncSession,
+        key: str,
+        value: JSONValue,
+    ) -> None:
+        _ = session
+        if key == "auth.saml.jit.default_role":
+            if not isinstance(value, str) or value not in {role.value for role in UserRole}:
+                raise HTTPException(400, "saml.default_role_invalid")
+            return
+        if key == "auth.saml.group_mapping":
+            if not isinstance(value, str):
+                raise HTTPException(400, "saml.group_mapping_invalid")
+            try:
+                payload = json.loads(value)
+            except json.JSONDecodeError as exc:
+                raise HTTPException(400, "saml.group_mapping_invalid") from exc
+            if not isinstance(payload, list):
+                raise HTTPException(400, "saml.group_mapping_invalid")
+            valid_roles = {role.value for role in UserRole}
+            for item in payload:
+                if not isinstance(item, dict):
+                    raise HTTPException(400, "saml.group_mapping_invalid")
+                group = item.get("group")
+                role = item.get("role")
+                department_code = item.get("department_code")
+                if not isinstance(group, str) or not group.strip():
+                    raise HTTPException(400, "saml.group_mapping_invalid")
+                if not isinstance(role, str) or role not in valid_roles:
+                    raise HTTPException(400, "saml.group_mapping_invalid")
+                if department_code is not None and not isinstance(department_code, str):
+                    raise HTTPException(400, "saml.group_mapping_invalid")
+            return
+        if key in {
+            "auth.saml.idp.sso_url",
+            "auth.saml.idp.slo_url",
+            "auth.saml.sp.entity_id",
+            "auth.saml.sp.acs_url",
+        }:
+            if isinstance(value, str) and value.strip():
+                parsed = urlparse(value)
+                if parsed.scheme not in {"http", "https"} or not parsed.netloc:
+                    raise HTTPException(400, "saml.misconfigured")
 
     async def get(
         self, session: AsyncSession, key: str, default: JSONValue | object = None
@@ -187,6 +233,7 @@ class SystemParamsService:
         param = await self._require_param(session, key)
         new_value = self._normalize_value(key, param.data_type, value)
         self._validate_bounds(key, param.data_type, new_value, param.min_value, param.max_value)
+        await self._validate_custom_rules(session, key, new_value)
         old_value = copy.deepcopy(param.value)
         param.value = new_value
         param.updated_by_id = UUID(updated_by_id)
