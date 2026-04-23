@@ -409,6 +409,7 @@
     "file_size": "Size"
   },
   "pr": {
+    "items_required": "Please add at least one item before submitting",
     "guide_title": "Fill in Purchase Request",
     "guide_title_field": "Title: briefly describe what you need",
     "guide_required_fields": "Company / Cost Center / Expense Type: required for finance",
