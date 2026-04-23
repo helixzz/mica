@@ -7,6 +7,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [v0.8.8] — 2026-04-23
+
+### 修复
+
+- **AI 路由面板删除模型后不刷新**：删除 LLM 模型后切换到"AI 场景路由"Tab，被删模型仍显示在路由下拉选择中。根因：Admin Tabs 不卸载非活跃面板，路由面板的模型列表只在首次挂载时加载。修复：加 `destroyInactiveTabPane`，切换 Tab 时重新加载数据
+- **成本中心操作语义清晰化**：恢复删除按钮（后端实为软删除），与编辑/启停分开；删除 toast 改为"已删除"而非之前误导性的"已停用"
+
 ## [v0.8.7] — 2026-04-23
 
 ### 修复
