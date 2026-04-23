@@ -7,6 +7,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [v0.9.2] — 2026-04-23
+
+### 新增
+
+- **用户管理 CRUD**：Admin 用户管理 Tab 从只读表格升级为完整管理界面，支持新增用户、编辑用户信息、重置密码、启用/停用账号
+- **用户更新 API**：`PATCH /admin/users/{user_id}` 支持修改 display_name / email / role / company / department / locale / is_active，变更写入审计日志
+- 新增 20+ 用户管理相关 i18n 键（zh-CN / en-US）
+
+### 修复
+
+- **成本中心创建 500 错误**：当已软删除的成本中心仍占着唯一约束 code 时，重新创建同 code 会触发 `UniqueViolationError`。改为自动恢复已删除的同 code 记录并更新字段
+
 ## [v0.9.1] — 2026-04-23
 
 ### 新增

@@ -504,6 +504,50 @@ async def reset_user_password(
     await db.commit()
 
 
+class UserUpdateIn(BaseModel):
+    display_name: str | None = None
+    email: str | None = None
+    role: Literal["admin", "requester", "it_buyer", "dept_manager", "finance_auditor", "procurement_mgr"] | None = None
+    company_id: UUID | None = None
+    department_id: UUID | None = None
+    preferred_locale: str | None = None
+    is_active: bool | None = None
+
+
+@router.patch("/users/{user_id}", tags=["admin"])
+async def update_user(
+    user_id: UUID,
+    payload: UserUpdateIn,
+    user: CurrentUser,
+    db: Annotated[AsyncSession, Depends(get_db)],
+):
+    u = await db.get(User, user_id)
+    if u is None:
+        raise HTTPException(404, "user.not_found")
+    changes: dict[str, object] = {}
+    for field_name in payload.model_fields_set:
+        new_val = getattr(payload, field_name)
+        if new_val is not None or field_name == "department_id":
+            old_val = getattr(u, field_name)
+            if old_val != new_val:
+                changes[field_name] = {"old": str(old_val), "new": str(new_val)}
+                setattr(u, field_name, new_val)
+    if changes:
+        db.add(
+            AuditLog(
+                actor_id=user.id,
+                actor_name=user.display_name,
+                event_type="admin.user.updated",
+                resource_type="user",
+                resource_id=str(user_id),
+                metadata_json=changes,
+            )
+        )
+        await db.commit()
+        await db.refresh(u)
+    return UserOutAdmin.model_validate(u)
+
+
 @router.get("/audit-logs", tags=["admin"])
 async def list_audit_logs(
     user: CurrentUser,

@@ -23,6 +23,22 @@ async def list_cost_centers(
 
 
 async def create_cost_center(db: AsyncSession, data: dict) -> CostCenter:
+    existing = (
+        await db.execute(
+            select(CostCenter).where(
+                CostCenter.code == data.get("code", ""),
+                CostCenter.is_deleted.is_(True),
+            )
+        )
+    ).scalar_one_or_none()
+    if existing:
+        existing.is_deleted = False
+        existing.is_enabled = True
+        for k, v in data.items():
+            if v is not None and hasattr(existing, k) and k != "code":
+                setattr(existing, k, v)
+        await db.flush()
+        return existing
     cc = CostCenter(id=new_uuid(), **data)
     db.add(cc)
     await db.flush()
