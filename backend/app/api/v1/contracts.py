@@ -7,6 +7,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.security import CurrentUser
 from app.db import get_db
+from app.schemas import ContractVersionOut
 from app.services import contracts as svc
 
 router = APIRouter()
@@ -44,6 +45,17 @@ async def list_attachments(
 ):
     pairs = await svc.list_contract_documents(db, contract_id)
     return [svc.to_dict(cd, d) for cd, d in pairs]
+
+
+@router.get("/contracts/{contract_id}/versions", response_model=list[ContractVersionOut], tags=["contracts"])
+async def list_versions(
+    contract_id: UUID,
+    user: CurrentUser,
+    db: Annotated[AsyncSession, Depends(get_db)],
+):
+    _ = user
+    rows = await svc.list_contract_versions(db, contract_id)
+    return [ContractVersionOut.model_validate(row) for row in rows]
 
 
 @router.get("/contracts-search", tags=["contracts"])

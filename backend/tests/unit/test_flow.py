@@ -8,7 +8,7 @@ from fastapi import HTTPException
 from sqlalchemy import select
 
 from app.db import new_uuid
-from app.models import Document, POItem, PurchaseOrder, PurchaseRequisition, Supplier, User
+from app.models import ContractVersion, Document, POItem, PurchaseOrder, PurchaseRequisition, Supplier, User
 from app.services import flow as flow_svc
 from app.services import purchase as purchase_svc
 from app.schemas import PRCreateIn, PRItemIn
@@ -185,6 +185,12 @@ async def test_create_contract_creates_contract_from_po(seeded_db_session):
     assert contract.total_amount == Decimal("800.00")
     assert contract.contract_number.startswith(f"CT-{datetime.now(UTC).year}-")
     assert contract.notes == "Annual support"
+    version = (
+        await db.execute(select(ContractVersion).where(ContractVersion.contract_id == contract.id))
+    ).scalar_one()
+    assert version.version_number == 1
+    assert version.change_type == "created"
+    assert version.snapshot_json["contract_number"] == contract.contract_number
 
 
 async def test_create_contract_increments_contract_numbers(seeded_db_session):

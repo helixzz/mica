@@ -15,7 +15,7 @@ from sqlalchemy import Text, desc, func, literal_column, or_, select
 from sqlalchemy.dialects import postgresql
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.models import AuditLog, Contract, ContractDocument, Document, User
+from app.models import AuditLog, Contract, ContractDocument, ContractVersion, Document, User
 from app.services import documents as doc_svc
 from app.services import invoice_extract as extract_svc
 from app.services.system_params import system_params
@@ -234,3 +234,52 @@ def to_dict(cd: ContractDocument, d: Document) -> dict[str, object]:
         "content_type": d.content_type,
         "file_size": d.file_size,
     }
+
+
+def contract_snapshot(contract: Contract) -> dict[str, object]:
+    return {
+        "contract_number": contract.contract_number,
+        "po_id": str(contract.po_id),
+        "supplier_id": str(contract.supplier_id),
+        "title": contract.title,
+        "current_version": contract.current_version,
+        "status": contract.status,
+        "currency": contract.currency,
+        "total_amount": str(contract.total_amount),
+        "signed_date": contract.signed_date.isoformat() if contract.signed_date else None,
+        "effective_date": contract.effective_date.isoformat() if contract.effective_date else None,
+        "expiry_date": contract.expiry_date.isoformat() if contract.expiry_date else None,
+        "notes": contract.notes,
+    }
+
+
+async def create_contract_version(
+    db: AsyncSession,
+    *,
+    contract: Contract,
+    actor: User,
+    change_type: str,
+    change_reason: str | None = None,
+) -> ContractVersion:
+    version = ContractVersion(
+        contract_id=contract.id,
+        version_number=contract.current_version,
+        change_type=change_type,
+        change_reason=change_reason,
+        snapshot_json=contract_snapshot(contract),
+        changed_by_id=actor.id,
+    )
+    db.add(version)
+    await db.flush()
+    return version
+
+
+async def list_contract_versions(db: AsyncSession, contract_id: UUID) -> list[ContractVersion]:
+    rows = (
+        await db.execute(
+            select(ContractVersion)
+            .where(ContractVersion.contract_id == contract_id)
+            .order_by(desc(ContractVersion.version_number), desc(ContractVersion.created_at))
+        )
+    ).scalars().all()
+    return list(rows)
