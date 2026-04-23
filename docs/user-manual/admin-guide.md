@@ -33,6 +33,84 @@ cd deploy
 
 ---
 
+## HTTPS / TLS 配置
+
+Mica 默认使用 HTTP。生产环境建议启用 HTTPS，尤其是使用 SAML SSO 时（IdP 通常要求 ACS 地址为 HTTPS）。
+
+### 准备证书文件
+
+你需要两个 PEM 格式文件：
+
+| 文件 | 说明 |
+|:---|:---|
+| **server.crt** | 服务器证书。如果由内部 CA 签发，建议将中间 CA 证书一并合入：`cat server.crt intermediate.crt > bundle.crt` |
+| **server.key** | 对应的私钥（RSA 或 ECDSA） |
+
+!!! tip "企业内部 CA"
+    使用内部 CA 签发的证书时，所有访问 Mica 的用户需要在浏览器或操作系统中安装并信任该 CA 的根证书，否则浏览器会提示"不安全"。这与 Mica 无关，是所有内部 CA 证书的通用要求。
+
+### 一键启用
+
+将证书文件上传到服务器后，执行：
+
+```bash
+cd /path/to/mica/deploy
+./scripts/enable-tls.sh --cert /path/to/server.crt --key /path/to/server.key
+```
+
+脚本会自动：
+
+1. 验证证书格式和有效期
+2. 验证私钥格式
+3. 验证证书与私钥匹配（modulus 比对）
+4. 复制到 `deploy/certs/`（私钥权限 `600`）
+5. 将 Nginx 配置切换为 HTTPS 模式（HTTP 自动 301 跳转 HTTPS）
+6. 重启 Nginx 并执行 HTTPS 冒烟测试
+
+启用后：
+
+- `http://mica.example.com` → 自动跳转 → `https://mica.example.com`
+- 443 端口处理所有 HTTPS 请求
+- 原 80 端口仅负责 301 跳转
+
+### 恢复为 HTTP
+
+```bash
+./scripts/disable-tls.sh
+```
+
+将 Nginx 配置还原为纯 HTTP 模式并重启。
+
+### 端口配置
+
+默认 HTTPS 端口为 443。如需修改，编辑 `deploy/.env`：
+
+```
+HTTPS_PORT=8443
+```
+
+然后重新运行 `enable-tls.sh` 或 `docker compose restart nginx`。
+
+### 证书更新
+
+证书到期后，用新证书重新运行 `enable-tls.sh`（同一命令，会覆盖旧文件）：
+
+```bash
+./scripts/enable-tls.sh --cert /path/to/new.crt --key /path/to/new.key
+```
+
+### 启用 HTTPS 后的 SAML SSO 注意事项
+
+启用 HTTPS 后，SAML 配置中的以下参数需要更新（如果之前手动填写过）：
+
+- `auth.saml.sp.entity_id` → 改为 `https://` 开头
+- `auth.saml.sp.acs_url` → 改为 `https://` 开头
+- IdP 端的回复 URL / ACS URL 也需要同步更新为 HTTPS
+
+如果这两个参数留空（推荐），系统会根据请求的 `X-Forwarded-Proto` 头自动推导，启用 HTTPS 后无需手动改。
+
+---
+
 ## 系统管理控制台
 
 以管理员账号登录后，左侧导航栏最下方有 **系统管理**。
