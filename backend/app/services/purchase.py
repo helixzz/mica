@@ -145,7 +145,7 @@ async def update_pr(
         UserRole.PROCUREMENT_MGR.value,
     ):
         raise HTTPException(403, "insufficient_role")
-    if pr.status == PRStatus.DRAFT.value:
+    if pr.status in (PRStatus.DRAFT.value, PRStatus.RETURNED.value):
         pass
     elif pr.status == "approved" and actor.role in (
         UserRole.IT_BUYER.value,
@@ -213,7 +213,7 @@ async def submit_pr(db: AsyncSession, actor: User, pr_id: UUID) -> PurchaseRequi
         raise HTTPException(404, "pr.not_found")
     if pr.requester_id != actor.id and actor.role != UserRole.ADMIN.value:
         raise HTTPException(403, "insufficient_role")
-    if pr.status != PRStatus.DRAFT.value:
+    if pr.status not in (PRStatus.DRAFT.value, PRStatus.RETURNED.value):
         raise HTTPException(409, "pr.cannot_submit_non_draft")
     if not pr.items:
         raise HTTPException(422, "pr.no_items")
