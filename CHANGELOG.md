@@ -7,6 +7,54 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [v0.8.2] — 2026-04-23
+
+审批规则结构化编辑 + 合同版本管理基础 + 表单引导第二波。
+
+### 新增
+
+- **审批规则结构化编辑器**：Admin 审批规则从原始 JSON 文本框升级为结构化阶段编辑器（Form.List），支持新建/编辑/删除规则，阶段预览显示在列表。
+- **合同版本管理基础能力**：新增 `contract_versions` 表，合同创建时自动保存首版快照，新增 `GET /contracts/{id}/versions` API，合同详情页新增"版本历史"Tab。
+- **审批规则 API 扩展**：前端新增 `adminUpdateApprovalRule` 和 `adminDeleteApprovalRule` API 封装。
+
+### 改进
+
+- **表单填写引导（第二波）**：PO 交货/付款/发票、合同付款计划、SKU 报价录入、物料管理、Admin LLM 模型/审批规则/公司主体等高频表单新增 `help` 文案和内联引导。
+- **审批规则 UX**：阶段编辑器支持结构化角色选择、排序和预览；移除 React key-spread 警告。
+
+### 测试
+
+- 新增审批规则结构化表单 helper 纯函数测试（3 tests：default/hydrate/serialize）
+- 新增合同版本历史服务测试（1 test：降序历史查询）
+- 修改合同创建测试验证首版快照自动写入
+
+## [v0.8.1] — 2026-04-23
+
+SAML SSO 基础能力 + 管理端配置 + 首批表单填写引导。
+
+### 新增
+
+- **SAML SSO 后端基础能力**：引入 `python3-saml`，实现 `/api/v1/saml/metadata`、`/api/v1/saml/login`、`/api/v1/saml/acs`，支持 metadata 生成、登录跳转、ACS 回调、JWT 签发。
+- **管理员可配置 SAML 参数**：通过 `system_parameters` 新增 `auth.saml.*` 命名空间，覆盖 IdP Entity ID / SSO URL / 证书 / SP Entity ID / ACS URL / 属性映射 / JIT 默认角色 / 默认公司部门 / 组映射开关与 JSON 规则。
+- **SAML 登录自动建用户（JIT）**：首次 SAML 登录时自动创建本地用户；若命中已有本地邮箱账号，则自动关联到 `auth_provider="saml"`。
+- **可选用户组 → 角色映射**：支持按管理员配置的 JSON 顺序规则，将 SAML 组映射为本地角色与可选部门；未开启或未命中时降级到默认最低权限角色。
+- **前端 SSO 登录体验**：登录页新增基于 `/auth/login-options` 的“通过 SSO 登录”入口，新增 `/sso-callback` 页面接收 token、完成登录态加载并跳转回业务页。
+
+### 改进
+
+- **管理员配置引导**：`SystemParamsTab` 为 `auth.saml.*` 参数增加更合适的编辑控件（证书/映射 JSON 多行文本、默认角色下拉）和内联说明。
+- **需求方填写引导（第一波）**：为 PR 新建/编辑与 RFQ 新建表单新增用户友好 `help` 文案，明确标题、成本中心、开支类型、采购分类、业务原因、询价截止日期、供应商选择等字段应如何填写。
+- **本地 / 测试环境 SAML 兼容性**：对单标签 host（如 `testserver`）启用 `allowSingleLabelDomains`，保证本地测试与开发环境中的 SAML URL 验证通过。
+
+### 修复
+
+- **`requester` 角色约束漂移**：修复 ORM 模型层 `User.role` CHECK 约束仍遗漏 `requester` 的问题，与 0011 migration 保持一致。
+
+### 测试
+
+- 新增 **15 个 SAML 相关 backend tests**：覆盖配置加载、JIT 自动建用户、已有本地账号关联、组映射优先级、禁用 JIT、登录入口可用性、misconfigured 路径、本地密码登录回归。
+- 新增 **5 个 frontend tests**：覆盖登录页 SSO 按钮显示/隐藏、点击跳转、`/sso-callback` token 处理与错误路径。
+
 ## [v0.8.0] — 2026-04-23
 
 覆盖率硬阈值 + PO 回填 SKU + E2E CI + Bug 修复。
