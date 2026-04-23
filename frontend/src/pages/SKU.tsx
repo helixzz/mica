@@ -40,7 +40,7 @@ import {
   type Supplier,
 } from '@/api'
 import { extractError } from '@/api/client'
-import { fmtAmount } from '@/utils/format'
+import { fmtAmount, fmtQty } from '@/utils/format'
 
 export function SKUPage() {
   const { t } = useTranslation()
@@ -584,7 +584,7 @@ function InsightsPanel({ insights, itemName }: { insights: SKUInsights; itemName
               { title: t('sku.date_col'), dataIndex: 'date', width: 110 },
               { title: t('sku.supplier_col'), dataIndex: 'supplier_name' },
                { title: t('field.unit_price'), dataIndex: 'unit_price', align: 'right' as const, render: (v: number) => fmtAmount(v) },
-              { title: t('field.qty'), dataIndex: 'qty', align: 'right' as const },
+               { title: t('field.qty'), dataIndex: 'qty', align: 'right' as const, render: (v: string) => fmtQty(v) },
                { title: t('field.amount'), dataIndex: 'amount', align: 'right' as const, render: (v: number) => fmtAmount(v) },
               { title: 'PO', dataIndex: 'po_number' },
               {

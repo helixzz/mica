@@ -5,6 +5,7 @@ import { useEffect, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 
 import { api, type PurchaseOrder, type Shipment } from '@/api'
+import { fmtQty } from '@/utils/format'
 
 const STATUS_COLORS: Record<string, string> = {
   pending: 'default',
@@ -319,8 +320,8 @@ export function ShipmentsPage() {
                 columns={[
                   { title: t('field.line_no'), dataIndex: 'line_no', width: 60 },
                   { title: t('field.item_name'), dataIndex: 'item_name' },
-                  { title: t('field.qty'), dataIndex: 'qty', align: 'right' as const, width: 90 },
-                  { title: t('field.qty_received'), dataIndex: 'qty_received', align: 'right' as const, width: 100 },
+                   { title: t('field.qty'), dataIndex: 'qty', align: 'right' as const, width: 90, render: (v: string) => fmtQty(v) },
+                   { title: t('field.qty_received'), dataIndex: 'qty_received', align: 'right' as const, width: 100, render: (v: string) => fmtQty(v) },
                   {
                     title: t('field.qty_shipped'), width: 140,
                     render: (_: unknown, r: any, idx: number) => (

@@ -36,7 +36,7 @@ import {
 } from '@/api'
 import { extractError } from '@/api/client'
 import { getToken } from '@/api/client'
-import { fmtAmount } from '@/utils/format'
+import { fmtAmount, fmtQty } from '@/utils/format'
 
 function statusTag(s: string): string {
   return s
@@ -165,9 +165,9 @@ export function PODetailPage() {
                 columns={[
                   { title: t('field.line_no'), dataIndex: 'line_no', width: 60 },
                   { title: t('field.item_name'), dataIndex: 'item_name' },
-                  { title: t('field.qty'), dataIndex: 'qty', align: 'right', width: 90 },
-                  { title: t('field.qty_received'), dataIndex: 'qty_received', align: 'right', width: 110 },
-                  { title: t('field.qty_invoiced'), dataIndex: 'qty_invoiced', align: 'right', width: 110 },
+                  { title: t('field.qty'), dataIndex: 'qty', align: 'right', width: 90, render: (v: string) => fmtQty(v) },
+                  { title: t('field.qty_received'), dataIndex: 'qty_received', align: 'right', width: 110, render: (v: string) => fmtQty(v) },
+                  { title: t('field.qty_invoiced'), dataIndex: 'qty_invoiced', align: 'right', width: 110, render: (v: string) => fmtQty(v) },
                   { title: t('field.uom'), dataIndex: 'uom', width: 60 },
                    { title: t('field.unit_price'), dataIndex: 'unit_price', align: 'right', width: 110, render: (v: string) => fmtAmount(v) },
                    { title: t('field.amount'), dataIndex: 'amount', align: 'right', width: 110, render: (v: string) => fmtAmount(v) },
@@ -208,8 +208,8 @@ export function PODetailPage() {
                         columns={[
                           { title: t('field.line_no'), dataIndex: 'line_no', width: 60 },
                           { title: t('field.item_name'), dataIndex: 'item_name' },
-                          { title: t('field.qty_shipped'), dataIndex: 'qty_shipped', align: 'right' },
-                          { title: t('field.qty_received'), dataIndex: 'qty_received', align: 'right' },
+                           { title: t('field.qty_shipped'), dataIndex: 'qty_shipped', align: 'right', render: (v: string) => fmtQty(v) },
+                           { title: t('field.qty_received'), dataIndex: 'qty_received', align: 'right', render: (v: string) => fmtQty(v) },
                            { title: t('field.unit_price'), dataIndex: 'unit_price', align: 'right', render: (v: string) => fmtAmount(v) },
                         ]}
                       />
@@ -392,8 +392,8 @@ function ShipmentModal({ open, po, onClose, onDone, busy, setBusy }: ModalProps)
           columns={[
             { title: t('field.line_no'), dataIndex: 'line_no', width: 60 },
             { title: t('field.item_name'), dataIndex: 'item_name' },
-            { title: t('field.qty'), dataIndex: 'qty', align: 'right', width: 90 },
-            { title: t('field.qty_received'), dataIndex: 'qty_received', align: 'right', width: 100 },
+             { title: t('field.qty'), dataIndex: 'qty', align: 'right', width: 90, render: (v: string) => fmtQty(v) },
+             { title: t('field.qty_received'), dataIndex: 'qty_received', align: 'right', width: 100, render: (v: string) => fmtQty(v) },
             {
               title: t('field.qty_shipped'),
               width: 140,

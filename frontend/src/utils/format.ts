@@ -12,3 +12,10 @@ export function fmtAmount(value: number | string | null | undefined, currency = 
   const prefix = currency ? `${currency} ` : '¥'
   return `${prefix}${n.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
 }
+
+export function fmtQty(value: number | string | null | undefined): string {
+  if (value === null || value === undefined || value === '') return '-'
+  const n = typeof value === 'string' ? parseFloat(value) : value
+  if (isNaN(n)) return '-'
+  return n.toLocaleString(undefined, { minimumFractionDigits: 0, maximumFractionDigits: 2 })
+}
