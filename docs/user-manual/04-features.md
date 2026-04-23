@@ -202,6 +202,7 @@ PO 表冗余 6 个统计字段，避免每次查询都重算：
 | 创建时仅记账 | `payment_date` 留空；之后在详情页点击"标记已付款"（`confirm` 按钮）完成确认 |
 
 确认成功后：
+
 - 付款状态 → `PAID`；
 - 回写 PO.amount_paid 与 payment_progress_pct。
 
