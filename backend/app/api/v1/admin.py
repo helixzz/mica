@@ -192,6 +192,36 @@ async def delete_ai_model(
     m = await db.get(AIModel, model_id)
     if m is None:
         raise HTTPException(404, "ai_model.not_found")
+
+    referencing_routings = (
+        (
+            await db.execute(
+                select(AIFeatureRouting).where(AIFeatureRouting.primary_model_id == model_id)
+            )
+        )
+        .scalars()
+        .all()
+    )
+    for routing in referencing_routings:
+        routing.primary_model_id = None
+
+    all_routings = (
+        (
+            await db.execute(
+                select(AIFeatureRouting).where(AIFeatureRouting.fallback_model_ids.isnot(None))
+            )
+        )
+        .scalars()
+        .all()
+    )
+    model_id_str = str(model_id)
+    for routing in all_routings:
+        if routing.fallback_model_ids and model_id_str in routing.fallback_model_ids:
+            routing.fallback_model_ids = [
+                fid for fid in routing.fallback_model_ids if fid != model_id_str
+            ]
+
+    await db.flush()
     await db.delete(m)
     db.add(
         AuditLog(
