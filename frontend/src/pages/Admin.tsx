@@ -69,6 +69,8 @@ export function AdminPage() {
         items={[
           { key: 'system', label: t('admin.system_info'), children: <SystemInfoPanel /> },
           { key: 'companies', label: t('admin.companies'), children: <CompaniesTab /> },
+          { key: 'departments', label: t('admin.departments'), children: <DepartmentsTab /> },
+          { key: 'departments', label: t('admin.departments'), children: <DepartmentsTab /> },
           { key: 'system_params', label: t('admin.system_params'), children: <SystemParamsTab /> },
           { key: 'approval_rules', label: t('admin.approval_rules'), children: <ApprovalRulesTab /> },
           { key: 'classification', label: t('admin.classification'), children: <ClassificationTab /> },
@@ -921,6 +923,130 @@ function CompaniesTab() {
   )
 }
 
+function DepartmentsTab() {
+  const { t } = useTranslation()
+  const [departments, setDepartments] = useState<any[]>([])
+  const [companies, setCompanies] = useState<any[]>([])
+  const [drawerOpen, setDrawerOpen] = useState(false)
+  const [editingDept, setEditingDept] = useState<any | null>(null)
+  const [form] = Form.useForm()
+
+  const load = () => { void api.departments().then(setDepartments) }
+  useEffect(() => {
+    load()
+    void api.companies(true).then(setCompanies)
+  }, [])
+
+  const companyMap = Object.fromEntries(companies.map(c => [c.id, c.name_zh]))
+
+  const openCreate = () => {
+    setEditingDept(null)
+    form.resetFields()
+    setDrawerOpen(true)
+  }
+
+  const openEdit = (dept: any) => {
+    setEditingDept(dept)
+    form.resetFields()
+    form.setFieldsValue({
+      code: dept.code,
+      name_zh: dept.name_zh,
+      name_en: dept.name_en,
+      company_id: dept.company_id,
+    })
+    setDrawerOpen(true)
+  }
+
+  const handleSave = async () => {
+    try {
+      const values = form.getFieldsValue()
+      if (editingDept) {
+        await api.updateDepartment(editingDept.id, values)
+        void message.success(t('common.updated'))
+      } else {
+        await api.createDepartment(values)
+        void message.success(t('message.created'))
+      }
+      form.resetFields()
+      setDrawerOpen(false)
+      setEditingDept(null)
+      load()
+    } catch (e: any) {
+      void message.error(e?.response?.data?.detail || t('error.save_failed'))
+    }
+  }
+
+  const handleDelete = (dept: any) => {
+    Modal.confirm({
+      title: `${t('button.delete')} ${dept.name_zh}?`,
+      okText: t('button.delete'),
+      okType: 'danger',
+      cancelText: t('button.cancel'),
+      onOk: async () => {
+        try {
+          await api.deleteDepartment(dept.id)
+          void message.success(t('message.deleted'))
+          load()
+        } catch (e: any) {
+          void message.error(e?.response?.data?.detail || t('admin.operation_failed'))
+        }
+      },
+    })
+  }
+
+  return (
+    <Space direction="vertical" size="middle" style={{ width: '100%' }}>
+      <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+        <Typography.Text type="secondary">{departments.length} {t('admin.department_count')}</Typography.Text>
+        <Button type="primary" icon={<PlusOutlined />} onClick={openCreate}>{t('admin.new_department')}</Button>
+      </div>
+      <Table dataSource={departments} rowKey="id" size="small" pagination={false} columns={[
+        { title: t('admin.department_code'), dataIndex: 'code', width: 120 },
+        { title: t('admin.department_name_zh'), dataIndex: 'name_zh' },
+        { title: t('admin.department_name_en'), dataIndex: 'name_en', render: (v: string | null) => v || '-' },
+        { title: t('admin.department_company'), dataIndex: 'company_id', render: (v: string) => companyMap[v] || v },
+        {
+          title: t('common.actions'),
+          width: 160,
+          render: (_: unknown, r: any) => (
+            <Space>
+              <Button size="small" onClick={() => openEdit(r)}>{t('button.edit')}</Button>
+              <Button size="small" danger icon={<DeleteOutlined />} onClick={() => handleDelete(r)} />
+            </Space>
+          ),
+        },
+      ]} />
+      <Drawer
+        title={editingDept ? t('admin.edit_department', { name: editingDept.name_zh }) : t('admin.new_department')}
+        width={420}
+        open={drawerOpen}
+        onClose={() => { setDrawerOpen(false); setEditingDept(null) }}
+        footer={
+          <Space style={{ float: 'right' }}>
+            <Button onClick={() => { setDrawerOpen(false); setEditingDept(null) }}>{t('button.cancel')}</Button>
+            <Button type="primary" onClick={handleSave}>{t('button.save')}</Button>
+          </Space>
+        }
+      >
+        <Form form={form} layout="vertical">
+          <Form.Item name="code" label={t('admin.department_code')} rules={[{ required: true }]}>
+            <Input disabled={!!editingDept} />
+          </Form.Item>
+          <Form.Item name="name_zh" label={t('admin.department_name_zh')} rules={[{ required: true }]}>
+            <Input />
+          </Form.Item>
+          <Form.Item name="name_en" label={t('admin.department_name_en')}>
+            <Input />
+          </Form.Item>
+          <Form.Item name="company_id" label={t('admin.department_company')} rules={[{ required: true }]}>
+            <Select options={companies.map(c => ({ value: c.id, label: c.name_zh }))} />
+          </Form.Item>
+        </Form>
+      </Drawer>
+    </Space>
+  )
+}
+
 function ImportTab() {
   const { t } = useTranslation()
   const [result, setResult] = useState<{ created?: number; skipped?: number; errors?: string[] } | null>(null)
@@ -1030,7 +1156,13 @@ function ClassificationTab() {
     if (!editingItem) return
     try {
       const values = form.getFieldsValue()
-      await api.updateCostCenter(editingItem.id, values)
+      if (editingItem._dimension === 'category') {
+        await api.updateProcurementCategory(editingItem.id, values)
+      } else if (editingItem._dimension === 'expense_type') {
+        await api.updateLookupValue(editingItem.id, values)
+      } else {
+        await api.updateCostCenter(editingItem.id, values)
+      }
       void message.success(t('common.updated'))
       form.resetFields()
       setEditingItem(null)
@@ -1052,15 +1184,22 @@ function ClassificationTab() {
     }
   }
 
-  const handleToggleActive = async (item: any) => {
+  const handleToggleActive = async (item: any, dimension: string) => {
     try {
-      await api.updateCostCenter(item.id, {
+      const body = {
         code: item.code,
         label_zh: item.label_zh,
         label_en: item.label_en,
         sort_order: item.sort_order,
         is_enabled: !item.is_enabled,
-      })
+      }
+      if (dimension === 'category') {
+        await api.updateProcurementCategory(item.id, body)
+      } else if (dimension === 'expense_type') {
+        await api.updateLookupValue(item.id, body)
+      } else {
+        await api.updateCostCenter(item.id, body)
+      }
       void message.success(item.is_enabled ? t('admin.deactivated') : t('common.updated'))
       load()
     } catch (e: any) {
@@ -1068,8 +1207,8 @@ function ClassificationTab() {
     }
   }
 
-  const openEdit = (item: any) => {
-    setEditingItem(item)
+  const openEdit = (item: any, dimension: string) => {
+    setEditingItem({ ...item, _dimension: dimension })
     form.resetFields()
     form.setFieldsValue({
       code: item.code,
@@ -1096,37 +1235,29 @@ function ClassificationTab() {
           { title: t('admin.label_zh'), dataIndex: 'label_zh' },
           { title: t('admin.label_en'), dataIndex: 'label_en' },
           { title: t('admin.sort_order'), dataIndex: 'sort_order', width: 60 },
-          ...(dimension === 'cost_center'
-            ? [
-                {
-                  title: t('admin.status_col'),
-                  dataIndex: 'is_enabled',
-                  width: 70,
-                  render: (v: boolean) => (
-                    <Tag color={v !== false ? 'success' : 'default'}>
-                      {v !== false ? t('common.enabled') : t('common.disabled')}
-                    </Tag>
-                  ),
-                },
-              ]
-            : []),
+          {
+            title: t('admin.status_col'),
+            dataIndex: 'is_enabled',
+            width: 70,
+            render: (v: boolean) => (
+              <Tag color={v !== false ? 'success' : 'default'}>
+                {v !== false ? t('common.enabled') : t('common.disabled')}
+              </Tag>
+            ),
+          },
           {
             title: t('common.actions'),
-            width: dimension === 'cost_center' ? 240 : 60,
+            width: 240,
             render: (_: unknown, r: any) => (
               <Space>
-                {dimension === 'cost_center' && (
-                  <>
-                    <Button size="small" onClick={() => openEdit(r)}>{t('button.edit')}</Button>
-                    <Button
-                      size="small"
-                      danger={r.is_enabled !== false}
-                      onClick={() => handleToggleActive(r)}
-                    >
-                      {r.is_enabled !== false ? t('common.disabled') : t('common.enabled')}
-                    </Button>
-                  </>
-                )}
+                <Button size="small" onClick={() => openEdit(r, dimension)}>{t('button.edit')}</Button>
+                <Button
+                  size="small"
+                  danger={r.is_enabled !== false}
+                  onClick={() => handleToggleActive(r, dimension)}
+                >
+                  {r.is_enabled !== false ? t('common.disabled') : t('common.enabled')}
+                </Button>
                 <Button size="small" danger icon={<DeleteOutlined />} onClick={() => handleDelete(dimension, r.id)} />
               </Space>
             ),
@@ -1151,7 +1282,10 @@ function ClassificationTab() {
               <Typography.Text strong>{cat.label_zh}</Typography.Text>
               <Typography.Text type="secondary">{cat.code}</Typography.Text>
             </Space>
-            <Button size="small" danger icon={<DeleteOutlined />} onClick={() => handleDelete('category', cat.id)} />
+            <Space>
+              <Button size="small" onClick={() => openEdit(cat, 'category')}>{t('button.edit')}</Button>
+              <Button size="small" danger icon={<DeleteOutlined />} onClick={() => handleDelete('category', cat.id)} />
+            </Space>
           </div>
           {(cat.children || []).map((child: any) => (
             <div key={child.id} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '4px 0 4px 32px', borderBottom: '1px solid #fafafa' }}>
@@ -1160,7 +1294,10 @@ function ClassificationTab() {
                 <Typography.Text>{child.label_zh}</Typography.Text>
                 <Typography.Text type="secondary">{child.code}</Typography.Text>
               </Space>
-              <Button size="small" danger icon={<DeleteOutlined />} onClick={() => handleDelete('category', child.id)} />
+              <Space>
+                <Button size="small" onClick={() => openEdit(child, 'category')}>{t('button.edit')}</Button>
+                <Button size="small" danger icon={<DeleteOutlined />} onClick={() => handleDelete('category', child.id)} />
+              </Space>
             </div>
           ))}
         </div>

@@ -378,7 +378,16 @@
     "phone": "电话",
     "email": "邮箱",
     "loading": "加载中...",
-    "back_to_sku": "返回 SKU 行情库"
+    "back_to_sku": "返回 SKU 行情库",
+    "new": "新增供应商",
+    "edit": "编辑供应商：{{name}}",
+    "count": "家供应商",
+    "tax_number": "税号",
+    "notes": "备注",
+    "confirm_delete": "确认删除该供应商？",
+    "deleted": "供应商已删除",
+    "updated": "供应商已更新",
+    "status": "状态"
   },
   "pr": {
     "guide_title": "填写采购需求",
@@ -425,6 +434,14 @@
     "line_items_help": "每一行填写一项待采购物料。若最终供应商和价格尚未确定，也可以先提交物料、数量和规格。"
   },
   "admin": {
+    "departments": "部门管理",
+    "new_department": "新增部门",
+    "edit_department": "编辑部门：{{name}}",
+    "department_count": "个部门",
+    "department_code": "部门编码",
+    "department_name_zh": "中文名称",
+    "department_name_en": "英文名称",
+    "department_company": "所属公司",
     "companies": "公司主体",
     "import": "数据导入",
     "classification": "分类管理",
@@ -551,6 +568,14 @@
     "deactivated": "已停用",
     "operation_failed": "操作失败",
     "status_col": "状态",
+    "departments": "部门管理",
+    "new_department": "新增部门",
+    "edit_department": "编辑部门：{{name}}",
+    "department_count": "个部门",
+    "department_code": "部门编码",
+    "department_name_zh": "中文名称",
+    "department_name_en": "英文名称",
+    "department_company": "所属公司",
     "code_placeholder": "如 CC-IT / laptop / capex",
     "label_zh_placeholder": "信息技术部 / 笔记本电脑 / 资本性支出",
     "saml_help": {
