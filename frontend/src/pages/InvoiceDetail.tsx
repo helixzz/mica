@@ -17,7 +17,7 @@ import { useNavigate, useParams } from 'react-router-dom'
 
 import { api, type Invoice } from '@/api'
 import { extractError } from '@/api/client'
-import { fmtAmount } from '@/utils/format'
+import { fmtAmount, fmtQty } from '@/utils/format'
 
 export function InvoiceDetailPage() {
   const { t } = useTranslation()
@@ -145,7 +145,7 @@ export function InvoiceDetailPage() {
               render: (v: string) => <Tag color={v === 'product' ? 'blue' : 'default'}>{v}</Tag>,
             },
             { title: t('field.item_name'), dataIndex: 'item_name' },
-            { title: t('field.qty'), dataIndex: 'qty', align: 'right', width: 80 },
+            { title: t('field.qty'), dataIndex: 'qty', align: 'right', width: 80, render: (v: string) => fmtQty(v) },
             { title: t('field.unit_price'), dataIndex: 'unit_price', align: 'right', width: 110, render: (v: string) => fmtAmount(v) },
             { title: t('field.subtotal'), dataIndex: 'subtotal', align: 'right', width: 110, render: (v: string) => fmtAmount(v) },
             { title: t('field.tax_amount'), dataIndex: 'tax_amount', align: 'right', width: 100, render: (v: string) => fmtAmount(v) },

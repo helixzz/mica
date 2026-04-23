@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 
-import { fmtAmount, fmtPrice } from './format'
+import { fmtAmount, fmtPrice, fmtQty } from './format'
 
 describe('fmtPrice', () => {
   it('formats numeric values with the default currency', () => {
@@ -51,5 +51,31 @@ describe('fmtAmount', () => {
 
   it('returns a dash for empty strings', () => {
     expect(fmtAmount('')).toBe('-')
+  })
+})
+
+describe('fmtQty', () => {
+  it('hides decimals for integers', () => {
+    expect(fmtQty(10)).toBe('10')
+  })
+
+  it('shows up to 2 decimals for fractional values', () => {
+    expect(fmtQty(2.5)).toBe('2.5')
+  })
+
+  it('truncates to 2 decimals', () => {
+    expect(fmtQty('10.1234')).toBe('10.12')
+  })
+
+  it('adds thousands separator', () => {
+    expect(fmtQty(1500)).toBe('1,500')
+  })
+
+  it('returns a dash for null', () => {
+    expect(fmtQty(null)).toBe('-')
+  })
+
+  it('strips trailing zeros from backend decimals', () => {
+    expect(fmtQty('100.0000')).toBe('100')
   })
 })

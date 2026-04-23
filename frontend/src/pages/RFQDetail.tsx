@@ -5,6 +5,7 @@ import { useEffect, useState } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
 import { api, type Supplier } from '@/api'
 import { client, extractError } from '@/api/client'
+import { fmtQty } from '@/utils/format'
 
 const statusColors: Record<string, string> = {
   draft: 'default', sent: 'processing', quoting: 'cyan',
@@ -157,7 +158,7 @@ export default function RFQDetailPage() {
           scroll={{ x: 'max-content' }}
           columns={[
             { title: t('rfq.item_col'), dataIndex: 'item_name', fixed: 'left', width: 200 },
-            { title: t('rfq.qty_col'), dataIndex: 'qty', width: 80, align: 'right', render: (v: number, r: any) => `${v} ${r.uom}` },
+             { title: t('rfq.qty_col'), dataIndex: 'qty', width: 80, align: 'right', render: (v: number, r: any) => `${fmtQty(v)} ${r.uom}` },
             ...supplierCols,
           ]}
         />

@@ -16,7 +16,7 @@ import { useNavigate, useParams } from 'react-router-dom'
 
 import { api, type PurchaseRequisition, type Supplier } from '@/api'
 import { extractError } from '@/api/client'
-import { fmtAmount } from '@/utils/format'
+import { fmtAmount, fmtQty } from '@/utils/format'
 import { useAuth } from '@/auth/useAuth'
 
 const statusColors: Record<string, string> = {
@@ -215,7 +215,7 @@ export function PRDetailPage() {
               dataIndex: 'supplier_id',
               render: (v: string | null) => (v ? supplierMap[v] ?? v : '-'),
             },
-            { title: t('field.qty'), dataIndex: 'qty', align: 'right' },
+            { title: t('field.qty'), dataIndex: 'qty', align: 'right', render: (v: string) => fmtQty(v) },
             { title: t('field.uom'), dataIndex: 'uom', width: 80 },
             { title: t('field.unit_price'), dataIndex: 'unit_price', align: 'right', render: (v: string) => fmtAmount(v) },
             { title: t('field.amount'), dataIndex: 'amount', align: 'right', render: (v: string) => fmtAmount(v) },
