@@ -131,6 +131,7 @@ jobs:
         working-directory: deploy
         run: |
           cp .env.example .env
+          cp nginx/conf.d/mica.conf.default nginx/conf.d/mica.conf
           docker compose up -d --build --wait
           sleep 10
       - name: Health check
