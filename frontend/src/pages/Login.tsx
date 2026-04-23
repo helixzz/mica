@@ -127,11 +127,14 @@ export function LoginPage() {
                   <Input.Password
                     prefix={<LockOutlined />}
                     placeholder={t('placeholder.enter_password')}
+                    onPressEnter={(e) => { e.currentTarget.closest('form')?.requestSubmit() }}
                   />
                 </Form.Item>
-                <Button type="primary" htmlType="submit" block loading={loading} size="large">
-                  {t('button.submit')}
-                </Button>
+                <Form.Item>
+                  <Button type="primary" htmlType="submit" block loading={loading} size="large">
+                    {t('button.submit')}
+                  </Button>
+                </Form.Item>
               </Form>
               <Typography.Text type="secondary" style={{ fontSize: 12, display: 'block', textAlign: 'center' }}>
                 Dev: alice / bob / carol / dave / admin · password: MicaDev2026!

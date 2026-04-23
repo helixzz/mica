@@ -383,6 +383,8 @@ function UsersPanel() {
   const [companies, setCompanies] = useState<any[]>([])
   const [departments, setDepartments] = useState<any[]>([])
 
+  const deptMap = Object.fromEntries(departments.map(d => [d.id, d.name_zh]))
+
   const load = () => {
     setLoading(true)
     api.adminListUsers().then(setRows).finally(() => setLoading(false))
@@ -473,7 +475,7 @@ function UsersPanel() {
           { title: t('admin.display_name_col'), dataIndex: 'display_name' },
           { title: t('admin.role_col'), dataIndex: 'role', render: (v: string) => <Tag color="orange">{v}</Tag> },
           { title: t('admin.email_col'), dataIndex: 'email' },
-          { title: t('admin.department_col'), dataIndex: 'department_id', render: (v: string) => v || '-' },
+          { title: t('admin.department_col'), dataIndex: 'department_id', render: (v: string) => deptMap[v] || v || '-' },
           { title: t('admin.locale_col'), dataIndex: 'preferred_locale' },
           { title: t('admin.active_col'), dataIndex: 'is_active', render: (v: boolean) => <Tag color={v ? 'success' : 'default'}>{v ? t('common.enabled') : t('common.disabled')}</Tag> },
           { title: t('admin.auth_provider_col'), dataIndex: 'auth_provider' },
@@ -534,7 +536,7 @@ function UsersPanel() {
             <Select options={companies.map(c => ({ value: c.id, label: c.name_zh }))} />
           </Form.Item>
           <Form.Item name="department_id" label={t('admin.department_label')}>
-            <Select allowClear options={departments.map(d => ({ value: d.id, label: d.name }))} />
+            <Select allowClear options={departments.map(d => ({ value: d.id, label: d.name_zh }))} />
           </Form.Item>
           <Form.Item name="preferred_locale" label={t('admin.locale_label')}>
             <Select options={[{ value: 'zh-CN', label: 'zh-CN' }, { value: 'en-US', label: 'en-US' }]} />
