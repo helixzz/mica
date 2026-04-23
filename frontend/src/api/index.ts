@@ -46,9 +46,11 @@ export interface Supplier {
   id: string
   code: string
   name: string
+  tax_number: string | null
   contact_name: string | null
   contact_phone: string | null
   contact_email: string | null
+  notes: string | null
   is_enabled: boolean
   is_deleted: boolean
 }
@@ -624,9 +626,37 @@ export const api = {
     const { data } = await client.get<Department[]>('/departments')
     return data
   },
+  async createDepartment(body: {
+    company_id: string; code: string; name_zh: string; name_en?: string | null; parent_id?: string | null;
+  }): Promise<Department> {
+    const { data } = await client.post<Department>('/departments', body)
+    return data
+  },
+  async updateDepartment(id: string, body: Record<string, unknown>): Promise<Department> {
+    const { data } = await client.patch<Department>(`/departments/${id}`, body)
+    return data
+  },
+  async deleteDepartment(id: string): Promise<void> {
+    await client.delete(`/departments/${id}`)
+  },
   async suppliers(): Promise<Supplier[]> {
     const { data } = await client.get<Supplier[]>('/suppliers')
     return data
+  },
+  async createSupplier(body: {
+    code: string; name: string; tax_number?: string | null;
+    contact_name?: string | null; contact_phone?: string | null;
+    contact_email?: string | null; notes?: string | null;
+  }): Promise<Supplier> {
+    const { data } = await client.post<Supplier>('/suppliers', body)
+    return data
+  },
+  async updateSupplier(id: string, body: Record<string, unknown>): Promise<Supplier> {
+    const { data } = await client.patch<Supplier>(`/suppliers/${id}`, body)
+    return data
+  },
+  async deleteSupplier(id: string): Promise<void> {
+    await client.delete(`/suppliers/${id}`)
   },
   async items(): Promise<Item[]> {
     const { data } = await client.get<Item[]>('/items')
@@ -1021,8 +1051,16 @@ export const api = {
   async deleteProcurementCategory(id: string): Promise<void> {
     await client.delete(`/admin/procurement-categories/${id}`)
   },
+  async updateProcurementCategory(id: string, body: Record<string, unknown>): Promise<ClassificationItem> {
+    const { data } = await client.put<ClassificationItem>(`/admin/procurement-categories/${id}`, body)
+    return data
+  },
   async createLookupValue(body: ClassificationInput & { type: string }): Promise<ClassificationItem> {
     const { data } = await client.post<ClassificationItem>('/admin/lookup-values', body)
+    return data
+  },
+  async updateLookupValue(id: string, body: Record<string, unknown>): Promise<ClassificationItem> {
+    const { data } = await client.put<ClassificationItem>(`/admin/lookup-values/${id}`, body)
     return data
   },
   async deleteLookupValue(id: string): Promise<void> {

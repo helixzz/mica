@@ -378,7 +378,16 @@
     "phone": "Phone",
     "email": "Email",
     "loading": "Loading...",
-    "back_to_sku": "Back to SKU Database"
+    "back_to_sku": "Back to SKU Database",
+    "new": "New Supplier",
+    "edit": "Edit Supplier: {{name}}",
+    "count": "suppliers",
+    "tax_number": "Tax Number",
+    "notes": "Notes",
+    "confirm_delete": "Delete this supplier?",
+    "deleted": "Supplier deleted",
+    "updated": "Supplier updated",
+    "status": "Status"
   },
   "pr": {
     "guide_title": "Fill in Purchase Request",
@@ -425,6 +434,14 @@
     "line_items_help": "Add one line per requested item. If the final supplier or price is not fixed yet, submit the item, quantity, and specification first."
   },
   "admin": {
+    "departments": "Departments",
+    "new_department": "New Department",
+    "edit_department": "Edit Department: {{name}}",
+    "department_count": "departments",
+    "department_code": "Department Code",
+    "department_name_zh": "Chinese Name",
+    "department_name_en": "English Name",
+    "department_company": "Company",
     "companies": "Company Entities",
     "import": "Data Import",
     "classification": "Classification",
@@ -551,6 +568,14 @@
     "deactivated": "Deactivated",
     "operation_failed": "Operation failed",
     "status_col": "Status",
+    "departments": "Departments",
+    "new_department": "New Department",
+    "edit_department": "Edit Department: {{name}}",
+    "department_count": "departments",
+    "department_code": "Department Code",
+    "department_name_zh": "Chinese Name",
+    "department_name_en": "English Name",
+    "department_company": "Company",
     "code_placeholder": "e.g. CC-IT / laptop / capex",
     "label_zh_placeholder": "IT Dept / Laptop / CapEx",
     "saml_help": {
