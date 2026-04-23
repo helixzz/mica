@@ -328,6 +328,7 @@ export function PRNewPage() {
               <Form.Item
                 label={t('field.title')}
                 name="title"
+                help={t('pr.title_help')}
                 rules={[{ required: true }]}
               >
                 <Input placeholder={t('placeholder.enter_title')} />
@@ -340,13 +341,14 @@ export function PRNewPage() {
             </Col>
             <Col span={6}>
               <Form.Item label={t('field.required_date')} name="required_date">
+                
                 <DatePicker style={{ width: '100%' }} />
               </Form.Item>
             </Col>
           </Row>
           <Row gutter={16}>
             <Col span={6}>
-              <Form.Item label={t('pr.company_label')} name="company_id" rules={[{ required: true, message: t('validation.select_company') }]}>
+              <Form.Item label={t('pr.company_label')} name="company_id" help={t('pr.company_help')} rules={[{ required: true, message: t('validation.select_company') }]}>
                 <Select
                   placeholder={t('pr.select_company')}
                   options={companies.map((c) => ({ value: c.id, label: c.name_zh }))}
@@ -354,7 +356,7 @@ export function PRNewPage() {
               </Form.Item>
             </Col>
             <Col span={6}>
-              <Form.Item label={t('pr.cost_center_label')} name="cost_center_id" rules={[{ required: true, message: t('validation.select_cost_center') }]}>
+              <Form.Item label={t('pr.cost_center_label')} name="cost_center_id" help={t('pr.cost_center_help')} rules={[{ required: true, message: t('validation.select_cost_center') }]}>
                 <Select
                   placeholder={t('pr.select_cost_center')}
                   options={costCenters.map((c) => ({ value: c.id, label: c.label_zh }))}
@@ -362,7 +364,7 @@ export function PRNewPage() {
               </Form.Item>
             </Col>
             <Col span={6}>
-              <Form.Item label={t('pr.expense_type_label')} name="expense_type_id" rules={[{ required: true, message: t('validation.select_expense_type') }]}>
+              <Form.Item label={t('pr.expense_type_label')} name="expense_type_id" help={t('pr.expense_type_help')} rules={[{ required: true, message: t('validation.select_expense_type') }]}>
                 <Select
                   placeholder="CapEx / OpEx"
                   options={expenseTypes.map((e) => ({ value: e.id, label: e.label_zh }))}
@@ -370,7 +372,7 @@ export function PRNewPage() {
               </Form.Item>
             </Col>
             <Col span={6}>
-              <Form.Item label={t('pr.category_label')} name="procurement_category_id">
+              <Form.Item label={t('pr.category_label')} name="procurement_category_id" help={t('pr.category_help')}>
                 <Select
                   allowClear
                   showSearch
@@ -384,7 +386,7 @@ export function PRNewPage() {
               </Form.Item>
             </Col>
           </Row>
-          <Form.Item label={t('field.business_reason')} name="business_reason">
+          <Form.Item label={t('field.business_reason')} name="business_reason" help={t('pr.business_reason_help')}>
             <Input.TextArea rows={3} placeholder={t('placeholder.enter_reason')} />
           </Form.Item>
           <Space>
@@ -411,6 +413,9 @@ export function PRNewPage() {
           </Button>
         }
       >
+        <Typography.Text type="secondary" style={{ display: 'block', marginBottom: 12 }}>
+          {t('pr.line_items_help')}
+        </Typography.Text>
         <Table
           rowKey="key"
           dataSource={lines}

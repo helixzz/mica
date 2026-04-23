@@ -83,11 +83,11 @@ export default function ItemsPage() {
         <Space style={{ float: 'right' }}><Button onClick={() => setDrawerOpen(false)}>{t('button.cancel')}</Button><Button type="primary" onClick={handleSave}>{t('button.save')}</Button></Space>
       }>
         <Form form={form} layout="vertical">
-          <Form.Item name="code" label={t('item.code')} rules={[{ required: !editingItem }]}><Input placeholder="SRV-MEM-96GB" disabled={!!editingItem} /></Form.Item>
-          <Form.Item name="name" label={t('field.item_name')} rules={[{ required: true }]}><Input placeholder="96GB RDIMM DDR5 6400MT/s" /></Form.Item>
-          <Form.Item name="category_id" label={t('item.category_label')}><Select allowClear showSearch optionFilterProp="label" placeholder={t('item.select_category')} options={categories.map((c) => ({ value: c.id, label: (c.level ?? 1) === 2 ? `  └ ${c.label_zh}` : c.label_zh }))} /></Form.Item>
-          <Form.Item name="uom" label={t('item.uom_label')} initialValue="EA"><Select options={[{ value: 'EA', label: 'EA' }, { value: 'SET', label: 'SET' }, { value: 'PCS', label: 'PCS' }, { value: 'LICENSE', label: 'LICENSE' }, { value: 'HOUR', label: 'HOUR' }]} /></Form.Item>
-          <Form.Item name="specification" label={t('item.spec_label')}><Input.TextArea rows={3} /></Form.Item>
+          <Form.Item name="code" label={t('item.code')} help={t('item.code_help')} rules={[{ required: !editingItem }]}><Input placeholder="SRV-MEM-96GB" disabled={!!editingItem} /></Form.Item>
+          <Form.Item name="name" label={t('field.item_name')} help={t('item.name_help')} rules={[{ required: true }]}><Input placeholder="96GB RDIMM DDR5 6400MT/s" /></Form.Item>
+          <Form.Item name="category_id" label={t('item.category_label')} help={t('item.category_help')}><Select allowClear showSearch optionFilterProp="label" placeholder={t('item.select_category')} options={categories.map((c) => ({ value: c.id, label: (c.level ?? 1) === 2 ? `  └ ${c.label_zh}` : c.label_zh }))} /></Form.Item>
+          <Form.Item name="uom" label={t('item.uom_label')} help={t('item.uom_help')} initialValue="EA"><Select options={[{ value: 'EA', label: 'EA' }, { value: 'SET', label: 'SET' }, { value: 'PCS', label: 'PCS' }, { value: 'LICENSE', label: 'LICENSE' }, { value: 'HOUR', label: 'HOUR' }]} /></Form.Item>
+          <Form.Item name="specification" label={t('item.spec_label')} help={t('item.spec_help')}><Input.TextArea rows={3} /></Form.Item>
           <Form.Item name="requires_serial" label={t('item.serial_required')} valuePropName="checked"><Switch /></Form.Item>
           {editingItem && <Form.Item name="is_active" label={t('item.active_label')} valuePropName="checked"><Switch /></Form.Item>}
         </Form>

@@ -68,15 +68,16 @@ export default function RFQNewPage() {
       <Card>
         <Form form={form} layout="vertical">
           <Row gutter={16}>
-            <Col span={12}><Form.Item label={t('field.title')} name="title" rules={[{ required: true }]}><Input placeholder={t('rfq.title_placeholder')} /></Form.Item></Col>
-            <Col span={6}><Form.Item label={t('field.deadline')} name="deadline"><DatePicker style={{ width: '100%' }} /></Form.Item></Col>
+            <Col span={12}><Form.Item label={t('field.title')} name="title" help={t('rfq.title_help')} rules={[{ required: true }]}><Input placeholder={t('rfq.title_placeholder')} /></Form.Item></Col>
+            <Col span={6}><Form.Item label={t('field.deadline')} name="deadline" help={t('rfq.deadline_help')}><DatePicker style={{ width: '100%' }} /></Form.Item></Col>
           </Row>
-          <Form.Item label={t('field.notes')} name="notes"><Input.TextArea rows={2} /></Form.Item>
+          <Form.Item label={t('field.notes')} name="notes" help={t('rfq.notes_help')}><Input.TextArea rows={2} /></Form.Item>
         </Form>
 
         <Typography.Text strong>{t('rfq.rfq_items')}</Typography.Text>
+        <Typography.Text type="secondary" style={{ display: 'block', marginTop: 4, marginBottom: 8 }}>{t('rfq.items_help')}</Typography.Text>
         <div style={{ marginBottom: 8 }} />
-        {lines.map((l, idx) => (
+        {lines.map((l) => (
           <Row key={l.key} gutter={8} style={{ marginBottom: 8 }}>
             <Col span={10}>
               <Select style={{ width: '100%' }} placeholder={t('placeholder.select_item')} value={l.item_id ?? undefined}
@@ -84,7 +85,13 @@ export default function RFQNewPage() {
                 options={items.map((it) => ({ value: it.id, label: `${it.code} · ${it.name}` }))}
                 showSearch optionFilterProp="label" allowClear />
             </Col>
-            <Col span={4}><Input value={l.qty.toString()} onChange={(e) => updateLine(l.key, 'qty', Number(e.target.value) || 1)} addonAfter={l.uom} /></Col>
+            <Col span={4}>
+              <Input
+                value={l.qty.toString()}
+                onChange={(e) => updateLine(l.key, 'qty', Number(e.target.value) || 1)}
+                suffix={l.uom}
+              />
+            </Col>
             <Col span={8}><Input value={l.specification} onChange={(e) => updateLine(l.key, 'specification', e.target.value)} placeholder={t('rfq.spec_placeholder')} /></Col>
             <Col span={2}>{lines.length > 1 && <Button danger icon={<DeleteOutlined />} onClick={() => removeLine(l.key)} />}</Col>
           </Row>
@@ -93,6 +100,7 @@ export default function RFQNewPage() {
 
         <div style={{ marginTop: 16 }}>
           <Typography.Text strong>{t('rfq.invited_suppliers')}</Typography.Text>
+          <Typography.Text type="secondary" style={{ display: 'block', marginTop: 4 }}>{t('rfq.suppliers_help')}</Typography.Text>
           <Select mode="multiple" style={{ width: '100%', marginTop: 8 }} placeholder={t('rfq.select_suppliers')}
             value={selectedSuppliers} onChange={setSelectedSuppliers}
             options={suppliers.map((s) => ({ value: s.id, label: s.name }))}

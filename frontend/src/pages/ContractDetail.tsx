@@ -40,6 +40,7 @@ import {
   api,
   type Contract,
   type ContractAttachment,
+  type ContractVersion,
   type PaymentScheduleItem,
   type PaymentScheduleSummary,
 } from '@/api'
@@ -65,6 +66,7 @@ export function ContractDetailPage() {
   const [uploading, setUploading] = useState(false)
   const [schedule, setSchedule] = useState<PaymentScheduleSummary | null>(null)
   const [scheduleLoading, setScheduleLoading] = useState(false)
+  const [versions, setVersions] = useState<ContractVersion[]>([])
   const [drawerOpen, setDrawerOpen] = useState(false)
   const [form] = Form.useForm()
 
@@ -93,7 +95,8 @@ export function ContractDetailPage() {
   useEffect(() => {
     void load()
     void loadSchedule()
-  }, [load, loadSchedule])
+    if (id) void api.listContractVersions(id).then(setVersions).catch(() => setVersions([]))
+  }, [load, loadSchedule, id])
 
   const handleUpload = async (file: File) => {
     if (!id) return false
@@ -213,59 +216,9 @@ export function ContractDetailPage() {
         </Space>
       ),
     },
-    {
-      title: t('contract.planned_date'),
-      dataIndex: 'planned_date',
-      render: (v: string | null) => v || '-',
-    },
-    {
-      title: t('contract.planned_amount'),
-      dataIndex: 'planned_amount',
-      align: 'right' as const,
-      render: (v: string) => `¥${Number(v).toLocaleString()}`,
-    },
-    {
-      title: t('field.status'),
-      dataIndex: 'status',
-      render: (v: string) => <StatusTag status={v} />,
-    },
-    {
-      title: t('field.amount'),
-      dataIndex: 'actual_amount',
-      align: 'right' as const,
-      render: (v: string | null) => (v ? `¥${Number(v).toLocaleString()}` : '-'),
-    },
-    { title: t('field.actual_date'), dataIndex: 'actual_date', render: (v: string | null) => v || '-' },
-    {
-      title: t('common.actions'),
-      key: 'actions',
-      width: 150,
-      render: (_: unknown, record: PaymentScheduleItem) => (
-        <Space>
-          {record.status === 'planned' && (
-            <>
-              <Button
-                size="small"
-                type="primary"
-                icon={<SendOutlined />}
-                onClick={() => handleExecute(record)}
-              >{t('contract.execute')}
-              </Button>
-              <Button
-                size="small"
-                danger
-                icon={<DeleteOutlined />}
-                onClick={() => handleDelete(record)}
-              />
-            </>
-          )}
-          {record.status === 'paid' && <CheckCircleOutlined style={{ color: '#52c41a' }} />}
-        </Space>
-      ),
-    },
   ]
 
-  const tabItems = [
+  const tabItems: { key: string; label: React.ReactNode; children: React.ReactNode }[] = [
     {
       key: 'info',
       label: t('contract.basic_info'),
@@ -436,6 +389,32 @@ export function ContractDetailPage() {
         </Space>
       ),
     },
+    {
+      key: 'versions',
+      label: (
+        <Space>
+          {t('contract.version_history')}
+          {versions.length > 0 && <Tag>{versions.length}</Tag>}
+        </Space>
+      ),
+      children: (
+        <Table<ContractVersion>
+          rowKey="id"
+          dataSource={versions}
+          pagination={false}
+          size="small"
+          locale={{ emptyText: t('contract.no_versions_hint') }}
+          columns={[
+            { title: t('contract.version_col'), dataIndex: 'version_number', width: 80, render: (v: number) => `v${v}` },
+            { title: t('contract.change_type_col'), dataIndex: 'change_type', width: 120, render: (v: string) => <Tag>{v}</Tag> },
+            { title: t('field.title'), render: (_: unknown, r: ContractVersion) => (r.snapshot_json as Record<string, unknown>)?.title as string || '-' },
+            { title: t('field.total_amount'), render: (_: unknown, r: ContractVersion) => (r.snapshot_json as Record<string, unknown>)?.total_amount as string || '-', align: 'right' as const },
+            { title: t('contract.change_reason_col'), dataIndex: 'change_reason', render: (v: string | null) => v || '-' },
+            { title: t('field.created_at'), dataIndex: 'created_at', render: (v: string) => new Date(v).toLocaleString() },
+          ]}
+        />
+      ),
+    },
   ]
 
   return (
@@ -473,6 +452,9 @@ export function ContractDetailPage() {
           description={t('contract.current_total_hint', { amount: Number(contract.total_amount).toLocaleString() })}
         />
         <Form form={form} onFinish={handleAddSchedule} layout="vertical">
+          <Typography.Text type="secondary" style={{ display: 'block', marginBottom: 12 }}>
+            {t('contract.schedule_form_help')}
+          </Typography.Text>
           <Form.List name="items">
             {(fields, { add, remove }) => (
               <>
@@ -495,6 +477,7 @@ export function ContractDetailPage() {
                           {...field}
                           name={[field.name, 'label']}
                           label={t('contract.installment_label')}
+                          help={t('contract.installment_label_help')}
                           rules={[{ required: true }]}
                         >
                           <Input placeholder={t('contract.label_placeholder')} />
@@ -505,6 +488,7 @@ export function ContractDetailPage() {
                           {...field}
                           name={[field.name, 'planned_amount']}
                           label={t('contract.planned_amount')}
+                          help={t('contract.planned_amount_help')}
                           rules={[{ required: true }]}
                         >
                           <InputNumber
@@ -522,6 +506,7 @@ export function ContractDetailPage() {
                           {...field}
                           name={[field.name, 'planned_date']}
                           label={t('contract.planned_date')}
+                          help={t('contract.planned_date_help')}
                         >
                           <DatePicker style={{ width: '100%' }} />
                         </Form.Item>
@@ -531,6 +516,7 @@ export function ContractDetailPage() {
                           {...field}
                           name={[field.name, 'trigger_type']}
                           label={t('contract.trigger_type')}
+                          help={t('contract.trigger_type_help')}
                           initialValue="fixed_date"
                         >
                           <Select
@@ -548,6 +534,7 @@ export function ContractDetailPage() {
                       {...field}
                       name={[field.name, 'trigger_description']}
                       label={t('contract.trigger_desc')}
+                      help={t('contract.trigger_desc_help')}
                     >
                       <Input placeholder={t('contract.trigger_desc_placeholder')} />
                     </Form.Item>
