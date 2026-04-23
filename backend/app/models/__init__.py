@@ -131,7 +131,8 @@ class Company(Base, TimestampMixin):
     name_en: Mapped[str | None] = mapped_column(String(255))
     default_locale: Mapped[str] = mapped_column(String(10), default="zh-CN", nullable=False)
     default_currency: Mapped[str] = mapped_column(String(3), default="CNY", nullable=False)
-    is_active: Mapped[bool] = mapped_column(default=True, nullable=False)
+    is_enabled: Mapped[bool] = mapped_column(default=True, nullable=False)
+    is_deleted: Mapped[bool] = mapped_column(default=False, nullable=False)
 
     departments: Mapped[list[Department]] = relationship(back_populates="company")
     users: Mapped[list[User]] = relationship(back_populates="company")
@@ -150,7 +151,8 @@ class Department(Base, TimestampMixin):
     parent_id: Mapped[UUID | None] = mapped_column(
         PGUUID(as_uuid=True), ForeignKey("departments.id")
     )
-    is_active: Mapped[bool] = mapped_column(default=True, nullable=False)
+    is_enabled: Mapped[bool] = mapped_column(default=True, nullable=False)
+    is_deleted: Mapped[bool] = mapped_column(default=False, nullable=False)
 
     company: Mapped[Company] = relationship(back_populates="departments")
 
@@ -165,7 +167,8 @@ class CostCenter(Base, TimestampMixin):
     label_zh: Mapped[str] = mapped_column(String(128), nullable=False)
     label_en: Mapped[str] = mapped_column(String(128), nullable=False)
     sort_order: Mapped[int] = mapped_column(Integer, default=0, nullable=False)
-    is_active: Mapped[bool] = mapped_column(default=True, nullable=False)
+    is_enabled: Mapped[bool] = mapped_column(default=True, nullable=False)
+    is_deleted: Mapped[bool] = mapped_column(default=False, nullable=False)
     budget_amount: Mapped[Decimal | None] = mapped_column(Numeric(18, 4))
     manager_id: Mapped[UUID | None] = mapped_column(
         PGUUID(as_uuid=True),
@@ -182,7 +185,8 @@ class ProcurementCategory(Base, TimestampMixin):
     label_zh: Mapped[str] = mapped_column(String(128), nullable=False)
     label_en: Mapped[str] = mapped_column(String(128), nullable=False)
     sort_order: Mapped[int] = mapped_column(Integer, default=0, nullable=False)
-    is_active: Mapped[bool] = mapped_column(default=True, nullable=False)
+    is_enabled: Mapped[bool] = mapped_column(default=True, nullable=False)
+    is_deleted: Mapped[bool] = mapped_column(default=False, nullable=False)
     parent_id: Mapped[UUID | None] = mapped_column(
         PGUUID(as_uuid=True),
         ForeignKey("procurement_categories.id", ondelete="SET NULL"),
@@ -207,7 +211,8 @@ class LookupValue(Base, TimestampMixin):
     label_zh: Mapped[str] = mapped_column(String(128), nullable=False)
     label_en: Mapped[str] = mapped_column(String(128), nullable=False)
     sort_order: Mapped[int] = mapped_column(Integer, default=0, nullable=False)
-    is_active: Mapped[bool] = mapped_column(default=True, nullable=False)
+    is_enabled: Mapped[bool] = mapped_column(default=True, nullable=False)
+    is_deleted: Mapped[bool] = mapped_column(default=False, nullable=False)
     meta: Mapped[dict | None] = mapped_column(JSONB)
 
     __table_args__ = (UniqueConstraint("type", "code"),)
@@ -260,7 +265,8 @@ class Supplier(Base, TimestampMixin):
     contact_email: Mapped[str | None] = mapped_column(String(255))
     tax_number: Mapped[str | None] = mapped_column(String(64))
     notes: Mapped[str | None] = mapped_column(Text)
-    is_active: Mapped[bool] = mapped_column(default=True, nullable=False)
+    is_enabled: Mapped[bool] = mapped_column(default=True, nullable=False)
+    is_deleted: Mapped[bool] = mapped_column(default=False, nullable=False)
 
 
 class Item(Base, TimestampMixin):
@@ -277,7 +283,8 @@ class Item(Base, TimestampMixin):
     uom: Mapped[str] = mapped_column(String(16), default="EA", nullable=False)
     specification: Mapped[str | None] = mapped_column(Text)
     requires_serial: Mapped[bool] = mapped_column(default=False, nullable=False)
-    is_active: Mapped[bool] = mapped_column(default=True, nullable=False)
+    is_enabled: Mapped[bool] = mapped_column(default=True, nullable=False)
+    is_deleted: Mapped[bool] = mapped_column(default=False, nullable=False)
 
     procurement_category: Mapped[ProcurementCategory | None] = relationship()
 
