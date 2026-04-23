@@ -79,7 +79,7 @@ async def _resolve_user_for_role(
     db: AsyncSession,
     submitter: User,
     approver_role: str,
-) -> User:
+) -> list[User]:
     stmt = select(User).where(
         User.company_id == submitter.company_id,
         User.role == approver_role,
@@ -87,18 +87,18 @@ async def _resolve_user_for_role(
     )
     if approver_role == UserRole.DEPT_MANAGER.value and submitter.department_id:
         stmt = stmt.where(User.department_id == submitter.department_id)
-    result = (await db.execute(stmt)).scalars().first()
-    if result:
-        return result
+    users = list((await db.execute(stmt)).scalars().all())
+    if users:
+        return users
 
     if approver_role != UserRole.ADMIN.value:
         admin_stmt = select(User).where(
             User.role == UserRole.ADMIN.value,
             User.is_active.is_(True),
         )
-        admin = (await db.execute(admin_stmt)).scalars().first()
-        if admin:
-            return admin
+        admins = list((await db.execute(admin_stmt)).scalars().all())
+        if admins:
+            return admins
 
     raise HTTPException(500, "no_approver_found")
 
@@ -127,59 +127,44 @@ async def _resolve_active_delegation(
     return None
 
 
-async def _resolve_approver(
-    db: AsyncSession,
-    submitter: User,
-    amount: Decimal,
-    approver_role: str | None = None,
-) -> User:
-    target_role = approver_role
-    if target_role is None:
-        approval_threshold = await system_params.get_int(db, "approval.amount_threshold_cny")
-        target_role = (
-            UserRole.PROCUREMENT_MGR.value
-            if amount >= Decimal(str(approval_threshold))
-            else UserRole.DEPT_MANAGER.value
-        )
-
-    approver = await _resolve_user_for_role(db, submitter, target_role)
-    delegation = await _resolve_active_delegation(db, approver)
-    if delegation is None:
-        return approver
-
-    delegate = await db.get(User, delegation.to_user_id)
-    if delegate is None or not delegate.is_active:
-        return approver
-    return delegate
-
-
-_ = _resolve_approver
-
-
 async def _resolve_stage_assignment(
     db: AsyncSession,
     submitter: User,
     approver_role: str,
-) -> tuple[User, dict[str, object]]:
-    original_approver = await _resolve_user_for_role(db, submitter, approver_role)
-    delegation = await _resolve_active_delegation(db, original_approver)
-    if delegation is None:
-        return original_approver, {}
-
-    delegate = await db.get(User, delegation.to_user_id)
-    if delegate is None or not delegate.is_active:
-        return original_approver, {}
-
-    return delegate, {
-        "delegation": {
-            "delegation_id": str(delegation.id),
-            "from_user_id": str(original_approver.id),
-            "to_user_id": str(delegate.id),
-            "reason": delegation.reason,
-            "starts_at": delegation.starts_at.isoformat(),
-            "ends_at": delegation.ends_at.isoformat(),
-        }
-    }
+) -> list[tuple[User, dict[str, object]]]:
+    candidates = await _resolve_user_for_role(db, submitter, approver_role)
+    assignments: list[tuple[User, dict[str, object]]] = []
+    for candidate in candidates:
+        delegation = await _resolve_active_delegation(db, candidate)
+        if delegation is None:
+            assignments.append((candidate, {}))
+            continue
+        delegate = await db.get(User, delegation.to_user_id)
+        if delegate is None or not delegate.is_active:
+            assignments.append((candidate, {}))
+            continue
+        assignments.append(
+            (
+                delegate,
+                {
+                    "delegation": {
+                        "delegation_id": str(delegation.id),
+                        "from_user_id": str(candidate.id),
+                        "to_user_id": str(delegate.id),
+                        "reason": delegation.reason,
+                        "starts_at": delegation.starts_at.isoformat(),
+                        "ends_at": delegation.ends_at.isoformat(),
+                    }
+                },
+            )
+        )
+    seen_ids: set[UUID] = set()
+    deduped: list[tuple[User, dict[str, object]]] = []
+    for user, meta in assignments:
+        if user.id not in seen_ids:
+            seen_ids.add(user.id)
+            deduped.append((user, meta))
+    return deduped
 
 
 async def _match_rule(
@@ -294,33 +279,34 @@ async def create_instance_for_pr(
     db.add(instance)
     await db.flush()
 
-    first_pending_task: ApprovalTask | None = None
+    first_pending_tasks: list[ApprovalTask] = []
     for index, stage in enumerate(stages, start=1):
         stage_role = str(stage["approver_role"])
-        approver, meta = await _resolve_stage_assignment(db, submitter, stage_role)
+        assignees = await _resolve_stage_assignment(db, submitter, stage_role)
         stage_order = stage["order"]
-        meta = {
-            **meta,
-            "original_approver_role": stage_role,
-        }
-        if matched_rule_id is not None:
-            meta["approval_rule_id"] = matched_rule_id
-        task = ApprovalTask(
-            instance_id=instance.id,
-            stage_order=stage_order,
-            stage_name=str(stage["stage_name"]),
-            assignee_id=approver.id,
-            assignee_role=stage_role,
-            status=TASK_STATUS_PENDING if index == 1 else TASK_STATUS_WAITING,
-            meta=meta,
-        )
-        db.add(task)
-        if index == 1:
-            first_pending_task = task
+        for approver, delegation_meta in assignees:
+            meta = {
+                **delegation_meta,
+                "original_approver_role": stage_role,
+            }
+            if matched_rule_id is not None:
+                meta["approval_rule_id"] = matched_rule_id
+            task = ApprovalTask(
+                instance_id=instance.id,
+                stage_order=stage_order,
+                stage_name=str(stage["stage_name"]),
+                assignee_id=approver.id,
+                assignee_role=stage_role,
+                status=TASK_STATUS_PENDING if index == 1 else TASK_STATUS_WAITING,
+                meta=meta,
+            )
+            db.add(task)
+            if index == 1:
+                first_pending_tasks.append(task)
 
     await db.flush()
-    if first_pending_task is not None:
-        await _send_assignment_notification(db, instance, first_pending_task)
+    for task in first_pending_tasks:
+        await _send_assignment_notification(db, instance, task)
     return instance
 
 
@@ -362,16 +348,19 @@ async def _load_instance_with_tasks(db: AsyncSession, instance_id: UUID) -> Appr
 
 
 async def _advance_next_task(db: AsyncSession, instance: ApprovalInstance) -> bool:
-    next_task = next(
-        (task for task in instance.tasks if task.status == TASK_STATUS_WAITING),
-        None,
-    )
-    if next_task is None:
+    next_stage_order: int | None = None
+    for task in instance.tasks:
+        if task.status == TASK_STATUS_WAITING:
+            if next_stage_order is None or task.stage_order < next_stage_order:
+                next_stage_order = task.stage_order
+    if next_stage_order is None:
         return False
-    next_task.status = TASK_STATUS_PENDING
-    instance.current_stage = next_task.stage_order
+    for task in instance.tasks:
+        if task.stage_order == next_stage_order and task.status == TASK_STATUS_WAITING:
+            task.status = TASK_STATUS_PENDING
+            await _send_assignment_notification(db, instance, task)
+    instance.current_stage = next_stage_order
     await db.flush()
-    await _send_assignment_notification(db, instance, next_task)
     return True
 
 
@@ -399,6 +388,14 @@ async def act_on_task(
     instance = await _load_instance_with_tasks(db, instance_id)
 
     if action == "approve":
+        for sibling in instance.tasks:
+            if (
+                sibling.id != task.id
+                and sibling.stage_order == task.stage_order
+                and sibling.status == TASK_STATUS_PENDING
+            ):
+                sibling.status = TASK_STATUS_SKIPPED
+                sibling.comment = "auto-skipped: peer approved"
         advanced = await _advance_next_task(db, instance)
         if advanced:
             instance.status = INSTANCE_STATUS_PENDING
@@ -411,13 +408,19 @@ async def act_on_task(
         instance.status = "rejected"
         instance.completed_at = now
         for other_task in instance.tasks:
-            if other_task.id != task.id and other_task.status == TASK_STATUS_WAITING:
+            if other_task.id != task.id and other_task.status in (
+                TASK_STATUS_WAITING,
+                TASK_STATUS_PENDING,
+            ):
                 other_task.status = TASK_STATUS_SKIPPED
     else:
         instance.status = "returned"
         instance.completed_at = now
         for other_task in instance.tasks:
-            if other_task.id != task.id and other_task.status == TASK_STATUS_WAITING:
+            if other_task.id != task.id and other_task.status in (
+                TASK_STATUS_WAITING,
+                TASK_STATUS_PENDING,
+            ):
                 other_task.status = TASK_STATUS_SKIPPED
 
     await db.flush()
