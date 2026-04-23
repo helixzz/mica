@@ -7,6 +7,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [v0.8.6] — 2026-04-23
+
+### 修复
+
+- **公司主体停用不生效**：`CompanyUpdate` schema 和 `update_company()` 服务均缺少 `is_active` 字段处理，导致 PATCH 请求静默丢弃该字段
+- **成本中心只能添加/删除**：新增编辑按钮（修改名称/排序）和启用/停用切换按钮，复用已有 `PUT /admin/cost-centers/{id}` 端点；`CostCenterIn` schema 新增 `is_active` 字段
+
 ## [v0.8.5] — 2026-04-23
 
 ### 修复
