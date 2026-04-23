@@ -33,6 +33,7 @@ import {
   updateSystemParam,
   resetSystemParam,
 } from '../../api/admin-system-params';
+import { api } from '@/api';
 
 const { Title, Text } = Typography;
 const { Panel } = Collapse;

@@ -10,6 +10,11 @@ if [[ ! -f .env ]]; then
     echo "[dev-up] Created .env from .env.example"
 fi
 
+if [[ ! -f nginx/conf.d/mica.conf ]]; then
+    cp nginx/conf.d/mica.conf.default nginx/conf.d/mica.conf
+    echo "[dev-up] Created nginx/conf.d/mica.conf from default"
+fi
+
 echo "[dev-up] Building images..."
 docker compose build
 
