@@ -7,6 +7,19 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [v0.9.1] — 2026-04-23
+
+### 新增
+
+- **回收站 Tab**：系统管理新增"回收站"页面，集中展示所有被软删除的主数据实体（公司/部门/成本中心/采购分类/开支类型/供应商/物料），支持按类型筛选和一键恢复
+- **公司主体删除按钮**：Admin 公司主体列表新增删除操作（带确认弹窗）
+- **回收站 API**：`GET /admin/recycle-bin` 聚合查询 + `POST /admin/recycle-bin/{type}/{id}/restore` 恢复
+
+### 修复
+
+- **成本中心/公司主体删除后仍显示**：Admin 列表 API 参数逻辑错误，`include_inactive` 同时暴露了已删除条目。拆分为独立的 `include_disabled` / `include_deleted` / `enabled_only` 参数，Admin 列表只显示未删除条目（含已停用的）
+- **UserOut schema 残留 is_deleted 字段**：导致 `/auth/me` 500 错误
+
 ## [v0.9.0] — 2026-04-23
 
 主数据实体 `is_active` 拆分为 `is_enabled`（业务启停）+ `is_deleted`（软删除），消除长期语义歧义。
