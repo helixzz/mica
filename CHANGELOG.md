@@ -7,6 +7,27 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [v0.9.5] — 2026-04-23
+
+### 破坏性变更
+
+- **部署方式改革**：`upgrade.sh` 不再依赖 rsync，改为 `git fetch + git checkout <tag>`。生产环境的 `.env`、`nginx/conf.d/mica.conf`、`certs/` 等配置文件不再被代码更新覆盖
+- **Nginx 配置解耦**：`mica.conf` 从 Git 跟踪中移除，改为 `.gitignore`。Git 中保留 `mica.conf.default`（HTTP 默认配置）和 `mica-tls.conf.template`（HTTPS 模板）。首次部署自动从 default 创建
+
+### 新增
+
+- **IdP 元数据自动刷新**：新增 `auth.saml.idp.metadata_url` 系统参数 + `POST /saml/refresh-metadata` 管理端点 + `saml_metadata_refresh` 服务，可从 ADFS FederationMetadata.xml 自动获取并更新签名证书（migration 0017）
+- **SAML 错误日志**：ACS 验证失败时记录具体错误原因到日志和审计表，不再只返回 403
+
+### 修复
+
+- **SAML ACS 403 — unsigned Response**：ADFS 只签 Assertion 不签外层 Response，Mica 要求两者都签导致 403。放宽 `wantMessagesSigned` 为 false
+- **SAML SP URL 使用 http 而非 https**：反向代理后 `request.url.scheme` 永远是 http，改为读取 `X-Forwarded-Proto` / `X-Forwarded-Host`
+- **用户管理部门下拉框显示 UUID**：`Department` 字段名 `name` 不存在，改为 `name_zh`；表格列增加 `deptMap` 名称查找
+- **登录表单 Enter 键不提交**：提交按钮包裹到 `Form.Item` + 密码框增加 `onPressEnter`
+- **部署覆盖生产配置**：rsync 会覆盖 TLS nginx config / .env 等文件。重构为 git-based 部署
+- **健康检查不识别 HTTPS**：smoke_test 和 wait_healthy 适配 TLS 模式 + 修复 nginx 容器名称匹配
+
 ## [v0.9.4] — 2026-04-23
 
 ### 新增

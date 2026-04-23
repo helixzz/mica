@@ -596,6 +596,10 @@ export const api = {
     const { data } = await client.get<LoginOptionsResponse>('/auth/login-options')
     return data
   },
+  async refreshSamlMetadata(): Promise<Record<string, string>> {
+    const { data } = await client.post<Record<string, string>>('/saml/refresh-metadata')
+    return data
+  },
   async me(): Promise<User> {
     const { data } = await client.get<User>('/auth/me')
     return data

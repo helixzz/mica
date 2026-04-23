@@ -23,6 +23,7 @@ load_env() {
   PG_USER="${POSTGRES_USER:-mica}"
   PG_DB="${POSTGRES_DB:-mica}"
   HTTP_PORT="${HTTP_PORT:-80}"
+  HTTPS_PORT="${HTTPS_PORT:-443}"
   BACKEND_PORT="${BACKEND_PORT:-8000}"
 }
 
@@ -52,7 +53,10 @@ container_status() {
 
 wait_healthy() {
   local timeout="${1:-120}"; local deadline=$(( $(date +%s) + timeout ))
-  local svcs=(mica-postgres mica-backend mica-frontend mica-nginx)
+  local svcs=(mica-postgres mica-backend mica-frontend)
+  local nginx_name
+  nginx_name="$(docker ps --filter "name=mica.*nginx" --format '{{.Names}}' 2>/dev/null | head -1)"
+  [[ -n "${nginx_name}" ]] && svcs+=("${nginx_name}")
   while [[ $(date +%s) -lt ${deadline} ]]; do
     local all_ok=1
     for s in "${svcs[@]}"; do
@@ -66,17 +70,21 @@ wait_healthy() {
 }
 
 smoke_test() {
+  local base_url="http://localhost:${HTTP_PORT}"
+  if [[ -f "${DEPLOY_DIR}/certs/server.crt" ]]; then
+    base_url="https://localhost:${HTTPS_PORT:-443}"
+  fi
   local api_code frontend_code
-  api_code="$(curl -s -o /dev/null -w '%{http_code}' -X POST "http://localhost:${HTTP_PORT}/api/v1/auth/login" 2>/dev/null)"
+  api_code="$(curl -sk -o /dev/null -w '%{http_code}' -X POST "${base_url}/api/v1/auth/login" 2>/dev/null)"
   [[ -z "${api_code}" ]] && api_code="000"
-  frontend_code="$(curl -s -o /dev/null -w '%{http_code}' "http://localhost:${HTTP_PORT}/" 2>/dev/null)"
+  frontend_code="$(curl -sk -o /dev/null -w '%{http_code}' "${base_url}/" 2>/dev/null)"
   [[ -z "${frontend_code}" ]] && frontend_code="000"
   if [[ ! "${api_code}" =~ ^4[0-9][0-9]$ ]]; then
-    log_err "API smoke failed: POST /api/v1/auth/login → ${api_code}"
+    log_err "API smoke failed: POST ${base_url}/api/v1/auth/login → ${api_code}"
     return 1
   fi
   if [[ "${frontend_code}" != "200" ]]; then
-    log_err "Frontend smoke failed: GET / → ${frontend_code}"
+    log_err "Frontend smoke failed: GET ${base_url}/ → ${frontend_code}"
     return 1
   fi
   log_ok "smoke: API=${api_code} frontend=${frontend_code}"

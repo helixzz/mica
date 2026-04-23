@@ -31,6 +31,9 @@ saml/**/*.key
 deploy/**/certs/
 !deploy/**/certs/.gitkeep
 
+deploy/nginx/conf.d/mica.conf
+deploy/nginx/conf.d/mica.conf.bak
+
 # 应用运行时密钥文件
 secrets/
 .secrets/

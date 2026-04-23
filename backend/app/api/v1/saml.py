@@ -9,12 +9,13 @@ from fastapi.responses import RedirectResponse, Response
 from onelogin.saml2.auth import OneLogin_Saml2_Auth
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.core.security import create_access_token
+from app.core.security import CurrentUser, create_access_token
 from app.db import get_db
 from app.i18n import detect_locale, t
 from app.models import AuditLog
 from app.services.saml_config import build_onelogin_settings, get_saml_config
 from app.services.saml_jit import upsert_saml_user
+from app.services.saml_metadata_refresh import refresh_idp_metadata
 from app.services.system_params import system_params
 
 logger = logging.getLogger(__name__)
@@ -154,6 +155,17 @@ async def saml_acs(
     await db.commit()
     location = f"/sso-callback#token={quote(token)}&next={quote(next_path)}"
     return RedirectResponse(url=location, status_code=302)
+
+
+@router.post("/saml/refresh-metadata", tags=["saml"])
+async def saml_refresh_metadata(
+    user: CurrentUser,
+    db: Annotated[AsyncSession, Depends(get_db)],
+):
+    if user.role != "admin":
+        raise HTTPException(403, "admin_only")
+    result = await refresh_idp_metadata(session=db, updated_by_id=str(user.id))
+    return result
 
 
 def _build_onelogin_request(request: Request, form_data=None) -> dict[str, object]:

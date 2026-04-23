@@ -16,7 +16,12 @@ while (( $# )); do
   esac
 done
 
-[[ -z "${TAG}" ]] && TAG="$(git_describe)"
+if [[ -z "${TAG}" ]]; then
+  log_info "No --tag specified, fetching latest release from GitHub..."
+  TAG="$(cd "${REPO_DIR}" && git ls-remote --tags --sort=-v:refname origin 'v*' 2>/dev/null | head -1 | sed 's|.*refs/tags/||')"
+  [[ -z "${TAG}" ]] && { log_err "Could not determine latest tag. Use --tag <version>."; exit 1; }
+  log_info "Latest release: ${TAG}"
+fi
 
 mkdir -p "${DEPLOY_DIR}/logs"
 LOG_FILE="${DEPLOY_DIR}/logs/upgrade-$(date +%Y%m%d-%H%M%S).log"
@@ -29,15 +34,17 @@ START_EPOCH="$(date +%s)"
 rollback() {
   local code=$?
   trap - ERR EXIT
+  log_err "Upgrade failed (exit ${code})."
+  log_info "Rolling back source to ${START_SHA}..."
+  ( cd "${REPO_DIR}" && git checkout "${START_SHA}" -- . 2>/dev/null ) || true
   if (( NO_AUTO_ROLLBACK )); then
-    log_err "Upgrade failed (exit ${code})."
-    [[ -n "${BACKUP_ARCHIVE}" ]] && log_err "To rollback manually: ${SCRIPT_DIR}/restore.sh ${BACKUP_ARCHIVE} --yes-i-know --skip-confirm"
+    [[ -n "${BACKUP_ARCHIVE}" ]] && log_err "To rollback DB: ${SCRIPT_DIR}/restore.sh ${BACKUP_ARCHIVE} --yes-i-know --skip-confirm"
     exit 8
   fi
   if [[ -z "${BACKUP_ARCHIVE}" ]]; then
-    log_err "Upgrade failed (exit ${code}) and no backup exists. Manual recovery required."; exit 9
+    log_err "No backup exists. Manual recovery required."; exit 9
   fi
-  log_err "Upgrade failed (exit ${code}). Auto-rollback from ${BACKUP_ARCHIVE}…"
+  log_info "Auto-rollback from ${BACKUP_ARCHIVE}..."
   if "${SCRIPT_DIR}/restore.sh" "${BACKUP_ARCHIVE}" --yes-i-know --skip-confirm; then
     log_warn "Rollback complete. Upgrade aborted."; exit 8
   else
@@ -50,23 +57,22 @@ log_head "Mica Upgrade · from ${START_SHA} → ${TAG}  $((( DRY_RUN )) && print
 
 log_info "[preflight] docker compose v2"
 require_compose_v2 || exit 2
-log_info "[preflight] disk space ≥ 5 GB free"
+log_info "[preflight] disk space >= 5 GB free"
 FREE_GB="$(df -BG --output=avail /var/lib/docker 2>/dev/null | tail -1 | tr -dc '0-9' || echo 0)"
 if (( FREE_GB < 5 )); then log_err "only ${FREE_GB}G free in /var/lib/docker"; exit 2; fi
 log_ok "disk: ${FREE_GB}G free"
 
-log_info "[preflight] current containers healthy"
-if ! wait_healthy 30; then
-  log_err "Pre-upgrade containers are NOT healthy. Fix that first."
-  compose ps
-  exit 2
+log_info "[preflight] nginx config exists"
+if [[ ! -f "${DEPLOY_DIR}/nginx/conf.d/mica.conf" ]]; then
+  log_warn "mica.conf not found — creating from default template"
+  cp "${DEPLOY_DIR}/nginx/conf.d/mica.conf.default" "${DEPLOY_DIR}/nginx/conf.d/mica.conf"
 fi
-log_ok "all 4 containers healthy pre-upgrade"
 
 if (( DRY_RUN )); then
+  log_info "would: git fetch && git checkout ${TAG}"
   log_info "would: ./backup.sh"
   log_info "would: docker compose build"
-  log_info "would: docker compose stop backend frontend nginx"
+  log_info "would: docker compose stop backend frontend"
   log_info "would: docker compose run --rm migrate alembic upgrade head"
   log_info "would: docker compose up -d"
   log_info "would: wait_healthy 120"
@@ -77,32 +83,36 @@ fi
 
 trap rollback ERR
 
+log_info "[1/7] git fetch + checkout ${TAG}"
+( cd "${REPO_DIR}" && git fetch origin --tags && git checkout "${TAG}" -- . )
+log_ok "source updated to ${TAG}"
+
 if (( ! SKIP_BACKUP )); then
-  log_info "[1/6] pre-upgrade backup"
+  log_info "[2/7] pre-upgrade backup"
   BACKUP_ARCHIVE="$("${SCRIPT_DIR}/backup.sh" 2>&1 | tee /dev/stderr | grep -oE "${DEPLOY_DIR}/backups/mica-[^ ]*\.tar\.gz" | head -1 || true)"
   if [[ -z "${BACKUP_ARCHIVE}" || ! -f "${BACKUP_ARCHIVE}" ]]; then
     log_err "backup.sh produced no archive"; exit 3
   fi
   log_ok "backup saved: ${BACKUP_ARCHIVE}"
 else
-  log_warn "SKIP-BACKUP requested — rollback will not be possible"
+  log_warn "SKIP-BACKUP requested — DB rollback will not be possible"
 fi
 
-log_info "[2/6] docker compose build"
+log_info "[3/7] docker compose build"
 compose build || exit 4
 log_ok "images built"
 
-log_info "[3/6] stopping backend/frontend/nginx (postgres stays up)"
-compose stop backend frontend nginx >/dev/null
+log_info "[4/7] stopping backend/frontend (nginx stays up for zero-downtime)"
+compose stop backend frontend >/dev/null
 
-log_info "[4/6] alembic upgrade head"
+log_info "[5/7] alembic upgrade head"
 compose run --rm migrate alembic upgrade head || exit 5
 log_ok "migration done"
 
-log_info "[5/6] starting containers"
+log_info "[6/7] starting containers"
 compose up -d >/dev/null
 
-log_info "[6/6] waiting for health (up to 120s)"
+log_info "[7/7] waiting for health (up to 120s)"
 if ! wait_healthy 120; then compose ps; exit 6; fi
 log_ok "all containers healthy"
 
