@@ -7,6 +7,50 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [v0.9.6] — 2026-04-24
+
+### 新增
+
+- **合同 CRUD**：合同列表从只读升级为完整管理界面
+  - PO 详情页新增「创建合同」按钮（采购经理 / IT 采购员 / 管理员可见，在 PO 状态非 draft/cancelled 时可用）
+  - 合同列表每行支持 编辑 / 变更状态 / 删除 操作按钮（按角色授权显示）
+  - 合同详情页顶栏增加 编辑 / 变更状态 / 删除 按钮
+  - 状态变更覆盖合法转换：active → terminated / superseded / expired（状态不可回退到 active）
+  - 每次编辑/状态变更均写入 `contract_versions` 快照，`current_version` 自动递增
+  - 后端新增 `PATCH /contracts/{id}`、`PATCH /contracts/{id}/status`、`DELETE /contracts/{id}` 端点 + 角色守卫 + i18n 错误消息
+- **PO 级付款计划**：付款计划不再局限于合同，也可直接挂在 PO 上
+  - PO 详情页新增「付款计划」Tab，支持创建/执行/删除分期
+  - `payment_schedules` 表添加 `po_id` 列（migration 0018），`contract_id` 改为可空，加 CHECK 约束保证 XOR（contract OR po）
+  - 服务层重构：新增 `_resolve_parent` 抽象，同一套逻辑同时支持合同级和 PO 级计划
+  - REST API 新增 `GET/POST/PUT/DELETE /purchase-orders/{id}/payment-schedule[...]` 路由系列，合同路径保持向后兼容
+- **仪表盘「待付款项」图表**：采购经理 / 财务 / 管理员视图新增 6 个月付款预测条形图
+  - 并列显示计划金额（棕色）与已付金额（绿色），hover 显示月份明细
+  - 顶部汇总：总计划支出 / 已支出 / 待支出
+  - 使用内联 SVG 实现，不引入图表库依赖，bundle 增量 < 2KB
+
+### 修复
+
+- **PO 导出 PDF 字体渲染**：原版用 `STSong-Light` CID 字体（无粗体变体），reportlab 对 `<b>` 标签通过合成粗体（over-striking）产生可见文字重叠
+  - 后端镜像安装 `fonts-wqy-microhei`（文泉驿微米黑 TrueType，~6MB），注册为 `MicaCJK` 字体族
+  - 粗体角色映射到同一 Regular 字体，杜绝合成粗体重叠（已在服务层注释说明设计原因）
+  - 表头行改用 `Paragraph` 统一渲染（之前表头为纯字符串 + 表格级 FONTNAME，与单元格内 Paragraph 存在渲染差异）
+  - 所有用户输入（供应商名/物料名/规格）经 `html.escape` 处理，避免 `<`、`>`、`&` 破坏 Paragraph 的 XML 解析
+  - 若运行环境缺少 WenQuanYi（开发机），自动降级到 STSong-Light 并同样禁用合成粗体
+
+### 测试
+
+- 后端：payment_schedule 服务新增 3 条 PO 级测试（创建 / 合同和 PO 隔离 / 参数校验）
+- 后端：flow 服务新增 6 条合同 CRUD 测试（update / noop / rejected in terminal status / transition / invalid transition / delete）
+- 后端：export_pdf 新增 3 条测试（`_esc` HTML 转义、`_fmt_qty` 格式化、包含 XML 特殊字符的 PO 渲染）
+- 后端：273 → 279 tests，0 regressions（cerbos_client 测试 1 条失败为 main 上已存在，与本次改动无关）
+- 前端：type-check + build 通过，58 tests 绿灯
+
+### 数据库迁移
+
+- `0018_payment_schedules_po_or_contract.py`：`contract_id` 改为可空、新增 `po_id`、CHECK 约束、索引、外键
+
+---
+
 ## [v0.9.5] — 2026-04-23
 
 ### 破坏性变更
