@@ -819,6 +819,7 @@ function ClassificationTab() {
   const [categories, setCategories] = useState<any[]>([])
   const [expenseTypes, setExpenseTypes] = useState<any[]>([])
   const [adding, setAdding] = useState<string | null>(null)
+  const [editingItem, setEditingItem] = useState<any | null>(null)
   const [form] = Form.useForm()
 
   const load = () => {
@@ -847,6 +848,20 @@ function ClassificationTab() {
     }
   }
 
+  const handleUpdate = async () => {
+    if (!editingItem) return
+    try {
+      const values = form.getFieldsValue()
+      await api.updateCostCenter(editingItem.id, values)
+      void message.success(t('common.updated'))
+      form.resetFields()
+      setEditingItem(null)
+      load()
+    } catch (e: any) {
+      void message.error(e?.response?.data?.detail || t('error.save_failed'))
+    }
+  }
+
   const handleDelete = async (dimension: string, id: string) => {
     try {
       if (dimension === 'cost_center') await api.deleteCostCenter(id)
@@ -859,11 +874,38 @@ function ClassificationTab() {
     }
   }
 
+  const handleToggleActive = async (item: any) => {
+    try {
+      await api.updateCostCenter(item.id, {
+        code: item.code,
+        label_zh: item.label_zh,
+        label_en: item.label_en,
+        sort_order: item.sort_order,
+        is_active: !item.is_active,
+      })
+      void message.success(item.is_active ? t('admin.deactivated') : t('common.updated'))
+      load()
+    } catch (e: any) {
+      void message.error(e?.response?.data?.detail || t('admin.operation_failed'))
+    }
+  }
+
+  const openEdit = (item: any) => {
+    setEditingItem(item)
+    form.resetFields()
+    form.setFieldsValue({
+      code: item.code,
+      label_zh: item.label_zh,
+      label_en: item.label_en,
+      sort_order: item.sort_order,
+    })
+  }
+
   const renderList = (dimension: string, items: any[], title: string) => (
     <Card
       size="small"
       title={<Space><AppstoreOutlined />{title}</Space>}
-      extra={<Button size="small" icon={<PlusOutlined />} onClick={() => { setAdding(dimension); form.resetFields() }}>{t('common.add')}</Button>}
+      extra={<Button size="small" icon={<PlusOutlined />} onClick={() => { setAdding(dimension); setEditingItem(null); form.resetFields() }}>{t('common.add')}</Button>}
       style={{ marginBottom: 16 }}
     >
       <Table
@@ -876,11 +918,39 @@ function ClassificationTab() {
           { title: t('admin.label_zh'), dataIndex: 'label_zh' },
           { title: t('admin.label_en'), dataIndex: 'label_en' },
           { title: t('admin.sort_order'), dataIndex: 'sort_order', width: 60 },
+          ...(dimension === 'cost_center'
+            ? [
+                {
+                  title: t('admin.status_col'),
+                  dataIndex: 'is_active',
+                  width: 70,
+                  render: (v: boolean) => (
+                    <Tag color={v !== false ? 'success' : 'default'}>
+                      {v !== false ? t('common.enabled') : t('common.disabled')}
+                    </Tag>
+                  ),
+                },
+              ]
+            : []),
           {
-            title: '',
-            width: 60,
+            title: t('common.actions'),
+            width: dimension === 'cost_center' ? 180 : 60,
             render: (_: unknown, r: any) => (
-              <Button size="small" danger icon={<DeleteOutlined />} onClick={() => handleDelete(dimension, r.id)} />
+              <Space>
+                {dimension === 'cost_center' && (
+                  <>
+                    <Button size="small" onClick={() => openEdit(r)}>{t('button.edit')}</Button>
+                    <Button
+                      size="small"
+                      danger={r.is_active !== false}
+                      onClick={() => handleToggleActive(r)}
+                    >
+                      {r.is_active !== false ? t('common.disabled') : t('common.enabled')}
+                    </Button>
+                  </>
+                )}
+                <Button size="small" danger icon={<DeleteOutlined />} onClick={() => handleDelete(dimension, r.id)} />
+              </Space>
             ),
           },
         ]}
@@ -928,10 +998,12 @@ function ClassificationTab() {
       {renderList('expense_type', expenseTypes, t('admin.expense_type_title'))}
 
       <Modal
-        title={adding === 'cost_center' ? t('admin.add_cost_center') : adding === 'category' ? t('admin.add_category') : t('admin.add_expense_type')}
-        open={!!adding}
-        onCancel={() => setAdding(null)}
-        onOk={() => adding && handleAdd(adding)}
+        title={editingItem
+          ? t('admin.edit_cost_center')
+          : adding === 'cost_center' ? t('admin.add_cost_center') : adding === 'category' ? t('admin.add_category') : t('admin.add_expense_type')}
+        open={!!adding || !!editingItem}
+        onCancel={() => { setAdding(null); setEditingItem(null) }}
+        onOk={() => editingItem ? handleUpdate() : adding && handleAdd(adding)}
         okText={t('button.save')}
         cancelText={t('button.cancel')}
       >

@@ -973,6 +973,10 @@ export const api = {
     const { data } = await client.post<ClassificationItem>('/admin/cost-centers', body)
     return data
   },
+  async updateCostCenter(id: string, body: Record<string, unknown>): Promise<ClassificationItem> {
+    const { data } = await client.put<ClassificationItem>(`/admin/cost-centers/${id}`, body)
+    return data
+  },
   async deleteCostCenter(id: string): Promise<void> {
     await client.delete(`/admin/cost-centers/${id}`)
   },
