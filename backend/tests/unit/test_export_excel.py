@@ -97,9 +97,7 @@ async def _create_payment(
 
 def _payment_numbers(ws) -> list[str]:
     return [
-        ws[f"A{row_idx}"].value
-        for row_idx in range(2, ws.max_row + 1)
-        if ws[f"A{row_idx}"].value
+        ws[f"A{row_idx}"].value for row_idx in range(2, ws.max_row + 1) if ws[f"A{row_idx}"].value
     ]
 
 
@@ -162,7 +160,9 @@ async def test_render_payments_xlsx_returns_workbook_with_payment_rows(seeded_db
 async def test_render_payments_xlsx_filters_by_po_id_and_status(seeded_db_session):
     actor = await _user(seeded_db_session)
     supplier = await _supplier(seeded_db_session)
-    target_po = await _create_po(seeded_db_session, actor=actor, supplier=supplier, title="Target PO")
+    target_po = await _create_po(
+        seeded_db_session, actor=actor, supplier=supplier, title="Target PO"
+    )
     other_po = await _create_po(seeded_db_session, actor=actor, supplier=supplier, title="Other PO")
     await _create_payment(
         seeded_db_session,

@@ -60,13 +60,17 @@ async def _enable_saml(db) -> None:
         "auth.saml.idp.sso_url",
         "https://adfs.example.com/adfs/ls/",
     )
-    await _set_param(db, "auth.saml.idp.x509_cert", "-----BEGIN CERTIFICATE-----ABC-----END CERTIFICATE-----")
+    await _set_param(
+        db, "auth.saml.idp.x509_cert", "-----BEGIN CERTIFICATE-----ABC-----END CERTIFICATE-----"
+    )
 
 
 async def test_get_saml_config_builds_runtime_defaults(seeded_db_session):
     await _enable_saml(seeded_db_session)
 
-    config = await get_saml_config(seeded_db_session, cast(Request, cast(object, _FakeRequest())), "en-US")
+    config = await get_saml_config(
+        seeded_db_session, cast(Request, cast(object, _FakeRequest())), "en-US"
+    )
 
     assert config.enabled is True
     assert config.sp_entity_id == "http://testserver/api/v1/saml/metadata"
@@ -80,7 +84,9 @@ async def test_get_saml_config_rejects_invalid_group_mapping_json(seeded_db_sess
     await _set_param(seeded_db_session, "auth.saml.group_mapping", "not-json")
 
     with pytest.raises(HTTPException) as exc:
-        await get_saml_config(seeded_db_session, cast(Request, cast(object, _FakeRequest())), "en-US")
+        await get_saml_config(
+            seeded_db_session, cast(Request, cast(object, _FakeRequest())), "en-US"
+        )
 
     assert exc.value.status_code == 500
     assert exc.value.detail == "Configured SAML group mapping is invalid"
@@ -88,7 +94,9 @@ async def test_get_saml_config_rejects_invalid_group_mapping_json(seeded_db_sess
 
 async def test_upsert_saml_user_creates_new_user_with_default_role(seeded_db_session):
     await _enable_saml(seeded_db_session)
-    config = await get_saml_config(seeded_db_session, cast(Request, cast(object, _FakeRequest())), "en-US")
+    config = await get_saml_config(
+        seeded_db_session, cast(Request, cast(object, _FakeRequest())), "en-US"
+    )
 
     user = await upsert_saml_user(
         seeded_db_session,
@@ -125,7 +133,9 @@ async def test_upsert_saml_user_creates_new_user_with_default_role(seeded_db_ses
 
 async def test_upsert_saml_user_is_idempotent_for_same_external_id(seeded_db_session):
     await _enable_saml(seeded_db_session)
-    config = await get_saml_config(seeded_db_session, cast(Request, cast(object, _FakeRequest())), "en-US")
+    config = await get_saml_config(
+        seeded_db_session, cast(Request, cast(object, _FakeRequest())), "en-US"
+    )
     first = await upsert_saml_user(
         seeded_db_session,
         config=config,
@@ -144,7 +154,9 @@ async def test_upsert_saml_user_is_idempotent_for_same_external_id(seeded_db_ses
     )
 
     users = list(
-        (await seeded_db_session.execute(select(User).where(User.email == "repeat@example.com"))).scalars()
+        (
+            await seeded_db_session.execute(select(User).where(User.email == "repeat@example.com"))
+        ).scalars()
     )
     assert len(users) == 1
     assert first.id == second.id
@@ -155,7 +167,9 @@ async def test_upsert_saml_user_is_idempotent_for_same_external_id(seeded_db_ses
 
 async def test_upsert_saml_user_links_existing_local_user_by_email(seeded_db_session):
     await _enable_saml(seeded_db_session)
-    config = await get_saml_config(seeded_db_session, cast(Request, cast(object, _FakeRequest())), "en-US")
+    config = await get_saml_config(
+        seeded_db_session, cast(Request, cast(object, _FakeRequest())), "en-US"
+    )
     alice = await _get_user(seeded_db_session, "alice")
     original_password_hash = alice.password_hash
 
@@ -172,10 +186,16 @@ async def test_upsert_saml_user_links_existing_local_user_by_email(seeded_db_ses
 
     refreshed = await _get_user(seeded_db_session, "alice")
     linked_audit = (
-        await seeded_db_session.execute(
-            select(AuditLog).where(AuditLog.resource_id == str(alice.id), AuditLog.event_type == "auth.sso.linked")
+        (
+            await seeded_db_session.execute(
+                select(AuditLog).where(
+                    AuditLog.resource_id == str(alice.id), AuditLog.event_type == "auth.sso.linked"
+                )
+            )
         )
-    ).scalars().first()
+        .scalars()
+        .first()
+    )
 
     assert user.id == alice.id
     assert refreshed.password_hash == original_password_hash
@@ -194,12 +214,18 @@ async def test_upsert_saml_user_applies_first_matching_group_mapping(seeded_db_s
         "auth.saml.group_mapping",
         json.dumps(
             [
-                {"group": "Finance", "role": UserRole.FINANCE_AUDITOR.value, "department_code": "FIN"},
+                {
+                    "group": "Finance",
+                    "role": UserRole.FINANCE_AUDITOR.value,
+                    "department_code": "FIN",
+                },
                 {"group": "IT", "role": UserRole.DEPT_MANAGER.value, "department_code": "IT"},
             ]
         ),
     )
-    config = await get_saml_config(seeded_db_session, cast(Request, cast(object, _FakeRequest())), "en-US")
+    config = await get_saml_config(
+        seeded_db_session, cast(Request, cast(object, _FakeRequest())), "en-US"
+    )
 
     user = await upsert_saml_user(
         seeded_db_session,
@@ -225,7 +251,9 @@ async def test_upsert_saml_user_falls_back_when_group_mapping_has_no_match(seede
         "auth.saml.group_mapping",
         json.dumps([{"group": "Finance", "role": UserRole.FINANCE_AUDITOR.value}]),
     )
-    config = await get_saml_config(seeded_db_session, cast(Request, cast(object, _FakeRequest())), "en-US")
+    config = await get_saml_config(
+        seeded_db_session, cast(Request, cast(object, _FakeRequest())), "en-US"
+    )
 
     user = await upsert_saml_user(
         seeded_db_session,
@@ -244,7 +272,9 @@ async def test_upsert_saml_user_falls_back_when_group_mapping_has_no_match(seede
 async def test_upsert_saml_user_rejects_when_jit_disabled_and_user_missing(seeded_db_session):
     await _enable_saml(seeded_db_session)
     await _set_param(seeded_db_session, "auth.saml.jit.enabled", False)
-    config = await get_saml_config(seeded_db_session, cast(Request, cast(object, _FakeRequest())), "en-US")
+    config = await get_saml_config(
+        seeded_db_session, cast(Request, cast(object, _FakeRequest())), "en-US"
+    )
 
     with pytest.raises(HTTPException) as exc:
         await upsert_saml_user(
@@ -261,7 +291,9 @@ async def test_upsert_saml_user_rejects_when_jit_disabled_and_user_missing(seede
 
 async def test_upsert_saml_user_rejects_missing_email(seeded_db_session):
     await _enable_saml(seeded_db_session)
-    config = await get_saml_config(seeded_db_session, cast(Request, cast(object, _FakeRequest())), "en-US")
+    config = await get_saml_config(
+        seeded_db_session, cast(Request, cast(object, _FakeRequest())), "en-US"
+    )
 
     with pytest.raises(HTTPException) as exc:
         await upsert_saml_user(

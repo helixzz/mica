@@ -43,7 +43,9 @@ async def _create_rfq(
     _patch_next_number(monkeypatch)
     data = {
         "title": title,
-        "items": items if items is not None else [{"item_name": "Test Item", "qty": 10, "uom": "EA"}],
+        "items": items
+        if items is not None
+        else [{"item_name": "Test Item", "qty": 10, "uom": "EA"}],
         "supplier_ids": supplier_ids if supplier_ids is not None else [],
     }
     return await rfq_svc.create_rfq(db, user, data)
@@ -160,7 +162,9 @@ async def test_send_rfq_without_suppliers_raises_422(seeded_db_session, monkeypa
     assert exc.value.detail == "rfq.no_suppliers"
 
 
-async def test_add_quote_success_updates_status_from_sent_to_quoting(seeded_db_session, monkeypatch):
+async def test_add_quote_success_updates_status_from_sent_to_quoting(
+    seeded_db_session, monkeypatch
+):
     alice = await _get_alice(seeded_db_session)
     supplier = (await seeded_db_session.execute(select(Supplier))).scalars().first()
     rfq = await _create_sent_rfq(seeded_db_session, monkeypatch, alice, [str(supplier.id)])
@@ -181,9 +185,7 @@ async def test_add_quote_success_updates_status_from_sent_to_quoting(seeded_db_s
     )
     updated = await rfq_svc.get_rfq(seeded_db_session, rfq_id)
     stored_quotes = list(
-        (
-            await seeded_db_session.execute(select(RFQQuote).where(RFQQuote.rfq_id == rfq_id))
-        )
+        (await seeded_db_session.execute(select(RFQQuote).where(RFQQuote.rfq_id == rfq_id)))
         .scalars()
         .all()
     )
@@ -228,9 +230,7 @@ async def test_add_quote_to_existing_quoting_rfq_succeeds(seeded_db_session, mon
     )
     updated = await rfq_svc.get_rfq(seeded_db_session, rfq_id)
     stored_quotes = list(
-        (
-            await seeded_db_session.execute(select(RFQQuote).where(RFQQuote.rfq_id == rfq_id))
-        )
+        (await seeded_db_session.execute(select(RFQQuote).where(RFQQuote.rfq_id == rfq_id)))
         .scalars()
         .all()
     )

@@ -226,7 +226,8 @@ class ItemOut(BaseModel):
     uom: str
     specification: str | None = None
     requires_serial: bool = False
-    is_active: bool
+    is_enabled: bool
+    is_deleted: bool
     created_at: datetime
     updated_at: datetime
 

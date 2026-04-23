@@ -6,7 +6,18 @@ from uuid import uuid4
 
 from sqlalchemy import select
 
-from app.models import Contract, ContractDocument, ContractStatus, ContractVersion, Document, POStatus, PurchaseOrder, PurchaseRequisition, Supplier, User
+from app.models import (
+    Contract,
+    ContractDocument,
+    ContractStatus,
+    ContractVersion,
+    Document,
+    POStatus,
+    PurchaseOrder,
+    PurchaseRequisition,
+    Supplier,
+    User,
+)
 from app.services import contracts as svc
 
 
@@ -216,7 +227,9 @@ async def test_search_contracts_non_matching_query_returns_empty(seeded_db_sessi
     assert await svc.search_contracts(seeded_db_session, "nonexistent phrase") == []
 
 
-async def test_search_contracts_matching_query_returns_title_number_and_ocr_matches(seeded_db_session):
+async def test_search_contracts_matching_query_returns_title_number_and_ocr_matches(
+    seeded_db_session,
+):
     actor = await _user(seeded_db_session)
     supplier = await _supplier(seeded_db_session)
     contract = await _create_contract(
@@ -301,22 +314,24 @@ async def test_list_contract_versions_returns_descending_history(seeded_db_sessi
         title="Versioned Contract",
         expiry_date=date.today() + timedelta(days=30),
     )
-    seeded_db_session.add_all([
-        ContractVersion(
-            contract_id=contract.id,
-            version_number=1,
-            change_type="created",
-            snapshot_json={"title": "Versioned Contract", "current_version": 1},
-            changed_by_id=actor.id,
-        ),
-        ContractVersion(
-            contract_id=contract.id,
-            version_number=2,
-            change_type="updated",
-            snapshot_json={"title": "Versioned Contract v2", "current_version": 2},
-            changed_by_id=actor.id,
-        ),
-    ])
+    seeded_db_session.add_all(
+        [
+            ContractVersion(
+                contract_id=contract.id,
+                version_number=1,
+                change_type="created",
+                snapshot_json={"title": "Versioned Contract", "current_version": 1},
+                changed_by_id=actor.id,
+            ),
+            ContractVersion(
+                contract_id=contract.id,
+                version_number=2,
+                change_type="updated",
+                snapshot_json={"title": "Versioned Contract v2", "current_version": 2},
+                changed_by_id=actor.id,
+            ),
+        ]
+    )
     await seeded_db_session.flush()
 
     rows = await svc.list_contract_versions(seeded_db_session, contract.id)
