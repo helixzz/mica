@@ -69,6 +69,7 @@ class CompanyUpdate(BaseModel):
     name_en: str | None = Field(default=None, max_length=255)
     default_locale: str | None = Field(default=None, min_length=2, max_length=10)
     default_currency: str | None = Field(default=None, min_length=3, max_length=3)
+    is_active: bool | None = None
 
     @field_validator("code")
     @classmethod

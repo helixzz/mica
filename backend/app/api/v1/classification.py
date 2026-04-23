@@ -30,6 +30,7 @@ class CostCenterIn(BaseModel):
     label_zh: str
     label_en: str
     sort_order: int = 0
+    is_active: bool | None = None
 
 
 class ProcurementCategoryOut(BaseModel):
