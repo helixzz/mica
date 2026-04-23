@@ -42,7 +42,7 @@ export function ContractsPage() {
     { title: t('field.status'), dataIndex: 'status',
       filters: [{text:'active',value:'active'},{text:'superseded',value:'superseded'},{text:'terminated',value:'terminated'},{text:'expired',value:'expired'}],
       onFilter: (value: any, record: any) => record.status === value, render: (s) => <Tag>{t(`status.${s}` as 'status.active')}</Tag> },
-    { title: t('field.total_amount'), align: 'right', render: (_, r) => `${r.currency} ${r.total_amount}` },
+    { title: t('field.total_amount'), align: 'right', render: (_, r) => fmtAmount(r.total_amount, r.currency) },
     { title: t('field.signed_date'), dataIndex: 'signed_date' },
     { title: t('field.expiry_date'), dataIndex: 'expiry_date' },
   ]
@@ -100,7 +100,7 @@ export function ContractsPage() {
               },
               { title: t('field.title'), dataIndex: 'title' },
               { title: t('field.expiry_date'), dataIndex: 'expiry_date' },
-              { title: t('field.amount'), render: (_, r) => `${r.currency} ${r.total_amount}`, align: 'right' },
+               { title: t('field.amount'), render: (_, r) => fmtAmount(r.total_amount, r.currency), align: 'right' },
             ]}
           />
         </Card>

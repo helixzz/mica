@@ -17,6 +17,7 @@ import { useNavigate, useParams } from 'react-router-dom'
 
 import { api, type Invoice } from '@/api'
 import { extractError } from '@/api/client'
+import { fmtAmount } from '@/utils/format'
 
 export function InvoiceDetailPage() {
   const { t } = useTranslation()
@@ -82,14 +83,14 @@ export function InvoiceDetailPage() {
           <Descriptions.Item label={t('field.due_date')}>{inv.due_date || '-'}</Descriptions.Item>
           <Descriptions.Item label={t('field.tax_number')}>{inv.tax_number || '-'}</Descriptions.Item>
           <Descriptions.Item label={t('field.subtotal')}>
-            {inv.currency} {inv.subtotal}
+            {fmtAmount(inv.subtotal, inv.currency)}
           </Descriptions.Item>
           <Descriptions.Item label={t('field.tax_amount')}>
-            {inv.currency} {inv.tax_amount}
+            {fmtAmount(inv.tax_amount, inv.currency)}
           </Descriptions.Item>
           <Descriptions.Item label={t('field.total_amount')}>
             <strong>
-              {inv.currency} {inv.total_amount}
+              {fmtAmount(inv.total_amount, inv.currency)}
             </strong>
           </Descriptions.Item>
           {inv.notes && (
@@ -145,9 +146,9 @@ export function InvoiceDetailPage() {
             },
             { title: t('field.item_name'), dataIndex: 'item_name' },
             { title: t('field.qty'), dataIndex: 'qty', align: 'right', width: 80 },
-            { title: t('field.unit_price'), dataIndex: 'unit_price', align: 'right', width: 110 },
-            { title: t('field.subtotal'), dataIndex: 'subtotal', align: 'right', width: 110 },
-            { title: t('field.tax_amount'), dataIndex: 'tax_amount', align: 'right', width: 100 },
+            { title: t('field.unit_price'), dataIndex: 'unit_price', align: 'right', width: 110, render: (v: string) => fmtAmount(v) },
+            { title: t('field.subtotal'), dataIndex: 'subtotal', align: 'right', width: 110, render: (v: string) => fmtAmount(v) },
+            { title: t('field.tax_amount'), dataIndex: 'tax_amount', align: 'right', width: 100, render: (v: string) => fmtAmount(v) },
             {
               title: 'PO Item',
               dataIndex: 'po_item_id',
