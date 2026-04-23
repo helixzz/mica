@@ -598,8 +598,8 @@ export const api = {
     const { data } = await client.get<User>('/auth/me')
     return data
   },
-  async companies(includeInactive = false): Promise<Company[]> {
-    const { data } = await client.get<Company[]>('/companies', { params: includeInactive ? { include_inactive: true } : {} })
+  async companies(includeDisabled = false): Promise<Company[]> {
+    const { data } = await client.get<Company[]>('/companies', { params: includeDisabled ? { include_disabled: true } : {} })
     return data
   },
   async createCompany(body: { code: string; name_zh: string; name_en?: string; default_currency?: string }): Promise<Company> {
@@ -609,6 +609,16 @@ export const api = {
   async updateCompany(id: string, body: { name_zh?: string; name_en?: string; default_currency?: string; is_enabled?: boolean }): Promise<Company> {
     const { data } = await client.patch<Company>(`/companies/${id}`, body)
     return data
+  },
+  async deleteCompany(id: string): Promise<void> {
+    await client.delete(`/companies/${id}`)
+  },
+  async listRecycleBin(): Promise<{ entity_type: string; entity_id: string; code: string; label: string; deleted_at: string | null }[]> {
+    const { data } = await client.get('/admin/recycle-bin')
+    return data
+  },
+  async restoreFromRecycleBin(entityType: string, entityId: string): Promise<void> {
+    await client.post(`/admin/recycle-bin/${entityType}/${entityId}/restore`)
   },
   async departments(): Promise<Department[]> {
     const { data } = await client.get<Department[]>('/departments')
@@ -957,8 +967,8 @@ export const api = {
     })
     return data
   },
-  async listCostCenters(includeInactive = false): Promise<ClassificationItem[]> {
-    const { data } = await client.get<ClassificationItem[]>('/cost-centers', { params: includeInactive ? { active: false } : {} })
+  async listCostCenters(includeDisabled = false): Promise<ClassificationItem[]> {
+    const { data } = await client.get<ClassificationItem[]>('/cost-centers', { params: includeDisabled ? { enabled_only: false } : {} })
     return data
   },
   async listProcurementCategories(): Promise<ClassificationItem[]> {
