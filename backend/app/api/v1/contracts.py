@@ -47,7 +47,9 @@ async def list_attachments(
     return [svc.to_dict(cd, d) for cd, d in pairs]
 
 
-@router.get("/contracts/{contract_id}/versions", response_model=list[ContractVersionOut], tags=["contracts"])
+@router.get(
+    "/contracts/{contract_id}/versions", response_model=list[ContractVersionOut], tags=["contracts"]
+)
 async def list_versions(
     contract_id: UUID,
     user: CurrentUser,
