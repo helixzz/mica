@@ -1,4 +1,9 @@
-import { DownloadOutlined, PlusOutlined, UploadOutlined } from '@ant-design/icons'
+import {
+  DownloadOutlined,
+  FileTextOutlined,
+  PlusOutlined,
+  UploadOutlined,
+} from '@ant-design/icons'
 import {
   Button,
   Card,
@@ -28,6 +33,7 @@ import { useNavigate, useParams } from 'react-router-dom'
 
 import {
   api,
+  type Contract,
   type InvoiceListRow,
   type PaymentRecord,
   type POProgress,
@@ -36,6 +42,9 @@ import {
 } from '@/api'
 import { extractError } from '@/api/client'
 import { getToken } from '@/api/client'
+import { useAuth } from '@/auth/useAuth'
+import { ContractFormModal } from '@/components/ContractFormModal'
+import { PaymentScheduleTab } from '@/components/PaymentScheduleTab'
 import { fmtAmount, fmtQty } from '@/utils/format'
 
 function statusTag(s: string): string {
@@ -46,32 +55,41 @@ export function PODetailPage() {
   const { t } = useTranslation()
   const { id } = useParams<{ id: string }>()
   const navigate = useNavigate()
+  const user = useAuth((s) => s.user)
 
   const [po, setPo] = useState<PurchaseOrder | null>(null)
   const [progress, setProgress] = useState<POProgress | null>(null)
   const [shipments, setShipments] = useState<Shipment[]>([])
   const [payments, setPayments] = useState<PaymentRecord[]>([])
   const [invoices, setInvoices] = useState<InvoiceListRow[]>([])
+  const [contracts, setContracts] = useState<Contract[]>([])
 
   const [shipmentOpen, setShipmentOpen] = useState(false)
   const [paymentOpen, setPaymentOpen] = useState(false)
   const [invoiceOpen, setInvoiceOpen] = useState(false)
+  const [contractOpen, setContractOpen] = useState(false)
   const [busy, setBusy] = useState(false)
+
+  const canCreateContract = Boolean(
+    user && ['admin', 'procurement_mgr', 'it_buyer'].includes(user.role),
+  )
 
   const loadAll = async () => {
     if (!id) return
-    const [po0, pr0, sh, pay, inv] = await Promise.all([
+    const [po0, pr0, sh, pay, inv, ct] = await Promise.all([
       api.getPO(id),
       api.getPOProgress(id).catch(() => null),
       api.listShipments(id).catch(() => []),
       api.listPayments(id).catch(() => []),
       api.listInvoices(id).catch(() => []),
+      api.listContracts(id).catch(() => [] as Contract[]),
     ])
     setPo(po0)
     setProgress(pr0)
     setShipments(sh)
     setPayments(pay)
     setInvoices(inv)
+    setContracts(ct)
   }
 
   useEffect(() => {
@@ -90,6 +108,19 @@ export function PODetailPage() {
           <Tag color="success">{t(`status.${statusTag(po.status)}` as 'status.confirmed')}</Tag>
         </Space>
         <Space>
+          {canCreateContract && (
+            <Button
+              type="primary"
+              icon={<FileTextOutlined />}
+              className="no-print"
+              onClick={() => setContractOpen(true)}
+              disabled={po.status === 'draft' || po.status === 'cancelled'}
+            >
+              {contracts.length > 0
+                ? t('contract.add_another')
+                : t('contract.create_btn')}
+            </Button>
+          )}
           <Button
             icon={<DownloadOutlined />}
             className="no-print"
@@ -289,6 +320,19 @@ export function PODetailPage() {
               </>
             ),
           },
+          {
+            key: 'payment-plan',
+            label: t('contract.payment_schedule'),
+            children: (
+              <PaymentScheduleTab
+                poId={po.id}
+                currency={po.currency}
+                canWrite={Boolean(
+                  user && ['admin', 'procurement_mgr', 'finance_auditor'].includes(user.role),
+                )}
+              />
+            ),
+          },
         ]}
       />
 
@@ -315,6 +359,17 @@ export function PODetailPage() {
         onDone={() => { setInvoiceOpen(false); void loadAll() }}
         busy={busy}
         setBusy={setBusy}
+      />
+      <ContractFormModal
+        open={contractOpen}
+        mode="create"
+        poId={po.id}
+        onClose={() => setContractOpen(false)}
+        onSaved={(saved) => {
+          setContractOpen(false)
+          void loadAll()
+          navigate(`/contracts/${saved.id}`)
+        }}
       />
     </Space>
   )

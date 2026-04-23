@@ -266,6 +266,13 @@
     "expiring_contracts": "即将到期合同",
     "price_anomalies": "价格异常",
     "anomaly_item": "物料 {{id}}",
+    "payment_forecast": "待付款项（按月）",
+    "payment_forecast_empty": "暂无待付款项数据",
+    "grand_planned": "未来计划支出",
+    "grand_paid": "已支出",
+    "grand_remaining": "待支出",
+    "planned_amount": "计划金额",
+    "paid_amount": "已支出",
     "quick_actions": "快捷操作",
     "new_pr": "新建采购申请",
     "view_all_pos": "查看所有采购订单",
@@ -648,7 +655,8 @@
     "select_expense_type": "请选择开支类型",
     "at_least_one_item": "请至少添加一个物料",
     "at_least_one_supplier": "请至少选择一个供应商",
-    "at_least_one_line": "请至少添加一行明细"
+    "at_least_one_line": "请至少添加一行明细",
+    "required": "此项为必填"
   },
   "ai": {
     "unavailable_tooltip": "AI 功能需要管理员配置模型后方可使用"
@@ -815,7 +823,24 @@
     "no_versions_hint": "暂无版本记录。",
     "version_col": "版本",
     "change_type_col": "变更类型",
-    "change_reason_col": "变更原因"
+    "change_reason_col": "变更原因",
+    "create_btn": "创建合同",
+    "add_another": "再建合同",
+    "create_title": "创建合同",
+    "edit_title": "编辑合同",
+    "created_ok": "合同已创建",
+    "updated_ok": "合同已更新",
+    "change_reason": "变更原因",
+    "change_reason_placeholder": "用一句话说明本次修改（将写入版本历史）",
+    "confirm_delete_title": "删除合同 {{number}}？",
+    "confirm_delete_body": "合同及其所有版本记录、付款计划（未产生实际付款）将被永久删除，该操作不可撤销。",
+    "change_status": "变更状态",
+    "transition_to_terminated": "终止合同",
+    "transition_to_superseded": "标记为已替代",
+    "transition_to_expired": "标记为已过期",
+    "confirm_status_title": "变更状态为「{{status}}」？",
+    "confirm_status_body": "该变更将写入合同版本历史，且变更后合同不可再编辑。",
+    "status_changed_ok": "合同状态已更新"
   },
   "common": {
     "total_count": "共 {{count}} 条",

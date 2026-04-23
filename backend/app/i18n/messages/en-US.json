@@ -58,6 +58,9 @@
     }
   },
   "contract.not_found": "Contract not found",
+  "contract.not_editable_in_status": "Contract cannot be edited in its current status",
+  "contract.invalid_status_transition": "Invalid contract status transition",
+  "contract.cannot_delete_with_paid_schedule": "Contract has paid payment records and cannot be deleted",
   "schedule_item.not_found": "Payment schedule item not found",
   "schedule_item.cannot_delete_paid": "Cannot delete a paid schedule item",
   "schedule_item.already_paid": "This installment has already been paid",

@@ -3,8 +3,10 @@ import {
   ClockCircleOutlined,
   DeleteOutlined,
   DownloadOutlined,
+  EditOutlined,
   PlusOutlined,
   SendOutlined,
+  StopOutlined,
   UploadOutlined,
 } from '@ant-design/icons'
 import {
@@ -12,12 +14,13 @@ import {
   Button,
   Card,
   Col,
+  DatePicker,
   Descriptions,
   Drawer,
+  Dropdown,
   Form,
   Input,
   InputNumber,
-  DatePicker,
   Modal,
   Row,
   Select,
@@ -45,6 +48,8 @@ import {
   type PaymentScheduleSummary,
 } from '@/api'
 import { extractError } from '@/api/client'
+import { useAuth } from '@/auth/useAuth'
+import { ContractFormModal } from '@/components/ContractFormModal'
 import { fmtAmount } from '@/utils/format'
 
 function StatusTag({ status }: { status: string }) {
@@ -62,6 +67,7 @@ export function ContractDetailPage() {
   const { t } = useTranslation()
   const { id } = useParams<{ id: string }>()
   const navigate = useNavigate()
+  const user = useAuth((s) => s.user)
   const [contract, setContract] = useState<Contract | null>(null)
   const [attachments, setAttachments] = useState<ContractAttachment[]>([])
   const [uploading, setUploading] = useState(false)
@@ -69,7 +75,16 @@ export function ContractDetailPage() {
   const [scheduleLoading, setScheduleLoading] = useState(false)
   const [versions, setVersions] = useState<ContractVersion[]>([])
   const [drawerOpen, setDrawerOpen] = useState(false)
+  const [editOpen, setEditOpen] = useState(false)
   const [form] = Form.useForm()
+
+  const canWrite = Boolean(
+    user && ['admin', 'procurement_mgr', 'it_buyer'].includes(user.role),
+  )
+  const canDelete = Boolean(user && user.role === 'admin')
+  const canTransition = Boolean(
+    user && ['admin', 'procurement_mgr'].includes(user.role),
+  )
 
   const load = useCallback(async () => {
     if (!id) return
@@ -191,6 +206,45 @@ export function ContractDetailPage() {
           await api.deleteScheduleItem(id, item.installment_no)
           void message.success(t('message.deleted'))
           void loadSchedule()
+        } catch (e) {
+          void message.error(extractError(e).detail)
+        }
+      },
+    })
+  }
+
+  const handleDeleteContract = () => {
+    if (!contract) return
+    Modal.confirm({
+      title: t('contract.confirm_delete_title', { number: contract.contract_number }),
+      content: t('contract.confirm_delete_body'),
+      okText: t('button.delete'),
+      okType: 'danger',
+      cancelText: t('button.cancel'),
+      onOk: async () => {
+        try {
+          await api.deleteContract(contract.id)
+          void message.success(t('message.deleted'))
+          navigate('/contracts')
+        } catch (e) {
+          void message.error(extractError(e).detail)
+        }
+      },
+    })
+  }
+
+  const handleStatusChange = (next: 'superseded' | 'terminated' | 'expired') => {
+    if (!contract) return
+    Modal.confirm({
+      title: t('contract.confirm_status_title', { status: t(`status.${next}` as 'status.active') }),
+      content: t('contract.confirm_status_body'),
+      okText: t('button.confirm'),
+      cancelText: t('button.cancel'),
+      onOk: async () => {
+        try {
+          const updated = await api.updateContractStatus(contract.id, next)
+          setContract(updated)
+          void message.success(t('contract.status_changed_ok'))
         } catch (e) {
           void message.error(extractError(e).detail)
         }
@@ -427,10 +481,58 @@ export function ContractDetailPage() {
           </Typography.Title>
           <Tag>{t(`status.${contract.status}` as 'status.active')}</Tag>
         </Space>
-        <Button onClick={() => navigate('/contracts')}>{t('button.back')}</Button>
+        <Space>
+          {canWrite && contract.status === 'active' && (
+            <Button icon={<EditOutlined />} onClick={() => setEditOpen(true)}>
+              {t('button.edit')}
+            </Button>
+          )}
+          {canTransition && contract.status === 'active' && (
+            <Dropdown
+              menu={{
+                items: [
+                  {
+                    key: 'terminated',
+                    label: t('contract.transition_to_terminated'),
+                  },
+                  {
+                    key: 'superseded',
+                    label: t('contract.transition_to_superseded'),
+                  },
+                  {
+                    key: 'expired',
+                    label: t('contract.transition_to_expired'),
+                  },
+                ],
+                onClick: ({ key }) =>
+                  handleStatusChange(key as 'superseded' | 'terminated' | 'expired'),
+              }}
+              trigger={['click']}
+            >
+              <Button icon={<StopOutlined />}>{t('contract.change_status')}</Button>
+            </Dropdown>
+          )}
+          {canDelete && (
+            <Button danger icon={<DeleteOutlined />} onClick={handleDeleteContract}>
+              {t('button.delete')}
+            </Button>
+          )}
+          <Button onClick={() => navigate('/contracts')}>{t('button.back')}</Button>
+        </Space>
       </div>
 
       <Tabs items={tabItems} defaultActiveKey="info" />
+
+      <ContractFormModal
+        open={editOpen}
+        mode="edit"
+        contract={contract}
+        onClose={() => setEditOpen(false)}
+        onSaved={(saved) => {
+          setContract(saved)
+          setEditOpen(false)
+        }}
+      />
 
       <Drawer
         title={t('contract.new_schedule')}

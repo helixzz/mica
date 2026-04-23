@@ -18,6 +18,7 @@ from app.models import (
     InvoiceLine,
     InvoiceStatus,
     PaymentRecord,
+    PaymentSchedule,
     PaymentStatus,
     POItem,
     POStatus,
@@ -124,6 +125,142 @@ async def list_contracts(db: AsyncSession, po_id: UUID | None = None) -> list[Co
     if po_id:
         stmt = stmt.where(Contract.po_id == po_id)
     return list((await db.execute(stmt)).scalars().all())
+
+
+_ALLOWED_CONTRACT_EDIT_FIELDS: frozenset[str] = frozenset(
+    {"title", "total_amount", "signed_date", "effective_date", "expiry_date", "notes"}
+)
+
+# Terminal statuses block further edits/transitions — once a contract is
+# superseded/terminated/expired, its terms are frozen for the audit trail.
+_CONTRACT_TERMINAL_STATUSES: frozenset[str] = frozenset({"superseded", "terminated", "expired"})
+
+_CONTRACT_STATUS_TRANSITIONS: dict[str, frozenset[str]] = {
+    "active": frozenset({"superseded", "terminated", "expired"}),
+}
+
+
+async def _load_contract(db: AsyncSession, contract_id: UUID) -> Contract:
+    contract = (
+        await db.execute(select(Contract).where(Contract.id == contract_id))
+    ).scalar_one_or_none()
+    if contract is None:
+        raise HTTPException(404, "contract.not_found")
+    return contract
+
+
+async def update_contract(
+    db: AsyncSession,
+    actor: User,
+    contract_id: UUID,
+    updates: dict,
+) -> Contract:
+    contract = await _load_contract(db, contract_id)
+    if contract.status in _CONTRACT_TERMINAL_STATUSES:
+        raise HTTPException(409, "contract.not_editable_in_status")
+
+    changed: dict[str, object] = {}
+    for field in _ALLOWED_CONTRACT_EDIT_FIELDS:
+        if field not in updates:
+            continue
+        value = updates[field]
+        if field == "total_amount" and value is not None:
+            value = _as_decimal(value)
+        if getattr(contract, field) != value:
+            setattr(contract, field, value)
+            changed[field] = value
+
+    if not changed:
+        return contract
+
+    contract.current_version = (contract.current_version or 1) + 1
+    await db.flush()
+    await contract_svc.create_contract_version(
+        db,
+        contract=contract,
+        actor=actor,
+        change_type="updated",
+        change_reason=updates.get("change_reason"),
+    )
+    await _audit_write(
+        db,
+        actor,
+        "contract.updated",
+        "contract",
+        str(contract.id),
+        meta={"fields": list(changed.keys())},
+    )
+    await db.commit()
+    await db.refresh(contract)
+    return contract
+
+
+async def transition_contract_status(
+    db: AsyncSession,
+    actor: User,
+    contract_id: UUID,
+    new_status: str,
+    reason: str | None = None,
+) -> Contract:
+    contract = await _load_contract(db, contract_id)
+    current = contract.status or "active"
+    allowed = _CONTRACT_STATUS_TRANSITIONS.get(current, frozenset())
+    if new_status not in allowed:
+        raise HTTPException(409, "contract.invalid_status_transition")
+
+    contract.status = new_status
+    contract.current_version = (contract.current_version or 1) + 1
+    await db.flush()
+    await contract_svc.create_contract_version(
+        db,
+        contract=contract,
+        actor=actor,
+        change_type=new_status,
+        change_reason=reason,
+    )
+    await _audit_write(
+        db,
+        actor,
+        "contract.status_changed",
+        "contract",
+        str(contract.id),
+        meta={"from": current, "to": new_status, "reason": reason},
+    )
+    await db.commit()
+    await db.refresh(contract)
+    return contract
+
+
+async def delete_contract(
+    db: AsyncSession,
+    actor: User,
+    contract_id: UUID,
+) -> None:
+    contract = await _load_contract(db, contract_id)
+    paid = (
+        await db.execute(
+            select(func.count(PaymentRecord.id)).where(
+                PaymentRecord.schedule_item_id.in_(
+                    select(PaymentSchedule.id).where(PaymentSchedule.contract_id == contract.id)
+                ),
+                PaymentRecord.status == PaymentStatus.CONFIRMED.value,
+            )
+        )
+    ).scalar_one() or 0
+    if paid > 0:
+        raise HTTPException(409, "contract.cannot_delete_with_paid_schedule")
+
+    number = contract.contract_number
+    await db.delete(contract)
+    await _audit_write(
+        db,
+        actor,
+        "contract.deleted",
+        "contract",
+        str(contract_id),
+        meta={"contract_number": number},
+    )
+    await db.commit()
 
 
 async def create_shipment(

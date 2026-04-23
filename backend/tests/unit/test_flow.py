@@ -9,6 +9,7 @@ from sqlalchemy import select
 
 from app.db import new_uuid
 from app.models import (
+    Contract,
     ContractVersion,
     Document,
     POItem,
@@ -17,9 +18,9 @@ from app.models import (
     Supplier,
     User,
 )
+from app.schemas import PRCreateIn, PRItemIn
 from app.services import flow as flow_svc
 from app.services import purchase as purchase_svc
-from app.schemas import PRCreateIn, PRItemIn
 
 
 async def _get_user(db, username="alice"):
@@ -301,6 +302,128 @@ async def test_list_contracts_filters_by_po_id(seeded_db_session):
     contracts = await flow_svc.list_contracts(db, po_id=po1.id)
 
     assert [contract.id for contract in contracts] == [c1.id]
+
+
+async def test_update_contract_modifies_fields_and_creates_new_version(seeded_db_session):
+    db = seeded_db_session
+    user, _supplier, _pr, po = await _create_confirmed_po(db)
+    contract = await flow_svc.create_contract(
+        db, user, po.id, title="Original", total_amount=Decimal("500")
+    )
+    original_version = contract.current_version
+
+    updated = await flow_svc.update_contract(
+        db,
+        user,
+        contract.id,
+        {
+            "title": "Revised Title",
+            "total_amount": Decimal("750.00"),
+            "change_reason": "Price renegotiation",
+        },
+    )
+
+    assert updated.title == "Revised Title"
+    assert updated.total_amount == Decimal("750.00")
+    assert updated.current_version == original_version + 1
+    versions = list(
+        (
+            await db.execute(
+                select(ContractVersion).where(ContractVersion.contract_id == contract.id)
+            )
+        )
+        .scalars()
+        .all()
+    )
+    assert len(versions) == 2
+    latest = next(v for v in versions if v.version_number == original_version + 1)
+    assert latest.change_type == "updated"
+    assert latest.change_reason == "Price renegotiation"
+
+
+async def test_update_contract_noop_when_no_fields_change(seeded_db_session):
+    db = seeded_db_session
+    user, _supplier, _pr, po = await _create_confirmed_po(db)
+    contract = await flow_svc.create_contract(
+        db, user, po.id, title="Same", total_amount=Decimal("100")
+    )
+    before_version = contract.current_version
+
+    result = await flow_svc.update_contract(db, user, contract.id, {})
+
+    assert result.current_version == before_version
+
+
+async def test_update_contract_rejects_terminated_status(seeded_db_session):
+    db = seeded_db_session
+    user, _supplier, _pr, po = await _create_confirmed_po(db)
+    contract = await flow_svc.create_contract(
+        db, user, po.id, title="Lock", total_amount=Decimal("100")
+    )
+    await flow_svc.transition_contract_status(db, user, contract.id, "terminated", reason="test")
+
+    with pytest.raises(HTTPException) as exc_info:
+        await flow_svc.update_contract(db, user, contract.id, {"title": "Should fail"})
+
+    assert exc_info.value.status_code == 409
+    assert "not_editable" in str(exc_info.value.detail)
+
+
+async def test_transition_contract_status_allows_active_to_terminated(seeded_db_session):
+    db = seeded_db_session
+    user, _supplier, _pr, po = await _create_confirmed_po(db)
+    contract = await flow_svc.create_contract(
+        db, user, po.id, title="Transition", total_amount=Decimal("100")
+    )
+
+    result = await flow_svc.transition_contract_status(
+        db, user, contract.id, "terminated", reason="customer request"
+    )
+
+    assert result.status == "terminated"
+    version = (
+        (
+            await db.execute(
+                select(ContractVersion)
+                .where(ContractVersion.contract_id == contract.id)
+                .order_by(ContractVersion.version_number.desc())
+            )
+        )
+        .scalars()
+        .first()
+    )
+    assert version.change_type == "terminated"
+    assert version.change_reason == "customer request"
+
+
+async def test_transition_contract_status_blocks_invalid_transition(seeded_db_session):
+    db = seeded_db_session
+    user, _supplier, _pr, po = await _create_confirmed_po(db)
+    contract = await flow_svc.create_contract(
+        db, user, po.id, title="Invalid", total_amount=Decimal("100")
+    )
+    await flow_svc.transition_contract_status(db, user, contract.id, "terminated", reason="a")
+
+    with pytest.raises(HTTPException) as exc_info:
+        await flow_svc.transition_contract_status(db, user, contract.id, "active")
+
+    assert exc_info.value.status_code == 409
+
+
+async def test_delete_contract_removes_contract_and_versions(seeded_db_session):
+    db = seeded_db_session
+    user, _supplier, _pr, po = await _create_confirmed_po(db)
+    contract = await flow_svc.create_contract(
+        db, user, po.id, title="Delete me", total_amount=Decimal("100")
+    )
+    contract_id = contract.id
+
+    await flow_svc.delete_contract(db, user, contract_id)
+
+    remaining = (
+        await db.execute(select(Contract).where(Contract.id == contract_id))
+    ).scalar_one_or_none()
+    assert remaining is None
 
 
 async def test_create_shipment_creates_items_and_updates_po_partially_received(seeded_db_session):

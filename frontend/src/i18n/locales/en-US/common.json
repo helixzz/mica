@@ -266,6 +266,13 @@
     "expiring_contracts": "Expiring Contracts",
     "price_anomalies": "Price Anomalies",
     "anomaly_item": "Item {{id}}",
+    "payment_forecast": "Upcoming Payments (Monthly)",
+    "payment_forecast_empty": "No upcoming payment data yet",
+    "grand_planned": "Planned Outflow",
+    "grand_paid": "Already Paid",
+    "grand_remaining": "Outstanding",
+    "planned_amount": "Planned",
+    "paid_amount": "Paid",
     "quick_actions": "Quick Actions",
     "new_pr": "New PR",
     "view_all_pos": "View All POs",
@@ -648,7 +655,8 @@
     "select_expense_type": "Please select expense type",
     "at_least_one_item": "At least one item required",
     "at_least_one_supplier": "At least one supplier required",
-    "at_least_one_line": "At least one line required"
+    "at_least_one_line": "At least one line required",
+    "required": "This field is required"
   },
   "ai": {
     "unavailable_tooltip": "AI requires admin model configuration"
@@ -815,7 +823,24 @@
     "no_versions_hint": "No version history yet.",
     "version_col": "Version",
     "change_type_col": "Change",
-    "change_reason_col": "Reason"
+    "change_reason_col": "Reason",
+    "create_btn": "Create Contract",
+    "add_another": "Create Another Contract",
+    "create_title": "Create Contract",
+    "edit_title": "Edit Contract",
+    "created_ok": "Contract created",
+    "updated_ok": "Contract updated",
+    "change_reason": "Change Reason",
+    "change_reason_placeholder": "Briefly describe this change (written to version history)",
+    "confirm_delete_title": "Delete contract {{number}}?",
+    "confirm_delete_body": "This permanently removes the contract, all version history, and any payment schedule items (that have not yet been paid). This action cannot be undone.",
+    "change_status": "Change Status",
+    "transition_to_terminated": "Terminate",
+    "transition_to_superseded": "Mark as Superseded",
+    "transition_to_expired": "Mark as Expired",
+    "confirm_status_title": "Change status to \"{{status}}\"?",
+    "confirm_status_body": "This change is recorded in the version history, and the contract will no longer be editable after the transition.",
+    "status_changed_ok": "Contract status updated"
   },
   "common": {
     "total_count": "{{count}} total",

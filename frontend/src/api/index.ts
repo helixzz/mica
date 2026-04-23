@@ -488,7 +488,8 @@ export interface PaymentScheduleItemInput {
 
 export interface PaymentScheduleItem {
   id: string
-  contract_id: string
+  contract_id: string | null
+  po_id: string | null
   installment_no: number
   label: string
   planned_amount: string
@@ -753,6 +754,35 @@ export const api = {
     notes?: string | null
   }): Promise<Contract> {
     const { data } = await client.post<Contract>('/contracts', payload)
+    return data
+  },
+  async updateContract(
+    contractId: string,
+    payload: {
+      title?: string
+      total_amount?: number | string
+      signed_date?: string | null
+      effective_date?: string | null
+      expiry_date?: string | null
+      notes?: string | null
+      change_reason?: string | null
+    },
+  ): Promise<Contract> {
+    const { data } = await client.patch<Contract>(`/contracts/${contractId}`, payload)
+    return data
+  },
+  async deleteContract(contractId: string): Promise<void> {
+    await client.delete(`/contracts/${contractId}`)
+  },
+  async updateContractStatus(
+    contractId: string,
+    status: 'active' | 'superseded' | 'terminated' | 'expired',
+    reason?: string | null,
+  ): Promise<Contract> {
+    const { data } = await client.patch<Contract>(`/contracts/${contractId}/status`, {
+      status,
+      reason,
+    })
     return data
   },
   async listShipments(po_id?: string): Promise<Shipment[]> {
@@ -1031,6 +1061,36 @@ export const api = {
   },
   async deleteScheduleItem(contractId: string, installmentNo: number): Promise<void> {
     await client.delete(`/contracts/${contractId}/payment-schedule/${installmentNo}`)
+  },
+  async getPOPaymentSchedule(poId: string): Promise<PaymentScheduleSummary> {
+    const { data } = await client.get<PaymentScheduleSummary>(
+      `/purchase-orders/${poId}/payment-schedule`,
+    )
+    return data
+  },
+  async createPOPaymentSchedule(
+    poId: string,
+    items: PaymentScheduleItemInput[],
+  ): Promise<PaymentScheduleItem[]> {
+    const { data } = await client.post<PaymentScheduleItem[]>(
+      `/purchase-orders/${poId}/payment-schedule`,
+      { items },
+    )
+    return data
+  },
+  async executePOScheduleItem(
+    poId: string,
+    installmentNo: number,
+    body: { payment_method: string; transaction_ref?: string; invoice_id?: string; amount?: number },
+  ): Promise<PaymentScheduleItem> {
+    const { data } = await client.post<PaymentScheduleItem>(
+      `/purchase-orders/${poId}/payment-schedule/${installmentNo}/execute`,
+      body,
+    )
+    return data
+  },
+  async deletePOScheduleItem(poId: string, installmentNo: number): Promise<void> {
+    await client.delete(`/purchase-orders/${poId}/payment-schedule/${installmentNo}`)
   },
   async getPaymentForecast(months = 6): Promise<PaymentForecast> {
     const { data } = await client.get<PaymentForecast>('/dashboard/payment-forecast', {
