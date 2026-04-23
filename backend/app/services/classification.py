@@ -14,7 +14,7 @@ from app.models import CostCenter, LookupValue, ProcurementCategory
 async def list_cost_centers(db: AsyncSession, active_only: bool = True) -> list[CostCenter]:
     q = select(CostCenter).order_by(CostCenter.sort_order)
     if active_only:
-        q = q.where(CostCenter.is_active.is_(True))
+        q = q.where(CostCenter.is_deleted.is_(False), CostCenter.is_enabled.is_(True))
     return list((await db.execute(q)).scalars().all())
 
 
@@ -40,7 +40,7 @@ async def delete_cost_center(db: AsyncSession, cc_id: UUID) -> None:
     cc = await db.get(CostCenter, cc_id)
     if cc is None:
         raise HTTPException(404, "cost_center.not_found")
-    cc.is_active = False
+    cc.is_deleted = True
     await db.flush()
 
 
@@ -54,7 +54,9 @@ async def list_procurement_categories(
         ProcurementCategory.sort_order,
     )
     if active_only:
-        q = q.where(ProcurementCategory.is_active.is_(True))
+        q = q.where(
+            ProcurementCategory.is_deleted.is_(False), ProcurementCategory.is_enabled.is_(True)
+        )
     if not flat:
         q = q.options(selectinload(ProcurementCategory.children))
     return list((await db.execute(q)).scalars().unique().all())
@@ -63,7 +65,11 @@ async def list_procurement_categories(
 async def get_category_tree(db: AsyncSession) -> list[ProcurementCategory]:
     q = (
         select(ProcurementCategory)
-        .where(ProcurementCategory.parent_id.is_(None), ProcurementCategory.is_active.is_(True))
+        .where(
+            ProcurementCategory.parent_id.is_(None),
+            ProcurementCategory.is_deleted.is_(False),
+            ProcurementCategory.is_enabled.is_(True),
+        )
         .options(selectinload(ProcurementCategory.children))
         .order_by(ProcurementCategory.sort_order)
     )
@@ -100,7 +106,7 @@ async def delete_procurement_category(db: AsyncSession, cat_id: UUID) -> None:
     cat = await db.get(ProcurementCategory, cat_id)
     if cat is None:
         raise HTTPException(404, "category.not_found")
-    cat.is_active = False
+    cat.is_deleted = True
     await db.flush()
 
 
@@ -111,7 +117,7 @@ async def list_lookup_values(
 ) -> list[LookupValue]:
     q = select(LookupValue).where(LookupValue.type == type_).order_by(LookupValue.sort_order)
     if active_only:
-        q = q.where(LookupValue.is_active.is_(True))
+        q = q.where(LookupValue.is_deleted.is_(False), LookupValue.is_enabled.is_(True))
     return list((await db.execute(q)).scalars().all())
 
 
@@ -137,5 +143,5 @@ async def delete_lookup_value(db: AsyncSession, lv_id: UUID) -> None:
     lv = await db.get(LookupValue, lv_id)
     if lv is None:
         raise HTTPException(404, "lookup_value.not_found")
-    lv.is_active = False
+    lv.is_deleted = True
     await db.flush()

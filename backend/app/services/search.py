@@ -309,7 +309,7 @@ async def _search_suppliers(db: AsyncSession, query: str, limit: int) -> list[Se
     rows = (
         await db.execute(
             select(Supplier, score.label("score"), snippet.label("snippet"))
-            .where(Supplier.is_active == True)  # noqa: E712
+            .where(Supplier.is_deleted.is_(False), Supplier.is_enabled.is_(True))
             .where(condition)
             .order_by(desc("score"), Supplier.name)
             .limit(limit)
@@ -339,7 +339,7 @@ async def _search_items(db: AsyncSession, query: str, limit: int) -> list[Search
     rows = (
         await db.execute(
             select(Item, score.label("score"), snippet.label("snippet"))
-            .where(Item.is_active == True)  # noqa: E712
+            .where(Item.is_deleted.is_(False), Item.is_enabled.is_(True))
             .where(condition)
             .order_by(desc("score"), Item.name)
             .limit(limit)

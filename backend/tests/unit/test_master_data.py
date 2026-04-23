@@ -56,14 +56,10 @@ async def _supplier_by_code(seeded_db_session, code: str) -> Supplier:
 
 
 async def _item_by_code(seeded_db_session, code: str) -> Item:
-    return (
-        await seeded_db_session.execute(select(Item).where(Item.code == code))
-    ).scalar_one()
+    return (await seeded_db_session.execute(select(Item).where(Item.code == code))).scalar_one()
 
 
-async def _audit_logs(
-    seeded_db_session, *, event_type: str, resource_id: str
-) -> list[AuditLog]:
+async def _audit_logs(seeded_db_session, *, event_type: str, resource_id: str) -> list[AuditLog]:
     return list(
         (
             await seeded_db_session.execute(
@@ -131,7 +127,7 @@ async def test_create_supplier_success_persists_and_audits(seeded_db_session):
 
     assert supplier.code == payload.code
     assert supplier.name == payload.name
-    assert supplier.is_active is True
+    assert supplier.is_enabled is True
 
     persisted = await _supplier_by_code(seeded_db_session, payload.code)
     assert persisted.id == supplier.id
@@ -257,7 +253,7 @@ async def test_delete_supplier_soft_delete_deactivates_and_audits(seeded_db_sess
 
     refreshed = await seeded_db_session.get(Supplier, supplier.id)
     assert refreshed is not None
-    assert refreshed.is_active is False
+    assert refreshed.is_deleted is True
 
     audits = await _audit_logs(
         seeded_db_session,
@@ -266,8 +262,8 @@ async def test_delete_supplier_soft_delete_deactivates_and_audits(seeded_db_sess
     )
     assert len(audits) == 1
     assert audits[0].metadata_json == {
-        "old": {"is_active": True},
-        "new": {"is_active": False},
+        "old": {"is_deleted": False},
+        "new": {"is_deleted": True},
     }
 
 
@@ -404,17 +400,17 @@ async def test_update_item_updates_is_active(seeded_db_session):
         seeded_db_session,
         actor,
         item.id,
-        ItemUpdate(is_active=False),
+        ItemUpdate(is_enabled=False),
     )
 
-    assert updated.is_active is False
+    assert updated.is_enabled is False
 
     audits = await _audit_logs(
         seeded_db_session,
         event_type="item.updated",
         resource_id=str(item.id),
     )
-    assert audits[0].metadata_json["diff"]["is_active"] == {
+    assert audits[0].metadata_json["diff"]["is_enabled"] == {
         "old": True,
         "new": False,
     }
@@ -447,7 +443,7 @@ async def test_delete_item_soft_delete_deactivates_and_audits(seeded_db_session)
 
     refreshed = await seeded_db_session.get(Item, item.id)
     assert refreshed is not None
-    assert refreshed.is_active is False
+    assert refreshed.is_deleted is True
 
     audits = await _audit_logs(
         seeded_db_session,
@@ -456,8 +452,8 @@ async def test_delete_item_soft_delete_deactivates_and_audits(seeded_db_session)
     )
     assert len(audits) == 1
     assert audits[0].metadata_json == {
-        "old": {"is_active": True},
-        "new": {"is_active": False},
+        "old": {"is_deleted": False},
+        "new": {"is_deleted": True},
     }
 
 
@@ -505,7 +501,7 @@ async def test_create_company_success_persists_and_audits(seeded_db_session):
     assert company.name_en == payload.name_en
     assert company.default_currency == "CNY"
     assert company.default_locale == "zh-CN"
-    assert company.is_active is True
+    assert company.is_enabled is True
 
     persisted = (
         await seeded_db_session.execute(select(Company).where(Company.code == company.code))
@@ -598,7 +594,7 @@ async def test_delete_company_soft_delete_deactivates_and_audits(seeded_db_sessi
 
     refreshed = await seeded_db_session.get(Company, company.id)
     assert refreshed is not None
-    assert refreshed.is_active is False
+    assert refreshed.is_deleted is True
 
     audits = await _audit_logs(
         seeded_db_session,
@@ -607,8 +603,8 @@ async def test_delete_company_soft_delete_deactivates_and_audits(seeded_db_sessi
     )
     assert len(audits) == 1
     assert audits[0].metadata_json == {
-        "old": {"is_active": True},
-        "new": {"is_active": False},
+        "old": {"is_deleted": False},
+        "new": {"is_deleted": True},
     }
 
 
@@ -640,7 +636,7 @@ async def test_create_department_success_persists_and_audits(seeded_db_session):
     assert department.name_zh == "测试部门"
     assert department.name_en == "Test Department"
     assert department.parent_id is None
-    assert department.is_active is True
+    assert department.is_enabled is True
 
     persisted = (
         await seeded_db_session.execute(select(Department).where(Department.id == department.id))
@@ -737,7 +733,7 @@ async def test_delete_department_soft_delete_deactivates_and_audits(seeded_db_se
 
     refreshed = await seeded_db_session.get(Department, department.id)
     assert refreshed is not None
-    assert refreshed.is_active is False
+    assert refreshed.is_deleted is True
 
     audits = await _audit_logs(
         seeded_db_session,
@@ -746,6 +742,6 @@ async def test_delete_department_soft_delete_deactivates_and_audits(seeded_db_se
     )
     assert len(audits) == 1
     assert audits[0].metadata_json == {
-        "old": {"is_active": True},
-        "new": {"is_active": False},
+        "old": {"is_deleted": False},
+        "new": {"is_deleted": True},
     }

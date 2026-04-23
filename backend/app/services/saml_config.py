@@ -305,7 +305,11 @@ async def resolve_default_company(
         if company is not None:
             return company
     companies = list(
-        (await session.execute(select(Company).where(Company.is_active.is_(True)))).scalars()
+        (
+            await session.execute(
+                select(Company).where(Company.is_deleted.is_(False), Company.is_enabled.is_(True))
+            )
+        ).scalars()
     )
     if len(companies) == 1:
         return companies[0]
@@ -326,7 +330,8 @@ async def resolve_department(
             select(Department).where(
                 Department.company_id == company_id,
                 Department.code == department_code,
-                Department.is_active.is_(True),
+                Department.is_deleted.is_(False),
+                Department.is_enabled.is_(True),
             )
         )
     ).scalar_one_or_none()

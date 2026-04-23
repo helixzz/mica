@@ -289,8 +289,8 @@ async def delete_supplier(db: AsyncSession, actor: User, supplier_id: UUID, *, h
         await db.commit()
         return
 
-    if supplier.is_active:
-        supplier.is_active = False
+    if not supplier.is_deleted:
+        supplier.is_deleted = True
         await db.flush()
         await _audit(
             db,
@@ -298,7 +298,7 @@ async def delete_supplier(db: AsyncSession, actor: User, supplier_id: UUID, *, h
             event_type="supplier.deactivated",
             resource_type="supplier",
             resource_id=str(supplier.id),
-            metadata={"old": {"is_active": True}, "new": {"is_active": False}},
+            metadata={"old": {"is_deleted": False}, "new": {"is_deleted": True}},
         )
         await db.commit()
 
@@ -375,9 +375,9 @@ async def update_item(db: AsyncSession, actor: User, item_id: UUID, payload: Ite
         new_val = str(payload.category_id) if payload.category_id else None
         _record_change(diff, "category_id", old_val, new_val)
         item.category_id = payload.category_id
-    if "is_active" in payload.model_fields_set and payload.is_active is not None:
-        _record_change(diff, "is_active", item.is_active, payload.is_active)
-        item.is_active = payload.is_active
+    if "is_enabled" in payload.model_fields_set and payload.is_enabled is not None:
+        _record_change(diff, "is_enabled", item.is_enabled, payload.is_enabled)
+        item.is_enabled = payload.is_enabled
     if diff:
         await db.flush()
         await _audit(
@@ -430,8 +430,8 @@ async def delete_item(db: AsyncSession, actor: User, item_id: UUID, *, hard: boo
         await db.commit()
         return
 
-    if item.is_active:
-        item.is_active = False
+    if not item.is_deleted:
+        item.is_deleted = True
         await db.flush()
         await _audit(
             db,
@@ -439,7 +439,7 @@ async def delete_item(db: AsyncSession, actor: User, item_id: UUID, *, hard: boo
             event_type="item.deactivated",
             resource_type="item",
             resource_id=str(item.id),
-            metadata={"old": {"is_active": True}, "new": {"is_active": False}},
+            metadata={"old": {"is_deleted": False}, "new": {"is_deleted": True}},
         )
         await db.commit()
 
@@ -509,9 +509,9 @@ async def update_company(
     if "default_currency" in payload.model_fields_set and payload.default_currency is not None:
         _record_change(diff, "default_currency", company.default_currency, payload.default_currency)
         company.default_currency = payload.default_currency
-    if "is_active" in payload.model_fields_set and payload.is_active is not None:
-        _record_change(diff, "is_active", company.is_active, payload.is_active)
-        company.is_active = payload.is_active
+    if "is_enabled" in payload.model_fields_set and payload.is_enabled is not None:
+        _record_change(diff, "is_enabled", company.is_enabled, payload.is_enabled)
+        company.is_enabled = payload.is_enabled
     if diff:
         await db.flush()
         await _audit(
@@ -532,8 +532,8 @@ async def delete_company(db: AsyncSession, actor: User, company_id: UUID) -> Non
     if company is None:
         raise HTTPException(status_code=404, detail="company.not_found")
 
-    if company.is_active:
-        company.is_active = False
+    if not company.is_deleted:
+        company.is_deleted = True
         await db.flush()
         await _audit(
             db,
@@ -541,7 +541,7 @@ async def delete_company(db: AsyncSession, actor: User, company_id: UUID) -> Non
             event_type="company.deactivated",
             resource_type="company",
             resource_id=str(company.id),
-            metadata={"old": {"is_active": True}, "new": {"is_active": False}},
+            metadata={"old": {"is_deleted": False}, "new": {"is_deleted": True}},
         )
         await db.commit()
 
@@ -656,8 +656,8 @@ async def delete_department(db: AsyncSession, actor: User, department_id: UUID) 
             detail="department.has_users; deactivate blocked",
         )
 
-    if department.is_active:
-        department.is_active = False
+    if not department.is_deleted:
+        department.is_deleted = True
         await db.flush()
         await _audit(
             db,
@@ -665,6 +665,6 @@ async def delete_department(db: AsyncSession, actor: User, department_id: UUID) 
             event_type="department.deactivated",
             resource_type="department",
             resource_id=str(department.id),
-            metadata={"old": {"is_active": True}, "new": {"is_active": False}},
+            metadata={"old": {"is_deleted": False}, "new": {"is_deleted": True}},
         )
         await db.commit()

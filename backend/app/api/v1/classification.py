@@ -21,7 +21,8 @@ class CostCenterOut(BaseModel):
     label_zh: str
     label_en: str
     sort_order: int
-    is_active: bool
+    is_enabled: bool
+    is_deleted: bool
     budget_amount: float | None = None
 
 
@@ -30,7 +31,7 @@ class CostCenterIn(BaseModel):
     label_zh: str
     label_en: str
     sort_order: int = 0
-    is_active: bool | None = None
+    is_enabled: bool | None = None
 
 
 class ProcurementCategoryOut(BaseModel):
@@ -40,7 +41,8 @@ class ProcurementCategoryOut(BaseModel):
     label_zh: str
     label_en: str
     sort_order: int
-    is_active: bool
+    is_enabled: bool
+    is_deleted: bool
     parent_id: UUID | None = None
     level: int
 
@@ -65,7 +67,8 @@ class LookupValueOut(BaseModel):
     label_zh: str
     label_en: str
     sort_order: int
-    is_active: bool
+    is_enabled: bool
+    is_deleted: bool
 
 
 class LookupValueIn(BaseModel):
