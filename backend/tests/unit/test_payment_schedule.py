@@ -74,7 +74,6 @@ async def test_replace_schedule_creates_items(seeded_db_session):
     contract = await _ensure_contract(seeded_db_session)
     items = await svc.replace_schedule(
         seeded_db_session,
-        contract.id,
         [
             {
                 "installment_no": 1,
@@ -89,6 +88,7 @@ async def test_replace_schedule_creates_items(seeded_db_session):
                 "planned_date": "2026-08-01",
             },
         ],
+        contract_id=contract.id,
     )
     assert len(items) == 2
     assert items[0].label == "首付"
@@ -99,13 +99,13 @@ async def test_replace_schedule_removes_old_planned_items(seeded_db_session):
     contract = await _ensure_contract(seeded_db_session)
     await svc.replace_schedule(
         seeded_db_session,
-        contract.id,
         [{"installment_no": 1, "label": "v1", "planned_amount": Decimal("1000")}],
+        contract_id=contract.id,
     )
     new_items = await svc.replace_schedule(
         seeded_db_session,
-        contract.id,
         [{"installment_no": 1, "label": "v2", "planned_amount": Decimal("2000")}],
+        contract_id=contract.id,
     )
     assert len(new_items) == 1
     assert new_items[0].label == "v2"
@@ -115,11 +115,11 @@ async def test_list_schedule_returns_summary(seeded_db_session):
     contract = await _ensure_contract(seeded_db_session)
     created = await svc.replace_schedule(
         seeded_db_session,
-        contract.id,
         [
             {"installment_no": 1, "label": "A", "planned_amount": Decimal("24000")},
             {"installment_no": 2, "label": "B", "planned_amount": Decimal("24000")},
         ],
+        contract_id=contract.id,
     )
     summary = svc.build_summary(contract, created)
     assert summary["planned_total"] == Decimal("48000")
@@ -131,10 +131,12 @@ async def test_update_schedule_item(seeded_db_session):
     contract = await _ensure_contract(seeded_db_session)
     await svc.replace_schedule(
         seeded_db_session,
-        contract.id,
         [{"installment_no": 1, "label": "原始", "planned_amount": Decimal("10000")}],
+        contract_id=contract.id,
     )
-    updated = await svc.update_schedule_item(seeded_db_session, contract.id, 1, {"label": "已改"})
+    updated = await svc.update_schedule_item(
+        seeded_db_session, 1, {"label": "已改"}, contract_id=contract.id
+    )
     assert updated.label == "已改"
 
 
@@ -142,14 +144,14 @@ async def test_delete_schedule_item(seeded_db_session):
     contract = await _ensure_contract(seeded_db_session)
     await svc.replace_schedule(
         seeded_db_session,
-        contract.id,
         [
             {"installment_no": 1, "label": "keep", "planned_amount": Decimal("10000")},
             {"installment_no": 2, "label": "remove", "planned_amount": Decimal("5000")},
         ],
+        contract_id=contract.id,
     )
-    await svc.delete_schedule_item(seeded_db_session, contract.id, 2)
-    remaining = await svc.list_schedule(seeded_db_session, contract.id)
+    await svc.delete_schedule_item(seeded_db_session, 2, contract_id=contract.id)
+    remaining = await svc.list_schedule(seeded_db_session, contract_id=contract.id)
     assert len(remaining) == 1
     assert remaining[0].installment_no == 1
 
@@ -158,7 +160,6 @@ async def test_delete_paid_item_raises(seeded_db_session):
     contract = await _ensure_contract(seeded_db_session)
     await svc.replace_schedule(
         seeded_db_session,
-        contract.id,
         [
             {
                 "installment_no": 1,
@@ -167,18 +168,19 @@ async def test_delete_paid_item_raises(seeded_db_session):
                 "planned_date": "2026-05-01",
             }
         ],
+        contract_id=contract.id,
     )
     await svc.execute_schedule_item(
         seeded_db_session,
-        contract.id,
         1,
+        contract_id=contract.id,
         payment_method="bank_transfer",
         transaction_ref=None,
         invoice_id=None,
         amount_override=None,
     )
     with pytest.raises(Exception) as exc:
-        await svc.delete_schedule_item(seeded_db_session, contract.id, 1)
+        await svc.delete_schedule_item(seeded_db_session, 1, contract_id=contract.id)
     assert exc.value.status_code == 409
 
 
@@ -186,7 +188,6 @@ async def test_execute_creates_payment_record(seeded_db_session):
     contract = await _ensure_contract(seeded_db_session)
     await svc.replace_schedule(
         seeded_db_session,
-        contract.id,
         [
             {
                 "installment_no": 1,
@@ -195,11 +196,12 @@ async def test_execute_creates_payment_record(seeded_db_session):
                 "planned_date": "2026-06-01",
             }
         ],
+        contract_id=contract.id,
     )
     item = await svc.execute_schedule_item(
         seeded_db_session,
-        contract.id,
         1,
+        contract_id=contract.id,
         payment_method="bank_transfer",
         transaction_ref="TXN-001",
         invoice_id=None,
@@ -214,7 +216,6 @@ async def test_execute_with_amount_override(seeded_db_session):
     contract = await _ensure_contract(seeded_db_session)
     await svc.replace_schedule(
         seeded_db_session,
-        contract.id,
         [
             {
                 "installment_no": 1,
@@ -223,11 +224,12 @@ async def test_execute_with_amount_override(seeded_db_session):
                 "planned_date": "2026-06-01",
             }
         ],
+        contract_id=contract.id,
     )
     item = await svc.execute_schedule_item(
         seeded_db_session,
-        contract.id,
         1,
+        contract_id=contract.id,
         payment_method="bank_transfer",
         transaction_ref=None,
         invoice_id=None,
@@ -240,7 +242,6 @@ async def test_execute_already_paid_raises(seeded_db_session):
     contract = await _ensure_contract(seeded_db_session)
     await svc.replace_schedule(
         seeded_db_session,
-        contract.id,
         [
             {
                 "installment_no": 1,
@@ -249,11 +250,12 @@ async def test_execute_already_paid_raises(seeded_db_session):
                 "planned_date": "2026-06-01",
             }
         ],
+        contract_id=contract.id,
     )
     await svc.execute_schedule_item(
         seeded_db_session,
-        contract.id,
         1,
+        contract_id=contract.id,
         payment_method="bank_transfer",
         transaction_ref=None,
         invoice_id=None,
@@ -262,8 +264,8 @@ async def test_execute_already_paid_raises(seeded_db_session):
     with pytest.raises(Exception) as exc:
         await svc.execute_schedule_item(
             seeded_db_session,
-            contract.id,
             1,
+            contract_id=contract.id,
             payment_method="bank_transfer",
             transaction_ref=None,
             invoice_id=None,
@@ -279,6 +281,101 @@ async def test_payment_forecast_returns_monthly_buckets(seeded_db_session):
 
 
 async def test_nonexistent_contract_raises_404(seeded_db_session):
-    with pytest.raises(Exception) as exc:
-        await svc.list_schedule(seeded_db_session, uuid4())
+    from fastapi import HTTPException
+
+    with pytest.raises(HTTPException) as exc:
+        await svc.list_schedule(seeded_db_session, contract_id=uuid4())
     assert exc.value.status_code == 404
+
+
+async def _ensure_standalone_po(db_session) -> PurchaseOrder:
+    user = (await db_session.execute(select(User).limit(1))).scalar_one()
+    supplier = (await db_session.execute(select(Supplier).limit(1))).scalar_one()
+    pr = PurchaseRequisition(
+        id=new_uuid(),
+        pr_number=f"PR-PO-PAY-{uuid4().hex[:6]}",
+        title="PO payment plan PR",
+        business_reason="po-level payment schedule test",
+        status="draft",
+        requester_id=user.id,
+        company_id=user.company_id,
+        department_id=user.department_id,
+        currency="CNY",
+        total_amount=Decimal("30000"),
+    )
+    db_session.add(pr)
+    await db_session.flush()
+
+    po = PurchaseOrder(
+        id=new_uuid(),
+        po_number=f"PO-PAY-{uuid4().hex[:6]}",
+        pr_id=pr.id,
+        supplier_id=supplier.id,
+        company_id=user.company_id,
+        status=POStatus.CONFIRMED.value,
+        currency="CNY",
+        total_amount=Decimal("30000"),
+        created_by_id=user.id,
+    )
+    db_session.add(po)
+    await db_session.flush()
+    return po
+
+
+async def test_po_level_payment_schedule_create_and_summary(seeded_db_session):
+    db = seeded_db_session
+    po = await _ensure_standalone_po(db)
+
+    items = await svc.replace_schedule(
+        db,
+        [
+            {"installment_no": 1, "label": "deposit", "planned_amount": Decimal("10000")},
+            {"installment_no": 2, "label": "balance", "planned_amount": Decimal("20000")},
+        ],
+        po_id=po.id,
+    )
+    assert len(items) == 2
+    assert all(i.po_id == po.id for i in items)
+    assert all(i.contract_id is None for i in items)
+
+    summary = await svc.build_summary_for(db, po_id=po.id)
+    assert summary["contract_total"] == Decimal("30000")
+    assert summary["planned_total"] == Decimal("30000")
+    assert summary["paid_total"] == Decimal("0")
+    assert summary["total_mismatch"] is False
+    assert len(summary["items"]) == 2
+
+
+async def test_po_level_schedule_isolation_from_contract_schedules(seeded_db_session):
+    db = seeded_db_session
+    po = await _ensure_standalone_po(db)
+    contract = await _ensure_contract(db)
+
+    await svc.replace_schedule(
+        db,
+        [{"installment_no": 1, "label": "po-only", "planned_amount": Decimal("5000")}],
+        po_id=po.id,
+    )
+    await svc.replace_schedule(
+        db,
+        [{"installment_no": 1, "label": "contract-only", "planned_amount": Decimal("48000")}],
+        contract_id=contract.id,
+    )
+
+    po_items = await svc.list_schedule(db, po_id=po.id)
+    ct_items = await svc.list_schedule(db, contract_id=contract.id)
+
+    assert {i.label for i in po_items} == {"po-only"}
+    assert {i.label for i in ct_items} == {"contract-only"}
+
+
+async def test_payment_schedule_requires_exactly_one_parent(seeded_db_session):
+    from fastapi import HTTPException
+
+    with pytest.raises(HTTPException) as exc:
+        await svc.list_schedule(seeded_db_session)
+    assert exc.value.status_code == 400
+
+    with pytest.raises(HTTPException) as exc:
+        await svc.list_schedule(seeded_db_session, contract_id=uuid4(), po_id=uuid4())
+    assert exc.value.status_code == 400

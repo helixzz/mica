@@ -413,6 +413,11 @@ class PurchaseOrder(Base, TimestampMixin):
     items: Mapped[list[POItem]] = relationship(
         back_populates="po", cascade="all, delete-orphan", order_by="POItem.line_no"
     )
+    payment_schedules: Mapped[list[PaymentSchedule]] = relationship(
+        back_populates="po",
+        cascade="all, delete-orphan",
+        order_by="PaymentSchedule.installment_no",
+    )
 
 
 class POItem(Base, TimestampMixin):
@@ -508,12 +513,20 @@ class ContractVersion(Base, TimestampMixin):
 
 class PaymentSchedule(Base, TimestampMixin):
     __tablename__ = "payment_schedules"
+    # A schedule item belongs to exactly one parent: a Contract OR a PurchaseOrder.
+    # The CHECK constraint is enforced in migration 0018.
 
     id: Mapped[UUID] = mapped_column(PGUUID(as_uuid=True), primary_key=True, default=new_uuid)
-    contract_id: Mapped[UUID] = mapped_column(
+    contract_id: Mapped[UUID | None] = mapped_column(
         PGUUID(as_uuid=True),
         ForeignKey("contracts.id", ondelete="CASCADE"),
-        nullable=False,
+        nullable=True,
+        index=True,
+    )
+    po_id: Mapped[UUID | None] = mapped_column(
+        PGUUID(as_uuid=True),
+        ForeignKey("purchase_orders.id", ondelete="CASCADE"),
+        nullable=True,
         index=True,
     )
     installment_no: Mapped[int] = mapped_column(Integer, nullable=False)
@@ -543,7 +556,10 @@ class PaymentSchedule(Base, TimestampMixin):
     )
     notes: Mapped[str | None] = mapped_column(Text)
 
-    contract: Mapped[Contract] = relationship(back_populates="schedules")
+    contract: Mapped[Contract | None] = relationship(back_populates="schedules")
+    po: Mapped[PurchaseOrder | None] = relationship(
+        "PurchaseOrder", back_populates="payment_schedules"
+    )
     payment_record: Mapped[PaymentRecord | None] = relationship(
         foreign_keys=[payment_record_id],
     )

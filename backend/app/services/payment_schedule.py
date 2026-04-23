@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from dataclasses import dataclass
 from datetime import date
 from decimal import Decimal
 from uuid import UUID
@@ -16,8 +17,73 @@ from app.models import (
     PaymentRecord,
     PaymentSchedule,
     PaymentStatus,
+    PurchaseOrder,
     ScheduleItemStatus,
 )
+
+
+@dataclass(frozen=True)
+class _Parent:
+    kind: str
+    id: UUID
+    number: str
+    currency: str
+    total_amount: Decimal
+    po_id_for_payment: UUID
+
+
+async def _resolve_parent(
+    db: AsyncSession,
+    *,
+    contract_id: UUID | None = None,
+    po_id: UUID | None = None,
+) -> _Parent:
+    if (contract_id is None) == (po_id is None):
+        raise HTTPException(400, "payment_schedule.parent_required")
+
+    if contract_id is not None:
+        contract = (
+            await db.execute(
+                select(Contract)
+                .where(Contract.id == contract_id)
+                .options(selectinload(Contract.schedules))
+            )
+        ).scalar_one_or_none()
+        if contract is None:
+            raise HTTPException(404, "contract.not_found")
+        return _Parent(
+            kind="contract",
+            id=contract.id,
+            number=contract.contract_number,
+            currency=contract.currency,
+            total_amount=contract.total_amount,
+            po_id_for_payment=contract.po_id,
+        )
+
+    assert po_id is not None
+    po = (
+        await db.execute(
+            select(PurchaseOrder)
+            .where(PurchaseOrder.id == po_id)
+            .options(selectinload(PurchaseOrder.payment_schedules))
+        )
+    ).scalar_one_or_none()
+    if po is None:
+        raise HTTPException(404, "po.not_found")
+    return _Parent(
+        kind="po",
+        id=po.id,
+        number=po.po_number,
+        currency=po.currency,
+        total_amount=po.total_amount,
+        po_id_for_payment=po.id,
+    )
+
+
+def _parent_filter(parent: _Parent):
+    if parent.kind == "contract":
+        return PaymentSchedule.contract_id == parent.id
+    return PaymentSchedule.po_id == parent.id
 
 
 async def get_contract_with_schedules(db: AsyncSession, contract_id: UUID) -> Contract:
@@ -30,26 +96,63 @@ async def get_contract_with_schedules(db: AsyncSession, contract_id: UUID) -> Co
     return contract
 
 
-async def list_schedule(db: AsyncSession, contract_id: UUID) -> list[PaymentSchedule]:
-    await get_contract_with_schedules(db, contract_id)
+async def list_schedule(
+    db: AsyncSession,
+    *,
+    contract_id: UUID | None = None,
+    po_id: UUID | None = None,
+) -> list[PaymentSchedule]:
+    parent = await _resolve_parent(db, contract_id=contract_id, po_id=po_id)
     result = await db.execute(
         select(PaymentSchedule)
-        .where(PaymentSchedule.contract_id == contract_id)
+        .where(_parent_filter(parent))
         .order_by(PaymentSchedule.installment_no)
     )
     return list(result.scalars().all())
 
 
+async def build_summary_for(
+    db: AsyncSession,
+    *,
+    contract_id: UUID | None = None,
+    po_id: UUID | None = None,
+) -> dict:
+    parent = await _resolve_parent(db, contract_id=contract_id, po_id=po_id)
+    items = list(
+        (
+            await db.execute(
+                select(PaymentSchedule)
+                .where(_parent_filter(parent))
+                .order_by(PaymentSchedule.installment_no)
+            )
+        )
+        .scalars()
+        .all()
+    )
+    planned_total = sum((s.planned_amount for s in items), Decimal("0"))
+    paid_total = sum((s.actual_amount or Decimal("0") for s in items), Decimal("0"))
+    return {
+        "contract_total": parent.total_amount,
+        "planned_total": planned_total,
+        "paid_total": paid_total,
+        "remaining": planned_total - paid_total,
+        "total_mismatch": planned_total != parent.total_amount,
+        "items": items,
+    }
+
+
 async def replace_schedule(
     db: AsyncSession,
-    contract_id: UUID,
     items: list[dict],
+    *,
+    contract_id: UUID | None = None,
+    po_id: UUID | None = None,
 ) -> list[PaymentSchedule]:
-    await get_contract_with_schedules(db, contract_id)
+    parent = await _resolve_parent(db, contract_id=contract_id, po_id=po_id)
 
     await db.execute(
         delete(PaymentSchedule).where(
-            PaymentSchedule.contract_id == contract_id,
+            _parent_filter(parent),
             PaymentSchedule.status == ScheduleItemStatus.PLANNED.value,
         )
     )
@@ -62,7 +165,8 @@ async def replace_schedule(
 
         schedule = PaymentSchedule(
             id=new_uuid(),
-            contract_id=contract_id,
+            contract_id=parent.id if parent.kind == "contract" else None,
+            po_id=parent.id if parent.kind == "po" else None,
             installment_no=item_data["installment_no"],
             label=item_data["label"],
             planned_amount=Decimal(str(item_data["planned_amount"])),
@@ -80,13 +184,16 @@ async def replace_schedule(
 
 async def update_schedule_item(
     db: AsyncSession,
-    contract_id: UUID,
     installment_no: int,
     updates: dict,
+    *,
+    contract_id: UUID | None = None,
+    po_id: UUID | None = None,
 ) -> PaymentSchedule:
+    parent = await _resolve_parent(db, contract_id=contract_id, po_id=po_id)
     result = await db.execute(
         select(PaymentSchedule).where(
-            PaymentSchedule.contract_id == contract_id,
+            _parent_filter(parent),
             PaymentSchedule.installment_no == installment_no,
         )
     )
@@ -104,12 +211,15 @@ async def update_schedule_item(
 
 async def delete_schedule_item(
     db: AsyncSession,
-    contract_id: UUID,
     installment_no: int,
+    *,
+    contract_id: UUID | None = None,
+    po_id: UUID | None = None,
 ) -> None:
+    parent = await _resolve_parent(db, contract_id=contract_id, po_id=po_id)
     result = await db.execute(
         select(PaymentSchedule).where(
-            PaymentSchedule.contract_id == contract_id,
+            _parent_filter(parent),
             PaymentSchedule.installment_no == installment_no,
         )
     )
@@ -124,18 +234,20 @@ async def delete_schedule_item(
 
 async def execute_schedule_item(
     db: AsyncSession,
-    contract_id: UUID,
     installment_no: int,
     payment_method: str,
     transaction_ref: str | None,
     invoice_id: UUID | None,
     amount_override: Decimal | None,
+    *,
+    contract_id: UUID | None = None,
+    po_id: UUID | None = None,
 ) -> PaymentSchedule:
-    contract = await get_contract_with_schedules(db, contract_id)
+    parent = await _resolve_parent(db, contract_id=contract_id, po_id=po_id)
 
     result = await db.execute(
         select(PaymentSchedule).where(
-            PaymentSchedule.contract_id == contract_id,
+            _parent_filter(parent),
             PaymentSchedule.installment_no == installment_no,
         )
     )
@@ -149,17 +261,19 @@ async def execute_schedule_item(
 
     existing_count = (
         await db.execute(
-            select(func.count(PaymentRecord.id)).where(PaymentRecord.po_id == contract.po_id)
+            select(func.count(PaymentRecord.id)).where(
+                PaymentRecord.po_id == parent.po_id_for_payment
+            )
         )
     ).scalar() or 0
 
     payment = PaymentRecord(
         id=new_uuid(),
-        payment_number=f"PAY-{contract.contract_number}-{existing_count + 1:03d}",
-        po_id=contract.po_id,
+        payment_number=f"PAY-{parent.number}-{existing_count + 1:03d}",
+        po_id=parent.po_id_for_payment,
         installment_no=installment_no,
         amount=pay_amount,
-        currency=contract.currency,
+        currency=parent.currency,
         due_date=item.planned_date,
         payment_date=date.today(),
         payment_method=payment_method,
@@ -186,13 +300,16 @@ async def execute_schedule_item(
 
 async def link_invoice(
     db: AsyncSession,
-    contract_id: UUID,
     installment_no: int,
     invoice_id: UUID,
+    *,
+    contract_id: UUID | None = None,
+    po_id: UUID | None = None,
 ) -> PaymentSchedule:
+    parent = await _resolve_parent(db, contract_id=contract_id, po_id=po_id)
     result = await db.execute(
         select(PaymentSchedule).where(
-            PaymentSchedule.contract_id == contract_id,
+            _parent_filter(parent),
             PaymentSchedule.installment_no == installment_no,
         )
     )
@@ -210,8 +327,8 @@ async def link_invoice(
 
 
 def build_summary(contract: Contract, items: list[PaymentSchedule]) -> dict:
-    planned_total = sum(s.planned_amount for s in items)
-    paid_total = sum(s.actual_amount or Decimal("0") for s in items)
+    planned_total = sum((s.planned_amount for s in items), Decimal("0"))
+    paid_total = sum((s.actual_amount or Decimal("0") for s in items), Decimal("0"))
     return {
         "contract_total": contract.total_amount,
         "planned_total": planned_total,
@@ -259,11 +376,40 @@ async def payment_forecast(db: AsyncSession, months: int = 6) -> dict:
             }
         )
 
-    grand_planned = sum(b["planned"] for b in month_buckets)
-    grand_paid = sum(b["paid"] for b in month_buckets)
+    grand_planned = sum((b["planned"] for b in month_buckets), Decimal("0"))
+    grand_paid = sum((b["paid"] for b in month_buckets), Decimal("0"))
 
     return {
         "months": month_buckets,
         "grand_planned": grand_planned,
         "grand_paid": grand_paid,
     }
+
+
+async def upcoming_due_count(db: AsyncSession, within_days: int = 30) -> int:
+    today = date.today()
+    end = date.fromordinal(today.toordinal() + within_days)
+    q = select(func.count(PaymentSchedule.id)).where(
+        PaymentSchedule.planned_date.isnot(None),
+        PaymentSchedule.planned_date >= today,
+        PaymentSchedule.planned_date <= end,
+        PaymentSchedule.status.in_(
+            (ScheduleItemStatus.PLANNED.value, ScheduleItemStatus.DUE.value)
+        ),
+    )
+    return int((await db.execute(q)).scalar() or 0)
+
+
+__all__ = [
+    "build_summary",
+    "build_summary_for",
+    "delete_schedule_item",
+    "execute_schedule_item",
+    "get_contract_with_schedules",
+    "link_invoice",
+    "list_schedule",
+    "payment_forecast",
+    "replace_schedule",
+    "upcoming_due_count",
+    "update_schedule_item",
+]
