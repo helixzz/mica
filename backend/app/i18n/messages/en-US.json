@@ -61,8 +61,19 @@
   "contract.not_editable_in_status": "Contract cannot be edited in its current status",
   "contract.invalid_status_transition": "Invalid contract status transition",
   "contract.cannot_delete_with_paid_schedule": "Contract has paid payment records and cannot be deleted",
+  "payment.not_found": "Payment record not found",
+  "payment.contract_required": "Payment must be associated with a contract",
+  "payment.contract_po_mismatch": "Selected contract does not belong to this purchase order",
+  "payment.schedule_parent_mismatch": "Schedule item does not belong to the selected contract/PO",
+  "payment.cannot_delete_confirmed": "Confirmed payments cannot be deleted — reverse first",
+  "attachment.not_found": "Attachment not found",
   "schedule_item.not_found": "Payment schedule item not found",
   "schedule_item.cannot_delete_paid": "Cannot delete a paid schedule item",
   "schedule_item.already_paid": "This installment has already been paid",
-  "invoice.not_found": "Invoice not found"
+  "invoice.not_found": "Invoice not found",
+  "user.not_found": "User not found",
+  "user.username_exists": "Username is already taken",
+  "user.cannot_delete_self": "You cannot delete your own account",
+  "user.cannot_delete_last_admin": "Cannot delete the last active admin",
+  "user.has_references": "This user is referenced by existing records (PR/PO/approvals/audit logs) and cannot be hard-deleted. Disable the account instead."
 }
