@@ -623,6 +623,16 @@
       "auth.saml.group_mapping_enabled": "Enable automatic role assignment from SAML groups. When disabled, auto-created users keep the default role.",
       "auth.saml.group_mapping": "JSON array matched top-to-bottom, e.g. [{\"group\":\"Finance\",\"role\":\"finance_auditor\",\"department_code\":\"FIN\"}]"
     },
+    "saml_metadata": {
+      "refresh_tooltip": "Fetch IdP metadata from the URL above now and update the signing certificate (for ADFS cert rotation)",
+      "refresh_ok_title": "IdP metadata refreshed successfully",
+      "refresh_error_title": "Failed to refresh IdP metadata",
+      "cert_updated": "Signing certificate was updated. Next SSO login will use the new certificate.",
+      "cert_unchanged": "Signing certificate is already current — no change needed.",
+      "certs_found": "Certificates found in metadata: {{count}}",
+      "sso_url_in_metadata": "SSO URL in metadata: {{url}}",
+      "entity_id_mismatch": "Metadata entityId differs from current: {{metadata}} vs {{current}}"
+    },
     "new_user": "New User",
     "edit_user": "Edit User: {{name}}",
     "user_count": "users",

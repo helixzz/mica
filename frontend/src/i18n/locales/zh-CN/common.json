@@ -623,6 +623,16 @@
       "auth.saml.group_mapping_enabled": "启用后系统会根据 SAML 用户组自动映射本地角色；关闭时自动创建用户仅使用默认角色。",
       "auth.saml.group_mapping": "按顺序匹配的 JSON 数组，例如 [{\"group\":\"Finance\",\"role\":\"finance_auditor\",\"department_code\":\"FIN\"}]"
     },
+    "saml_metadata": {
+      "refresh_tooltip": "立即从上方 URL 拉取 IdP 元数据并更新签名证书（用于 ADFS 证书轮换）",
+      "refresh_ok_title": "IdP 元数据刷新成功",
+      "refresh_error_title": "IdP 元数据刷新失败",
+      "cert_updated": "签名证书已更新，下次 SSO 登录将使用新证书。",
+      "cert_unchanged": "签名证书未发生变化，当前证书已是最新。",
+      "certs_found": "元数据中找到 {{count}} 个签名证书",
+      "sso_url_in_metadata": "元数据中的 SSO 地址：{{url}}",
+      "entity_id_mismatch": "元数据中的 entityId 与当前配置不一致：{{metadata}} vs {{current}}"
+    },
     "new_user": "新增用户",
     "edit_user": "编辑用户：{{name}}",
     "user_count": "位用户",
