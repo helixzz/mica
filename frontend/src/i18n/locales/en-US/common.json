@@ -46,7 +46,8 @@
     "mark_paid": "Mark Paid",
     "record_shipment": "Record Shipment",
     "record_payment": "Record Payment",
-    "record_invoice": "Record Invoice"
+    "record_invoice": "Record Invoice",
+    "close": "Close"
   },
   "field": {
     "username": "Username",
@@ -81,6 +82,7 @@
     "amount": "Amount",
     "pr_number": "PR Number",
     "po_number": "PO Number",
+    "po_status": "PO Status",
     "contract_number": "Contract No.",
     "shipment_number": "Shipment No.",
     "payment_number": "Payment No.",
@@ -601,6 +603,8 @@
     "select_parent": "Select parent category",
     "added": "Added",
     "deactivated": "Deactivated",
+    "confirm_delete_user_title": "Delete user {{name}}?",
+    "confirm_delete_user_body": "Hard delete is not reversible. If the user already has related records (PR/PO/approvals/audit logs), deletion will fail — disable the account instead.",
     "operation_failed": "Operation failed",
     "status_col": "Status",
     "departments": "Departments",
@@ -858,7 +862,17 @@
     "transition_to_expired": "Mark as Expired",
     "confirm_status_title": "Change status to \"{{status}}\"?",
     "confirm_status_body": "This change is recorded in the version history, and the contract will no longer be editable after the transition.",
-    "status_changed_ok": "Contract status updated"
+    "status_changed_ok": "Contract status updated",
+    "linked_po": "Linked Purchase Order",
+    "view_po": "View PO",
+    "shipments_tab": "Shipments",
+    "shipments_title": "Shipments for the linked PO",
+    "no_shipments_hint": "No shipments recorded against the linked PO yet.",
+    "manage_in_po": "Manage in PO",
+    "view_ocr": "View OCR",
+    "ocr_viewer_title": "Extracted OCR Text · {{name}}",
+    "ocr_empty": "OCR text is empty",
+    "ocr_disclaimer": "OCR text shown here is machine-extracted for search and reference only. The original document remains authoritative."
   },
   "common": {
     "total_count": "{{count}} total",
@@ -898,6 +912,17 @@
     "payment_due_date_help": "Use the contract or invoice due date so overdue and cash-flow tracking stay accurate.",
     "payment_date_help": "Fill this only if the payment has already happened. Leave blank for planned or pending records.",
     "payment_ref_help": "Optional. Add the bank reference, voucher number, or internal remittance identifier for reconciliation.",
+    "payment_contract_required": "Please select an associated contract first",
+    "payment_linked_contract": "Linked Contract",
+    "payment_linked_schedule": "Linked Schedule Installment (optional)",
+    "payment_linked_schedule_placeholder": "None (record against contract only)",
+    "payment_linked_schedule_help": "If an installment is selected, executing this payment will automatically mark the installment as paid. Leave blank to record only against the contract.",
+    "payment_no_contract_title": "This PO has no contract yet",
+    "payment_no_contract_body": "By compliance policy, every payment must be linked to a contract. Use \"Create Contract\" to add one quickly.",
+    "payment_edit_title": "Edit Payment: {{number}}",
+    "payment_confirm_delete_title": "Delete this payment record?",
+    "payment_confirm_delete_body": "Only pending payments can be deleted. Reverse confirmed payments first.",
+    "no_contracts_hint": "No contracts linked to this PO yet. Use \"Create Contract\" above before recording payments.",
     "invoice_help": "Record the supplier's invoice number, date, tax info, and supporting files so later matching and payment review stay traceable."
   }
 }
