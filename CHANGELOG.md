@@ -7,7 +7,26 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [v0.9.8] — 2026-04-24
+
+### 修复
+
+- **管理员用户列表中部分用户的部门显示为 UUID 而不是部门名称** — 生产环境用户反馈
+  - 根因：`GET /admin/users` 返回全量用户（跨公司），但前端构建 `deptMap` 调用的 `/departments` 端点按 `company_id == user.company_id` 过滤（只返回当前管理员所在公司的部门）。结果：跨公司用户（如种子数据中属于 DEMO 公司的 alice/bob/carol/dave，而当前管理员属于 JQSH）的 `department_id` 不在 deptMap 中，UI 回落到显示原始 UUID
+  - 修复：在 `/admin/users` 响应中预 join 部门和公司字段（`department_code`、`department_name_zh`、`company_code`、`company_name_zh`），前端渲染直接从用户行读取，不再依赖 dept 映射表。同步更新 `POST /admin/users` 和 `PATCH /admin/users/{id}` 的返回值
+  - 前端：`Admin.tsx` 用户管理表的部门列优先读 `department_name_zh`，deptMap 作为二级兜底（兼容旧逻辑），最后才显示 UUID
+
+### 备注
+
+- 部门下拉选项（创建/编辑用户对话框）仍按当前管理员公司范围列出 —— 管理员不应把用户分配到自己看不到的公司的部门，这是预期行为。仅修复展示不一致
+
+---
+
 ## [v0.9.7] — 2026-04-24
+
+### 修复
+
+- **本地用户创建报"数据校验失败"**：`UserCreateIn.role` Literal 漏了 `requester` 角色（6 个合法角色中只列出了 5 个），导致前端默认选中的 requester 每次都被后端 422 拒绝。`UserUpdateIn.role` 早就修对了，但创建路径的漂移一直没被发现。
 
 ### 修复
 
