@@ -358,17 +358,30 @@ async def payment_forecast(db: AsyncSession, months: int = 6) -> dict:
         else:
             month_end = date(y, m + 1, 1)
 
-        planned_q = select(func.coalesce(func.sum(PaymentSchedule.planned_amount), 0)).where(
+        planned_from_schedule = select(
+            func.coalesce(func.sum(PaymentSchedule.planned_amount), 0)
+        ).where(
             PaymentSchedule.planned_date >= month_start,
             PaymentSchedule.planned_date < month_end,
-            PaymentSchedule.status != ScheduleItemStatus.CANCELLED.value,
+            PaymentSchedule.status.in_(
+                (ScheduleItemStatus.PLANNED.value, ScheduleItemStatus.DUE.value)
+            ),
         )
-        planned = Decimal(str((await db.execute(planned_q)).scalar()))
+        planned_from_pending_records = select(
+            func.coalesce(func.sum(PaymentRecord.amount), 0)
+        ).where(
+            PaymentRecord.due_date >= month_start,
+            PaymentRecord.due_date < month_end,
+            PaymentRecord.status == PaymentStatus.PENDING.value,
+        )
+        planned_sched = Decimal(str((await db.execute(planned_from_schedule)).scalar()))
+        planned_pending = Decimal(str((await db.execute(planned_from_pending_records)).scalar()))
+        planned = planned_sched + planned_pending
 
-        paid_q = select(func.coalesce(func.sum(PaymentSchedule.actual_amount), 0)).where(
-            PaymentSchedule.actual_date >= month_start,
-            PaymentSchedule.actual_date < month_end,
-            PaymentSchedule.status == ScheduleItemStatus.PAID.value,
+        paid_q = select(func.coalesce(func.sum(PaymentRecord.amount), 0)).where(
+            PaymentRecord.payment_date >= month_start,
+            PaymentRecord.payment_date < month_end,
+            PaymentRecord.status == PaymentStatus.CONFIRMED.value,
         )
         paid = Decimal(str((await db.execute(paid_q)).scalar()))
 
