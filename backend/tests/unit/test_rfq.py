@@ -7,7 +7,7 @@ import pytest
 from fastapi import HTTPException
 from sqlalchemy import select
 
-from app.models import RFQQuote, RFQStatus, Item, Supplier, User
+from app.models import Item, RFQQuote, RFQStatus, Supplier, User
 from app.services import purchase as purchase_svc
 from app.services import rfq as rfq_svc
 
