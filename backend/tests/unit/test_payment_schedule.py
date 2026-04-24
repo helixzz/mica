@@ -418,3 +418,67 @@ async def test_payment_schedule_requires_exactly_one_parent(seeded_db_session):
     with pytest.raises(HTTPException) as exc:
         await svc.list_schedule(seeded_db_session, contract_id=uuid4(), po_id=uuid4())
     assert exc.value.status_code == 400
+
+
+async def test_payment_forecast_includes_direct_confirmed_payments(seeded_db_session):
+    from datetime import date as _date
+
+    from app.models import PaymentRecord, PaymentStatus
+
+    today = _date.today()
+    po = await _ensure_standalone_po(seeded_db_session)
+
+    seeded_db_session.add(
+        PaymentRecord(
+            id=new_uuid(),
+            payment_number=f"PAY-FORECAST-{uuid4().hex[:6]}",
+            po_id=po.id,
+            contract_id=None,
+            installment_no=1,
+            amount=Decimal("4500000"),
+            currency="CNY",
+            due_date=today,
+            payment_date=today,
+            payment_method="bank_transfer",
+            status=PaymentStatus.CONFIRMED.value,
+        )
+    )
+    await seeded_db_session.flush()
+
+    result = await svc.payment_forecast(seeded_db_session, months=1)
+
+    assert len(result["months"]) == 1
+    current_bucket = result["months"][0]
+    assert current_bucket["paid"] >= Decimal("4500000")
+    assert result["grand_paid"] >= Decimal("4500000")
+
+
+async def test_payment_forecast_includes_pending_records_in_planned(seeded_db_session):
+    from datetime import date as _date
+
+    from app.models import PaymentRecord, PaymentStatus
+
+    po = await _ensure_standalone_po(seeded_db_session)
+    due = _date.today()
+
+    seeded_db_session.add(
+        PaymentRecord(
+            id=new_uuid(),
+            payment_number=f"PAY-PENDING-{uuid4().hex[:6]}",
+            po_id=po.id,
+            contract_id=None,
+            installment_no=1,
+            amount=Decimal("1200000"),
+            currency="CNY",
+            due_date=due,
+            payment_date=None,
+            payment_method="bank_transfer",
+            status=PaymentStatus.PENDING.value,
+        )
+    )
+    await seeded_db_session.flush()
+
+    result = await svc.payment_forecast(seeded_db_session, months=3)
+
+    grand_planned = sum(Decimal(str(m["planned"])) for m in result["months"])
+    assert grand_planned >= Decimal("1200000")
