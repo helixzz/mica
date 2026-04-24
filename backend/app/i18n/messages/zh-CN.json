@@ -61,8 +61,19 @@
   "contract.not_editable_in_status": "当前状态下合同不可编辑",
   "contract.invalid_status_transition": "不允许的合同状态变更",
   "contract.cannot_delete_with_paid_schedule": "已存在已付款记录，合同无法删除",
+  "payment.not_found": "付款记录不存在",
+  "payment.contract_required": "付款必须关联合同",
+  "payment.contract_po_mismatch": "合同与采购订单不匹配",
+  "payment.schedule_parent_mismatch": "付款计划分期与所选合同/订单不匹配",
+  "payment.cannot_delete_confirmed": "已确认的付款不可删除，请先撤销",
+  "attachment.not_found": "附件不存在",
   "schedule_item.not_found": "付款计划期次不存在",
   "schedule_item.cannot_delete_paid": "已付款的计划不能删除",
   "schedule_item.already_paid": "该期已付款，不能重复执行",
-  "invoice.not_found": "发票不存在"
+  "invoice.not_found": "发票不存在",
+  "user.not_found": "用户不存在",
+  "user.username_exists": "用户名已被占用",
+  "user.cannot_delete_self": "不能删除当前登录账号",
+  "user.cannot_delete_last_admin": "不能删除最后一位启用状态的管理员",
+  "user.has_references": "该用户已产生业务数据（PR/PO/审批/审计日志），无法硬删除。请改为禁用账号。"
 }

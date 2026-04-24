@@ -23,6 +23,7 @@ from app.models import (
     POItem,
     POStatus,
     PurchaseOrder,
+    ScheduleItemStatus,
     SerialNumberEntry,
     Shipment,
     ShipmentDocument,
@@ -121,10 +122,26 @@ async def create_contract(
 
 
 async def list_contracts(db: AsyncSession, po_id: UUID | None = None) -> list[Contract]:
-    stmt = select(Contract).order_by(Contract.created_at.desc())
+    stmt = (
+        select(Contract)
+        .order_by(Contract.created_at.desc())
+        .options(selectinload(Contract.po), selectinload(Contract.supplier))
+    )
     if po_id:
         stmt = stmt.where(Contract.po_id == po_id)
     return list((await db.execute(stmt)).scalars().all())
+
+
+async def get_contract(db: AsyncSession, contract_id: UUID) -> Contract:
+    stmt = (
+        select(Contract)
+        .where(Contract.id == contract_id)
+        .options(selectinload(Contract.po), selectinload(Contract.supplier))
+    )
+    contract = (await db.execute(stmt)).scalar_one_or_none()
+    if contract is None:
+        raise HTTPException(404, "contract.not_found")
+    return contract
 
 
 _ALLOWED_CONTRACT_EDIT_FIELDS: frozenset[str] = frozenset(
@@ -485,6 +502,8 @@ async def create_payment(
     actor: User,
     po_id: UUID,
     amount: Decimal,
+    contract_id: UUID,
+    schedule_item_id: UUID | None = None,
     due_date=None,
     payment_date=None,
     payment_method: str = "bank_transfer",
@@ -494,6 +513,23 @@ async def create_payment(
     po = await _load_po(db, po_id)
     if po is None:
         raise HTTPException(404, "po.not_found")
+
+    contract = (
+        await db.execute(select(Contract).where(Contract.id == contract_id))
+    ).scalar_one_or_none()
+    if contract is None:
+        raise HTTPException(404, "contract.not_found")
+    if contract.po_id != po_id:
+        raise HTTPException(409, "payment.contract_po_mismatch")
+
+    if schedule_item_id is not None:
+        schedule_item = (
+            await db.execute(select(PaymentSchedule).where(PaymentSchedule.id == schedule_item_id))
+        ).scalar_one_or_none()
+        if schedule_item is None:
+            raise HTTPException(404, "schedule_item.not_found")
+        if schedule_item.contract_id != contract_id and schedule_item.po_id != po_id:
+            raise HTTPException(409, "payment.schedule_parent_mismatch")
 
     existing_count = (
         await db.execute(select(func.count(PaymentRecord.id)).where(PaymentRecord.po_id == po_id))
@@ -505,6 +541,8 @@ async def create_payment(
     record = PaymentRecord(
         payment_number=payment_number,
         po_id=po_id,
+        contract_id=contract_id,
+        schedule_item_id=schedule_item_id,
         installment_no=installment_no,
         amount=_as_decimal(amount),
         currency=po.currency,
@@ -516,9 +554,18 @@ async def create_payment(
         notes=notes,
     )
     db.add(record)
+    await db.flush()
 
     if status == PaymentStatus.CONFIRMED.value:
         po.amount_paid = (po.amount_paid or Decimal("0")) + _as_decimal(amount)
+
+    if schedule_item_id is not None and status == PaymentStatus.CONFIRMED.value:
+        schedule_item = await db.get(PaymentSchedule, schedule_item_id)
+        if schedule_item is not None and schedule_item.status != ScheduleItemStatus.PAID.value:
+            schedule_item.actual_amount = _as_decimal(amount)
+            schedule_item.actual_date = payment_date
+            schedule_item.payment_record_id = record.id
+            schedule_item.status = ScheduleItemStatus.PAID.value
 
     await _audit_write(
         db,
@@ -526,11 +573,121 @@ async def create_payment(
         "payment.created",
         "payment_record",
         str(record.id) or "",
-        meta={"po_id": str(po_id), "amount": str(amount), "status": status},
+        meta={
+            "po_id": str(po_id),
+            "contract_id": str(contract_id),
+            "schedule_item_id": str(schedule_item_id) if schedule_item_id else None,
+            "amount": str(amount),
+            "status": status,
+        },
     )
     await db.commit()
     await db.refresh(record)
     return record
+
+
+async def update_payment(
+    db: AsyncSession,
+    actor: User,
+    payment_id: UUID,
+    *,
+    amount: Decimal | None = None,
+    due_date=None,
+    payment_date=None,
+    payment_method: str | None = None,
+    transaction_ref: str | None = None,
+    notes: str | None = None,
+) -> PaymentRecord:
+    record = (
+        await db.execute(select(PaymentRecord).where(PaymentRecord.id == payment_id))
+    ).scalar_one_or_none()
+    if record is None:
+        raise HTTPException(404, "payment.not_found")
+
+    changes: dict[str, object] = {}
+
+    if amount is not None and _as_decimal(amount) != record.amount:
+        old = record.amount
+        new = _as_decimal(amount)
+        if record.status == PaymentStatus.CONFIRMED.value:
+            po = await _load_po(db, record.po_id)
+            if po is not None:
+                po.amount_paid = (po.amount_paid or Decimal("0")) - old + new
+            if record.schedule_item_id is not None:
+                schedule_item = await db.get(PaymentSchedule, record.schedule_item_id)
+                if schedule_item is not None:
+                    schedule_item.actual_amount = new
+        record.amount = new
+        changes["amount"] = {"from": str(old), "to": str(new)}
+
+    if due_date is not None and due_date != record.due_date:
+        changes["due_date"] = {"from": str(record.due_date), "to": str(due_date)}
+        record.due_date = due_date
+
+    if payment_date is not None and payment_date != record.payment_date:
+        changes["payment_date"] = {"from": str(record.payment_date), "to": str(payment_date)}
+        record.payment_date = payment_date
+        if record.schedule_item_id is not None:
+            schedule_item = await db.get(PaymentSchedule, record.schedule_item_id)
+            if schedule_item is not None:
+                schedule_item.actual_date = payment_date
+
+    if payment_method is not None and payment_method != record.payment_method:
+        changes["payment_method"] = {"from": record.payment_method, "to": payment_method}
+        record.payment_method = payment_method
+
+    if transaction_ref is not None and transaction_ref != record.transaction_ref:
+        changes["transaction_ref"] = {"from": record.transaction_ref, "to": transaction_ref}
+        record.transaction_ref = transaction_ref
+
+    if notes is not None and notes != record.notes:
+        changes["notes"] = {"from": record.notes, "to": notes}
+        record.notes = notes
+
+    if not changes:
+        return record
+
+    await _audit_write(
+        db,
+        actor,
+        "payment.updated",
+        "payment_record",
+        str(record.id),
+        meta={"changes": changes},
+    )
+    await db.commit()
+    await db.refresh(record)
+    return record
+
+
+async def delete_payment(db: AsyncSession, actor: User, payment_id: UUID) -> None:
+    record = (
+        await db.execute(select(PaymentRecord).where(PaymentRecord.id == payment_id))
+    ).scalar_one_or_none()
+    if record is None:
+        raise HTTPException(404, "payment.not_found")
+    if record.status == PaymentStatus.CONFIRMED.value:
+        raise HTTPException(409, "payment.cannot_delete_confirmed")
+
+    if record.schedule_item_id is not None:
+        schedule_item = await db.get(PaymentSchedule, record.schedule_item_id)
+        if schedule_item is not None and schedule_item.payment_record_id == record.id:
+            schedule_item.payment_record_id = None
+            schedule_item.actual_amount = None
+            schedule_item.actual_date = None
+            schedule_item.status = ScheduleItemStatus.PLANNED.value
+
+    payment_number = record.payment_number
+    await db.delete(record)
+    await _audit_write(
+        db,
+        actor,
+        "payment.deleted",
+        "payment_record",
+        str(payment_id),
+        meta={"payment_number": payment_number},
+    )
+    await db.commit()
 
 
 async def confirm_payment(

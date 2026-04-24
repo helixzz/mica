@@ -406,7 +406,10 @@ class ContractOut(BaseModel):
     id: UUID
     contract_number: str
     po_id: UUID
+    po_number: str | None = None
+    po_status: str | None = None
     supplier_id: UUID
+    supplier_name: str | None = None
     title: str
     current_version: int
     status: str
@@ -499,10 +502,21 @@ class SerialNumberIn(BaseModel):
 
 class PaymentCreateIn(BaseModel):
     po_id: UUID
+    contract_id: UUID
+    schedule_item_id: UUID | None = None
     amount: Decimal = Field(..., gt=0)
     due_date: date | None = None
     payment_date: date | None = None
     payment_method: str = "bank_transfer"
+    transaction_ref: str | None = None
+    notes: str | None = None
+
+
+class PaymentUpdateIn(BaseModel):
+    amount: Decimal | None = Field(default=None, gt=0)
+    due_date: date | None = None
+    payment_date: date | None = None
+    payment_method: str | None = None
     transaction_ref: str | None = None
     notes: str | None = None
 
@@ -512,6 +526,8 @@ class PaymentOut(BaseModel):
     id: UUID
     payment_number: str
     po_id: UUID
+    contract_id: UUID | None = None
+    schedule_item_id: UUID | None = None
     installment_no: int
     amount: Decimal
     currency: str
@@ -522,6 +538,10 @@ class PaymentOut(BaseModel):
     status: str
     notes: str | None
     created_at: datetime
+
+
+class PaymentListOut(PaymentOut):
+    contract_number: str | None = None
 
 
 class PaymentConfirmIn(BaseModel):

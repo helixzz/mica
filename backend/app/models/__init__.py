@@ -688,8 +688,14 @@ class PaymentRecord(Base, TimestampMixin):
         PGUUID(as_uuid=True),
         ForeignKey("payment_schedules.id", ondelete="SET NULL"),
     )
+    contract_id: Mapped[UUID | None] = mapped_column(
+        PGUUID(as_uuid=True),
+        ForeignKey("contracts.id", ondelete="SET NULL"),
+        index=True,
+    )
 
     po: Mapped[PurchaseOrder] = relationship()
+    contract: Mapped[Contract | None] = relationship(foreign_keys=[contract_id])
 
 
 class Invoice(Base, TimestampMixin):

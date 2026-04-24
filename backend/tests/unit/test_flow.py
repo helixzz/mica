@@ -12,6 +12,7 @@ from app.models import (
     Contract,
     ContractVersion,
     Document,
+    PaymentRecord,
     POItem,
     PurchaseOrder,
     PurchaseRequisition,
@@ -542,12 +543,16 @@ async def test_create_payment_creates_pending_record_without_updating_po_amount_
 ):
     db = seeded_db_session
     user, _supplier, _pr, po = await _create_confirmed_po(db)
+    contract = await flow_svc.create_contract(
+        db, user, po.id, title="Pay test", total_amount=Decimal("1000")
+    )
 
     payment = await flow_svc.create_payment(
         db,
         user,
         po.id,
         amount=Decimal("300"),
+        contract_id=contract.id,
         due_date=date(2026, 4, 20),
         notes="Pending payment",
     )
@@ -558,18 +563,23 @@ async def test_create_payment_creates_pending_record_without_updating_po_amount_
     assert payment.status == "pending"
     assert payment.payment_date is None
     assert payment.currency == po.currency
+    assert payment.contract_id == contract.id
     assert refreshed_po.amount_paid == Decimal("0")
 
 
 async def test_create_payment_with_payment_date_updates_po_amount_paid(seeded_db_session):
     db = seeded_db_session
     user, _supplier, _pr, po = await _create_confirmed_po(db)
+    contract = await flow_svc.create_contract(
+        db, user, po.id, title="Pay test", total_amount=Decimal("1000")
+    )
 
     payment = await flow_svc.create_payment(
         db,
         user,
         po.id,
         amount=Decimal("450"),
+        contract_id=contract.id,
         payment_date=date(2026, 4, 21),
         transaction_ref="TX-100",
     )
@@ -577,15 +587,23 @@ async def test_create_payment_with_payment_date_updates_po_amount_paid(seeded_db
     refreshed_po = await purchase_svc.get_po(db, po.id)
     assert payment.status == "confirmed"
     assert payment.payment_date == date(2026, 4, 21)
+    assert payment.contract_id == contract.id
     assert refreshed_po.amount_paid == Decimal("450")
 
 
 async def test_create_payment_increments_installment_number(seeded_db_session):
     db = seeded_db_session
     user, _supplier, _pr, po = await _create_confirmed_po(db)
+    contract = await flow_svc.create_contract(
+        db, user, po.id, title="Pay test", total_amount=Decimal("1000")
+    )
 
-    p1 = await flow_svc.create_payment(db, user, po.id, amount=Decimal("100"))
-    p2 = await flow_svc.create_payment(db, user, po.id, amount=Decimal("200"))
+    p1 = await flow_svc.create_payment(
+        db, user, po.id, amount=Decimal("100"), contract_id=contract.id
+    )
+    p2 = await flow_svc.create_payment(
+        db, user, po.id, amount=Decimal("200"), contract_id=contract.id
+    )
 
     assert p1.installment_no == 1
     assert p2.installment_no == 2
@@ -597,10 +615,96 @@ async def test_create_payment_raises_for_missing_po(seeded_db_session):
     user = await _get_user(db)
 
     with pytest.raises(HTTPException) as exc:
-        await flow_svc.create_payment(db, user, uuid4(), amount=Decimal("1"))
+        await flow_svc.create_payment(db, user, uuid4(), amount=Decimal("1"), contract_id=uuid4())
 
     assert exc.value.status_code == 404
     assert exc.value.detail == "po.not_found"
+
+
+async def test_create_payment_rejects_contract_not_belonging_to_po(seeded_db_session):
+    db = seeded_db_session
+    user, _supplier, _pr, po_a = await _create_confirmed_po(db, title="PO A")
+    _u, _s, _pr2, po_b = await _create_confirmed_po(db, title="PO B")
+    contract_b = await flow_svc.create_contract(
+        db, user, po_b.id, title="Belongs to PO B", total_amount=Decimal("500")
+    )
+
+    with pytest.raises(HTTPException) as exc:
+        await flow_svc.create_payment(
+            db, user, po_a.id, amount=Decimal("100"), contract_id=contract_b.id
+        )
+
+    assert exc.value.status_code == 409
+    assert exc.value.detail == "payment.contract_po_mismatch"
+
+
+async def test_update_payment_adjusts_po_amount_paid(seeded_db_session):
+    db = seeded_db_session
+    user, _supplier, _pr, po = await _create_confirmed_po(db)
+    contract = await flow_svc.create_contract(
+        db, user, po.id, title="Pay test", total_amount=Decimal("1000")
+    )
+    payment = await flow_svc.create_payment(
+        db,
+        user,
+        po.id,
+        amount=Decimal("200"),
+        contract_id=contract.id,
+        payment_date=date(2026, 4, 22),
+    )
+
+    po_before = await purchase_svc.get_po(db, po.id)
+    assert po_before.amount_paid == Decimal("200")
+
+    await flow_svc.update_payment(db, user, payment.id, amount=Decimal("250"))
+
+    po_after = await purchase_svc.get_po(db, po.id)
+    assert po_after.amount_paid == Decimal("250")
+
+
+async def test_delete_payment_blocks_confirmed_records(seeded_db_session):
+    db = seeded_db_session
+    user, _supplier, _pr, po = await _create_confirmed_po(db)
+    contract = await flow_svc.create_contract(
+        db, user, po.id, title="Pay test", total_amount=Decimal("1000")
+    )
+    payment = await flow_svc.create_payment(
+        db,
+        user,
+        po.id,
+        amount=Decimal("300"),
+        contract_id=contract.id,
+        payment_date=date(2026, 4, 22),
+    )
+
+    with pytest.raises(HTTPException) as exc:
+        await flow_svc.delete_payment(db, user, payment.id)
+
+    assert exc.value.status_code == 409
+    assert exc.value.detail == "payment.cannot_delete_confirmed"
+
+
+async def test_delete_payment_removes_pending_records(seeded_db_session):
+    db = seeded_db_session
+    user, _supplier, _pr, po = await _create_confirmed_po(db)
+    contract = await flow_svc.create_contract(
+        db, user, po.id, title="Pay test", total_amount=Decimal("1000")
+    )
+    payment = await flow_svc.create_payment(
+        db,
+        user,
+        po.id,
+        amount=Decimal("300"),
+        contract_id=contract.id,
+        due_date=date(2026, 4, 25),
+    )
+
+    await flow_svc.delete_payment(db, user, payment.id)
+
+    remaining = (
+        await db.execute(select(PaymentRecord).where(PaymentRecord.id == payment.id))
+    ).scalar_one_or_none()
+    assert remaining is None
 
 
 async def test_create_invoice_creates_invoice_lines_and_attachments(seeded_db_session):

@@ -3,10 +3,12 @@ from uuid import UUID
 
 from fastapi import APIRouter, Depends, status
 from fastapi.responses import Response
+from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.security import CurrentUser, require_roles
 from app.db import get_db
+from app.models import Contract
 from app.schemas import (
     ContractCreateIn,
     ContractOut,
@@ -17,7 +19,9 @@ from app.schemas import (
     InvoiceOut,
     PaymentConfirmIn,
     PaymentCreateIn,
+    PaymentListOut,
     PaymentOut,
+    PaymentUpdateIn,
     POProgressOut,
     SerialNumberIn,
     ShipmentAttachIn,
@@ -28,6 +32,14 @@ from app.schemas import (
 from app.services import export_excel, flow
 
 router = APIRouter()
+
+
+def _contract_to_out(c: Contract) -> ContractOut:
+    data = ContractOut.model_validate(c)
+    data.po_number = c.po.po_number if c.po else None
+    data.po_status = c.po.status if c.po else None
+    data.supplier_name = c.supplier.name if c.supplier else None
+    return data
 
 
 @router.post(
@@ -50,7 +62,8 @@ async def create_contract(
         payload.expiry_date,
         payload.notes,
     )
-    return ContractOut.model_validate(c)
+    c = await flow.get_contract(db, c.id)
+    return _contract_to_out(c)
 
 
 @router.get("/contracts", response_model=list[ContractOut], tags=["flow"])
@@ -59,7 +72,17 @@ async def list_contracts(
     db: Annotated[AsyncSession, Depends(get_db)],
     po_id: UUID | None = None,
 ):
-    return [ContractOut.model_validate(c) for c in await flow.list_contracts(db, po_id)]
+    return [_contract_to_out(c) for c in await flow.list_contracts(db, po_id)]
+
+
+@router.get("/contracts/{contract_id}", response_model=ContractOut, tags=["flow"])
+async def get_contract(
+    contract_id: UUID,
+    user: CurrentUser,
+    db: Annotated[AsyncSession, Depends(get_db)],
+):
+    c = await flow.get_contract(db, contract_id)
+    return _contract_to_out(c)
 
 
 @router.patch("/contracts/{contract_id}", response_model=ContractOut, tags=["flow"])
@@ -72,7 +95,8 @@ async def update_contract(
 ):
     updates = payload.model_dump(exclude_unset=True)
     c = await flow.update_contract(db, user, contract_id, updates)
-    return ContractOut.model_validate(c)
+    c = await flow.get_contract(db, c.id)
+    return _contract_to_out(c)
 
 
 @router.patch("/contracts/{contract_id}/status", response_model=ContractOut, tags=["flow"])
@@ -84,7 +108,8 @@ async def change_contract_status(
     _role: Annotated[None, Depends(require_roles("admin", "procurement_mgr"))],
 ):
     c = await flow.transition_contract_status(db, user, contract_id, payload.status, payload.reason)
-    return ContractOut.model_validate(c)
+    c = await flow.get_contract(db, c.id)
+    return _contract_to_out(c)
 
 
 @router.delete("/contracts/{contract_id}", status_code=status.HTTP_204_NO_CONTENT, tags=["flow"])
@@ -217,6 +242,8 @@ async def create_payment(
         user,
         payload.po_id,
         payload.amount,
+        contract_id=payload.contract_id,
+        schedule_item_id=payload.schedule_item_id,
         due_date=payload.due_date,
         payment_date=payload.payment_date,
         payment_method=payload.payment_method,
@@ -224,6 +251,30 @@ async def create_payment(
         notes=payload.notes,
     )
     return PaymentOut.model_validate(p)
+
+
+@router.patch("/payments/{payment_id}", response_model=PaymentOut, tags=["flow"])
+async def update_payment(
+    payment_id: UUID,
+    payload: PaymentUpdateIn,
+    user: CurrentUser,
+    db: Annotated[AsyncSession, Depends(get_db)],
+    _role: Annotated[None, Depends(require_roles("admin", "procurement_mgr", "finance_auditor"))],
+):
+    updates = payload.model_dump(exclude_unset=True)
+    p = await flow.update_payment(db, user, payment_id, **updates)
+    return PaymentOut.model_validate(p)
+
+
+@router.delete("/payments/{payment_id}", status_code=status.HTTP_204_NO_CONTENT, tags=["flow"])
+async def delete_payment(
+    payment_id: UUID,
+    user: CurrentUser,
+    db: Annotated[AsyncSession, Depends(get_db)],
+    _role: Annotated[None, Depends(require_roles("admin", "procurement_mgr", "finance_auditor"))],
+) -> Response:
+    await flow.delete_payment(db, user, payment_id)
+    return Response(status_code=status.HTTP_204_NO_CONTENT)
 
 
 @router.post("/payments/{payment_id}/confirm", response_model=PaymentOut, tags=["flow"])
@@ -239,13 +290,30 @@ async def confirm_payment(
     return PaymentOut.model_validate(p)
 
 
-@router.get("/payments", response_model=list[PaymentOut], tags=["flow"])
+@router.get("/payments", response_model=list[PaymentListOut], tags=["flow"])
 async def list_payments(
     user: CurrentUser,
     db: Annotated[AsyncSession, Depends(get_db)],
     po_id: UUID | None = None,
 ):
-    return [PaymentOut.model_validate(p) for p in await flow.list_payments(db, po_id)]
+    payments = await flow.list_payments(db, po_id)
+    contract_ids = {p.contract_id for p in payments if p.contract_id is not None}
+    contract_map: dict[UUID, str] = {}
+    if contract_ids:
+        rows = (
+            await db.execute(
+                select(Contract.id, Contract.contract_number).where(Contract.id.in_(contract_ids))
+            )
+        ).all()
+        contract_map = dict(rows)
+    out: list[PaymentListOut] = []
+    for p in payments:
+        data = PaymentListOut.model_validate(p)
+        data.contract_number = (
+            contract_map.get(p.contract_id) if p.contract_id is not None else None
+        )
+        out.append(data)
+    return out
 
 
 @router.get("/payments/export/excel", tags=["flow"])
