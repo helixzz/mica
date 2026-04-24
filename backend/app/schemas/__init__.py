@@ -519,6 +519,8 @@ class PaymentUpdateIn(BaseModel):
     payment_method: str | None = None
     transaction_ref: str | None = None
     notes: str | None = None
+    contract_id: UUID | None = None
+    schedule_item_id: UUID | None = None
 
 
 class PaymentOut(BaseModel):

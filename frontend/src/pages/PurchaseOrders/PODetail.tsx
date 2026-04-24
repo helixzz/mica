@@ -814,6 +814,10 @@ function PaymentEditModal({ open, payment, onClose, onSaved }: PaymentEditModalP
   const [method, setMethod] = useState('bank_transfer')
   const [txRef, setTxRef] = useState('')
   const [notes, setNotes] = useState('')
+  const [contractId, setContractId] = useState<string | null>(null)
+  const [scheduleItemId, setScheduleItemId] = useState<string | null>(null)
+  const [contractOptions, setContractOptions] = useState<Contract[]>([])
+  const [scheduleOptions, setScheduleOptions] = useState<PaymentScheduleItem[]>([])
   const [busy, setBusy] = useState(false)
 
   useEffect(() => {
@@ -824,20 +828,55 @@ function PaymentEditModal({ open, payment, onClose, onSaved }: PaymentEditModalP
     setMethod(payment.payment_method || 'bank_transfer')
     setTxRef(payment.transaction_ref || '')
     setNotes(payment.notes || '')
+    setContractId(payment.contract_id)
+    setScheduleItemId(payment.schedule_item_id)
+    api
+      .listContracts(payment.po_id)
+      .then(setContractOptions)
+      .catch(() => setContractOptions([]))
   }, [open, payment])
+
+  useEffect(() => {
+    if (!contractId) {
+      setScheduleOptions([])
+      return
+    }
+    api
+      .getPaymentSchedule(contractId)
+      .then((s) => {
+        setScheduleOptions(
+          s.items.filter(
+            (i) => i.status !== 'paid' || i.id === scheduleItemId,
+          ),
+        )
+      })
+      .catch(() => setScheduleOptions([]))
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [contractId])
 
   const submit = async () => {
     if (!payment) return
+    if (!contractId) {
+      void message.error(t('po.payment_contract_required'))
+      return
+    }
     try {
       setBusy(true)
-      await api.updatePayment(payment.id, {
+      const patch: Record<string, unknown> = {
         amount,
         due_date: dueDate ? dueDate.format('YYYY-MM-DD') : null,
         payment_date: payDate ? payDate.format('YYYY-MM-DD') : null,
         payment_method: method,
         transaction_ref: txRef || null,
         notes: notes || null,
-      })
+      }
+      if (contractId !== payment.contract_id) {
+        patch.contract_id = contractId
+      }
+      if (scheduleItemId !== payment.schedule_item_id) {
+        patch.schedule_item_id = scheduleItemId
+      }
+      await api.updatePayment(payment.id, patch)
       void message.success(t('message.save_success'))
       onSaved()
     } catch (e) {
@@ -854,9 +893,45 @@ function PaymentEditModal({ open, payment, onClose, onSaved }: PaymentEditModalP
       onCancel={onClose}
       onOk={submit}
       confirmLoading={busy}
-      width={560}
+      width={600}
     >
       <Form layout="vertical">
+        <Form.Item label={t('po.payment_linked_contract')} required>
+          <Select
+            value={contractId}
+            onChange={(v) => {
+              setContractId(v)
+              setScheduleItemId(null)
+            }}
+            placeholder={
+              contractOptions.length === 0
+                ? t('po.payment_no_contract_body')
+                : undefined
+            }
+            disabled={contractOptions.length === 0}
+            options={contractOptions.map((c) => ({
+              value: c.id,
+              label: `${c.contract_number} · ${c.title}`,
+            }))}
+          />
+        </Form.Item>
+        {contractId && scheduleOptions.length > 0 && (
+          <Form.Item
+            label={t('po.payment_linked_schedule')}
+            help={t('po.payment_linked_schedule_help')}
+          >
+            <Select
+              allowClear
+              placeholder={t('po.payment_linked_schedule_placeholder')}
+              value={scheduleItemId}
+              onChange={(v) => setScheduleItemId(v ?? null)}
+              options={scheduleOptions.map((s) => ({
+                value: s.id,
+                label: `${t('contract.installment_n', { n: s.installment_no })} · ${s.label} · ${fmtAmount(s.planned_amount, payment?.currency ?? 'CNY')}${s.planned_date ? ` · ${s.planned_date}` : ''}${s.status === 'paid' ? ` · ${t('status.paid')}` : ''}`,
+              }))}
+            />
+          </Form.Item>
+        )}
         <Row gutter={12}>
           <Col span={12}>
             <Form.Item label={t('field.amount')} required>

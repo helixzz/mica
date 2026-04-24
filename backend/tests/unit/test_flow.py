@@ -656,7 +656,7 @@ async def test_update_payment_adjusts_po_amount_paid(seeded_db_session):
     po_before = await purchase_svc.get_po(db, po.id)
     assert po_before.amount_paid == Decimal("200")
 
-    await flow_svc.update_payment(db, user, payment.id, amount=Decimal("250"))
+    await flow_svc.update_payment(db, user, payment.id, {"amount": Decimal("250")})
 
     po_after = await purchase_svc.get_po(db, po.id)
     assert po_after.amount_paid == Decimal("250")
@@ -705,6 +705,74 @@ async def test_delete_payment_removes_pending_records(seeded_db_session):
         await db.execute(select(PaymentRecord).where(PaymentRecord.id == payment.id))
     ).scalar_one_or_none()
     assert remaining is None
+
+
+async def test_update_payment_can_retroactively_set_contract(seeded_db_session):
+    db = seeded_db_session
+    user, _supplier, _pr, po = await _create_confirmed_po(db)
+    contract = await flow_svc.create_contract(
+        db, user, po.id, title="Backfill link", total_amount=Decimal("1000")
+    )
+    payment = await flow_svc.create_payment(
+        db,
+        user,
+        po.id,
+        amount=Decimal("300"),
+        contract_id=contract.id,
+        due_date=date(2026, 4, 25),
+    )
+    payment.contract_id = None
+    await db.flush()
+
+    updated = await flow_svc.update_payment(db, user, payment.id, {"contract_id": contract.id})
+
+    assert updated.contract_id == contract.id
+
+
+async def test_update_payment_rejects_contract_from_different_po(seeded_db_session):
+    db = seeded_db_session
+    user, _s, _pr, po_a = await _create_confirmed_po(db, title="A")
+    _u, _s2, _pr2, po_b = await _create_confirmed_po(db, title="B")
+    contract_a = await flow_svc.create_contract(
+        db, user, po_a.id, title="Belongs to A", total_amount=Decimal("100")
+    )
+    contract_b = await flow_svc.create_contract(
+        db, user, po_b.id, title="Belongs to B", total_amount=Decimal("100")
+    )
+    payment = await flow_svc.create_payment(
+        db,
+        user,
+        po_a.id,
+        amount=Decimal("50"),
+        contract_id=contract_a.id,
+    )
+
+    with pytest.raises(HTTPException) as exc:
+        await flow_svc.update_payment(db, user, payment.id, {"contract_id": contract_b.id})
+
+    assert exc.value.status_code == 409
+    assert exc.value.detail == "payment.contract_po_mismatch"
+
+
+async def test_update_payment_clearing_contract_id_rejected(seeded_db_session):
+    db = seeded_db_session
+    user, _supplier, _pr, po = await _create_confirmed_po(db)
+    contract = await flow_svc.create_contract(
+        db, user, po.id, title="Nullify", total_amount=Decimal("100")
+    )
+    payment = await flow_svc.create_payment(
+        db,
+        user,
+        po.id,
+        amount=Decimal("50"),
+        contract_id=contract.id,
+    )
+
+    with pytest.raises(HTTPException) as exc:
+        await flow_svc.update_payment(db, user, payment.id, {"contract_id": None})
+
+    assert exc.value.status_code == 400
+    assert exc.value.detail == "payment.contract_required"
 
 
 async def test_create_invoice_creates_invoice_lines_and_attachments(seeded_db_session):
