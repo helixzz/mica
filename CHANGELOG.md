@@ -7,6 +7,43 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [v0.9.11] — 2026-04-24
+
+### 修复（关键）
+
+- **仪表盘「已支出」显示为 0 但实际已付 450 万**：`/dashboard/payment-forecast` 的 paid 金额从 `payment_schedules.actual_amount` 聚合；但通过 PO 直接登记的付款（没有走合同分期"执行"）从未在 payment_schedules 表里留下数据，导致仪表盘对这类付款完全不可见
+  - 修复：改为从 `payment_records` 聚合（status=confirmed 按 `payment_date` 入桶），这是实际付款的唯一事实来源
+  - 连带修复 planned 桶：改为 `payment_schedules` (PLANNED/DUE) + `payment_records` (status=PENDING 按 due_date 入桶) 的联合，两类未来支出都能看到
+
+### 修复
+
+- **无法把已有付款关联到合同**：PaymentUpdateIn 原先不允许修改 `contract_id` / `schedule_item_id`，导致 v0.9.10 前的旧付款记录（contract_id=NULL）无法补挂合同
+  - 后端：PATCH 接受 contract_id + schedule_item_id，校验新 contract 的 po_id 与 payment.po_id 匹配；校验 schedule 属于新 contract 或 PO；改动时自动把旧 schedule（如果是因本付款被标 PAID）回滚到 PLANNED，并把新 schedule（若 payment 是 confirmed）标为 PAID
+  - 前端：PaymentEditModal 增加合同下拉和分期下拉；已是 paid 的分期会在下拉里保留当前选中项，便于核对；清空 contract_id 会被 400 拒绝（policy: 合同必须存在）
+
+### 改进
+
+- **仪表盘付款预测面板优化**：
+  - 卡片右上角注明时间窗口（"未来 6 个月（2026-04 → 2026-09）"）
+  - 顶部汇总卡的标题明确标注"未来 N 个月"
+  - 图表下方新增紧凑的月度明细表（月份 / 计划 / 已付 / 当月待支出 + 合计行），无需再仔细观察柱高就能看到具体数字
+
+### 测试
+
+- 新增 5 条回归测试：
+  - forecast 看见直接确认的 PaymentRecord（捕获本次 bug）
+  - forecast 看见 pending PaymentRecord（验证新增 planned 逻辑）
+  - update_payment 可把 contract_id=NULL 的旧记录补挂合同
+  - update_payment 拒绝跨 PO 的合同
+  - update_payment 拒绝把 contract_id 清空
+- 后端总测试数 299 → 304，全绿
+
+### 备注
+
+- 本次不涉及 DB schema 变更，migrate 容器只是跑 alembic head（无事可做），部署耗时短
+
+---
+
 ## [v0.9.10] — 2026-04-24
 
 ### 修复（关键）
