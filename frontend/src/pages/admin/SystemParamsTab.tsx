@@ -26,6 +26,7 @@ import {
   EditOutlined,
   UndoOutlined,
   InfoCircleOutlined,
+  SyncOutlined,
 } from '@ant-design/icons';
 import {
   SystemParameter,
@@ -45,6 +46,7 @@ export const SystemParamsTab: React.FC = () => {
   const [searchText, setSearchText] = useState('');
   const [editModalVisible, setEditModalVisible] = useState(false);
   const [editingParam, setEditingParam] = useState<SystemParameter | null>(null);
+  const [refreshingMetadata, setRefreshingMetadata] = useState(false);
   const [form] = Form.useForm();
 
   const fetchParams = async () => {
@@ -90,6 +92,74 @@ export const SystemParamsTab: React.FC = () => {
       fetchParams();
     } catch (error) {
       message.error(t('admin.system_params.reset_error', 'Failed to reset parameter'));
+    }
+  };
+
+  const handleRefreshMetadata = async () => {
+    setRefreshingMetadata(true);
+    try {
+      const result = await api.refreshSamlMetadata();
+      const certChanged = result.cert_changed === 'True';
+      const certsFound = Number(result.signing_certs_found ?? '0');
+      Modal.success({
+        title: t(
+          'admin.saml_metadata.refresh_ok_title',
+          'IdP metadata refreshed successfully',
+        ),
+        content: (
+          <div>
+            <p>
+              {certChanged
+                ? t(
+                    'admin.saml_metadata.cert_updated',
+                    'Signing certificate was updated.',
+                  )
+                : t(
+                    'admin.saml_metadata.cert_unchanged',
+                    'Signing certificate is already current — no change needed.',
+                  )}
+            </p>
+            <Text type="secondary" style={{ fontSize: 12 }}>
+              {t('admin.saml_metadata.certs_found', 'Certificates found: {{count}}', {
+                count: certsFound,
+              })}
+              {result.sso_url_in_metadata && (
+                <>
+                  <br />
+                  {t('admin.saml_metadata.sso_url_in_metadata', 'SSO URL in metadata: {{url}}', {
+                    url: result.sso_url_in_metadata,
+                  })}
+                </>
+              )}
+              {result.entity_id_in_metadata && (
+                <>
+                  <br />
+                  {t(
+                    'admin.saml_metadata.entity_id_mismatch',
+                    'Metadata entityId differs from current: {{metadata}} vs {{current}}',
+                    {
+                      metadata: result.entity_id_in_metadata,
+                      current: result.entity_id_current,
+                    },
+                  )}
+                </>
+              )}
+            </Text>
+          </div>
+        ),
+      });
+      fetchParams();
+    } catch (error: unknown) {
+      const detail =
+        (error as { response?: { data?: { detail?: string } } })?.response?.data?.detail ||
+        (error as Error)?.message ||
+        'Unknown error';
+      Modal.error({
+        title: t('admin.saml_metadata.refresh_error_title', 'Failed to refresh IdP metadata'),
+        content: String(detail),
+      });
+    } finally {
+      setRefreshingMetadata(false);
     }
   };
 
@@ -253,6 +323,22 @@ export const SystemParamsTab: React.FC = () => {
                     </Col>
                     <Col span={4} style={{ textAlign: 'right' }}>
                       <Space>
+                        {param.key === 'auth.saml.idp.metadata_url' && (
+                          <Tooltip
+                            title={t(
+                              'admin.saml_metadata.refresh_tooltip',
+                              'Fetch IdP metadata now and update signing certificate',
+                            )}
+                          >
+                            <Button
+                              type="text"
+                              icon={<SyncOutlined spin={refreshingMetadata} />}
+                              onClick={handleRefreshMetadata}
+                              loading={refreshingMetadata}
+                              disabled={!param.value}
+                            />
+                          </Tooltip>
+                        )}
                         <Button
                           type="text"
                           icon={<EditOutlined />}
