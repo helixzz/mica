@@ -421,6 +421,10 @@ class PurchaseOrder(Base, TimestampMixin):
         cascade="all, delete-orphan",
         order_by="PaymentSchedule.installment_no",
     )
+    contract_links: Mapped[list[POContractLink]] = relationship(
+        back_populates="po",
+        cascade="all, delete-orphan",
+    )
 
 
 class POItem(Base, TimestampMixin):
@@ -488,6 +492,28 @@ class Contract(Base, TimestampMixin):
         cascade="all, delete-orphan",
         order_by="ContractVersion.version_number",
     )
+    po_links: Mapped[list[POContractLink]] = relationship(
+        back_populates="contract",
+        cascade="all, delete-orphan",
+    )
+
+
+class POContractLink(Base, TimestampMixin):
+    __tablename__ = "po_contract_links"
+
+    po_id: Mapped[UUID] = mapped_column(
+        PGUUID(as_uuid=True),
+        ForeignKey("purchase_orders.id", ondelete="CASCADE"),
+        primary_key=True,
+    )
+    contract_id: Mapped[UUID] = mapped_column(
+        PGUUID(as_uuid=True),
+        ForeignKey("contracts.id", ondelete="CASCADE"),
+        primary_key=True,
+    )
+
+    po: Mapped[PurchaseOrder] = relationship(back_populates="contract_links")
+    contract: Mapped[Contract] = relationship(back_populates="po_links")
 
 
 class ContractVersion(Base, TimestampMixin):
@@ -1293,3 +1319,20 @@ class RFQQuote(Base, TimestampMixin):
     rfq: Mapped[RFQ] = relationship(back_populates="quotes")
     rfq_item: Mapped[RFQItem] = relationship()
     supplier: Mapped[Supplier] = relationship()
+
+
+class DocumentTemplate(Base, TimestampMixin):
+    __tablename__ = "document_templates"
+
+    id: Mapped[UUID] = mapped_column(PGUUID(as_uuid=True), primary_key=True, default=new_uuid)
+    code: Mapped[str] = mapped_column(String(64), unique=True, nullable=False)
+    name: Mapped[str] = mapped_column(String(128), nullable=False)
+    description: Mapped[str | None] = mapped_column(Text)
+    template_document_id: Mapped[UUID | None] = mapped_column(
+        PGUUID(as_uuid=True),
+        ForeignKey("documents.id", ondelete="SET NULL"),
+    )
+    filename_template: Mapped[str] = mapped_column(Text, nullable=False)
+    is_enabled: Mapped[bool] = mapped_column(default=True, nullable=False)
+
+    template_document: Mapped[Document | None] = relationship(foreign_keys=[template_document_id])
