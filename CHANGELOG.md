@@ -7,6 +7,47 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [v0.9.13] — 2026-04-25
+
+### 新增
+
+- **首页「月度付款追踪」（从原"待付款项"升级）**：
+  - 卡片右上角新增 ← / 本月 / → 三个按钮，可以自由翻阅过去和未来
+  - 默认窗口：过去 3 个月 + 当前月 + 未来 3 个月（共 7 个月）
+  - 当前月在柱状图和明细表中都做了视觉突出（浅棕背景、加粗月份文本、"本月" 标注）
+  - 后端 `payment_forecast` 新增 `past_months` 和 `anchor`（YYYY-MM）参数；老调用（`months=6`）继续可用
+- **合同编号自定义 + ACME 自动建议**：
+  - 合同编号默认格式从 `CT-{YYYY}-{NNNN}` 改为 `ACME{YYYYMMDD}{SEQ}`，SEQ 三位数字每天从 001 起递增，例：`ACME20260425001`
+  - 创建合同对话框把合同编号设为可编辑字段，默认填入后端建议值，右侧"重新生成"按钮可刷新建议
+  - 后端新增 `GET /contracts/suggest-number` 端点；若用户输入的编号与已有记录冲突返回 409 `contract.number_duplicate`
+
+### 修复
+
+- **迁移 0022：把孤儿付款记录自动挂到合同**
+  - 针对历史上 `contract_id=NULL` 的 PaymentRecord，如果其所在 PO 下只有一份合同，自动把该 PaymentRecord 的 contract_id 补齐为该合同 id
+  - 生产 PO-2026-0001-P01（contract_id=NULL，但 PO 下只有 CT-2026-0001 一份合同）被自动关联到 CT-2026-0001，修复了 v0.9.11 前遗留的历史记录
+
+### 改进
+
+- **前端 `PaymentForecastChart` 改名为 `PaymentTracker`**（保留旧名作为别名，不破坏 import）
+- 首页卡片标题改为"月度付款追踪"，强调可回溯 + 可前瞻
+
+### 测试 & 文档
+
+- 后端新增 3 条回归测试（ACME 格式前缀 / 自定义编号成功 / 重复编号 409 拒绝）
+- 后端总测试数 305 → 308
+- **测试覆盖度评估**：
+  - Backend: pytest 308 tests, **行覆盖 73%** (app/ 6842 行 / 1872 未覆盖)
+  - Frontend: vitest 58 tests, 组件级覆盖约 89%（仅覆盖 utils / stores / ui primitives / ThemeProvider；业务页面如 PODetail / ContractDetail / Admin / SKU 暂无单元测试，未来迭代重点）
+  - 覆盖率低的后端模块：`api/v1/import_excel`（17%）、`services/ai`（22%）、`api/v1/saml`（24%）、`services/invoice_extract`（30%）、`services/saml_metadata_refresh`（27%） —— 主要是 LLM / SAML 集成路径，依赖外部服务，单元测试难度大
+- README 测试徽章更新为 "pytest 308 tests (backend 73% coverage) · vitest 58 tests"
+
+### 数据库迁移
+
+- `0022_autolink_orphan_payments.py`：一次性回填孤儿付款到唯一合同
+
+---
+
 ## [v0.9.12] — 2026-04-24
 
 ### 修复

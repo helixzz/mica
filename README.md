@@ -10,7 +10,7 @@
 </p>
 
 <p align="center">
-  <a href="https://github.com/helixzz/mica/releases/tag/v0.9.12"><img src="https://img.shields.io/badge/version-0.9.12-8B5E3C?style=flat-square" alt="Version" /></a>
+  <a href="https://github.com/helixzz/mica/releases/tag/v0.9.13"><img src="https://img.shields.io/badge/version-0.9.13-8B5E3C?style=flat-square" alt="Version" /></a>
   <a href="https://github.com/helixzz/mica/actions/workflows/ci.yml"><img src="https://img.shields.io/github/actions/workflow/status/helixzz/mica/ci.yml?branch=main&style=flat-square&label=CI" alt="CI" /></a>
   <a href="https://codecov.io/gh/helixzz/mica"><img src="https://img.shields.io/codecov/c/github/helixzz/mica?style=flat-square&label=coverage" alt="Coverage" /></a>
   <a href="LICENSE"><img src="https://img.shields.io/badge/license-Apache%202.0-blue?style=flat-square" alt="License" /></a>
@@ -80,7 +80,7 @@
 | **授权** | Cerbos sidecar（4 resource policies + graceful fallback） |
 | **AI** | LiteLLM SDK（OpenAI / DeepSeek / GLM / 通义等兼容接口） |
 | **国际化** | react-i18next（前端）· 自研消息字典（后端） |
-| **测试** | pytest 264 tests · vitest 49 tests · GitHub Actions CI · Codecov |
+| **测试** | pytest 308 tests (backend 73% coverage) · vitest 58 tests · GitHub Actions CI · Codecov |
 | **部署** | Docker Compose v2 · Nginx · 一键脚本（备份/恢复/升级/健康检查） |
 
 ## 快速开始
