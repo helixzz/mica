@@ -1,31 +1,20 @@
 import {
-  CheckCircleOutlined,
   ClockCircleOutlined,
   DeleteOutlined,
   DownloadOutlined,
   EditOutlined,
-  PlusOutlined,
-  SendOutlined,
   StopOutlined,
   UploadOutlined,
 } from '@ant-design/icons'
 import {
-  Alert,
   Button,
   Card,
   Col,
-  DatePicker,
   Descriptions,
-  Drawer,
   Dropdown,
-  Form,
-  Input,
-  InputNumber,
   Modal,
   Row,
-  Select,
   Space,
-  Statistic,
   Table,
   Tabs,
   Tag,
@@ -34,7 +23,6 @@ import {
   message,
 } from 'antd'
 import type { ColumnsType } from 'antd/es/table'
-import dayjs from 'dayjs'
 import { useCallback, useEffect, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { useNavigate, useParams } from 'react-router-dom'
@@ -44,12 +32,11 @@ import {
   type Contract,
   type ContractAttachment,
   type ContractVersion,
-  type PaymentScheduleItem,
-  type PaymentScheduleSummary,
 } from '@/api'
 import { extractError } from '@/api/client'
 import { useAuth } from '@/auth/useAuth'
 import { ContractFormModal } from '@/components/ContractFormModal'
+import { PaymentScheduleTab } from '@/components/PaymentScheduleTab'
 import { fmtAmount } from '@/utils/format'
 
 function StatusTag({ status }: { status: string }) {
@@ -71,12 +58,8 @@ export function ContractDetailPage() {
   const [contract, setContract] = useState<Contract | null>(null)
   const [attachments, setAttachments] = useState<ContractAttachment[]>([])
   const [uploading, setUploading] = useState(false)
-  const [schedule, setSchedule] = useState<PaymentScheduleSummary | null>(null)
-  const [scheduleLoading, setScheduleLoading] = useState(false)
   const [versions, setVersions] = useState<ContractVersion[]>([])
-  const [drawerOpen, setDrawerOpen] = useState(false)
   const [editOpen, setEditOpen] = useState(false)
-  const [form] = Form.useForm()
 
   const canWrite = Boolean(
     user && ['admin', 'procurement_mgr', 'it_buyer'].includes(user.role),
@@ -95,24 +78,10 @@ export function ContractDetailPage() {
     setAttachments(att)
   }, [id])
 
-  const loadSchedule = useCallback(async () => {
-    if (!id) return
-    setScheduleLoading(true)
-    try {
-      const s = await api.getPaymentSchedule(id)
-      setSchedule(s)
-    } catch {
-      setSchedule(null)
-    } finally {
-      setScheduleLoading(false)
-    }
-  }, [id])
-
   useEffect(() => {
     void load()
-    void loadSchedule()
     if (id) void api.listContractVersions(id).then(setVersions).catch(() => setVersions([]))
-  }, [load, loadSchedule, id])
+  }, [load, id])
 
   const handleUpload = async (file: File) => {
     if (!id) return false
@@ -147,70 +116,6 @@ export function ContractDetailPage() {
     } catch (e) {
       void message.error(extractError(e).detail)
     }
-  }
-
-  const handleAddSchedule = async (values: {
-    items: { label: string; planned_amount: number; planned_date: dayjs.Dayjs | null; trigger_type: string; trigger_description?: string }[]
-  }) => {
-    if (!id) return
-    try {
-      const items = values.items.map((item, idx) => ({
-        installment_no: idx + 1,
-        label: item.label,
-        planned_amount: item.planned_amount,
-        planned_date: item.planned_date?.format('YYYY-MM-DD') ?? null,
-        trigger_type: item.trigger_type || 'fixed_date',
-        trigger_description: item.trigger_description,
-      }))
-      await api.createPaymentSchedule(id, items)
-      void message.success(t('contract.schedule_saved'))
-      setDrawerOpen(false)
-      form.resetFields()
-      void loadSchedule()
-    } catch (e) {
-      void message.error(extractError(e).detail)
-    }
-  }
-
-  const handleExecute = (item: PaymentScheduleItem) => {
-    if (!id) return
-    Modal.confirm({
-      title: t('contract.execute_title', { name: item.label }),
-      content: t('contract.confirm_execute', { amount: fmtAmount(item.planned_amount, contract?.currency ?? '') }),
-      okText: t('contract.confirm_execute_ok'),
-      cancelText: t('button.cancel'),
-      onOk: async () => {
-        try {
-          await api.executeScheduleItem(id, item.installment_no, {
-            payment_method: 'bank_transfer',
-          })
-          void message.success(t('contract.payment_executed'))
-          void loadSchedule()
-        } catch (e) {
-          void message.error(extractError(e).detail)
-        }
-      },
-    })
-  }
-
-  const handleDelete = (item: PaymentScheduleItem) => {
-    if (!id) return
-    Modal.confirm({
-      title: t('contract.delete_title', { name: item.label }),
-      content: t('contract.confirm_delete_schedule'),
-      okText: t('button.delete'),
-      okType: 'danger',
-      cancelText: t('button.cancel'),
-      onOk: async () => {
-        try {
-          await api.deleteScheduleItem(id, item.installment_no)
-          void message.success(t('message.deleted'))
-          void loadSchedule()
-        } catch (e) {
-          void message.error(extractError(e).detail)
-        }
-      },
-    })
   }
 
   const handleDeleteContract = () => {
@@ -253,25 +158,6 @@ export function ContractDetailPage() {
   }
 
   if (!contract) return <div>{t('message.loading')}</div>
-
-  const scheduleColumns: ColumnsType<PaymentScheduleItem> = [
-    { title: t('field.installment_no'), dataIndex: 'installment_no', width: 60 },
-    { title: t('contract.installment_label'), dataIndex: 'label' },
-    {
-      title: t('contract.trigger_type'),
-      dataIndex: 'trigger_type',
-      render: (v: string, r) => (
-        <Space direction="vertical" size={0}>
-          <Tag>{v}</Tag>
-          {r.trigger_description && (
-            <Typography.Text type="secondary" style={{ fontSize: 12 }}>
-              {r.trigger_description}
-            </Typography.Text>
-          )}
-        </Space>
-      ),
-    },
-  ]
 
   const tabItems: { key: string; label: React.ReactNode; children: React.ReactNode }[] = [
     {
@@ -358,90 +244,16 @@ export function ContractDetailPage() {
       key: 'schedule',
       label: (
         <Space>
-          <ClockCircleOutlined />{t('contract.payment_schedule')}
-          {schedule && schedule.items.length > 0 && (
-            <Tag>{t('contract.installments_count', { count: schedule.items.length })}</Tag>
-          )}
+          <ClockCircleOutlined />
+          {t('contract.payment_schedule')}
         </Space>
       ),
       children: (
-        <Space direction="vertical" size="large" style={{ width: '100%' }}>
-          {schedule && schedule.items.length > 0 && (
-            <>
-              <Row gutter={16}>
-                <Col span={6}>
-                  <Statistic
-                    title={t('contract.contract_total')}
-                    value={Number(schedule.contract_total)}
-                    prefix="¥"
-                    precision={2}
-                  />
-                </Col>
-                <Col span={6}>
-                  <Statistic
-                    title={t('contract.planned_total')}
-                    value={Number(schedule.planned_total)}
-                    prefix="¥"
-                    precision={2}
-                    valueStyle={schedule.total_mismatch ? { color: '#faad14' } : undefined}
-                  />
-                </Col>
-                <Col span={6}>
-                  <Statistic
-                    title={t('contract.paid_total')}
-                    value={Number(schedule.paid_total)}
-                    prefix="¥"
-                    precision={2}
-                    valueStyle={{ color: '#52c41a' }}
-                  />
-                </Col>
-                <Col span={6}>
-                  <Statistic
-                    title={t('contract.remaining')}
-                    value={Number(schedule.remaining)}
-                    prefix="¥"
-                    precision={2}
-                  />
-                </Col>
-              </Row>
-              {schedule.total_mismatch && (
-                <Alert
-                  type="warning"
-                  message={t('contract.mismatch_warning')}
-                  description={`${t('contract.contract_total')} ${fmtAmount(schedule.contract_total, contract.currency)} / ${t('contract.planned_total')} ${fmtAmount(schedule.planned_total, contract.currency)}`}
-                  showIcon
-                />
-              )}
-            </>
-          )}
-
-          <Card
-            title={t('contract.schedule_details')}
-            extra={
-              <Button
-                type="primary"
-                icon={<PlusOutlined />}
-                onClick={() => {
-                  form.setFieldsValue({
-                    items: [{ label: '', planned_amount: 0, trigger_type: 'fixed_date' }],
-                  })
-                  setDrawerOpen(true)
-                }}
-              >{t('contract.new_schedule')}
-              </Button>
-            }
-          >
-            <Table
-              dataSource={schedule?.items || []}
-              columns={scheduleColumns}
-              rowKey="id"
-              loading={scheduleLoading}
-              pagination={false}
-              size="small"
-              locale={{ emptyText: t('contract.no_schedule_hint') }}
-            />
-          </Card>
-        </Space>
+        <PaymentScheduleTab
+          contractId={id!}
+          currency={contract.currency}
+          canWrite={canWrite}
+        />
       ),
     },
     {
@@ -534,122 +346,6 @@ export function ContractDetailPage() {
         }}
       />
 
-      <Drawer
-        title={t('contract.new_schedule')}
-        width={640}
-        open={drawerOpen}
-        onClose={() => setDrawerOpen(false)}
-        footer={
-          <Space style={{ float: 'right' }}>
-            <Button onClick={() => setDrawerOpen(false)}>{t('button.cancel')}</Button>
-            <Button type="primary" onClick={() => form.submit()}>{t('button.save')}
-            </Button>
-          </Space>
-        }
-      >
-        <Alert
-          type="info"
-          showIcon
-          style={{ marginBottom: 16 }}
-          message={t('contract.plan_amount_hint')}
-           description={t('contract.current_total_hint', { amount: fmtAmount(contract.total_amount, contract.currency) })}
-        />
-        <Form form={form} onFinish={handleAddSchedule} layout="vertical">
-          <Typography.Text type="secondary" style={{ display: 'block', marginBottom: 12 }}>
-            {t('contract.schedule_form_help')}
-          </Typography.Text>
-          <Form.List name="items">
-            {(fields, { add, remove }) => (
-              <>
-                {fields.map((field, idx) => (
-                  <Card
-                    key={field.key}
-                    size="small"
-                    title={t('contract.installment_n', { n: idx + 1 })}
-                    extra={
-                      fields.length > 1 && (
-                        <Button size="small" danger onClick={() => remove(field.name)}>{t('button.delete')}
-                        </Button>
-                      )
-                    }
-                    style={{ marginBottom: 12 }}
-                  >
-                    <Row gutter={12}>
-                      <Col span={12}>
-                        <Form.Item
-                          {...field}
-                          name={[field.name, 'label']}
-                          label={t('contract.installment_label')}
-                          help={t('contract.installment_label_help')}
-                          rules={[{ required: true }]}
-                        >
-                          <Input placeholder={t('contract.label_placeholder')} />
-                        </Form.Item>
-                      </Col>
-                      <Col span={12}>
-                        <Form.Item
-                          {...field}
-                          name={[field.name, 'planned_amount']}
-                          label={t('contract.planned_amount')}
-                          help={t('contract.planned_amount_help')}
-                          rules={[{ required: true }]}
-                        >
-                          <InputNumber
-                            style={{ width: '100%' }}
-                            min={0}
-                            precision={2}
-                            prefix="¥"
-                          />
-                        </Form.Item>
-                      </Col>
-                    </Row>
-                    <Row gutter={12}>
-                      <Col span={12}>
-                        <Form.Item
-                          {...field}
-                          name={[field.name, 'planned_date']}
-                          label={t('contract.planned_date')}
-                          help={t('contract.planned_date_help')}
-                        >
-                          <DatePicker style={{ width: '100%' }} />
-                        </Form.Item>
-                      </Col>
-                      <Col span={12}>
-                        <Form.Item
-                          {...field}
-                          name={[field.name, 'trigger_type']}
-                          label={t('contract.trigger_type')}
-                          help={t('contract.trigger_type_help')}
-                          initialValue="fixed_date"
-                        >
-                          <Select
-                            options={[
-                              { value: 'fixed_date', label: t('contract.trigger_fixed_date') },
-                              { value: 'milestone', label: t('contract.trigger_milestone') },
-                              { value: 'invoice_received', label: t('contract.trigger_invoice') },
-                              { value: 'acceptance', label: t('contract.trigger_acceptance') },
-                            ]}
-                          />
-                        </Form.Item>
-                      </Col>
-                    </Row>
-                    <Form.Item
-                      {...field}
-                      name={[field.name, 'trigger_description']}
-                      label={t('contract.trigger_desc')}
-                      help={t('contract.trigger_desc_help')}
-                    >
-                      <Input placeholder={t('contract.trigger_desc_placeholder')} />
-                    </Form.Item>
-                  </Card>
-                ))}
-                <Button type="dashed" onClick={() => add()} block icon={<PlusOutlined />}>{t('contract.add_installment')}
-                </Button>
-              </>
-            )}
-          </Form.List>
-        </Form>
-      </Drawer>
     </Space>
   )
 }
