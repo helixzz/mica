@@ -535,6 +535,7 @@ export interface PaymentForecast {
   months: PaymentForecastMonth[]
   grand_planned: string
   grand_paid: string
+  paid_to_date: string
 }
 
 export interface ClassificationItem {

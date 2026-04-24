@@ -451,6 +451,38 @@ async def test_payment_forecast_includes_direct_confirmed_payments(seeded_db_ses
     current_bucket = result["months"][0]
     assert current_bucket["paid"] >= Decimal("4500000")
     assert result["grand_paid"] >= Decimal("4500000")
+    assert result["paid_to_date"] >= Decimal("4500000")
+
+
+async def test_payment_forecast_paid_to_date_includes_past_payments(seeded_db_session):
+    from datetime import date as _date
+
+    from app.models import PaymentRecord, PaymentStatus
+
+    po = await _ensure_standalone_po(seeded_db_session)
+    past_date = _date(2024, 1, 15)
+
+    seeded_db_session.add(
+        PaymentRecord(
+            id=new_uuid(),
+            payment_number=f"PAY-OLD-{uuid4().hex[:6]}",
+            po_id=po.id,
+            contract_id=None,
+            installment_no=1,
+            amount=Decimal("7777777"),
+            currency="CNY",
+            due_date=past_date,
+            payment_date=past_date,
+            payment_method="bank_transfer",
+            status=PaymentStatus.CONFIRMED.value,
+        )
+    )
+    await seeded_db_session.flush()
+
+    result = await svc.payment_forecast(seeded_db_session, months=6)
+
+    assert result["grand_paid"] == Decimal("0")
+    assert result["paid_to_date"] >= Decimal("7777777")
 
 
 async def test_payment_forecast_includes_pending_records_in_planned(seeded_db_session):
