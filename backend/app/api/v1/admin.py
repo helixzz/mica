@@ -408,7 +408,9 @@ class UserCreateIn(BaseModel):
     email: str
     display_name: str
     password: str = Field(..., min_length=8)
-    role: Literal["admin", "it_buyer", "dept_manager", "finance_auditor", "procurement_mgr"]
+    role: Literal[
+        "admin", "requester", "it_buyer", "dept_manager", "finance_auditor", "procurement_mgr"
+    ]
     company_id: UUID
     department_id: UUID | None = None
     preferred_locale: str = "zh-CN"
