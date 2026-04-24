@@ -154,6 +154,18 @@ export interface PurchaseOrder {
   items: POItem[]
 }
 
+export interface DocumentTemplate {
+  id: string
+  code: string
+  name: string
+  description: string | null
+  template_document_id: string | null
+  template_filename: string | null
+  template_size: number | null
+  filename_template: string
+  is_enabled: boolean
+}
+
 export interface Contract {
   id: string
   contract_number: string
@@ -994,6 +1006,62 @@ export const api = {
   },
   async adminDeleteUser(userId: string): Promise<void> {
     await client.delete(`/admin/users/${userId}`)
+  },
+  async adminListDocumentTemplates(): Promise<DocumentTemplate[]> {
+    const { data } = await client.get<DocumentTemplate[]>('/admin/document-templates')
+    return data
+  },
+  async adminUpdateDocumentTemplate(
+    id: string,
+    body: {
+      name?: string
+      description?: string | null
+      filename_template?: string
+      is_enabled?: boolean
+    },
+  ): Promise<DocumentTemplate> {
+    const { data } = await client.patch<DocumentTemplate>(
+      `/admin/document-templates/${id}`,
+      body,
+    )
+    return data
+  },
+  async adminUploadDocumentTemplate(id: string, file: File): Promise<DocumentTemplate> {
+    const formData = new FormData()
+    formData.append('file', file)
+    const { data } = await client.post<DocumentTemplate>(
+      `/admin/document-templates/${id}/upload`,
+      formData,
+      { headers: { 'Content-Type': 'multipart/form-data' } },
+    )
+    return data
+  },
+  async previewTemplatePlaceholders(
+    id: string,
+  ): Promise<{ placeholders: string[] }> {
+    const { data } = await client.get<{ placeholders: string[] }>(
+      `/document-templates/${id}/placeholders`,
+    )
+    return data
+  },
+  async generateScheduleDocument(
+    scheduleItemId: string,
+    templateCode: string,
+  ): Promise<{ blob: Blob; filename: string }> {
+    const formData = new FormData()
+    formData.append('template_code', templateCode)
+    const response = await client.post(
+      `/payment-schedule-items/${scheduleItemId}/generate-document`,
+      formData,
+      { responseType: 'blob' },
+    )
+    const disposition = response.headers['content-disposition'] as string | undefined
+    let filename = 'generated.docx'
+    if (disposition) {
+      const match = disposition.match(/filename="?([^";]+)"?/i)
+      if (match) filename = decodeURIComponent(match[1])
+    }
+    return { blob: response.data as Blob, filename }
   },
   async adminAuditLogs(params: { since_days?: number; event_type_prefix?: string } = {}): Promise<Record<string, unknown>[]> {
     const { data } = await client.get('/admin/audit-logs', { params })

@@ -1,6 +1,7 @@
 import {
   CheckCircleOutlined,
   DeleteOutlined,
+  FileWordOutlined,
   PlusOutlined,
   SendOutlined,
 } from '@ant-design/icons'
@@ -164,6 +165,29 @@ export function PaymentScheduleTab({
     })
   }
 
+  const handleGeneratePaymentForm = async (item: PaymentScheduleItem) => {
+    const hide = message.loading(t('contract.generating_payment_form'), 0)
+    try {
+      const { blob, filename } = await api.generateScheduleDocument(
+        item.id,
+        'finance_payment_form',
+      )
+      const url = URL.createObjectURL(blob)
+      const a = document.createElement('a')
+      a.href = url
+      a.download = filename
+      document.body.appendChild(a)
+      a.click()
+      a.remove()
+      URL.revokeObjectURL(url)
+      void message.success(t('contract.payment_form_generated'))
+    } catch (e) {
+      void message.error(extractError(e).detail)
+    } finally {
+      hide()
+    }
+  }
+
   const columns: ColumnsType<PaymentScheduleItem> = [
     { title: t('field.installment_no'), dataIndex: 'installment_no', width: 60 },
     { title: t('contract.installment_label'), dataIndex: 'label' },
@@ -201,9 +225,17 @@ export function PaymentScheduleTab({
     {
       title: t('field.actions'),
       key: 'actions',
-      width: 180,
+      width: 260,
       render: (_, r) => (
-        <Space size="small">
+        <Space size="small" wrap>
+          <Button
+            size="small"
+            icon={<FileWordOutlined />}
+            onClick={() => handleGeneratePaymentForm(r)}
+            title={t('contract.generate_payment_form')}
+          >
+            {t('contract.generate_payment_form_short')}
+          </Button>
           {canWrite && r.status !== 'paid' && (
             <Button
               size="small"

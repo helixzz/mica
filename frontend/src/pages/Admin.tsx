@@ -31,6 +31,7 @@ import {
   mapApprovalRuleFormToPayload,
   mapApprovalRuleToForm,
 } from './admin/approvalRuleForm'
+import { DocumentTemplatesPanel } from './admin/DocumentTemplatesPanel'
 import { SystemParamsTab } from './admin/SystemParamsTab'
 
 type AIModelRow = {
@@ -75,6 +76,7 @@ export function AdminPage() {
           { key: 'system_params', label: t('admin.system_params'), children: <SystemParamsTab /> },
           { key: 'approval_rules', label: t('admin.approval_rules'), children: <ApprovalRulesTab /> },
           { key: 'classification', label: t('admin.classification'), children: <ClassificationTab /> },
+          { key: 'document_templates', label: t('admin.document_templates'), children: <DocumentTemplatesPanel /> },
           { key: 'import', label: '数据导入', children: <ImportTab /> },
           { key: 'models', label: t('admin.llm_models'), children: <AIModelsPanel /> },
           { key: 'routings', label: t('admin.ai_routing'), children: <RoutingsPanel /> },
