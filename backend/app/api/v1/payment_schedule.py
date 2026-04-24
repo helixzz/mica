@@ -234,5 +234,15 @@ async def get_payment_forecast(
     _user: CurrentUser,
     db: Annotated[AsyncSession, Depends(get_db)],
     months: Annotated[int, Query(ge=1, le=24)] = 6,
+    past_months: Annotated[int, Query(ge=0, le=24)] = 0,
+    anchor: Annotated[str | None, Query(pattern=r"^\d{4}-\d{2}$")] = None,
 ):
-    return await svc.payment_forecast(db, months)
+    from datetime import date as _date
+
+    anchor_date: _date | None = None
+    if anchor:
+        y, m = anchor.split("-")
+        anchor_date = _date(int(y), int(m), 1)
+    return await svc.payment_forecast(
+        db, months=months, anchor=anchor_date, past_months=past_months
+    )
