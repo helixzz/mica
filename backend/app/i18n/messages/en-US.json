@@ -61,6 +61,8 @@
   "contract.not_editable_in_status": "Contract cannot be edited in its current status",
   "contract.invalid_status_transition": "Invalid contract status transition",
   "contract.cannot_delete_with_paid_schedule": "Contract has paid payment records and cannot be deleted",
+  "contract.number_required": "Contract number must not be empty",
+  "contract.number_duplicate": "Contract number is already in use",
   "payment.not_found": "Payment record not found",
   "payment.contract_required": "Payment must be associated with a contract",
   "payment.contract_po_mismatch": "Selected contract does not belong to this purchase order",

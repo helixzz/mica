@@ -61,9 +61,19 @@ async def create_contract(
         payload.effective_date,
         payload.expiry_date,
         payload.notes,
+        contract_number=payload.contract_number,
     )
     c = await flow.get_contract(db, c.id)
     return _contract_to_out(c)
+
+
+@router.get("/contracts/suggest-number", tags=["flow"])
+async def suggest_contract_number(
+    _user: CurrentUser,
+    db: Annotated[AsyncSession, Depends(get_db)],
+):
+    number = await flow.suggest_contract_number(db)
+    return {"suggested_number": number}
 
 
 @router.get("/contracts", response_model=list[ContractOut], tags=["flow"])

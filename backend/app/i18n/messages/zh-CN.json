@@ -61,6 +61,8 @@
   "contract.not_editable_in_status": "当前状态下合同不可编辑",
   "contract.invalid_status_transition": "不允许的合同状态变更",
   "contract.cannot_delete_with_paid_schedule": "已存在已付款记录，合同无法删除",
+  "contract.number_required": "合同编号不能为空",
+  "contract.number_duplicate": "合同编号已被占用，请使用其他编号",
   "payment.not_found": "付款记录不存在",
   "payment.contract_required": "付款必须关联合同",
   "payment.contract_po_mismatch": "合同与采购订单不匹配",
