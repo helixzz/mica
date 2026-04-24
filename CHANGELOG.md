@@ -7,6 +7,55 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [v0.9.10] — 2026-04-24
+
+### 修复（关键）
+
+- **合同付款计划"执行"不更新 PO 已付金额** — 采购订单的"已付金额"与合同分期执行记录长期不一致。`execute_schedule_item()` 创建 PaymentRecord 却漏掉 `po.amount_paid += pay_amount`；只有通过 PO 直接登记付款才会更新。此次补齐；**并提供一次性回填 migration（0020）** 把历史上所有 `status=confirmed` 的付款记录累加回 PO.amount_paid，把线上数据修齐
+
+### 新增（端到端打通）
+
+- **付款必须关联合同（合规政策）**：
+  - `payment_records` 新增 `contract_id` 列（migration 0021），并从已有 `schedule_item_id` 链路回填
+  - `create_payment` 强制要求 `contract_id`，校验 contract 的 `po_id` 与传入 PO 一致；可选地传 `schedule_item_id` 自动把该期标记为 PAID
+  - `execute_schedule_item`（合同分期 + PO 分期两条路径）都会在创建的 PaymentRecord 上写 `contract_id`
+  - 前端 PaymentModal 重做：合同下拉必选；若 PO 下唯一合同自动选中；若没有合同展示内联 `创建合同` 按钮（一键 pre-fill）；若已选合同且有未付分期，展示次级下拉"关联到第 N 期付款"
+- **付款可编辑/可删除**：
+  - 新增 `PATCH /payments/{id}` 修改金额 / 日期 / 付款方式 / 交易号 / 备注；PO.amount_paid 和对应分期 actual_amount 同步更新
+  - 新增 `DELETE /payments/{id}`；已确认付款不允许删除（`payment.cannot_delete_confirmed`）；删除分期关联时回滚分期状态到 PLANNED
+  - PO 付款表新增 编辑 / 删除 按钮 + 所在合同号列
+- **PO ↔ 合同双向导航**：
+  - PO 详情新增「合同」Tab，列出该 PO 下所有合同（含点击跳转）
+  - 合同详情新增「关联 PO」卡片（放在信息 Tab 最上方，带"查看 PO"按钮）
+  - 合同列表新增 `所属 PO 号` 列（可点击跳转）
+  - 后端 `ContractOut` 增加 `po_number`、`po_status`、`supplier_name` 反范式字段；新增 `GET /contracts/{id}` 端点，eager-load `po` 和 `supplier`
+- **合同↔交货联动**：合同详情新增「交货记录」Tab，列出该合同所属 PO 下所有 shipments，支持跳转到 PO 中进行管理
+- **OCR 文本可见**：合同附件卡片的 OCR badge 旁新增「查看 OCR」按钮，弹出 Modal 显示完整识别文本；新增 `GET /contracts/{id}/attachments/{document_id}/ocr` 端点返回 ocr_text
+- **用户删除**：
+  - 后端新增 `DELETE /admin/users/{id}`，带安全校验：
+    - 不允许删除当前登录账号（`user.cannot_delete_self`）
+    - 最后一位启用状态的管理员不允许删除（`user.cannot_delete_last_admin`）
+    - 已产生业务数据（PR/PO/审批/审计日志）的用户硬删除会被 FK 拒绝 → 返回 `user.has_references` 并提示禁用账号
+  - 前端 Admin 用户管理每行新增红色删除按钮（删除自己按钮置灰），含确认对话框
+
+### 测试
+
+- 后端新增 11 条：execute_schedule_item 更新 amount_paid、payment.contract_required、合同/PO 不匹配、payment.update 金额调整 PO.amount_paid、confirmed 付款禁止删除、pending 付款删除成功、5 条用户删除安全场景
+- 后端总测试数 289 → 300，全绿
+- 前端 58 tests 全绿，type-check + build 通过
+
+### 数据库迁移
+
+- `0020_backfill_amount_paid.py` — 一次性回填 PO.amount_paid（修复历史数据漂移）
+- `0021_payment_records_contract_id.py` — 新增 contract_id 列 + FK + 索引 + 从 schedule_item_id 链路回填
+
+### 备注
+
+- 方案 B（合规 + 效率平衡）落地：付款严格关联合同，但 UI 把"没有合同时一键创建"的路径压缩到最短
+- v0.9.6 新增的 PO 级 payment schedule 保留不变；通过它执行付款时，PaymentRecord 的 `contract_id` 会保持 null，由合同级路径保证合规；后续若收紧政策可在 `execute_schedule_item` 的 PO parent 路径上再增硬性校验
+
+---
+
 ## [v0.9.9] — 2026-04-24
 
 ### 新增
