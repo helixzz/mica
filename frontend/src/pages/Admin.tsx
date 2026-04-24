@@ -475,7 +475,7 @@ function UsersPanel() {
           { title: t('admin.display_name_col'), dataIndex: 'display_name' },
           { title: t('admin.role_col'), dataIndex: 'role', render: (v: string) => <Tag color="orange">{v}</Tag> },
           { title: t('admin.email_col'), dataIndex: 'email' },
-          { title: t('admin.department_col'), dataIndex: 'department_id', render: (v: string) => deptMap[v] || v || '-' },
+          { title: t('admin.department_col'), dataIndex: 'department_id', render: (v: string, r: any) => r?.department_name_zh || deptMap[v] || v || '-' },
           { title: t('admin.locale_col'), dataIndex: 'preferred_locale' },
           { title: t('admin.active_col'), dataIndex: 'is_active', render: (v: boolean) => <Tag color={v ? 'success' : 'default'}>{v ? t('common.enabled') : t('common.disabled')}</Tag> },
           { title: t('admin.auth_provider_col'), dataIndex: 'auth_provider' },
