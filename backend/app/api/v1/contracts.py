@@ -1,12 +1,14 @@
 from typing import Annotated
 from uuid import UUID
 
-from fastapi import APIRouter, Depends, Query
+from fastapi import APIRouter, Depends, HTTPException, Query
 from pydantic import BaseModel
+from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.security import CurrentUser
 from app.db import get_db
+from app.models import ContractDocument
 from app.schemas import ContractVersionOut
 from app.services import contracts as svc
 
@@ -45,6 +47,36 @@ async def list_attachments(
 ):
     pairs = await svc.list_contract_documents(db, contract_id)
     return [svc.to_dict(cd, d) for cd, d in pairs]
+
+
+@router.get(
+    "/contracts/{contract_id}/attachments/{document_id}/ocr",
+    tags=["contracts"],
+)
+async def get_attachment_ocr(
+    contract_id: UUID,
+    document_id: UUID,
+    user: CurrentUser,
+    db: Annotated[AsyncSession, Depends(get_db)],
+):
+    _ = user
+    row = (
+        await db.execute(
+            select(ContractDocument).where(
+                ContractDocument.contract_id == contract_id,
+                ContractDocument.document_id == document_id,
+            )
+        )
+    ).scalar_one_or_none()
+    if row is None:
+        raise HTTPException(404, "attachment.not_found")
+    return {
+        "contract_id": str(contract_id),
+        "document_id": str(document_id),
+        "has_ocr": bool(row.ocr_text),
+        "ocr_chars": len(row.ocr_text or ""),
+        "ocr_text": row.ocr_text or "",
+    }
 
 
 @router.get(
