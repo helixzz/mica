@@ -11,6 +11,7 @@ from app.api.v1 import (
     classification,
     contracts,
     dashboard,
+    document_templates,
     documents,
     flow,
     import_excel,
@@ -51,3 +52,4 @@ api_router.include_router(classification.router)
 api_router.include_router(import_excel.router)
 api_router.include_router(rfq.router)
 api_router.include_router(recycle_bin.router)
+api_router.include_router(document_templates.router)
