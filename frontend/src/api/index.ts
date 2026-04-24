@@ -50,6 +50,9 @@ export interface Supplier {
   contact_name: string | null
   contact_phone: string | null
   contact_email: string | null
+  payee_name: string | null
+  payee_bank: string | null
+  payee_bank_account: string | null
   notes: string | null
   is_enabled: boolean
   is_deleted: boolean
@@ -651,7 +654,9 @@ export const api = {
   async createSupplier(body: {
     code: string; name: string; tax_number?: string | null;
     contact_name?: string | null; contact_phone?: string | null;
-    contact_email?: string | null; notes?: string | null;
+    contact_email?: string | null;
+    payee_name?: string | null; payee_bank?: string | null; payee_bank_account?: string | null;
+    notes?: string | null;
   }): Promise<Supplier> {
     const { data } = await client.post<Supplier>('/suppliers', body)
     return data

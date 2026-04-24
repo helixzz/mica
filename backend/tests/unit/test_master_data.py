@@ -142,6 +142,53 @@ async def test_create_supplier_success_persists_and_audits(seeded_db_session):
     assert audits[0].metadata_json["new"]["code"] == payload.code
 
 
+async def test_create_supplier_with_payee_bank_fields_persists_all_three(seeded_db_session):
+    actor = await _user(seeded_db_session, "alice")
+    payload = SupplierCreate(
+        code=f"SUP-{_suffix()}",
+        name="Test Supplier with Bank",
+        payee_name="上海测试科技有限公司",
+        payee_bank="中国工商银行上海分行",
+        payee_bank_account="6222 0800 0000 0000 123",
+    )
+
+    supplier = await svc.create_supplier(seeded_db_session, actor, payload)
+
+    assert supplier.payee_name == "上海测试科技有限公司"
+    assert supplier.payee_bank == "中国工商银行上海分行"
+    assert supplier.payee_bank_account == "6222 0800 0000 0000 123"
+
+    persisted = await _supplier_by_code(seeded_db_session, payload.code)
+    assert persisted.payee_name == "上海测试科技有限公司"
+    assert persisted.payee_bank == "中国工商银行上海分行"
+    assert persisted.payee_bank_account == "6222 0800 0000 0000 123"
+
+
+async def test_update_supplier_can_change_payee_bank_fields(seeded_db_session):
+    actor = await _user(seeded_db_session, "alice")
+    created = await svc.create_supplier(
+        seeded_db_session,
+        actor,
+        SupplierCreate(code=f"SUP-{_suffix()}", name="Bank edit test"),
+    )
+    assert created.payee_bank_account is None
+
+    updated = await svc.update_supplier(
+        seeded_db_session,
+        actor,
+        created.id,
+        SupplierUpdate(
+            payee_name="新收款单位",
+            payee_bank="招商银行",
+            payee_bank_account="6214 8500 0000 1234",
+        ),
+    )
+
+    assert updated.payee_name == "新收款单位"
+    assert updated.payee_bank == "招商银行"
+    assert updated.payee_bank_account == "6214 8500 0000 1234"
+
+
 async def test_create_supplier_normalizes_code_to_uppercase(seeded_db_session):
     actor = await _user(seeded_db_session, "alice")
 
