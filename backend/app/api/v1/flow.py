@@ -262,7 +262,7 @@ async def update_payment(
     _role: Annotated[None, Depends(require_roles("admin", "procurement_mgr", "finance_auditor"))],
 ):
     updates = payload.model_dump(exclude_unset=True)
-    p = await flow.update_payment(db, user, payment_id, **updates)
+    p = await flow.update_payment(db, user, payment_id, updates)
     return PaymentOut.model_validate(p)
 
 

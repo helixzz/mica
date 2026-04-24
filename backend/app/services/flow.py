@@ -590,13 +590,7 @@ async def update_payment(
     db: AsyncSession,
     actor: User,
     payment_id: UUID,
-    *,
-    amount: Decimal | None = None,
-    due_date=None,
-    payment_date=None,
-    payment_method: str | None = None,
-    transaction_ref: str | None = None,
-    notes: str | None = None,
+    updates: dict,
 ) -> PaymentRecord:
     record = (
         await db.execute(select(PaymentRecord).where(PaymentRecord.id == payment_id))
@@ -606,43 +600,105 @@ async def update_payment(
 
     changes: dict[str, object] = {}
 
-    if amount is not None and _as_decimal(amount) != record.amount:
-        old = record.amount
-        new = _as_decimal(amount)
-        if record.status == PaymentStatus.CONFIRMED.value:
-            po = await _load_po(db, record.po_id)
-            if po is not None:
-                po.amount_paid = (po.amount_paid or Decimal("0")) - old + new
+    new_contract_id = record.contract_id
+    if "contract_id" in updates:
+        candidate = updates["contract_id"]
+        if candidate is None:
+            raise HTTPException(400, "payment.contract_required")
+        if candidate != record.contract_id:
+            contract = (
+                await db.execute(select(Contract).where(Contract.id == candidate))
+            ).scalar_one_or_none()
+            if contract is None:
+                raise HTTPException(404, "contract.not_found")
+            if contract.po_id != record.po_id:
+                raise HTTPException(409, "payment.contract_po_mismatch")
+            changes["contract_id"] = {
+                "from": str(record.contract_id) if record.contract_id else None,
+                "to": str(candidate),
+            }
+            record.contract_id = candidate
+            new_contract_id = candidate
+
+    if "schedule_item_id" in updates:
+        candidate = updates["schedule_item_id"]
+        if candidate != record.schedule_item_id:
             if record.schedule_item_id is not None:
-                schedule_item = await db.get(PaymentSchedule, record.schedule_item_id)
-                if schedule_item is not None:
-                    schedule_item.actual_amount = new
-        record.amount = new
-        changes["amount"] = {"from": str(old), "to": str(new)}
+                old_item = await db.get(PaymentSchedule, record.schedule_item_id)
+                if old_item is not None and old_item.payment_record_id == record.id:
+                    old_item.payment_record_id = None
+                    old_item.actual_amount = None
+                    old_item.actual_date = None
+                    old_item.status = ScheduleItemStatus.PLANNED.value
 
-    if due_date is not None and due_date != record.due_date:
-        changes["due_date"] = {"from": str(record.due_date), "to": str(due_date)}
-        record.due_date = due_date
+            if candidate is not None:
+                new_item = (
+                    await db.execute(select(PaymentSchedule).where(PaymentSchedule.id == candidate))
+                ).scalar_one_or_none()
+                if new_item is None:
+                    raise HTTPException(404, "schedule_item.not_found")
+                if new_item.contract_id != new_contract_id and new_item.po_id != record.po_id:
+                    raise HTTPException(409, "payment.schedule_parent_mismatch")
+                if record.status == PaymentStatus.CONFIRMED.value:
+                    new_item.actual_amount = record.amount
+                    new_item.actual_date = record.payment_date
+                    new_item.payment_record_id = record.id
+                    new_item.status = ScheduleItemStatus.PAID.value
 
-    if payment_date is not None and payment_date != record.payment_date:
-        changes["payment_date"] = {"from": str(record.payment_date), "to": str(payment_date)}
-        record.payment_date = payment_date
+            changes["schedule_item_id"] = {
+                "from": str(record.schedule_item_id) if record.schedule_item_id else None,
+                "to": str(candidate) if candidate else None,
+            }
+            record.schedule_item_id = candidate
+
+    if "amount" in updates and updates["amount"] is not None:
+        new = _as_decimal(updates["amount"])
+        if new != record.amount:
+            old = record.amount
+            if record.status == PaymentStatus.CONFIRMED.value:
+                po = await _load_po(db, record.po_id)
+                if po is not None:
+                    po.amount_paid = (po.amount_paid or Decimal("0")) - old + new
+                if record.schedule_item_id is not None:
+                    schedule_item = await db.get(PaymentSchedule, record.schedule_item_id)
+                    if schedule_item is not None:
+                        schedule_item.actual_amount = new
+            record.amount = new
+            changes["amount"] = {"from": str(old), "to": str(new)}
+
+    if "due_date" in updates and updates["due_date"] != record.due_date:
+        changes["due_date"] = {"from": str(record.due_date), "to": str(updates["due_date"])}
+        record.due_date = updates["due_date"]
+
+    if "payment_date" in updates and updates["payment_date"] != record.payment_date:
+        new_payment_date = updates["payment_date"]
+        changes["payment_date"] = {
+            "from": str(record.payment_date),
+            "to": str(new_payment_date),
+        }
+        record.payment_date = new_payment_date
         if record.schedule_item_id is not None:
             schedule_item = await db.get(PaymentSchedule, record.schedule_item_id)
             if schedule_item is not None:
-                schedule_item.actual_date = payment_date
+                schedule_item.actual_date = new_payment_date
 
-    if payment_method is not None and payment_method != record.payment_method:
-        changes["payment_method"] = {"from": record.payment_method, "to": payment_method}
-        record.payment_method = payment_method
+    if "payment_method" in updates and updates["payment_method"] != record.payment_method:
+        changes["payment_method"] = {
+            "from": record.payment_method,
+            "to": updates["payment_method"],
+        }
+        record.payment_method = updates["payment_method"]
 
-    if transaction_ref is not None and transaction_ref != record.transaction_ref:
-        changes["transaction_ref"] = {"from": record.transaction_ref, "to": transaction_ref}
-        record.transaction_ref = transaction_ref
+    if "transaction_ref" in updates and updates["transaction_ref"] != record.transaction_ref:
+        changes["transaction_ref"] = {
+            "from": record.transaction_ref,
+            "to": updates["transaction_ref"],
+        }
+        record.transaction_ref = updates["transaction_ref"]
 
-    if notes is not None and notes != record.notes:
-        changes["notes"] = {"from": record.notes, "to": notes}
-        record.notes = notes
+    if "notes" in updates and updates["notes"] != record.notes:
+        changes["notes"] = {"from": record.notes, "to": updates["notes"]}
+        record.notes = updates["notes"]
 
     if not changes:
         return record
