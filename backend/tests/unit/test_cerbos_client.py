@@ -8,6 +8,20 @@ class TestCerbosClientFallback:
     the static FIELD_PERMISSIONS dict. These tests verify the
     fallback path produces identical results."""
 
+    @pytest.fixture(autouse=True)
+    def _force_cerbos_unreachable(self, monkeypatch):
+        # Point the client at a reserved/unroutable address so the HTTP
+        # call fails fast and we exercise the graceful-degradation path
+        # regardless of whether a real Cerbos sidecar is running.
+        monkeypatch.setattr(
+            "app.core.cerbos_client.CERBOS_BASE_URL",
+            "http://127.0.0.1:1",
+        )
+        monkeypatch.setattr(
+            "app.core.cerbos_client.CERBOS_TIMEOUT",
+            0.25,
+        )
+
     @pytest.mark.parametrize(
         "resource,role",
         [
