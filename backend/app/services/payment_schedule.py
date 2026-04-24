@@ -271,6 +271,7 @@ async def execute_schedule_item(
         id=new_uuid(),
         payment_number=f"PAY-{parent.number}-{existing_count + 1:03d}",
         po_id=parent.po_id_for_payment,
+        contract_id=item.contract_id,
         installment_no=installment_no,
         amount=pay_amount,
         currency=parent.currency,
@@ -287,6 +288,10 @@ async def execute_schedule_item(
     item.actual_date = date.today()
     item.payment_record_id = payment.id
     item.status = ScheduleItemStatus.PAID.value
+
+    po = await db.get(PurchaseOrder, parent.po_id_for_payment)
+    if po is not None:
+        po.amount_paid = (po.amount_paid or Decimal("0")) + pay_amount
 
     if invoice_id is not None:
         invoice = await db.get(Invoice, invoice_id)
