@@ -7,6 +7,23 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [v0.9.12] — 2026-04-24
+
+### 修复
+
+- **仪表盘「已支出」仍然显示 0**（v0.9.11 后仍未解决）：
+  - 追溯原因：v0.9.11 让 forecast 正确读取了 payment_records，但 `grand_paid` 仍只累加"落在未来 6 个月窗口内"的付款。用户的 4.5M 付款 `payment_date=2026-03-24`（当前月之前），完全不在该向前窗口里 —— 设计上正确，但语义不符用户直觉
+  - 修复：在 `/dashboard/payment-forecast` 响应中新增 `paid_to_date`（**累计已付款，不受时间窗口限制**），前端预测卡顶部突出展示"累计已付款（截至今日）"，与"未来 N 个月计划支出"、"未来 N 个月已在窗口内支出"、"未来 N 个月待支出"并列
+  - 现在用户立刻能看到自己累计的 4.5M 支出，而不是被窗口切掉
+
+### 测试
+
+- `test_payment_forecast_paid_to_date_includes_past_payments` — 确认历史过期付款也会进入累计已付款统计
+- `test_payment_forecast_includes_direct_confirmed_payments` — 扩展为同时验证 `paid_to_date`
+- 后端总测试数 304 → 305
+
+---
+
 ## [v0.9.11] — 2026-04-24
 
 ### 修复（关键）
