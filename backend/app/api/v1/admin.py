@@ -11,8 +11,10 @@ from typing import Annotated, Any, Literal, cast
 from uuid import UUID
 
 from fastapi import APIRouter, Depends, HTTPException
+from fastapi.responses import Response
 from pydantic import BaseModel, ConfigDict, Field
 from sqlalchemy import func, select
+from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
@@ -28,6 +30,7 @@ from app.models import (
     AuditLog,
     JSONValue,
     User,
+    UserRole,
 )
 from app.services import notifications as notification_svc
 from app.services.system_params import system_params
@@ -541,6 +544,60 @@ async def reset_user_password(
         )
     )
     await db.commit()
+
+
+@router.delete("/users/{user_id}", status_code=204, tags=["admin"])
+async def delete_user(
+    user_id: UUID,
+    user: CurrentUser,
+    db: Annotated[AsyncSession, Depends(get_db)],
+    _role: Annotated[None, Depends(require_roles("admin"))],
+) -> Response:
+    target = await db.get(User, user_id)
+    if target is None:
+        raise HTTPException(404, "user.not_found")
+    if target.id == user.id:
+        raise HTTPException(409, "user.cannot_delete_self")
+
+    if target.role == UserRole.ADMIN.value:
+        remaining_admins = (
+            await db.execute(
+                select(func.count(User.id)).where(
+                    User.role == UserRole.ADMIN.value,
+                    User.is_active.is_(True),
+                    User.id != target.id,
+                )
+            )
+        ).scalar_one()
+        if remaining_admins == 0:
+            raise HTTPException(409, "user.cannot_delete_last_admin")
+
+    username = target.username
+    display_name = target.display_name
+    role = target.role
+    try:
+        await db.delete(target)
+        await db.flush()
+    except IntegrityError:
+        await db.rollback()
+        raise HTTPException(409, "user.has_references") from None
+
+    db.add(
+        AuditLog(
+            actor_id=user.id,
+            actor_name=user.display_name,
+            event_type="admin.user.deleted",
+            resource_type="user",
+            resource_id=str(user_id),
+            metadata_json={
+                "username": username,
+                "display_name": display_name,
+                "role": role,
+            },
+        )
+    )
+    await db.commit()
+    return Response(status_code=204)
 
 
 class UserUpdateIn(BaseModel):
