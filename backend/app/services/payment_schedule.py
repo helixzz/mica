@@ -344,14 +344,24 @@ def build_summary(contract: Contract, items: list[PaymentSchedule]) -> dict:
     }
 
 
-async def payment_forecast(db: AsyncSession, months: int = 6) -> dict:
+async def payment_forecast(
+    db: AsyncSession,
+    months: int = 6,
+    *,
+    anchor: date | None = None,
+    past_months: int = 0,
+) -> dict:
     today = date.today()
-    current_month = today.replace(day=1)
+    anchor_month = (anchor or today).replace(day=1)
+
+    start_offset = -abs(past_months)
+    total = past_months + months
 
     month_buckets: list[dict] = []
-    for i in range(months):
-        y = current_month.year + (current_month.month + i - 1) // 12
-        m = (current_month.month + i - 1) % 12 + 1
+    for i in range(total):
+        offset = start_offset + i
+        y = anchor_month.year + (anchor_month.month + offset - 1) // 12
+        m = (anchor_month.month + offset - 1) % 12 + 1
         month_start = date(y, m, 1)
         if m == 12:
             month_end = date(y + 1, 1, 1)

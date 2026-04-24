@@ -27,7 +27,7 @@ import {
 } from '@/api'
 import { useAuth } from '@/auth/useAuth'
 import { PageHeader, StatCard, Section, EmptyState } from '@/components/ui'
-import { PaymentForecastChart } from '@/components/PaymentForecastChart'
+import { PaymentTracker } from '@/components/PaymentForecastChart'
 
 const { Text } = Typography
 
@@ -283,7 +283,7 @@ export function DashboardPage() {
       </Row>
 
       {(isProcurementMgr || isFinanceAuditor || role === 'admin') && (
-        <PaymentForecastChart months={6} />
+        <PaymentTracker />
       )}
 
       <Section title={t('dashboard.quick_actions')}>

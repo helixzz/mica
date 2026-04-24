@@ -1,6 +1,7 @@
-import { Card, Col, Empty, Row, Statistic, Table, Typography } from 'antd'
+import { LeftOutlined, RightOutlined, HomeOutlined } from '@ant-design/icons'
+import { Button, Card, Col, Empty, Row, Space, Statistic, Table, Typography } from 'antd'
 import type { ColumnsType } from 'antd/es/table'
-import { useEffect, useMemo, useState } from 'react'
+import { useCallback, useEffect, useMemo, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 
 import { api, type PaymentForecast, type PaymentForecastMonth } from '@/api'
@@ -8,24 +9,50 @@ import { fmtAmount } from '@/utils/format'
 
 const PLANNED_COLOR = '#B48A6A'
 const PAID_COLOR = '#52c41a'
+const TODAY_HIGHLIGHT_BG = 'rgba(139, 94, 60, 0.08)'
 
-interface PaymentForecastChartProps {
-  months?: number
+interface PaymentTrackerProps {
   title?: string
 }
 
-export function PaymentForecastChart({ months = 6, title }: PaymentForecastChartProps) {
+function currentMonthStr(): string {
+  const now = new Date()
+  return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`
+}
+
+function shiftMonth(ym: string, delta: number): string {
+  const [y, m] = ym.split('-').map(Number)
+  const d = new Date(y, m - 1 + delta, 1)
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`
+}
+
+export function PaymentTracker({ title }: PaymentTrackerProps) {
   const { t } = useTranslation()
+  const today = currentMonthStr()
+  const [anchor, setAnchor] = useState<string>(today)
   const [data, setData] = useState<PaymentForecast | null>(null)
   const [loading, setLoading] = useState(false)
 
-  useEffect(() => {
+  const pastMonths = 3
+  const futureMonths = 3
+
+  const fetchData = useCallback(async () => {
     setLoading(true)
-    api
-      .getPaymentForecast(months)
-      .then(setData)
-      .finally(() => setLoading(false))
-  }, [months])
+    try {
+      const result = await api.getPaymentForecast({
+        months: futureMonths + 1,
+        past_months: pastMonths,
+        anchor,
+      })
+      setData(result)
+    } finally {
+      setLoading(false)
+    }
+  }, [anchor])
+
+  useEffect(() => {
+    void fetchData()
+  }, [fetchData])
 
   const maxValue = useMemo(() => {
     if (!data) return 0
@@ -35,23 +62,31 @@ export function PaymentForecastChart({ months = 6, title }: PaymentForecastChart
     )
   }, [data])
 
-  const hasAny =
-    data &&
-    (Number(data.paid_to_date) > 0 ||
-      data.months.some((m) => Number(m.planned) > 0 || Number(m.paid) > 0))
   const windowLabel = data
-    ? t('dashboard.forecast_window_range', {
-        count: data.months.length,
+    ? t('dashboard.tracker_window_range', {
         from: data.months[0]?.month ?? '',
         to: data.months[data.months.length - 1]?.month ?? '',
       })
     : ''
 
+  const isCurrentWindow = anchor === today
+  const goPrev = () => setAnchor((a) => shiftMonth(a, -(pastMonths + futureMonths + 1)))
+  const goNext = () => setAnchor((a) => shiftMonth(a, pastMonths + futureMonths + 1))
+  const goToday = () => setAnchor(today)
+
   const breakdownColumns: ColumnsType<PaymentForecastMonth> = [
     {
       title: t('dashboard.forecast_month_col'),
       dataIndex: 'month',
-      width: 110,
+      width: 120,
+      render: (v: string) => (
+        <Space>
+          <Typography.Text>{v}</Typography.Text>
+          {v === today && <Typography.Text type="secondary" style={{ fontSize: 11 }}>
+            ({t('dashboard.tracker_today_marker')})
+          </Typography.Text>}
+        </Space>
+      ),
     },
     {
       title: t('dashboard.planned_amount'),
@@ -79,32 +114,36 @@ export function PaymentForecastChart({ months = 6, title }: PaymentForecastChart
     },
   ]
 
-  if (!loading && !hasAny) {
-    return (
-      <Card
-        title={title ?? t('dashboard.payment_forecast')}
-        extra={
-          data ? (
-            <Typography.Text type="secondary" style={{ fontSize: 12 }}>
-              {windowLabel}
-            </Typography.Text>
-          ) : null
-        }
-      >
-        <Empty description={t('dashboard.payment_forecast_empty')} />
-      </Card>
-    )
-  }
-
   return (
     <Card
-      title={title ?? t('dashboard.payment_forecast')}
+      title={title ?? t('dashboard.payment_tracker')}
       extra={
-        data ? (
+        <Space>
           <Typography.Text type="secondary" style={{ fontSize: 12 }}>
             {windowLabel}
           </Typography.Text>
-        ) : null
+          <Button
+            size="small"
+            icon={<LeftOutlined />}
+            onClick={goPrev}
+            title={t('dashboard.tracker_prev')}
+          />
+          <Button
+            size="small"
+            icon={<HomeOutlined />}
+            onClick={goToday}
+            disabled={isCurrentWindow}
+            title={t('dashboard.tracker_today')}
+          >
+            {t('dashboard.tracker_today')}
+          </Button>
+          <Button
+            size="small"
+            icon={<RightOutlined />}
+            onClick={goNext}
+            title={t('dashboard.tracker_next')}
+          />
+        </Space>
       }
       loading={loading}
     >
@@ -122,7 +161,7 @@ export function PaymentForecastChart({ months = 6, title }: PaymentForecastChart
             </Col>
             <Col xs={12} md={6}>
               <Statistic
-                title={`${t('dashboard.grand_planned')} · ${t('dashboard.forecast_window_suffix', { count: data.months.length })}`}
+                title={t('dashboard.tracker_window_planned')}
                 value={Number(data.grand_planned)}
                 prefix="¥"
                 precision={2}
@@ -130,7 +169,7 @@ export function PaymentForecastChart({ months = 6, title }: PaymentForecastChart
             </Col>
             <Col xs={12} md={6}>
               <Statistic
-                title={`${t('dashboard.grand_paid')} · ${t('dashboard.forecast_window_suffix', { count: data.months.length })}`}
+                title={t('dashboard.tracker_window_paid')}
                 value={Number(data.grand_paid)}
                 prefix="¥"
                 precision={2}
@@ -139,10 +178,8 @@ export function PaymentForecastChart({ months = 6, title }: PaymentForecastChart
             </Col>
             <Col xs={12} md={6}>
               <Statistic
-                title={`${t('dashboard.grand_remaining')} · ${t('dashboard.forecast_window_suffix', { count: data.months.length })}`}
-                value={
-                  Math.max(0, Number(data.grand_planned) - Number(data.grand_paid))
-                }
+                title={t('dashboard.tracker_window_remaining')}
+                value={Math.max(0, Number(data.grand_planned) - Number(data.grand_paid))}
                 prefix="¥"
                 precision={2}
                 valueStyle={{ color: '#8B5E3C' }}
@@ -150,16 +187,22 @@ export function PaymentForecastChart({ months = 6, title }: PaymentForecastChart
             </Col>
           </Row>
 
-          <BarChart months={data.months} maxValue={maxValue} />
-
-          <Row style={{ marginTop: 12 }} gutter={16} align="middle">
-            <Col>
-              <LegendDot color={PLANNED_COLOR} label={t('dashboard.planned_amount')} />
-            </Col>
-            <Col>
-              <LegendDot color={PAID_COLOR} label={t('dashboard.paid_amount')} />
-            </Col>
-          </Row>
+          {data.months.length === 0 ||
+          data.months.every((m) => Number(m.planned) === 0 && Number(m.paid) === 0) ? (
+            <Empty description={t('dashboard.tracker_window_empty')} style={{ margin: '32px 0' }} />
+          ) : (
+            <>
+              <BarChart months={data.months} maxValue={maxValue} todayMonth={today} />
+              <Row style={{ marginTop: 12 }} gutter={16} align="middle">
+                <Col>
+                  <LegendDot color={PLANNED_COLOR} label={t('dashboard.planned_amount')} />
+                </Col>
+                <Col>
+                  <LegendDot color={PAID_COLOR} label={t('dashboard.paid_amount')} />
+                </Col>
+              </Row>
+            </>
+          )}
 
           <Table<PaymentForecastMonth>
             style={{ marginTop: 16 }}
@@ -168,11 +211,14 @@ export function PaymentForecastChart({ months = 6, title }: PaymentForecastChart
             pagination={false}
             columns={breakdownColumns}
             dataSource={data.months}
+            rowClassName={(r) => (r.month === today ? 'tracker-row-today' : '')}
+            onRow={(r) =>
+              r.month === today
+                ? { style: { background: TODAY_HIGHLIGHT_BG } }
+                : {}
+            }
             summary={(rows) => {
-              const totalPlanned = rows.reduce(
-                (s, r) => s + Number(r.planned || 0),
-                0,
-              )
+              const totalPlanned = rows.reduce((s, r) => s + Number(r.planned || 0), 0)
               const totalPaid = rows.reduce((s, r) => s + Number(r.paid || 0), 0)
               const totalRemaining = Math.max(0, totalPlanned - totalPaid)
               return (
@@ -205,6 +251,8 @@ export function PaymentForecastChart({ months = 6, title }: PaymentForecastChart
   )
 }
 
+export const PaymentForecastChart = PaymentTracker
+
 function LegendDot({ color, label }: { color: string; label: string }) {
   return (
     <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6, fontSize: 12 }}>
@@ -225,9 +273,10 @@ function LegendDot({ color, label }: { color: string; label: string }) {
 interface BarChartProps {
   months: { month: string; planned: string; paid: string; remaining: string }[]
   maxValue: number
+  todayMonth: string
 }
 
-function BarChart({ months, maxValue }: BarChartProps) {
+function BarChart({ months, maxValue, todayMonth }: BarChartProps) {
   const { t } = useTranslation()
   const width = 800
   const height = 260
@@ -256,8 +305,23 @@ function BarChart({ months, maxValue }: BarChartProps) {
         background: 'var(--color-bg-subtle, #fafafa)',
       }}
       role="img"
-      aria-label={t('dashboard.payment_forecast')}
+      aria-label={t('dashboard.payment_tracker')}
     >
+      {months.map((m, i) => {
+        if (m.month !== todayMonth) return null
+        const x = padLeft + groupW * i
+        return (
+          <rect
+            key={`today-${m.month}`}
+            x={x}
+            y={padTop}
+            width={groupW}
+            height={innerH}
+            fill="rgba(139, 94, 60, 0.08)"
+          />
+        )
+      })}
+
       {tickValues.map((v, i) => {
         const y = padTop + innerH - v * scale
         return (
@@ -287,6 +351,7 @@ function BarChart({ months, maxValue }: BarChartProps) {
         const cx = padLeft + groupW * i + groupW / 2
         const plannedH = Number(m.planned) * scale
         const paidH = Number(m.paid) * scale
+        const isToday = m.month === todayMonth
         return (
           <g key={m.month}>
             <title>
@@ -314,7 +379,8 @@ function BarChart({ months, maxValue }: BarChartProps) {
               y={padTop + innerH + 18}
               fontSize={11}
               textAnchor="middle"
-              fill="#6F6861"
+              fill={isToday ? '#8B5E3C' : '#6F6861'}
+              fontWeight={isToday ? 600 : 400}
             >
               {m.month}
             </text>

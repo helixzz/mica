@@ -768,8 +768,15 @@ export const api = {
     effective_date?: string | null
     expiry_date?: string | null
     notes?: string | null
+    contract_number?: string | null
   }): Promise<Contract> {
     const { data } = await client.post<Contract>('/contracts', payload)
+    return data
+  },
+  async suggestContractNumber(): Promise<{ suggested_number: string }> {
+    const { data } = await client.get<{ suggested_number: string }>(
+      '/contracts/suggest-number',
+    )
     return data
   },
   async updateContract(
@@ -1143,9 +1150,16 @@ export const api = {
   async deletePOScheduleItem(poId: string, installmentNo: number): Promise<void> {
     await client.delete(`/purchase-orders/${poId}/payment-schedule/${installmentNo}`)
   },
-  async getPaymentForecast(months = 6): Promise<PaymentForecast> {
+  async getPaymentForecast(
+    opts: { months?: number; past_months?: number; anchor?: string } = {},
+  ): Promise<PaymentForecast> {
+    const { months = 6, past_months, anchor } = opts
     const { data } = await client.get<PaymentForecast>('/dashboard/payment-forecast', {
-      params: { months },
+      params: {
+        months,
+        ...(past_months !== undefined ? { past_months } : {}),
+        ...(anchor ? { anchor } : {}),
+      },
     })
     return data
   },
