@@ -168,6 +168,9 @@ async def create_supplier(db: AsyncSession, actor: User, payload: SupplierCreate
         contact_name=payload.contact_name,
         contact_phone=payload.contact_phone,
         contact_email=payload.contact_email,
+        payee_name=payload.payee_name,
+        payee_bank=payload.payee_bank,
+        payee_bank_account=payload.payee_bank_account,
         notes=payload.notes,
     )
     db.add(supplier)
@@ -186,6 +189,9 @@ async def create_supplier(db: AsyncSession, actor: User, payload: SupplierCreate
                 "contact_name": payload.contact_name,
                 "contact_phone": payload.contact_phone,
                 "contact_email": payload.contact_email,
+                "payee_name": payload.payee_name,
+                "payee_bank": payload.payee_bank,
+                "payee_bank_account": payload.payee_bank_account,
                 "notes": payload.notes,
             }
         },
@@ -231,6 +237,20 @@ async def update_supplier(
     if "contact_email" in payload.model_fields_set:
         _record_change(diff, "contact_email", supplier.contact_email, payload.contact_email)
         supplier.contact_email = payload.contact_email
+    if "payee_name" in payload.model_fields_set:
+        _record_change(diff, "payee_name", supplier.payee_name, payload.payee_name)
+        supplier.payee_name = payload.payee_name
+    if "payee_bank" in payload.model_fields_set:
+        _record_change(diff, "payee_bank", supplier.payee_bank, payload.payee_bank)
+        supplier.payee_bank = payload.payee_bank
+    if "payee_bank_account" in payload.model_fields_set:
+        _record_change(
+            diff,
+            "payee_bank_account",
+            supplier.payee_bank_account,
+            payload.payee_bank_account,
+        )
+        supplier.payee_bank_account = payload.payee_bank_account
     if "notes" in payload.model_fields_set:
         _record_change(diff, "notes", supplier.notes, payload.notes)
         supplier.notes = payload.notes

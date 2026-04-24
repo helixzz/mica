@@ -1,5 +1,5 @@
 import { DeleteOutlined, EditOutlined, PlusOutlined } from '@ant-design/icons'
-import { Button, Drawer, Form, Input, Modal, Space, Table, Tag, Typography, message } from 'antd'
+import { Button, Divider, Drawer, Form, Input, Modal, Space, Table, Tag, Typography, message } from 'antd'
 import { useEffect, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { Link } from 'react-router-dom'
@@ -132,6 +132,22 @@ export default function SuppliersPage() {
             <Input />
           </Form.Item>
           <Form.Item name="contact_email" label={t('field.contact_email')}>
+            <Input />
+          </Form.Item>
+          <Divider orientation="left" plain style={{ fontSize: 13, color: '#8B5E3C' }}>
+            {t('supplier.payee_section')}
+          </Divider>
+          <Form.Item
+            name="payee_name"
+            label={t('supplier.payee_name')}
+            help={t('supplier.payee_name_help')}
+          >
+            <Input placeholder={editingSupplier?.name ?? ''} />
+          </Form.Item>
+          <Form.Item name="payee_bank" label={t('supplier.payee_bank')}>
+            <Input />
+          </Form.Item>
+          <Form.Item name="payee_bank_account" label={t('supplier.payee_bank_account')}>
             <Input />
           </Form.Item>
           <Form.Item name="notes" label={t('supplier.notes')}>

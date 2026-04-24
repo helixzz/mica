@@ -141,6 +141,9 @@ class SupplierCreate(BaseModel):
     contact_name: str | None = Field(default=None, max_length=128)
     contact_phone: str | None = Field(default=None, max_length=32)
     contact_email: str | None = Field(default=None, max_length=255)
+    payee_name: str | None = Field(default=None, max_length=255)
+    payee_bank: str | None = Field(default=None, max_length=255)
+    payee_bank_account: str | None = Field(default=None, max_length=64)
     notes: str | None = None
 
     @field_validator("code")
@@ -156,6 +159,9 @@ class SupplierUpdate(BaseModel):
     contact_name: str | None = Field(default=None, max_length=128)
     contact_phone: str | None = Field(default=None, max_length=32)
     contact_email: str | None = Field(default=None, max_length=255)
+    payee_name: str | None = Field(default=None, max_length=255)
+    payee_bank: str | None = Field(default=None, max_length=255)
+    payee_bank_account: str | None = Field(default=None, max_length=64)
     notes: str | None = None
 
     @field_validator("code")
@@ -175,6 +181,9 @@ class SupplierOut(BaseModel):
     contact_name: str | None = None
     contact_phone: str | None = None
     contact_email: str | None = None
+    payee_name: str | None = None
+    payee_bank: str | None = None
+    payee_bank_account: str | None = None
     notes: str | None = None
     is_enabled: bool
     is_deleted: bool
