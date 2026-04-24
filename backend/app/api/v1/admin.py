@@ -14,6 +14,7 @@ from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel, ConfigDict, Field
 from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy.orm import selectinload
 
 from app.config import get_settings
 from app.core.crypto import decrypt, encrypt
@@ -428,7 +429,11 @@ class UserOutAdmin(BaseModel):
     display_name: str
     role: str
     company_id: UUID
+    company_code: str | None = None
+    company_name_zh: str | None = None
     department_id: UUID | None
+    department_code: str | None = None
+    department_name_zh: str | None = None
     preferred_locale: str
     is_active: bool
     is_local_admin: bool
@@ -437,13 +442,45 @@ class UserOutAdmin(BaseModel):
     created_at: datetime
 
 
+def _user_to_admin_out(u: User) -> UserOutAdmin:
+    return UserOutAdmin(
+        id=u.id,
+        username=u.username,
+        email=u.email,
+        display_name=u.display_name,
+        role=u.role,
+        company_id=u.company_id,
+        company_code=u.company.code if u.company else None,
+        company_name_zh=u.company.name_zh if u.company else None,
+        department_id=u.department_id,
+        department_code=u.department.code if u.department else None,
+        department_name_zh=u.department.name_zh if u.department else None,
+        preferred_locale=u.preferred_locale,
+        is_active=u.is_active,
+        is_local_admin=u.is_local_admin,
+        auth_provider=u.auth_provider,
+        last_login_at=u.last_login_at,
+        created_at=u.created_at,
+    )
+
+
 @router.get("/users", tags=["admin"])
 async def list_users(
     user: CurrentUser,
     db: Annotated[AsyncSession, Depends(get_db)],
 ):
-    rows = (await db.execute(select(User).order_by(User.username))).scalars().all()
-    return [UserOutAdmin.model_validate(u) for u in rows]
+    rows = (
+        (
+            await db.execute(
+                select(User)
+                .order_by(User.username)
+                .options(selectinload(User.company), selectinload(User.department))
+            )
+        )
+        .scalars()
+        .all()
+    )
+    return [_user_to_admin_out(u) for u in rows]
 
 
 @router.post("/users", status_code=201, tags=["admin"])
@@ -479,8 +516,8 @@ async def create_user(
         )
     )
     await db.commit()
-    await db.refresh(u)
-    return UserOutAdmin.model_validate(u)
+    await db.refresh(u, attribute_names=["company", "department"])
+    return _user_to_admin_out(u)
 
 
 @router.post("/users/{user_id}/reset-password", status_code=204, tags=["admin"])
@@ -552,7 +589,8 @@ async def update_user(
         )
         await db.commit()
         await db.refresh(u)
-    return UserOutAdmin.model_validate(u)
+    await db.refresh(u, attribute_names=["company", "department"])
+    return _user_to_admin_out(u)
 
 
 @router.get("/audit-logs", tags=["admin"])
