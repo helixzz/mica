@@ -1,8 +1,9 @@
-import { Card, Col, Empty, Row, Statistic, Typography } from 'antd'
+import { Card, Col, Empty, Row, Statistic, Table, Typography } from 'antd'
+import type { ColumnsType } from 'antd/es/table'
 import { useEffect, useMemo, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 
-import { api, type PaymentForecast } from '@/api'
+import { api, type PaymentForecast, type PaymentForecastMonth } from '@/api'
 import { fmtAmount } from '@/utils/format'
 
 const PLANNED_COLOR = '#B48A6A'
@@ -35,23 +36,81 @@ export function PaymentForecastChart({ months = 6, title }: PaymentForecastChart
   }, [data])
 
   const hasAny = data && data.months.some((m) => Number(m.planned) > 0 || Number(m.paid) > 0)
+  const windowLabel = data
+    ? t('dashboard.forecast_window_range', {
+        count: data.months.length,
+        from: data.months[0]?.month ?? '',
+        to: data.months[data.months.length - 1]?.month ?? '',
+      })
+    : ''
+
+  const breakdownColumns: ColumnsType<PaymentForecastMonth> = [
+    {
+      title: t('dashboard.forecast_month_col'),
+      dataIndex: 'month',
+      width: 110,
+    },
+    {
+      title: t('dashboard.planned_amount'),
+      dataIndex: 'planned',
+      align: 'right',
+      render: (v: string) => (
+        <Typography.Text style={{ color: PLANNED_COLOR }}>
+          {fmtAmount(v)}
+        </Typography.Text>
+      ),
+    },
+    {
+      title: t('dashboard.paid_amount'),
+      dataIndex: 'paid',
+      align: 'right',
+      render: (v: string) => (
+        <Typography.Text style={{ color: PAID_COLOR }}>{fmtAmount(v)}</Typography.Text>
+      ),
+    },
+    {
+      title: t('dashboard.forecast_remaining_col'),
+      dataIndex: 'remaining',
+      align: 'right',
+      render: (v: string) => fmtAmount(v),
+    },
+  ]
 
   if (!loading && !hasAny) {
     return (
-      <Card title={title ?? t('dashboard.payment_forecast')}>
+      <Card
+        title={title ?? t('dashboard.payment_forecast')}
+        extra={
+          data ? (
+            <Typography.Text type="secondary" style={{ fontSize: 12 }}>
+              {windowLabel}
+            </Typography.Text>
+          ) : null
+        }
+      >
         <Empty description={t('dashboard.payment_forecast_empty')} />
       </Card>
     )
   }
 
   return (
-    <Card title={title ?? t('dashboard.payment_forecast')} loading={loading}>
+    <Card
+      title={title ?? t('dashboard.payment_forecast')}
+      extra={
+        data ? (
+          <Typography.Text type="secondary" style={{ fontSize: 12 }}>
+            {windowLabel}
+          </Typography.Text>
+        ) : null
+      }
+      loading={loading}
+    >
       {data && (
         <>
           <Row gutter={16} style={{ marginBottom: 16 }}>
             <Col xs={12} md={8}>
               <Statistic
-                title={t('dashboard.grand_planned')}
+                title={`${t('dashboard.grand_planned')} · ${t('dashboard.forecast_window_suffix', { count: data.months.length })}`}
                 value={Number(data.grand_planned)}
                 prefix="¥"
                 precision={2}
@@ -59,7 +118,7 @@ export function PaymentForecastChart({ months = 6, title }: PaymentForecastChart
             </Col>
             <Col xs={12} md={8}>
               <Statistic
-                title={t('dashboard.grand_paid')}
+                title={`${t('dashboard.grand_paid')} · ${t('dashboard.forecast_window_suffix', { count: data.months.length })}`}
                 value={Number(data.grand_paid)}
                 prefix="¥"
                 precision={2}
@@ -68,7 +127,7 @@ export function PaymentForecastChart({ months = 6, title }: PaymentForecastChart
             </Col>
             <Col xs={12} md={8}>
               <Statistic
-                title={t('dashboard.grand_remaining')}
+                title={`${t('dashboard.grand_remaining')} · ${t('dashboard.forecast_window_suffix', { count: data.months.length })}`}
                 value={
                   Math.max(0, Number(data.grand_planned) - Number(data.grand_paid))
                 }
@@ -89,6 +148,45 @@ export function PaymentForecastChart({ months = 6, title }: PaymentForecastChart
               <LegendDot color={PAID_COLOR} label={t('dashboard.paid_amount')} />
             </Col>
           </Row>
+
+          <Table<PaymentForecastMonth>
+            style={{ marginTop: 16 }}
+            rowKey="month"
+            size="small"
+            pagination={false}
+            columns={breakdownColumns}
+            dataSource={data.months}
+            summary={(rows) => {
+              const totalPlanned = rows.reduce(
+                (s, r) => s + Number(r.planned || 0),
+                0,
+              )
+              const totalPaid = rows.reduce((s, r) => s + Number(r.paid || 0), 0)
+              const totalRemaining = Math.max(0, totalPlanned - totalPaid)
+              return (
+                <Table.Summary.Row>
+                  <Table.Summary.Cell index={0}>
+                    <Typography.Text strong>
+                      {t('dashboard.forecast_total_row')}
+                    </Typography.Text>
+                  </Table.Summary.Cell>
+                  <Table.Summary.Cell index={1} align="right">
+                    <Typography.Text strong style={{ color: PLANNED_COLOR }}>
+                      {fmtAmount(totalPlanned)}
+                    </Typography.Text>
+                  </Table.Summary.Cell>
+                  <Table.Summary.Cell index={2} align="right">
+                    <Typography.Text strong style={{ color: PAID_COLOR }}>
+                      {fmtAmount(totalPaid)}
+                    </Typography.Text>
+                  </Table.Summary.Cell>
+                  <Table.Summary.Cell index={3} align="right">
+                    <Typography.Text strong>{fmtAmount(totalRemaining)}</Typography.Text>
+                  </Table.Summary.Cell>
+                </Table.Summary.Row>
+              )
+            }}
+          />
         </>
       )}
     </Card>
