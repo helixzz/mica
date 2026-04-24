@@ -1,6 +1,6 @@
 [project]
 name = "mica-backend"
-version = "0.9.7"
+version = "0.9.8"
 description = "Mica | 觅采 — Internal procurement management system backend"
 requires-python = ">=3.12"
 license = "Apache-2.0"
