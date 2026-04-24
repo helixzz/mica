@@ -112,6 +112,12 @@ export function ContractsPage() {
     },
     { title: t('field.title'), dataIndex: 'title' },
     {
+      title: t('field.po_number'),
+      dataIndex: 'po_number',
+      render: (v: string | null, r) =>
+        v ? <Link to={`/purchase-orders/${r.po_id}`}>{v}</Link> : '-',
+    },
+    {
       title: t('field.status'),
       dataIndex: 'status',
       filters: [

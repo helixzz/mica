@@ -3,6 +3,8 @@ import {
   DeleteOutlined,
   DownloadOutlined,
   EditOutlined,
+  EyeOutlined,
+  InboxOutlined,
   StopOutlined,
   UploadOutlined,
 } from '@ant-design/icons'
@@ -12,6 +14,7 @@ import {
   Col,
   Descriptions,
   Dropdown,
+  Empty,
   Modal,
   Row,
   Space,
@@ -32,6 +35,7 @@ import {
   type Contract,
   type ContractAttachment,
   type ContractVersion,
+  type Shipment,
 } from '@/api'
 import { extractError } from '@/api/client'
 import { useAuth } from '@/auth/useAuth'
@@ -59,7 +63,15 @@ export function ContractDetailPage() {
   const [attachments, setAttachments] = useState<ContractAttachment[]>([])
   const [uploading, setUploading] = useState(false)
   const [versions, setVersions] = useState<ContractVersion[]>([])
+  const [shipments, setShipments] = useState<Shipment[]>([])
   const [editOpen, setEditOpen] = useState(false)
+  const [ocrViewer, setOcrViewer] = useState<{
+    open: boolean
+    loading: boolean
+    docId: string | null
+    filename: string
+    text: string
+  }>({ open: false, loading: false, docId: null, filename: '', text: '' })
 
   const canWrite = Boolean(
     user && ['admin', 'procurement_mgr', 'it_buyer'].includes(user.role),
@@ -71,17 +83,51 @@ export function ContractDetailPage() {
 
   const load = useCallback(async () => {
     if (!id) return
-    const list = await api.listContracts()
-    const found = list.find((c) => c.id === id)
-    setContract(found || null)
+    try {
+      const fetched = await api.getContract(id)
+      setContract(fetched)
+    } catch {
+      setContract(null)
+    }
     const att = await api.listContractAttachments(id)
     setAttachments(att)
   }, [id])
 
   useEffect(() => {
     void load()
-    if (id) void api.listContractVersions(id).then(setVersions).catch(() => setVersions([]))
+    if (id) {
+      void api.listContractVersions(id).then(setVersions).catch(() => setVersions([]))
+    }
   }, [load, id])
+
+  useEffect(() => {
+    if (!contract?.po_id) {
+      setShipments([])
+      return
+    }
+    api
+      .listShipments(contract.po_id)
+      .then(setShipments)
+      .catch(() => setShipments([]))
+  }, [contract?.po_id])
+
+  const openOcrViewer = async (doc: ContractAttachment) => {
+    if (!id) return
+    setOcrViewer({
+      open: true,
+      loading: true,
+      docId: doc.document_id,
+      filename: doc.original_filename,
+      text: '',
+    })
+    try {
+      const data = await api.getContractAttachmentOcr(id, doc.document_id)
+      setOcrViewer((s) => ({ ...s, loading: false, text: data.ocr_text || '' }))
+    } catch (e) {
+      setOcrViewer((s) => ({ ...s, loading: false, text: '' }))
+      void message.error(extractError(e).detail)
+    }
+  }
 
   const handleUpload = async (file: File) => {
     if (!id) return false
@@ -165,6 +211,41 @@ export function ContractDetailPage() {
       label: t('contract.basic_info'),
       children: (
         <Space direction="vertical" size="large" style={{ width: '100%' }}>
+          <Card
+            title={t('contract.linked_po')}
+            extra={
+              <Button
+                size="small"
+                icon={<EyeOutlined />}
+                onClick={() => navigate(`/purchase-orders/${contract.po_id}`)}
+              >
+                {t('contract.view_po')}
+              </Button>
+            }
+          >
+            <Descriptions bordered size="small" column={3}>
+              <Descriptions.Item label={t('field.po_number')}>
+                {contract.po_number ? (
+                  <a onClick={() => navigate(`/purchase-orders/${contract.po_id}`)}>
+                    {contract.po_number}
+                  </a>
+                ) : (
+                  <Typography.Text type="secondary">-</Typography.Text>
+                )}
+              </Descriptions.Item>
+              <Descriptions.Item label={t('field.po_status')}>
+                {contract.po_status ? (
+                  <Tag>{t(`status.${contract.po_status}` as 'status.confirmed')}</Tag>
+                ) : (
+                  '-'
+                )}
+              </Descriptions.Item>
+              <Descriptions.Item label={t('field.supplier')}>
+                {contract.supplier_name || '-'}
+              </Descriptions.Item>
+            </Descriptions>
+          </Card>
+
           <Card>
             <Descriptions bordered size="small" column={2}>
               <Descriptions.Item label={t('field.title')}>{contract.title}</Descriptions.Item>
@@ -219,13 +300,26 @@ export function ContractDetailPage() {
                           </Tag>
                           <Tag>{a.role}</Tag>
                         </Space>
-                        <Button
-                          size="small"
-                          icon={<DownloadOutlined />}
-                          onClick={() => download(a.document_id, a.original_filename)}
-                          block
-                        >{t('common.download')}
-                        </Button>
+                        <Space style={{ width: '100%' }}>
+                          {a.has_ocr && (
+                            <Button
+                              size="small"
+                              icon={<EyeOutlined />}
+                              onClick={() => openOcrViewer(a)}
+                              block
+                            >
+                              {t('contract.view_ocr')}
+                            </Button>
+                          )}
+                          <Button
+                            size="small"
+                            icon={<DownloadOutlined />}
+                            onClick={() => download(a.document_id, a.original_filename)}
+                            block
+                          >
+                            {t('common.download')}
+                          </Button>
+                        </Space>
                       </Space>
                     </Card>
                   </Col>
@@ -254,6 +348,57 @@ export function ContractDetailPage() {
           currency={contract.currency}
           canWrite={canWrite}
         />
+      ),
+    },
+    {
+      key: 'shipments',
+      label: (
+        <Space>
+          <InboxOutlined />
+          {t('contract.shipments_tab')}
+          {shipments.length > 0 && <Tag>{shipments.length}</Tag>}
+        </Space>
+      ),
+      children: (
+        <Card
+          title={t('contract.shipments_title')}
+          extra={
+            <Button
+              size="small"
+              icon={<EyeOutlined />}
+              onClick={() => navigate(`/purchase-orders/${contract.po_id}`)}
+            >
+              {t('contract.manage_in_po')}
+            </Button>
+          }
+        >
+          {shipments.length === 0 ? (
+            <Empty description={t('contract.no_shipments_hint')} />
+          ) : (
+            <Table<Shipment>
+              rowKey="id"
+              dataSource={shipments}
+              pagination={false}
+              size="small"
+              columns={[
+                {
+                  title: t('field.shipment_number'),
+                  dataIndex: 'shipment_number',
+                },
+                { title: t('field.status'), dataIndex: 'status',
+                  render: (s: string) => <Tag>{t(`status.${s}` as 'status.pending')}</Tag> },
+                { title: t('field.carrier'), dataIndex: 'carrier',
+                  render: (v: string | null) => v || '-' },
+                { title: t('field.tracking_number'), dataIndex: 'tracking_number',
+                  render: (v: string | null) => v || '-' },
+                { title: t('field.expected_date'), dataIndex: 'expected_date',
+                  render: (v: string | null) => v || '-' },
+                { title: t('field.actual_date'), dataIndex: 'actual_date',
+                  render: (v: string | null) => v || '-' },
+              ]}
+            />
+          )}
+        </Card>
       ),
     },
     {
@@ -345,6 +490,47 @@ export function ContractDetailPage() {
           setEditOpen(false)
         }}
       />
+
+      <Modal
+        title={t('contract.ocr_viewer_title', { name: ocrViewer.filename })}
+        open={ocrViewer.open}
+        onCancel={() => setOcrViewer((s) => ({ ...s, open: false }))}
+        footer={[
+          <Button key="close" onClick={() => setOcrViewer((s) => ({ ...s, open: false }))}>
+            {t('button.close')}
+          </Button>,
+        ]}
+        width={800}
+      >
+        {ocrViewer.loading ? (
+          <Typography.Text type="secondary">{t('message.loading')}</Typography.Text>
+        ) : ocrViewer.text ? (
+          <div
+            style={{
+              maxHeight: '60vh',
+              overflow: 'auto',
+              background: 'var(--color-bg-subtle, #fafafa)',
+              border: '1px solid var(--color-border-default, #ddd)',
+              borderRadius: 6,
+              padding: 12,
+              whiteSpace: 'pre-wrap',
+              fontFamily: "'JetBrains Mono', Menlo, monospace",
+              fontSize: 13,
+              lineHeight: 1.55,
+            }}
+          >
+            {ocrViewer.text}
+          </div>
+        ) : (
+          <Empty description={t('contract.ocr_empty')} />
+        )}
+        <Typography.Text
+          type="secondary"
+          style={{ display: 'block', marginTop: 12, fontSize: 12 }}
+        >
+          {t('contract.ocr_disclaimer')}
+        </Typography.Text>
+      </Modal>
 
     </Space>
   )

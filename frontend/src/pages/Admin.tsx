@@ -373,6 +373,7 @@ function RoutingsPanel() {
 
 function UsersPanel() {
   const { t } = useTranslation()
+  const { user: currentUser } = useAuth()
   const [rows, setRows] = useState<any[]>([])
   const [loading, setLoading] = useState(false)
   const [drawerOpen, setDrawerOpen] = useState(false)
@@ -446,6 +447,25 @@ function UsersPanel() {
     }
   }
 
+  const handleDelete = (user: any) => {
+    Modal.confirm({
+      title: t('admin.confirm_delete_user_title', { name: user.display_name || user.username }),
+      content: t('admin.confirm_delete_user_body'),
+      okText: t('button.delete'),
+      okType: 'danger',
+      cancelText: t('button.cancel'),
+      onOk: async () => {
+        try {
+          await api.adminDeleteUser(user.id)
+          void message.success(t('message.deleted'))
+          load()
+        } catch (e: any) {
+          void message.error(e?.response?.data?.detail || t('admin.operation_failed'))
+        }
+      },
+    })
+  }
+
   const handleResetPassword = async () => {
     try {
       const values = await resetForm.validateFields()
@@ -482,7 +502,7 @@ function UsersPanel() {
           { title: t('admin.last_login_col'), dataIndex: 'last_login_at', render: (v?: string) => v ? new Date(v).toLocaleString() : '-' },
           {
             title: t('common.actions'),
-            width: 260,
+            width: 340,
             render: (_: unknown, r: any) => (
               <Space>
                 <Button size="small" onClick={() => openEdit(r)}>{t('button.edit')}</Button>
@@ -490,6 +510,13 @@ function UsersPanel() {
                 <Button size="small" danger={r.is_active} onClick={() => toggleActive(r)}>
                   {r.is_active ? t('common.disabled') : t('common.enabled')}
                 </Button>
+                <Button
+                  size="small"
+                  danger
+                  icon={<DeleteOutlined />}
+                  disabled={currentUser?.id === r.id}
+                  onClick={() => handleDelete(r)}
+                />
               </Space>
             ),
           },

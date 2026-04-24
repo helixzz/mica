@@ -46,7 +46,8 @@
     "mark_paid": "标记已付款",
     "record_shipment": "登记交货",
     "record_payment": "登记付款",
-    "record_invoice": "登记发票"
+    "record_invoice": "登记发票",
+    "close": "关闭"
   },
   "field": {
     "username": "用户名",
@@ -81,6 +82,7 @@
     "amount": "金额",
     "pr_number": "申请单号",
     "po_number": "订单号",
+    "po_status": "订单状态",
     "contract_number": "合同号",
     "shipment_number": "批次号",
     "payment_number": "付款编号",
@@ -601,6 +603,8 @@
     "select_parent": "选择上级分类（一级）",
     "added": "已添加",
     "deactivated": "已停用",
+    "confirm_delete_user_title": "删除用户 {{name}}？",
+    "confirm_delete_user_body": "硬删除后不可恢复，并且如果用户已经产生业务数据（PR/PO/审批/审计日志），删除会失败 —— 此时请改为禁用账号。",
     "operation_failed": "操作失败",
     "status_col": "状态",
     "departments": "部门管理",
@@ -858,7 +862,17 @@
     "transition_to_expired": "标记为已过期",
     "confirm_status_title": "变更状态为「{{status}}」？",
     "confirm_status_body": "该变更将写入合同版本历史，且变更后合同不可再编辑。",
-    "status_changed_ok": "合同状态已更新"
+    "status_changed_ok": "合同状态已更新",
+    "linked_po": "关联采购订单",
+    "view_po": "查看订单",
+    "shipments_tab": "交货记录",
+    "shipments_title": "订单下的交货记录",
+    "no_shipments_hint": "此合同所属订单尚无交货记录。",
+    "manage_in_po": "在订单中管理",
+    "view_ocr": "查看 OCR",
+    "ocr_viewer_title": "OCR 提取文本 · {{name}}",
+    "ocr_empty": "OCR 提取内容为空",
+    "ocr_disclaimer": "此处显示的是 OCR 自动识别文本，仅供检索和参考，以合同原件为准。"
   },
   "common": {
     "total_count": "共 {{count}} 条",
@@ -898,6 +912,17 @@
     "payment_due_date_help": "按合同或发票约定填写到期日，便于系统做逾期与现金流跟踪。",
     "payment_date_help": "只有在款项已经实际付出时才填写；计划中或待支付记录可暂时留空。",
     "payment_ref_help": "可选。填写银行流水号、凭证号或内部汇款编号，方便后续对账。",
+    "payment_contract_required": "请先选择关联合同",
+    "payment_linked_contract": "关联合同",
+    "payment_linked_schedule": "关联付款计划分期（可选）",
+    "payment_linked_schedule_placeholder": "不关联（直接记到合同下）",
+    "payment_linked_schedule_help": "选中某一期后，执行付款时会自动把该期标记为已付；不选则只记录到合同。",
+    "payment_no_contract_title": "此订单还没有合同",
+    "payment_no_contract_body": "按合规要求，付款必须关联一份合同。点击「创建合同」快速补充合同信息。",
+    "payment_edit_title": "编辑付款记录: {{number}}",
+    "payment_confirm_delete_title": "删除该付款记录？",
+    "payment_confirm_delete_body": "仅可删除未确认（pending）的付款记录。已确认的付款请先撤销再删除。",
+    "no_contracts_hint": "此订单尚未关联任何合同。在上方点击「创建合同」补充合同信息后，才能记录付款。",
     "invoice_help": "录入供应商发票号、日期、税务信息和附件，确保后续匹配、付款和审计链路都可追溯。"
   }
 }

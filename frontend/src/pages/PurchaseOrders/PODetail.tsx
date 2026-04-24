@@ -5,6 +5,7 @@ import {
   UploadOutlined,
 } from '@ant-design/icons'
 import {
+  Alert,
   Button,
   Card,
   Col,
@@ -36,6 +37,7 @@ import {
   type Contract,
   type InvoiceListRow,
   type PaymentRecord,
+  type PaymentScheduleItem,
   type POProgress,
   type PurchaseOrder,
   type Shipment,
@@ -68,6 +70,7 @@ export function PODetailPage() {
   const [paymentOpen, setPaymentOpen] = useState(false)
   const [invoiceOpen, setInvoiceOpen] = useState(false)
   const [contractOpen, setContractOpen] = useState(false)
+  const [editingPayment, setEditingPayment] = useState<PaymentRecord | null>(null)
   const [busy, setBusy] = useState(false)
 
   const canCreateContract = Boolean(
@@ -266,26 +269,91 @@ export function PODetailPage() {
                   pagination={false}
                   columns={[
                     { title: t('field.payment_number'), dataIndex: 'payment_number' },
+                    {
+                      title: t('field.contract_number'),
+                      dataIndex: 'contract_number',
+                      render: (v: string | null, r: PaymentRecord) =>
+                        v && r.contract_id ? (
+                          <a onClick={() => navigate(`/contracts/${r.contract_id}`)}>{v}</a>
+                        ) : (
+                          <Typography.Text type="secondary">-</Typography.Text>
+                        ),
+                    },
                     { title: t('field.installment_no'), dataIndex: 'installment_no', width: 80 },
-                     { title: t('field.amount'), dataIndex: 'amount', align: 'right', render: (v: string) => fmtAmount(v) },
+                    {
+                      title: t('field.amount'),
+                      dataIndex: 'amount',
+                      align: 'right',
+                      render: (v: string) => fmtAmount(v),
+                    },
                     { title: t('field.due_date'), dataIndex: 'due_date' },
                     { title: t('field.payment_date'), dataIndex: 'payment_date' },
-                    { title: t('field.status'), dataIndex: 'status',
-                      render: (s: string) => <Tag color={s === 'confirmed' ? 'success' : 'default'}>{t(`status.${s}` as 'status.pending')}</Tag> },
                     {
-                      title: '',
-                      render: (_, r) =>
-                        r.status === 'pending' ? (
-                          <Button size="small" onClick={async () => {
-                            try {
-                              await api.confirmPayment(r.id, { payment_date: dayjs().format('YYYY-MM-DD') })
-                              void message.success(t('message.save_success'))
-                              void loadAll()
-                            } catch (e) {
-                              void message.error(extractError(e).detail)
-                            }
-                          }}>{t('button.mark_paid')}</Button>
-                        ) : null,
+                      title: t('field.status'),
+                      dataIndex: 'status',
+                      render: (s: string) => (
+                        <Tag color={s === 'confirmed' ? 'success' : 'default'}>
+                          {t(`status.${s}` as 'status.pending')}
+                        </Tag>
+                      ),
+                    },
+                    {
+                      title: t('common.actions'),
+                      width: 220,
+                      render: (_: unknown, r: PaymentRecord) => (
+                        <Space size="small">
+                          {r.status === 'pending' && (
+                            <Button
+                              size="small"
+                              onClick={async () => {
+                                try {
+                                  await api.confirmPayment(r.id, {
+                                    payment_date: dayjs().format('YYYY-MM-DD'),
+                                  })
+                                  void message.success(t('message.save_success'))
+                                  void loadAll()
+                                } catch (e) {
+                                  void message.error(extractError(e).detail)
+                                }
+                              }}
+                            >
+                              {t('button.mark_paid')}
+                            </Button>
+                          )}
+                          <Button
+                            size="small"
+                            onClick={() => setEditingPayment(r)}
+                          >
+                            {t('button.edit')}
+                          </Button>
+                          {r.status !== 'confirmed' && (
+                            <Button
+                              size="small"
+                              danger
+                              onClick={() => {
+                                Modal.confirm({
+                                  title: t('po.payment_confirm_delete_title'),
+                                  content: t('po.payment_confirm_delete_body'),
+                                  okText: t('button.delete'),
+                                  okType: 'danger',
+                                  cancelText: t('button.cancel'),
+                                  onOk: async () => {
+                                    try {
+                                      await api.deletePayment(r.id)
+                                      void message.success(t('message.deleted'))
+                                      void loadAll()
+                                    } catch (e) {
+                                      void message.error(extractError(e).detail)
+                                    }
+                                  },
+                                })
+                              }}
+                            >
+                              {t('button.delete')}
+                            </Button>
+                          )}
+                        </Space>
+                      ),
                     },
                   ]}
                 />
@@ -317,6 +385,63 @@ export function PODetailPage() {
                       render: (s: string) => <Tag>{t(`status.${s}` as 'status.draft')}</Tag> },
                   ]}
                 />
+              </>
+            ),
+          },
+          {
+            key: 'contracts',
+            label: `${t('nav.contracts')} (${contracts.length})`,
+            children: (
+              <>
+                <div style={{ marginBottom: 12, textAlign: 'right' }}>
+                  {canCreateContract && (
+                    <Button
+                      type="primary"
+                      icon={<FileTextOutlined />}
+                      onClick={() => setContractOpen(true)}
+                      disabled={po.status === 'draft' || po.status === 'cancelled'}
+                    >
+                      {t('contract.create_btn')}
+                    </Button>
+                  )}
+                </div>
+                {contracts.length === 0 ? (
+                  <Typography.Text type="secondary">
+                    {t('po.no_contracts_hint')}
+                  </Typography.Text>
+                ) : (
+                  <Table
+                    rowKey="id"
+                    dataSource={contracts}
+                    pagination={false}
+                    size="small"
+                    columns={[
+                      {
+                        title: t('field.contract_number'),
+                        dataIndex: 'contract_number',
+                        render: (v: string, r: Contract) => (
+                          <a onClick={() => navigate(`/contracts/${r.id}`)}>{v}</a>
+                        ),
+                      },
+                      { title: t('field.title'), dataIndex: 'title' },
+                      {
+                        title: t('field.status'),
+                        dataIndex: 'status',
+                        render: (s: string) => (
+                          <Tag>{t(`status.${s}` as 'status.active')}</Tag>
+                        ),
+                      },
+                      {
+                        title: t('field.total_amount'),
+                        align: 'right',
+                        render: (_: unknown, r: Contract) =>
+                          fmtAmount(r.total_amount, r.currency),
+                      },
+                      { title: t('field.signed_date'), dataIndex: 'signed_date' },
+                      { title: t('field.expiry_date'), dataIndex: 'expiry_date' },
+                    ]}
+                  />
+                )}
               </>
             ),
           },
@@ -369,6 +494,15 @@ export function PODetailPage() {
           setContractOpen(false)
           void loadAll()
           navigate(`/contracts/${saved.id}`)
+        }}
+      />
+      <PaymentEditModal
+        open={editingPayment !== null}
+        payment={editingPayment}
+        onClose={() => setEditingPayment(null)}
+        onSaved={() => {
+          setEditingPayment(null)
+          void loadAll()
         }}
       />
     </Space>
@@ -478,18 +612,59 @@ function PaymentModal({ open, po, onClose, onDone, busy, setBusy }: ModalProps) 
   const [dueDate, setDueDate] = useState<dayjs.Dayjs | null>(dayjs().add(30, 'day'))
   const [payDate, setPayDate] = useState<dayjs.Dayjs | null>(null)
   const [txRef, setTxRef] = useState('')
+  const [contractOptions, setContractOptions] = useState<Contract[]>([])
+  const [contractId, setContractId] = useState<string | null>(null)
+  const [scheduleOptions, setScheduleOptions] = useState<PaymentScheduleItem[]>([])
+  const [scheduleItemId, setScheduleItemId] = useState<string | null>(null)
+  const [contractFormOpen, setContractFormOpen] = useState(false)
+
+  const loadContracts = async () => {
+    try {
+      const list = await api.listContracts(po.id)
+      setContractOptions(list)
+      if (list.length === 1) {
+        setContractId(list[0].id)
+      } else if (list.length > 1 && contractId === null) {
+        const active = list.find((c) => c.status === 'active')
+        setContractId((active ?? list[0]).id)
+      } else if (list.length === 0) {
+        setContractId(null)
+      }
+    } catch {
+      setContractOptions([])
+    }
+  }
 
   useEffect(() => {
-    if (open) {
-      setAmount(Math.max(0, Number(po.total_amount) - Number(po.amount_paid || 0)))
+    if (!open) return
+    setAmount(Math.max(0, Number(po.total_amount) - Number(po.amount_paid || 0)))
+    setScheduleItemId(null)
+    void loadContracts()
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [open, po.id])
+
+  useEffect(() => {
+    if (!contractId) {
+      setScheduleOptions([])
+      return
     }
-  }, [open, po])
+    api
+      .getPaymentSchedule(contractId)
+      .then((s) => setScheduleOptions(s.items.filter((i) => i.status !== 'paid')))
+      .catch(() => setScheduleOptions([]))
+  }, [contractId])
 
   const submit = async () => {
+    if (!contractId) {
+      void message.error(t('po.payment_contract_required'))
+      return
+    }
     try {
       setBusy(true)
       await api.createPayment({
         po_id: po.id,
+        contract_id: contractId,
+        schedule_item_id: scheduleItemId,
         amount,
         due_date: dueDate ? dueDate.format('YYYY-MM-DD') : null,
         payment_date: payDate ? payDate.format('YYYY-MM-DD') : null,
@@ -505,20 +680,196 @@ function PaymentModal({ open, po, onClose, onDone, busy, setBusy }: ModalProps) 
     }
   }
 
+  const noContractsYet = contractOptions.length === 0
+
   return (
-    <Modal title={t('button.record_payment')} open={open} onCancel={onClose} onOk={submit} confirmLoading={busy} width={600}>
+    <>
+      <Modal
+        title={t('button.record_payment')}
+        open={open}
+        onCancel={onClose}
+        onOk={submit}
+        confirmLoading={busy}
+        okButtonProps={{ disabled: noContractsYet || !contractId }}
+        width={600}
+      >
+        <Form layout="vertical">
+          <Typography.Text type="secondary" style={{ display: 'block', marginBottom: 12 }}>
+            {t('po.payment_help')}
+          </Typography.Text>
+
+          {noContractsYet ? (
+            <Alert
+              type="warning"
+              showIcon
+              message={t('po.payment_no_contract_title')}
+              description={t('po.payment_no_contract_body')}
+              action={
+                <Button
+                  size="small"
+                  type="primary"
+                  onClick={() => setContractFormOpen(true)}
+                >
+                  {t('contract.create_btn')}
+                </Button>
+              }
+              style={{ marginBottom: 16 }}
+            />
+          ) : (
+            <Form.Item label={t('po.payment_linked_contract')} required>
+              <Select
+                value={contractId}
+                onChange={(v) => setContractId(v)}
+                options={contractOptions.map((c) => ({
+                  value: c.id,
+                  label: `${c.contract_number} · ${c.title}`,
+                }))}
+              />
+            </Form.Item>
+          )}
+
+          {contractId && scheduleOptions.length > 0 && (
+            <Form.Item
+              label={t('po.payment_linked_schedule')}
+              help={t('po.payment_linked_schedule_help')}
+            >
+              <Select
+                allowClear
+                placeholder={t('po.payment_linked_schedule_placeholder')}
+                value={scheduleItemId}
+                onChange={(v) => setScheduleItemId(v ?? null)}
+                options={scheduleOptions.map((s) => ({
+                  value: s.id,
+                  label: `${t('contract.installment_n', { n: s.installment_no })} · ${s.label} · ${fmtAmount(s.planned_amount, po.currency)}${s.planned_date ? ` · ${s.planned_date}` : ''}`,
+                }))}
+              />
+            </Form.Item>
+          )}
+
+          <Row gutter={12}>
+            <Col span={12}>
+              <Form.Item label={t('field.amount')} help={t('po.payment_amount_help')} required>
+                <InputNumber min={0} value={amount} onChange={(v) => setAmount(Number(v ?? 0))} style={{ width: '100%' }} />
+              </Form.Item>
+            </Col>
+            <Col span={12}>
+              <Form.Item label={t('field.payment_method')} help={t('po.payment_method_help')}>
+                <Select
+                  value={method}
+                  onChange={setMethod}
+                  options={[
+                    { value: 'bank_transfer', label: 'Bank Transfer' },
+                    { value: 'check', label: 'Check' },
+                    { value: 'cash', label: 'Cash' },
+                  ]}
+                />
+              </Form.Item>
+            </Col>
+          </Row>
+          <Row gutter={12}>
+            <Col span={12}>
+              <Form.Item label={t('field.due_date')} help={t('po.payment_due_date_help')}>
+                <DatePicker value={dueDate} onChange={setDueDate} style={{ width: '100%' }} />
+              </Form.Item>
+            </Col>
+            <Col span={12}>
+              <Form.Item label={t('field.payment_date')} help={t('po.payment_date_help')}>
+                <DatePicker value={payDate} onChange={setPayDate} style={{ width: '100%' }} />
+              </Form.Item>
+            </Col>
+          </Row>
+          <Form.Item label={t('field.transaction_ref')} help={t('po.payment_ref_help')}>
+            <Input value={txRef} onChange={(e) => setTxRef(e.target.value)} />
+          </Form.Item>
+        </Form>
+      </Modal>
+
+      <ContractFormModal
+        open={contractFormOpen}
+        mode="create"
+        poId={po.id}
+        onClose={() => setContractFormOpen(false)}
+        onSaved={(saved) => {
+          setContractFormOpen(false)
+          setContractOptions((list) => [...list, saved])
+          setContractId(saved.id)
+        }}
+      />
+    </>
+  )
+}
+
+interface PaymentEditModalProps {
+  open: boolean
+  payment: PaymentRecord | null
+  onClose: () => void
+  onSaved: () => void
+}
+
+function PaymentEditModal({ open, payment, onClose, onSaved }: PaymentEditModalProps) {
+  const { t } = useTranslation()
+  const [amount, setAmount] = useState<number>(0)
+  const [dueDate, setDueDate] = useState<dayjs.Dayjs | null>(null)
+  const [payDate, setPayDate] = useState<dayjs.Dayjs | null>(null)
+  const [method, setMethod] = useState('bank_transfer')
+  const [txRef, setTxRef] = useState('')
+  const [notes, setNotes] = useState('')
+  const [busy, setBusy] = useState(false)
+
+  useEffect(() => {
+    if (!open || !payment) return
+    setAmount(Number(payment.amount))
+    setDueDate(payment.due_date ? dayjs(payment.due_date) : null)
+    setPayDate(payment.payment_date ? dayjs(payment.payment_date) : null)
+    setMethod(payment.payment_method || 'bank_transfer')
+    setTxRef(payment.transaction_ref || '')
+    setNotes(payment.notes || '')
+  }, [open, payment])
+
+  const submit = async () => {
+    if (!payment) return
+    try {
+      setBusy(true)
+      await api.updatePayment(payment.id, {
+        amount,
+        due_date: dueDate ? dueDate.format('YYYY-MM-DD') : null,
+        payment_date: payDate ? payDate.format('YYYY-MM-DD') : null,
+        payment_method: method,
+        transaction_ref: txRef || null,
+        notes: notes || null,
+      })
+      void message.success(t('message.save_success'))
+      onSaved()
+    } catch (e) {
+      void message.error(extractError(e).detail)
+    } finally {
+      setBusy(false)
+    }
+  }
+
+  return (
+    <Modal
+      title={t('po.payment_edit_title', { number: payment?.payment_number ?? '' })}
+      open={open}
+      onCancel={onClose}
+      onOk={submit}
+      confirmLoading={busy}
+      width={560}
+    >
       <Form layout="vertical">
-        <Typography.Text type="secondary" style={{ display: 'block', marginBottom: 12 }}>
-          {t('po.payment_help')}
-        </Typography.Text>
         <Row gutter={12}>
           <Col span={12}>
-            <Form.Item label={t('field.amount')} help={t('po.payment_amount_help')} required>
-              <InputNumber min={0} value={amount} onChange={(v) => setAmount(Number(v ?? 0))} style={{ width: '100%' }} />
+            <Form.Item label={t('field.amount')} required>
+              <InputNumber
+                min={0}
+                value={amount}
+                onChange={(v) => setAmount(Number(v ?? 0))}
+                style={{ width: '100%' }}
+              />
             </Form.Item>
           </Col>
           <Col span={12}>
-            <Form.Item label={t('field.payment_method')} help={t('po.payment_method_help')}>
+            <Form.Item label={t('field.payment_method')}>
               <Select
                 value={method}
                 onChange={setMethod}
@@ -533,18 +884,25 @@ function PaymentModal({ open, po, onClose, onDone, busy, setBusy }: ModalProps) 
         </Row>
         <Row gutter={12}>
           <Col span={12}>
-            <Form.Item label={t('field.due_date')} help={t('po.payment_due_date_help')}>
+            <Form.Item label={t('field.due_date')}>
               <DatePicker value={dueDate} onChange={setDueDate} style={{ width: '100%' }} />
             </Form.Item>
           </Col>
           <Col span={12}>
-            <Form.Item label={t('field.payment_date')} help={t('po.payment_date_help')}>
+            <Form.Item label={t('field.payment_date')}>
               <DatePicker value={payDate} onChange={setPayDate} style={{ width: '100%' }} />
             </Form.Item>
           </Col>
         </Row>
-        <Form.Item label={t('field.transaction_ref')} help={t('po.payment_ref_help')}>
+        <Form.Item label={t('field.transaction_ref')}>
           <Input value={txRef} onChange={(e) => setTxRef(e.target.value)} />
+        </Form.Item>
+        <Form.Item label={t('field.notes')}>
+          <Input.TextArea
+            rows={2}
+            value={notes}
+            onChange={(e) => setNotes(e.target.value)}
+          />
         </Form.Item>
       </Form>
     </Modal>

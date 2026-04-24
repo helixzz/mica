@@ -158,7 +158,10 @@ export interface Contract {
   id: string
   contract_number: string
   po_id: string
+  po_number?: string | null
+  po_status?: string | null
   supplier_id: string
+  supplier_name?: string | null
   title: string
   current_version: number
   status: string
@@ -212,6 +215,9 @@ export interface PaymentRecord {
   id: string
   payment_number: string
   po_id: string
+  contract_id: string | null
+  contract_number?: string | null
+  schedule_item_id: string | null
   installment_no: number
   amount: string
   currency: string
@@ -745,6 +751,10 @@ export const api = {
     const { data } = await client.get<Contract[]>('/contracts', { params: { po_id } })
     return data
   },
+  async getContract(contractId: string): Promise<Contract> {
+    const { data } = await client.get<Contract>(`/contracts/${contractId}`)
+    return data
+  },
   async listContractVersions(contractId: string): Promise<ContractVersion[]> {
     const { data } = await client.get<ContractVersion[]>(`/contracts/${contractId}/versions`)
     return data
@@ -829,6 +839,8 @@ export const api = {
   },
   async createPayment(payload: {
     po_id: string
+    contract_id: string
+    schedule_item_id?: string | null
     amount: number | string
     due_date?: string | null
     payment_date?: string | null
@@ -838,6 +850,23 @@ export const api = {
   }): Promise<PaymentRecord> {
     const { data } = await client.post<PaymentRecord>('/payments', payload)
     return data
+  },
+  async updatePayment(
+    id: string,
+    payload: {
+      amount?: number | string
+      due_date?: string | null
+      payment_date?: string | null
+      payment_method?: string
+      transaction_ref?: string | null
+      notes?: string | null
+    },
+  ): Promise<PaymentRecord> {
+    const { data } = await client.patch<PaymentRecord>(`/payments/${id}`, payload)
+    return data
+  },
+  async deletePayment(id: string): Promise<void> {
+    await client.delete(`/payments/${id}`)
   },
   async confirmPayment(id: string, payload: { payment_date?: string | null; transaction_ref?: string | null }): Promise<PaymentRecord> {
     const { data } = await client.post<PaymentRecord>(`/payments/${id}/confirm`, payload)
@@ -955,6 +984,9 @@ export const api = {
   async adminResetPassword(userId: string, newPassword: string): Promise<void> {
     await client.post(`/admin/users/${userId}/reset-password`, { new_password: newPassword })
   },
+  async adminDeleteUser(userId: string): Promise<void> {
+    await client.delete(`/admin/users/${userId}`)
+  },
   async adminAuditLogs(params: { since_days?: number; event_type_prefix?: string } = {}): Promise<Record<string, unknown>[]> {
     const { data } = await client.get('/admin/audit-logs', { params })
     return data as Record<string, unknown>[]
@@ -1017,6 +1049,19 @@ export const api = {
   },
   async listContractAttachments(contract_id: string): Promise<ContractAttachment[]> {
     const { data } = await client.get<ContractAttachment[]>(`/contracts/${contract_id}/attachments`)
+    return data
+  },
+  async getContractAttachmentOcr(
+    contract_id: string,
+    document_id: string,
+  ): Promise<{ contract_id: string; document_id: string; has_ocr: boolean; ocr_chars: number; ocr_text: string }> {
+    const { data } = await client.get<{
+      contract_id: string
+      document_id: string
+      has_ocr: boolean
+      ocr_chars: number
+      ocr_text: string
+    }>(`/contracts/${contract_id}/attachments/${document_id}/ocr`)
     return data
   },
   async searchContracts(q: string): Promise<ContractSearchHit[]> {
