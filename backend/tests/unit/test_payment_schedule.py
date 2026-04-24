@@ -212,6 +212,45 @@ async def test_execute_creates_payment_record(seeded_db_session):
     assert item.payment_record_id is not None
 
 
+async def test_execute_schedule_item_updates_po_amount_paid(seeded_db_session):
+    contract = await _ensure_contract(seeded_db_session)
+    po = (
+        await seeded_db_session.execute(
+            select(PurchaseOrder).where(PurchaseOrder.id == contract.po_id)
+        )
+    ).scalar_one()
+    starting_amount_paid = po.amount_paid or Decimal("0")
+    await svc.replace_schedule(
+        seeded_db_session,
+        [
+            {
+                "installment_no": 1,
+                "label": "execute-updates-po",
+                "planned_amount": Decimal("7500"),
+                "planned_date": "2026-06-01",
+            }
+        ],
+        contract_id=contract.id,
+    )
+
+    await svc.execute_schedule_item(
+        seeded_db_session,
+        1,
+        contract_id=contract.id,
+        payment_method="bank_transfer",
+        transaction_ref=None,
+        invoice_id=None,
+        amount_override=None,
+    )
+
+    refreshed_po = (
+        await seeded_db_session.execute(
+            select(PurchaseOrder).where(PurchaseOrder.id == contract.po_id)
+        )
+    ).scalar_one()
+    assert refreshed_po.amount_paid == starting_amount_paid + Decimal("7500")
+
+
 async def test_execute_with_amount_override(seeded_db_session):
     contract = await _ensure_contract(seeded_db_session)
     await svc.replace_schedule(
