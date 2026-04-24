@@ -243,7 +243,9 @@ async def test_create_contract_creates_contract_from_po(seeded_db_session):
     assert contract.supplier_id == supplier.id
     assert contract.currency == po.currency
     assert contract.total_amount == Decimal("800.00")
-    assert contract.contract_number.startswith(f"CT-{datetime.now(UTC).year}-")
+    today = datetime.now(UTC).date()
+    expected_prefix = f"ACME{today.year:04d}{today.month:02d}{today.day:02d}"
+    assert contract.contract_number.startswith(expected_prefix)
     assert contract.notes == "Annual support"
     version = (
         await db.execute(select(ContractVersion).where(ContractVersion.contract_id == contract.id))
@@ -261,7 +263,59 @@ async def test_create_contract_increments_contract_numbers(seeded_db_session):
     c1 = await flow_svc.create_contract(db, user, po1.id, title="C1", total_amount=Decimal("10"))
     c2 = await flow_svc.create_contract(db, user, po2.id, title="C2", total_amount=Decimal("20"))
 
-    assert int(c2.contract_number.split("-")[-1]) == int(c1.contract_number.split("-")[-1]) + 1
+    assert c1.contract_number[:-3] == c2.contract_number[:-3]
+    assert int(c2.contract_number[-3:]) == int(c1.contract_number[-3:]) + 1
+
+
+async def test_create_contract_accepts_custom_contract_number(seeded_db_session):
+    db = seeded_db_session
+    user, _supplier, _pr, po = await _create_confirmed_po(db)
+
+    contract = await flow_svc.create_contract(
+        db,
+        user,
+        po.id,
+        title="Custom numbered",
+        total_amount=Decimal("500"),
+        contract_number="CUSTOM-2026-001",
+    )
+
+    assert contract.contract_number == "CUSTOM-2026-001"
+
+
+async def test_create_contract_rejects_duplicate_custom_number(seeded_db_session):
+    db = seeded_db_session
+    user, _supplier, _pr1, po1 = await _create_confirmed_po(db, title="DupTest1")
+    _u2, _s2, _pr2, po2 = await _create_confirmed_po(db, title="DupTest2")
+
+    await flow_svc.create_contract(
+        db, user, po1.id, title="first", total_amount=Decimal("1"), contract_number="DUP-001"
+    )
+
+    with pytest.raises(HTTPException) as exc:
+        await flow_svc.create_contract(
+            db,
+            user,
+            po2.id,
+            title="second",
+            total_amount=Decimal("1"),
+            contract_number="DUP-001",
+        )
+
+    assert exc.value.status_code == 409
+    assert exc.value.detail == "contract.number_duplicate"
+
+
+async def test_suggest_contract_number_follows_acme_format(seeded_db_session):
+    db = seeded_db_session
+    today = datetime.now(UTC).date()
+    expected_prefix = f"ACME{today.year:04d}{today.month:02d}{today.day:02d}"
+
+    suggested = await flow_svc.suggest_contract_number(db)
+
+    assert suggested.startswith(expected_prefix)
+    assert len(suggested) == len(expected_prefix) + 3
+    assert suggested[-3:].isdigit()
 
 
 async def test_create_contract_raises_for_missing_po(seeded_db_session):

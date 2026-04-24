@@ -64,6 +64,25 @@ async def _load_po(db: AsyncSession, po_id: UUID) -> PurchaseOrder | None:
     ).scalar_one_or_none()
 
 
+async def suggest_contract_number(db: AsyncSession) -> str:
+    now = datetime.now(UTC)
+    prefix = f"ACME{now.year:04d}{now.month:02d}{now.day:02d}"
+    max_suffix = (
+        await db.execute(
+            select(func.max(Contract.contract_number)).where(
+                Contract.contract_number.like(f"{prefix}%")
+            )
+        )
+    ).scalar_one_or_none()
+    next_seq = 1
+    if max_suffix and len(max_suffix) == len(prefix) + 3:
+        try:
+            next_seq = int(max_suffix[-3:]) + 1
+        except ValueError:
+            next_seq = 1
+    return f"{prefix}{next_seq:03d}"
+
+
 async def create_contract(
     db: AsyncSession,
     actor: User,
@@ -74,19 +93,25 @@ async def create_contract(
     effective_date=None,
     expiry_date=None,
     notes: str | None = None,
+    contract_number: str | None = None,
 ) -> Contract:
     po = await _load_po(db, po_id)
     if po is None:
         raise HTTPException(404, "po.not_found")
 
-    year = datetime.now(UTC).year
-    prefix = f"CT-{year}-"
-    n = (
-        await db.execute(
-            select(func.count(Contract.id)).where(Contract.contract_number.startswith(prefix))
-        )
-    ).scalar_one() or 0
-    number = f"{prefix}{n + 1:04d}"
+    if contract_number:
+        number = contract_number.strip()
+        if not number:
+            raise HTTPException(400, "contract.number_required")
+        collision = (
+            await db.execute(
+                select(func.count(Contract.id)).where(Contract.contract_number == number)
+            )
+        ).scalar_one() or 0
+        if collision > 0:
+            raise HTTPException(409, "contract.number_duplicate")
+    else:
+        number = await suggest_contract_number(db)
 
     contract = Contract(
         contract_number=number,

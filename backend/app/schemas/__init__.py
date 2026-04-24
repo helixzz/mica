@@ -384,6 +384,7 @@ class ContractCreateIn(BaseModel):
     effective_date: date | None = None
     expiry_date: date | None = None
     notes: str | None = None
+    contract_number: str | None = Field(default=None, max_length=64)
 
 
 class ContractUpdateIn(BaseModel):
