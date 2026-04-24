@@ -992,3 +992,4 @@ class PaymentForecastOut(BaseModel):
     months: list[PaymentForecastMonth]
     grand_planned: Decimal
     grand_paid: Decimal
+    paid_to_date: Decimal = Decimal(0)

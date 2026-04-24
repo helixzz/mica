@@ -397,10 +397,16 @@ async def payment_forecast(db: AsyncSession, months: int = 6) -> dict:
     grand_planned = sum((b["planned"] for b in month_buckets), Decimal("0"))
     grand_paid = sum((b["paid"] for b in month_buckets), Decimal("0"))
 
+    paid_to_date_q = select(func.coalesce(func.sum(PaymentRecord.amount), 0)).where(
+        PaymentRecord.status == PaymentStatus.CONFIRMED.value,
+    )
+    paid_to_date = Decimal(str((await db.execute(paid_to_date_q)).scalar()))
+
     return {
         "months": month_buckets,
         "grand_planned": grand_planned,
         "grand_paid": grand_paid,
+        "paid_to_date": paid_to_date,
     }
 
 

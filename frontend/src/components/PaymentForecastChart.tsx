@@ -35,7 +35,10 @@ export function PaymentForecastChart({ months = 6, title }: PaymentForecastChart
     )
   }, [data])
 
-  const hasAny = data && data.months.some((m) => Number(m.planned) > 0 || Number(m.paid) > 0)
+  const hasAny =
+    data &&
+    (Number(data.paid_to_date) > 0 ||
+      data.months.some((m) => Number(m.planned) > 0 || Number(m.paid) > 0))
   const windowLabel = data
     ? t('dashboard.forecast_window_range', {
         count: data.months.length,
@@ -108,7 +111,16 @@ export function PaymentForecastChart({ months = 6, title }: PaymentForecastChart
       {data && (
         <>
           <Row gutter={16} style={{ marginBottom: 16 }}>
-            <Col xs={12} md={8}>
+            <Col xs={12} md={6}>
+              <Statistic
+                title={t('dashboard.paid_to_date')}
+                value={Number(data.paid_to_date)}
+                prefix="¥"
+                precision={2}
+                valueStyle={{ color: PAID_COLOR }}
+              />
+            </Col>
+            <Col xs={12} md={6}>
               <Statistic
                 title={`${t('dashboard.grand_planned')} · ${t('dashboard.forecast_window_suffix', { count: data.months.length })}`}
                 value={Number(data.grand_planned)}
@@ -116,7 +128,7 @@ export function PaymentForecastChart({ months = 6, title }: PaymentForecastChart
                 precision={2}
               />
             </Col>
-            <Col xs={12} md={8}>
+            <Col xs={12} md={6}>
               <Statistic
                 title={`${t('dashboard.grand_paid')} · ${t('dashboard.forecast_window_suffix', { count: data.months.length })}`}
                 value={Number(data.grand_paid)}
@@ -125,7 +137,7 @@ export function PaymentForecastChart({ months = 6, title }: PaymentForecastChart
                 valueStyle={{ color: PAID_COLOR }}
               />
             </Col>
-            <Col xs={12} md={8}>
+            <Col xs={12} md={6}>
               <Statistic
                 title={`${t('dashboard.grand_remaining')} · ${t('dashboard.forecast_window_suffix', { count: data.months.length })}`}
                 value={
