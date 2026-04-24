@@ -7,6 +7,57 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [v0.9.14] — 2026-04-25
+
+### 新增
+
+- **AI 驱动的单据模板生成**：按模板批量生成财务付款表等业务单据
+  - **系统管理 → 模板管理** 新增 Tab：
+    - 预置一个 `finance_payment_form`（财务付款表）模板，管理员上传 `.docx` 模板文件即可启用
+    - 可编辑模板名称、描述、生成文件名格式，启用/禁用
+    - "预览占位符" 按钮：解析当前模板（含文件名格式）中的 `[...]` 占位符，帮助管理员检查命名是否被系统识别
+  - **占位符语法** `[描述]`：
+    - 描述可以是字段名（如 `[PO编号]`、`[合同编号]`、`[收款单位名称]`、`[收款单位开户行]`、`[银行账号]`）
+    - 描述也可以带格式指令：`[付款日期 YYYY年MM月DD日]`、`[付款日期YYYYMMDD]`、`[本期付款金额(大写)]`
+  - **智能填充**：两级解析策略
+    - 第一级：确定性字段（PO 号、合同号、供应商名、收款信息等）用正则直接映射，零延迟
+    - 第二级：未命中的占位符交给 LLM（通过已有 AI routing 基础设施），要求返回 JSON 映射。Prompt 明确指示日期格式、大写金额等 convention
+    - 日期格式、大写金额等 computed 字段走内置转换（cn_amount_upper 将 4500000 转为 "肆佰伍拾万元整"）
+  - **付款计划行新增"生成财务付款表"按钮**（PODetail 的付款计划 Tab + ContractDetail 的付款计划 Tab 均可见）：
+    - 一键生成单据，按模板的文件名格式命名下载（例：`财务付款表_PO-2026-0001_第1期_20260424.docx`）
+  - 新增端点：
+    - `GET /admin/document-templates` / `PATCH /admin/document-templates/{id}` / `POST /admin/document-templates/{id}/upload`
+    - `GET /document-templates/{id}/placeholders`（预览）
+    - `POST /payment-schedule-items/{id}/generate-document`（一键生成 + 下载）
+
+### 数据库迁移
+
+- `0023_po_contract_links.py`：新增 `po_contract_links` M:N 表 + 从现有 `contract.po_id` 回填（为后续 v0.9.15 的聚合视图打底；目前尚未启用聚合逻辑）
+- `0024_document_templates.py`：新增 `document_templates` 表，种一条 `finance_payment_form`（管理员上传文件后即可用）
+
+### 测试
+
+- 后端 `test_document_templates.py` 新增 18 条测试：
+  - 占位符抽取（文件名格式 + docx body）
+  - 文件名替换 + 非法字符清理
+  - 大写金额转换（整元 / 含分 / Decimal / 空值）
+  - 确定性字段解析（PO、合同、收款信息）
+  - 日期格式补全（YYYY年MM月DD日 / YYYYMMDD）
+  - 无 LLM 时的 graceful fallback
+- 后端总测试数 308 → 326
+
+### 依赖
+
+- 新增 `python-docx>=1.1.2`（Word 模板解析与填充）
+
+### 备注
+
+- 仅支持 `.docx`；`.xlsx`（Excel 表格）模板如需后续增加，可复用 openpyxl 走相同的解析-填充管线
+- LLM 通过 `document_generation` feature routing 配置；未配置时系统降级到纯确定性规则 + computed enrichment，大部分常见占位符仍可自动填充
+- PO↔Contract 的 M:N 关联表虽已落表，但服务层和 UI 尚未切换到聚合视图 —— **推迟到 v0.9.15** 实现"PO 付款/到货/开票进度 = 所有关联合同之和"
+
+---
+
 ## [v0.9.13] — 2026-04-25
 
 ### 新增
