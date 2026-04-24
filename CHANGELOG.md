@@ -7,6 +7,25 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [v0.9.9] — 2026-04-24
+
+### 新增
+
+- **供应商收款信息字段**：在供应商实体中新增 3 个字段，用于财务付款时使用
+  - `payee_name`（收款单位名称）—— 付款抬头，未填写时默认使用供应商名称
+  - `payee_bank`（收款单位开户行）
+  - `payee_bank_account`（收款单位银行账号）
+  - Migration 0019：`suppliers` 表增加 3 列，均为 nullable
+  - 前端：供应商编辑抽屉里用 Divider 分组展示「基本信息 + 联系方式 + 收款信息」；SupplierDetail 页面新增「收款信息」卡片，银行账号支持一键复制
+  - 仅编辑/详情可见，列表页不展示（避免敏感字段过度曝光）
+  - i18n：新增 zh-CN / en-US 键完整覆盖
+
+### 测试
+
+- `test_master_data.py` 新增 2 条回归测试（payee 字段持久化 + 更新），后端 287 → 289 passed
+
+---
+
 ## [v0.9.8] — 2026-04-24
 
 ### 修复
