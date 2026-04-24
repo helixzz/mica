@@ -7,6 +7,36 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [v0.9.7] — 2026-04-24
+
+### 修复
+
+- **本地用户创建报"数据校验失败"**：`UserCreateIn.role` Literal 漏了 `requester` 角色（6 个合法角色中只列出了 5 个），导致前端默认选中的 requester 每次都被后端 422 拒绝。`UserUpdateIn.role` 早就修对了，但创建路径的漂移一直没被发现。
+  - 修复：补上 `"requester"` 到 create 的 Literal
+  - 加固：新增 `tests/unit/test_admin_user_schemas.py`，参数化遍历 `UserRole` 枚举所有值，create + update 两个 schema 必须都接受，否则 CI 红灯。此后任何新加的角色若忘了同步 schema 会被立即发现
+
+### 新增
+
+- **SAML IdP 元数据手动刷新按钮**：系统参数页面 `auth.saml.idp.metadata_url` 一行现在有「立即刷新」按钮（`SyncOutlined` 图标），点击会：
+  - 调用 `POST /saml/refresh-metadata` 从 URL 拉取 IdP FederationMetadata.xml
+  - 弹出成功模态窗，提示证书是否发生变化、找到几张证书、SSO URL 与 entityId 是否一致
+  - 失败时弹错误模态窗并显示具体原因（网络不通、证书解析失败等）
+  - 这之前只能 curl 后端端点，普通管理员没办法自助操作
+
+### 重构
+
+- **ContractDetail 合同详情页付款计划 Tab 迁移到 `<PaymentScheduleTab>` 组件**
+  - 合同详情的付款计划 Tab 之前是自己的实现，漏掉了"执行付款"和"删除分期"的按钮，用户只能看不能操作。现在改用 v0.9.6 新增的共享组件，与 PO 的付款计划 Tab 行为完全一致，并获得执行/删除功能
+  - 代码量从 655 行降到 351 行（-304），去除了重复的 `scheduleColumns` 定义、schedule state、Drawer 表单、以及三个重复的 handlers
+
+### 测试
+
+- **修复 `tests/unit/test_cerbos_client.py::test_unknown_resource_returns_all_fields` 先前的 flaky 失败**：测试类的假设是"Cerbos 不可达时降级到 FIELD_PERMISSIONS"，但在 docker compose 测试环境里 Cerbos sidecar 实际是健康运行的，收到未知 resource 会显式 deny 而非回退。加 `autouse` fixture 把 `CERBOS_BASE_URL` 强制指向 `http://127.0.0.1:1`，让整个 class 始终走降级路径
+- 后端总测试数 272 → 287（+15：admin schema 14 + cerbos 修复后恢复 1）
+- 前端 58 tests 仍全绿，type-check + build 干净
+
+---
+
 ## [v0.9.6] — 2026-04-24
 
 ### 新增
