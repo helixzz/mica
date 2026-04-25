@@ -4,6 +4,7 @@ import io
 import json
 import logging
 import re
+from datetime import UTC, datetime
 from decimal import Decimal
 from typing import Any
 from uuid import UUID
@@ -18,6 +19,7 @@ from app.core.litellm_helpers import resolve_litellm_model
 from app.models import (
     AIFeatureRouting,
     AIModel,
+    Company,
     Contract,
     Document,
     DocumentTemplate,
@@ -25,6 +27,7 @@ from app.models import (
     POContractLink,
     PurchaseOrder,
     Supplier,
+    User,
 )
 
 logger = logging.getLogger(__name__)
@@ -37,16 +40,33 @@ DETERMINISTIC_RESOLVERS: dict[re.Pattern[str], str] = {
     re.compile(r"^合同[_\-\s]?(编号|号|number)$", re.IGNORECASE): "contract.contract_number",
     re.compile(r"^供应商(名称|名字|name)?$", re.IGNORECASE): "supplier.name",
     re.compile(
-        r"^(收款(单位)?|payee)[_\-\s]?(名称|name)?$", re.IGNORECASE
+        r"^(收款(方|单位)?|payee)[_\-\s]?(公司)?(全(称|名)?|名称|name)?$",
+        re.IGNORECASE,
     ): "supplier.payee_name_effective",
-    re.compile(r"^((收款(单位)?|payee)[_\-\s]?)?开户行$", re.IGNORECASE): "supplier.payee_bank",
     re.compile(
-        r"^(收款(单位)?|银行|bank)[_\-\s]?(账号|账户|account)$", re.IGNORECASE
+        r"^((收款(方|单位)?|payee)[_\-\s]?)?(银行[_\-\s]?)?开户行$",
+        re.IGNORECASE,
+    ): "supplier.payee_bank",
+    re.compile(
+        r"^((收款(方|单位)?)[_\-\s]?)?银行[_\-\s]?(账号|账户|account)$",
+        re.IGNORECASE,
     ): "supplier.payee_bank_account",
     re.compile(r"^银行账号$"): "supplier.payee_bank_account",
     re.compile(r"^(税号|tax[_\-\s]?number)$", re.IGNORECASE): "supplier.tax_number",
     re.compile(r"^付款期次(说明)?$"): "schedule.label_with_installment",
     re.compile(r"^分期[_\-\s]?(编号|号|no)$", re.IGNORECASE): "schedule.installment_no",
+    re.compile(r"^付款金额$"): "schedule.effective_amount",
+    re.compile(r"^(付款方|采购方|采购)[_\-\s]?(公司)?(全(称|名)?|名称)?$"): "company.name",
+    re.compile(
+        r"^(付款方|采购方|采购)[_\-\s]?(公司)?(简称|short[_\-\s]?name)$"
+    ): "company.short_name",
+    re.compile(r"^采购公司名的四字简称$"): "company.short_name",
+    re.compile(r"^(本单据|付款单据)?[_\-\s]?生成日期$"): "today.iso",
+    re.compile(r"^生成日期(YYYY)?[-/\.年]?MM?[-/\.月]?DD?[日]?$"): "today.iso",
+    re.compile(r"^(生成付款单据的|当前|制单)?用户[_\-\s]?(全名|姓名|name)$"): "actor.display_name",
+    re.compile(r"(付款的?)?(极简)?概括"): "payment.narrative_short",
+    re.compile(r"付款(的?)性质"): "payment.narrative_short",
+    re.compile(r"采购付款的?性质"): "payment.narrative_short",
 }
 
 
@@ -103,12 +123,28 @@ def build_context(
     contract: Contract,
     supplier: Supplier,
     schedule: PaymentSchedule,
+    *,
+    actor: User | None = None,
+    company: Company | None = None,
+    payment_narrative: str | None = None,
 ) -> dict[str, Any]:
     payee_name = supplier.payee_name or supplier.name
     amount = (
         schedule.actual_amount if schedule.actual_amount is not None else schedule.planned_amount
     )
     date_value = schedule.actual_date or schedule.planned_date
+    today = datetime.now(UTC).date()
+
+    company_name = ""
+    company_short = ""
+    if company is not None:
+        company_name = company.name_zh or company.name_en or ""
+        company_short = (company.name_zh or company.name_en or "")[:4]
+
+    actor_name = ""
+    if actor is not None:
+        actor_name = actor.display_name or actor.username or ""
+
     return {
         "po": {
             "po_number": po.po_number,
@@ -152,6 +188,21 @@ def build_context(
             "trigger_type": schedule.trigger_type,
             "trigger_description": schedule.trigger_description or "",
         },
+        "company": {
+            "name": company_name,
+            "short_name": company_short,
+        },
+        "actor": {
+            "display_name": actor_name,
+        },
+        "today": {
+            "iso": today.isoformat(),
+            "yyyymmdd": today.strftime("%Y%m%d"),
+            "yyyy_mm_dd_cn": today.strftime("%Y年%m月%d日"),
+        },
+        "payment": {
+            "narrative_short": (payment_narrative or schedule.label or "").strip(),
+        },
     }
 
 
@@ -173,6 +224,19 @@ def resolve_placeholder_deterministic(description: str, context: dict[str, Any])
     return None
 
 
+async def _resolve_document_generation_model(db: AsyncSession) -> AIModel | None:
+    routing = (
+        await db.execute(
+            select(AIFeatureRouting).where(AIFeatureRouting.feature_code == "document_generation")
+        )
+    ).scalar_one_or_none()
+    if routing is None or not routing.enabled or not routing.primary_model_id:
+        return None
+    return (
+        await db.execute(select(AIModel).where(AIModel.id == routing.primary_model_id))
+    ).scalar_one_or_none()
+
+
 async def resolve_placeholders_with_llm(
     db: AsyncSession,
     placeholders: list[str],
@@ -181,17 +245,7 @@ async def resolve_placeholders_with_llm(
     if not placeholders:
         return {}
 
-    routing = (
-        await db.execute(
-            select(AIFeatureRouting).where(AIFeatureRouting.feature_code == "document_generation")
-        )
-    ).scalar_one_or_none()
-    model: AIModel | None = None
-    if routing and routing.enabled and routing.primary_model_id:
-        model = (
-            await db.execute(select(AIModel).where(AIModel.id == routing.primary_model_id))
-        ).scalar_one_or_none()
-
+    model = await _resolve_document_generation_model(db)
     if model is None:
         return {}
 
@@ -339,7 +393,11 @@ def _enrich_with_computed(
         return context["schedule"]["effective_amount"]
     date_match = DATE_FORMAT_RE.search(description)
     if date_match:
-        raw_date = context["schedule"]["effective_date"]
+        today_markers = ("生成", "今天", "当前", "本单据", "today", "now")
+        if any(marker in description for marker in today_markers):
+            raw_date = context.get("today", {}).get("iso", "")
+        else:
+            raw_date = context["schedule"]["effective_date"]
         if not raw_date or raw_date == "None":
             return ""
         try:
@@ -388,14 +446,15 @@ async def resolve_all_placeholders(
     """Resolve placeholders by routing class.
 
     Routing contract (tests enforce this):
-    - filename placeholders → deterministic + computed only (never LLM)
     - sensitive placeholders (bank / tax) → deterministic only
     - short canonical placeholders → deterministic; LLM as fallback if no hit
     - natural-language placeholders → LLM is primary; deterministic is fallback
+    - filename placeholders pass through the same routing but their final value
+      is sanitized for filesystem safety by render_filename()
     - computed enrichment (dates / 大写金额) runs last and overrides everything
     """
 
-    filename_set: set[str] = set(filename_placeholders or ())
+    _ = filename_placeholders  # accepted for API compatibility; sanitization is in render_filename
     resolved: dict[str, str] = {}
     deterministic_hits: dict[str, str] = {}
     llm_candidates: list[str] = []
@@ -404,10 +463,6 @@ async def resolve_all_placeholders(
         value = resolve_placeholder_deterministic(p, context)
         if value is not None:
             deterministic_hits[p] = value
-
-        if p in filename_set:
-            resolved[p] = value if value is not None else ""
-            continue
 
         if _is_sensitive_description(p):
             resolved[p] = value if value is not None else ""
@@ -506,6 +561,8 @@ async def generate_payment_document(
     db: AsyncSession,
     template_code: str,
     schedule_item_id: UUID,
+    *,
+    actor: User | None = None,
 ) -> tuple[bytes, str]:
     template = (
         await db.execute(
@@ -575,10 +632,17 @@ async def generate_payment_document(
     if supplier is None:
         raise HTTPException(409, "template.supplier_missing")
 
+    company = None
+    company_id = getattr(po, "company_id", None)
+    if company_id is not None:
+        company = (
+            await db.execute(select(Company).where(Company.id == company_id))
+        ).scalar_one_or_none()
+
     file_bytes = _read_document_bytes(template.template_document)
     original_filename = template.template_document.original_filename.lower()
 
-    context = build_context(po, contract, supplier, schedule)
+    context = build_context(po, contract, supplier, schedule, actor=actor, company=company)
     filename_only = extract_placeholders(None, template.filename_template)
     placeholders = extract_placeholders(file_bytes, template.filename_template)
     mapping = await resolve_all_placeholders(

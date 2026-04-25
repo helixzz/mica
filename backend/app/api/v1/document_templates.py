@@ -221,7 +221,9 @@ async def generate_schedule_document(
     template_code: str = Form(...),
 ):
     _ = user
-    content, filename = await svc.generate_payment_document(db, template_code, schedule_item_id)
+    content, filename = await svc.generate_payment_document(
+        db, template_code, schedule_item_id, actor=user
+    )
     media_type = _XLSX_CONTENT_TYPE if filename.lower().endswith(".xlsx") else _DOCX_CONTENT_TYPE
     return Response(
         content=content,

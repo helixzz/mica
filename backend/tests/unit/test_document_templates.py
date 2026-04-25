@@ -170,6 +170,21 @@ def _sample_context():
             "trigger_type": "fixed_date",
             "trigger_description": "",
         },
+        "company": {
+            "name": "Acme Procurement Co.",
+            "short_name": "AcmeProcure",
+        },
+        "actor": {
+            "display_name": "Alice Buyer",
+        },
+        "today": {
+            "iso": "2026-04-25",
+            "yyyymmdd": "20260425",
+            "yyyy_mm_dd_cn": "2026年04月25日",
+        },
+        "payment": {
+            "narrative_short": "Annual Hardware",
+        },
     }
 
 
@@ -194,6 +209,51 @@ def test_resolve_deterministic_payee_info():
 def test_resolve_deterministic_returns_none_for_unknown():
     context = _sample_context()
     assert svc.resolve_placeholder_deterministic("随便什么字段", context) is None
+
+
+def test_resolve_deterministic_real_world_finance_form_placeholders():
+    """The exact placeholders that prod's 财务付款表 uses must all resolve
+    deterministically when context is enriched with company / actor / today /
+    payment narrative."""
+    context = _sample_context()
+    cases = {
+        "付款方公司全名": "Acme Procurement Co.",
+        "采购公司名的四字简称": "AcmeProcure",
+        "收款方公司全称": "Foo Payee",
+        "收款公司全名": "Foo Payee",
+        "收款方银行开户行": "ICBC Shanghai",
+        "收款方银行账号": "6222 0800 1234 5678",
+        "付款金额": "5000000",
+        "生成付款单据的用户全名": "Alice Buyer",
+        "本单据生成日期": "2026-04-25",
+    }
+    for placeholder, expected in cases.items():
+        actual = svc.resolve_placeholder_deterministic(placeholder, context)
+        assert actual == expected, f"{placeholder} expected {expected!r} got {actual!r}"
+
+
+def test_resolve_deterministic_payment_narrative_handles_long_descriptions():
+    context = _sample_context()
+    assert svc.resolve_placeholder_deterministic(
+        "付款的极简概括，例如服务费、货款", context
+    ) == "Annual Hardware"
+    assert svc.resolve_placeholder_deterministic(
+        "采购付款的性质简称（例如货款、服务费）", context
+    ) == "Annual Hardware"
+
+
+def test_enrich_computed_today_date_uses_today_not_schedule_date():
+    context = _sample_context()
+    result = svc._enrich_with_computed("生成日期YYYYMMDD", context, None)
+    assert result == "20260425"
+    result_cn = svc._enrich_with_computed("本单据生成日期YYYY年MM月DD日", context, None)
+    assert result_cn == "2026年04月25日"
+
+
+def test_enrich_computed_schedule_date_unaffected_by_today_logic():
+    context = _sample_context()
+    result = svc._enrich_with_computed("付款日期YYYYMMDD", context, None)
+    assert result == "20260425"
 
 
 def test_enrich_computed_handles_date_pattern():
@@ -289,11 +349,16 @@ async def test_resolve_all_routes_natural_language_to_llm(monkeypatch):
 
 
 @pytest.mark.asyncio
-async def test_resolve_all_filename_placeholders_skip_llm(monkeypatch):
-    called: dict[str, int] = {"count": 0}
+async def test_resolve_all_filename_placeholders_still_routed_to_llm(monkeypatch):
+    """v0.9.17: filename placeholders no longer bypass the LLM. They are
+    routed normally; the only filename-specific guarantee is that the final
+    output is sanitized for filesystem safety by render_filename(), which is
+    tested separately via test_render_filename_sanitizes_illegal_chars.
+    """
+    seen: list[str] = []
 
     async def _llm(_db, placeholders, _context):
-        called["count"] += 1
+        seen.extend(placeholders)
         return {p: f"LLM:{p}" for p in placeholders}
 
     monkeypatch.setattr(svc, "resolve_placeholders_with_llm", _llm)
@@ -307,8 +372,8 @@ async def test_resolve_all_filename_placeholders_skip_llm(monkeypatch):
         filename_placeholders={instruction, "PO编号"},
     )
 
-    assert called["count"] == 0
-    assert mapping[instruction] == ""
+    assert instruction in seen
+    assert mapping[instruction] == f"LLM:{instruction}"
     assert mapping["PO编号"] == "PO-2026-0001"
 
 
@@ -350,7 +415,7 @@ async def test_resolve_all_computed_overrides_llm_for_dates_and_upper_amount(mon
 
 @pytest.mark.asyncio
 async def test_generate_payment_document_uses_single_linked_contract_for_po_schedule(monkeypatch):
-    po = SimpleNamespace(id=uuid4(), supplier_id=uuid4(), po_number="PO-1", currency="CNY", total_amount="100", status="confirmed")
+    po = SimpleNamespace(id=uuid4(), supplier_id=uuid4(), company_id=None, po_number="PO-1", currency="CNY", total_amount="100", status="confirmed")
     contract = SimpleNamespace(
         id=uuid4(),
         po=po,
@@ -435,7 +500,7 @@ async def test_generate_payment_document_uses_single_linked_contract_for_po_sche
 
 @pytest.mark.asyncio
 async def test_generate_payment_document_rejects_ambiguous_multiple_linked_contracts(monkeypatch):
-    po = SimpleNamespace(id=uuid4(), supplier_id=uuid4(), po_number="PO-1", currency="CNY", total_amount="100", status="confirmed")
+    po = SimpleNamespace(id=uuid4(), supplier_id=uuid4(), company_id=None, po_number="PO-1", currency="CNY", total_amount="100", status="confirmed")
     schedule = SimpleNamespace(
         id=uuid4(),
         contract=None,
@@ -487,6 +552,7 @@ async def test_generate_payment_document_returns_xlsx_when_template_is_xlsx(monk
     po = SimpleNamespace(
         id=uuid4(),
         supplier_id=uuid4(),
+        company_id=None,
         po_number="PO-1",
         currency="CNY",
         total_amount="100",
