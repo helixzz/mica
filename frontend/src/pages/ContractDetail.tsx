@@ -64,6 +64,9 @@ export function ContractDetailPage() {
   const canWrite = Boolean(
     user && ['admin', 'procurement_mgr', 'it_buyer'].includes(user.role),
   )
+  const canEditSchedule = Boolean(
+    user && ['admin', 'procurement_mgr', 'finance_auditor'].includes(user.role),
+  )
   const canDelete = Boolean(user && user.role === 'admin')
   const canTransition = Boolean(
     user && ['admin', 'procurement_mgr'].includes(user.role),
@@ -361,7 +364,7 @@ export function ContractDetailPage() {
         <PaymentScheduleTab
           contractId={id!}
           currency={contract.currency}
-          canWrite={canWrite}
+          canWrite={canEditSchedule}
         />
       ),
     },
