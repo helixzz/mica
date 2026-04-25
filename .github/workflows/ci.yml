@@ -15,11 +15,14 @@ jobs:
       - name: Scan for banned tenant identifiers
         run: |
           set -e
-          if grep -rnE 'Acme|ACME|acme|jqdomain' \
+          # Patterns are obfuscated (character classes / hex) so that this
+          # workflow file does not itself trip the scan.
+          PATTERNS='[J][Q][P][A]|[j][q][p][a]|jqdomain|\xe4\xbd\xb3\xe6\x9c\x9f'
+          if grep -rnP "$PATTERNS" \
                --exclude-dir=.git --exclude-dir=node_modules \
                --exclude-dir=dist --exclude-dir=__pycache__ \
-               --exclude='.denylist' . ; then
-            echo "::error::Banned tenant identifier found. See .denylist for the policy."
+               --exclude='.denylist' --exclude='ci.yml' . ; then
+            echo "::error::Banned tenant identifier found. See .denylist for policy."
             exit 1
           fi
           echo "Denylist scan clean."

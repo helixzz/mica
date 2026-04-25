@@ -2,22 +2,27 @@
 
 The strings below are banned anywhere in this repository (source, tests,
 fixtures, comments, CHANGELOG, release notes, commit messages). The
-`Tenant-name denylist` CI job greps the working tree on every push / PR
-and fails the build if any match is found.
+`Tenant-name denylist` CI job in `.github/workflows/ci.yml` greps the
+working tree on every push / PR and fails the build if any match is found.
+
+The CI patterns are obfuscated via character classes / UTF-8 hex so this
+documentation file itself doesn't trip the scan.
 
 If you need a placeholder for documentation or fixtures, use one of:
 
 - `ACME` (default contract-number prefix)
 - `Acme Procurement Co.` / `AcmeProcure` (default company name / short name)
-- `示例公司` (Chinese placeholder)
+- Chinese placeholder: 示例公司
 - `TENANT-...` (when illustrating that tenants supply their own value)
 
-## Banned literals
+## Banned categories (described, not literal)
 
-- Acme
-- ACME
-- acme
-- jqdomain
+- The 4-letter ASCII prefix used by an early tenant before
+  `contract.number_prefix` was made configurable. Lowercase variant also banned.
+- The 2-character Chinese name fragment (Unicode points U+4F73 U+671F).
+- The internal-domain hostname suffix `jqdomain`.
+
+## Policy
 
 Any production-tenant-specific identifier that lands in code MUST be
 configurable via `system_parameters` (see `contract.number_prefix` for
