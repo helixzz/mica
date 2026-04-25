@@ -7,6 +7,34 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [v0.9.17] — 2026-04-25
+
+### 修复
+
+- **付款表格智能填充端到端可用**：v0.9.16 重构 LLM 路由后，生产上传的实际 xlsx 模板（AcmeProcure 财务付款表）大量字段仍生成为空。本次的精准修复：
+  - `build_context()` 增加 `actor` / `company` / `today` / `payment` 四组数据，API 层默认传入当前用户 + PO 所属公司；
+  - `DETERMINISTIC_RESOLVERS` 新增 12 条正则覆盖：付款方公司全名 / 四字简称、收款方公司全称、付款金额、生成日期、当前用户全名、付款性质简称等真实模板里出现的占位符；
+  - `_enrich_with_computed` 的日期处理根据「生成 / 当前 / 今天 / 本单据」关键字选择 `today.iso`，避免把生成日期错填为付款计划日期；
+  - 解除 v0.9.16 对 filename placeholders 的 LLM 拦截 —— 文件名仍由 `render_filename()` 做文件系统安全清洗。
+  - 端到端验证：生产模板的 14 个真实占位符里 12 个无需 LLM 即可正确填充，剩下两个落到 `payment.narrative_short` 兜底或 LLM。
+- **首页月度付款追踪不再出现负数 remaining**：当某月有 CONFIRMED 付款但没有匹配的 PaymentSchedule（典型例子：用户跳过排期直接登记 450 万），原 `planned - paid` 会得到负数。新逻辑 `planned = max(scheduled+pending, paid)`、`remaining = max(planned-paid, 0)`，符合用户语义「已付即在计划内」。
+
+### 数据迁移
+
+- `0025_ai_feature_routing_document_generation`：在已有生产库中插入一行 `document_generation` AI 路由记录（默认 `enabled=false`、指向最早的 AI Model）。管理员只需到 Admin 控制台把它打开即可启用 LLM 路径；若一直关闭，新的 deterministic 覆盖已能填出绝大多数字段。
+
+### 测试
+
+- `test_document_templates.py` 新增 5 条契约测试：真实生产模板占位符全量解析、付款叙事关键词匹配、生成日期与付款日期分别走 today / schedule、filename placeholders 现在合法走 LLM。
+- `test_payment_schedule.py` 新增 `test_payment_forecast_remaining_never_negative`，锁定不可负的语义。
+- 容器内 `pytest tests/unit/` 349 passed。
+
+### 元数据
+
+- 版本对齐 `0.9.17`：`backend/pyproject.toml`、`frontend/package.json`、`backend/app/config.py`、`deploy/.env.example`、`AGENTS.md`、`README` 徽章。
+
+---
+
 ## [v0.9.16] — 2026-04-25
 
 ### 新增
