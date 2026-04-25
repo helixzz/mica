@@ -66,8 +66,14 @@ async def _load_po(db: AsyncSession, po_id: UUID) -> PurchaseOrder | None:
 
 
 async def suggest_contract_number(db: AsyncSession) -> str:
-    now = datetime.now(UTC)
-    prefix = f"ACME{now.year:04d}{now.month:02d}{now.day:02d}"
+    from app.services.system_params import system_params
+
+    raw_prefix = await system_params.get(db, "contract.number_prefix", "")
+    if isinstance(raw_prefix, str) and raw_prefix.strip():
+        prefix = raw_prefix.strip()
+    else:
+        now = datetime.now(UTC)
+        prefix = f"ACME{now.year:04d}{now.month:02d}{now.day:02d}"
     max_suffix = (
         await db.execute(
             select(func.max(Contract.contract_number)).where(

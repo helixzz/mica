@@ -308,7 +308,7 @@ async def test_create_contract_rejects_duplicate_custom_number(seeded_db_session
     assert exc.value.detail == "contract.number_duplicate"
 
 
-async def test_suggest_contract_number_follows_acme_format(seeded_db_session):
+async def test_suggest_contract_number_uses_default_acme_prefix_when_unset(seeded_db_session):
     db = seeded_db_session
     today = datetime.now(UTC).date()
     expected_prefix = f"ACME{today.year:04d}{today.month:02d}{today.day:02d}"
@@ -317,6 +317,24 @@ async def test_suggest_contract_number_follows_acme_format(seeded_db_session):
 
     assert suggested.startswith(expected_prefix)
     assert len(suggested) == len(expected_prefix) + 3
+    assert suggested[-3:].isdigit()
+
+
+async def test_suggest_contract_number_honors_system_parameter_prefix(
+    seeded_db_session, monkeypatch
+):
+    from app.services.system_params import system_params
+
+    async def _fake_get(_self, _session, key, default=None):
+        if key == "contract.number_prefix":
+            return "TENANT-2026-"
+        return default
+
+    monkeypatch.setattr(type(system_params), "get", _fake_get)
+
+    suggested = await flow_svc.suggest_contract_number(seeded_db_session)
+
+    assert suggested.startswith("TENANT-2026-")
     assert suggested[-3:].isdigit()
 
 
