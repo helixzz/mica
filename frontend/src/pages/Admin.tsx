@@ -9,6 +9,7 @@ import {
   Input,
   InputNumber,
   Modal,
+  Popconfirm,
   Select,
   Space,
   Statistic,
@@ -320,6 +321,7 @@ function RoutingsPanel() {
   const [rows, setRows] = useState<Record<string, unknown>[]>([])
   const [models, setModels] = useState<AIModelRow[]>([])
   const [loading, setLoading] = useState(false)
+  const [pendingToggle, setPendingToggle] = useState<string | null>(null)
 
   const load = () => {
     setLoading(true)
@@ -341,6 +343,29 @@ function RoutingsPanel() {
     })
     void message.success(t('admin.routing_updated'))
     load()
+  }
+
+  const applyEnabledChange = async (current: Record<string, unknown>, nextEnabled: boolean) => {
+    setPendingToggle(current.feature_code as string)
+    try {
+      await api.adminUpsertRouting(current.feature_code as string, {
+        feature_code: current.feature_code,
+        primary_model_id: current.primary_model_id,
+        fallback_model_ids: current.fallback_model_ids,
+        prompt_template: current.prompt_template,
+        temperature: current.temperature,
+        max_tokens: current.max_tokens,
+        enabled: nextEnabled,
+      })
+      void message.success(
+        nextEnabled ? t('admin.routing_enabled_toast') : t('admin.routing_disabled_toast'),
+      )
+      load()
+    } catch (e) {
+      void message.error(extractError(e).detail)
+    } finally {
+      setPendingToggle(null)
+    }
   }
 
   return (
@@ -367,7 +392,35 @@ function RoutingsPanel() {
         },
         { title: 'Temperature', dataIndex: 'temperature' },
         { title: 'Max Tokens', dataIndex: 'max_tokens' },
-        { title: 'Enabled', dataIndex: 'enabled', render: (v: boolean) => v ? <Tag color="success">✓</Tag> : <Tag>✗</Tag> },
+        {
+          title: t('admin.enabled_col'),
+          dataIndex: 'enabled',
+          width: 120,
+          render: (v: boolean, r) => {
+            const feature = r.feature_code as string
+            const loading_ = pendingToggle === feature
+            const switchEl = (
+              <Switch
+                checked={v}
+                loading={loading_}
+                disabled={loading_}
+                onChange={!v ? undefined : (next) => void applyEnabledChange(r, next)}
+              />
+            )
+            if (v) return switchEl
+            return (
+              <Popconfirm
+                title={t('admin.routing_enable_confirm_title')}
+                description={t('admin.routing_enable_confirm_desc')}
+                okText={t('admin.routing_enable_confirm_ok')}
+                cancelText={t('button.cancel')}
+                onConfirm={() => void applyEnabledChange(r, true)}
+              >
+                <Switch checked={false} loading={loading_} disabled={loading_} />
+              </Popconfirm>
+            )
+          },
+        },
       ]}
     />
   )
