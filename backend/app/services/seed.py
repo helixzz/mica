@@ -229,36 +229,51 @@ async def _seed_ai_if_missing(db: AsyncSession) -> None:
     db.add(vision_placeholder)
     await db.flush()
 
-    db.add_all(
-        [
-            AIFeatureRouting(
-                feature_code="pr_description_polish",
-                primary_model_id=demo_model.id,
-                temperature=Decimal("0.30"),
-                max_tokens=512,
-                enabled=True,
-            ),
-            AIFeatureRouting(
-                feature_code="sku_suggest",
-                primary_model_id=demo_model.id,
-                temperature=Decimal("0.20"),
-                max_tokens=400,
-                enabled=True,
-            ),
-            AIFeatureRouting(
-                feature_code="invoice_extract",
-                primary_model_id=vision_placeholder.id,
-                temperature=Decimal("0.10"),
-                max_tokens=1500,
-                enabled=True,
-            ),
-            AIFeatureRouting(
-                feature_code="document_generation",
-                primary_model_id=demo_model.id,
-                temperature=Decimal("0.00"),
-                max_tokens=1200,
-                enabled=False,
-            ),
-        ]
+    # Migration 0025 may have already seeded document_generation on
+    # upgraded deployments. Skip any feature_code that already exists
+    # so seed remains idempotent against pre-seeded migration rows.
+    desired_routings = [
+        AIFeatureRouting(
+            feature_code="pr_description_polish",
+            primary_model_id=demo_model.id,
+            temperature=Decimal("0.30"),
+            max_tokens=512,
+            enabled=True,
+        ),
+        AIFeatureRouting(
+            feature_code="sku_suggest",
+            primary_model_id=demo_model.id,
+            temperature=Decimal("0.20"),
+            max_tokens=400,
+            enabled=True,
+        ),
+        AIFeatureRouting(
+            feature_code="invoice_extract",
+            primary_model_id=vision_placeholder.id,
+            temperature=Decimal("0.10"),
+            max_tokens=1500,
+            enabled=True,
+        ),
+        AIFeatureRouting(
+            feature_code="document_generation",
+            primary_model_id=demo_model.id,
+            temperature=Decimal("0.00"),
+            max_tokens=1200,
+            enabled=False,
+        ),
+    ]
+    existing_codes = set(
+        (
+            await db.execute(
+                select(AIFeatureRouting.feature_code).where(
+                    AIFeatureRouting.feature_code.in_([r.feature_code for r in desired_routings])
+                )
+            )
+        )
+        .scalars()
+        .all()
     )
+    new_routings = [r for r in desired_routings if r.feature_code not in existing_codes]
+    if new_routings:
+        db.add_all(new_routings)
     await db.commit()
