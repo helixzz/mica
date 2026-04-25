@@ -7,6 +7,23 @@ on:
     branches: [main]
 
 jobs:
+  denylist:
+    name: Tenant-name denylist
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Scan for banned tenant identifiers
+        run: |
+          set -e
+          if grep -rnE 'Acme|ACME|acme|jqdomain' \
+               --exclude-dir=.git --exclude-dir=node_modules \
+               --exclude-dir=dist --exclude-dir=__pycache__ \
+               --exclude='.denylist' . ; then
+            echo "::error::Banned tenant identifier found. See .denylist for the policy."
+            exit 1
+          fi
+          echo "Denylist scan clean."
+
   backend:
     name: Backend lint + build
     runs-on: ubuntu-latest

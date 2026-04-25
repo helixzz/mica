@@ -1,0 +1,24 @@
+# Tenant identifier denylist
+
+The strings below are banned anywhere in this repository (source, tests,
+fixtures, comments, CHANGELOG, release notes, commit messages). The
+`Tenant-name denylist` CI job greps the working tree on every push / PR
+and fails the build if any match is found.
+
+If you need a placeholder for documentation or fixtures, use one of:
+
+- `ACME` (default contract-number prefix)
+- `Acme Procurement Co.` / `AcmeProcure` (default company name / short name)
+- `示例公司` (Chinese placeholder)
+- `TENANT-...` (when illustrating that tenants supply their own value)
+
+## Banned literals
+
+- Acme
+- ACME
+- acme
+- jqdomain
+
+Any production-tenant-specific identifier that lands in code MUST be
+configurable via `system_parameters` (see `contract.number_prefix` for
+the canonical pattern), never hard-coded.
