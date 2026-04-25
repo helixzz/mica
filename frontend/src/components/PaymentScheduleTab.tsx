@@ -1,6 +1,7 @@
 import {
   CheckCircleOutlined,
   DeleteOutlined,
+  EditOutlined,
   FileWordOutlined,
   PlusOutlined,
   SendOutlined,
@@ -28,6 +29,7 @@ import {
 import type { ColumnsType } from 'antd/es/table'
 import { useCallback, useEffect, useState } from 'react'
 import { useTranslation } from 'react-i18next'
+import dayjs from 'dayjs'
 
 import { api, type PaymentScheduleItem, type PaymentScheduleSummary } from '@/api'
 import { extractError } from '@/api/client'
@@ -61,6 +63,7 @@ export function PaymentScheduleTab({
   const [schedule, setSchedule] = useState<PaymentScheduleSummary | null>(null)
   const [loading, setLoading] = useState(false)
   const [drawerOpen, setDrawerOpen] = useState(false)
+  const [editingItem, setEditingItem] = useState<PaymentScheduleItem | null>(null)
   const [form] = Form.useForm()
 
   if ((contractId == null) === (poId == null)) {
@@ -100,14 +103,31 @@ export function PaymentScheduleTab({
       }),
     )
     try {
-      if (contractId) {
-        await api.createPaymentSchedule(contractId, items)
+      if (editingItem) {
+        const updateBody = {
+          label: items[0].label as string | undefined,
+          planned_amount: items[0].planned_amount as number | string | undefined,
+          planned_date: items[0].planned_date as string | null,
+          trigger_type: items[0].trigger_type as string,
+          trigger_description: items[0].trigger_description as string | null,
+        }
+        if (contractId) {
+          await api.updateScheduleItem(contractId, editingItem.installment_no, updateBody)
+        } else {
+          await api.updatePOScheduleItem(poId!, editingItem.installment_no, updateBody)
+        }
+        void message.success(t('contract.schedule_updated'))
       } else {
-        await api.createPOPaymentSchedule(poId!, items)
+        if (contractId) {
+          await api.createPaymentSchedule(contractId, items)
+        } else {
+          await api.createPOPaymentSchedule(poId!, items)
+        }
+        void message.success(t('contract.schedule_saved'))
       }
-      void message.success(t('contract.schedule_saved'))
       setDrawerOpen(false)
       form.resetFields()
+      setEditingItem(null)
       void load()
     } catch (e) {
       void message.error(extractError(e).detail)
@@ -163,6 +183,22 @@ export function PaymentScheduleTab({
         }
       },
     })
+  }
+
+  const handleEdit = (item: PaymentScheduleItem) => {
+    setEditingItem(item)
+    form.setFieldsValue({
+      items: [
+        {
+          label: item.label,
+          planned_amount: item.planned_amount,
+          planned_date: item.planned_date ? dayjs(item.planned_date) : null,
+          trigger_type: item.trigger_type,
+          trigger_description: item.trigger_description,
+        },
+      ],
+    })
+    setDrawerOpen(true)
   }
 
   const handleGeneratePaymentForm = async (item: PaymentScheduleItem) => {
@@ -225,7 +261,7 @@ export function PaymentScheduleTab({
     {
       title: t('field.actions'),
       key: 'actions',
-      width: 260,
+      width: 320,
       render: (_, r) => (
         <Space size="small" wrap>
           <Button
@@ -236,6 +272,16 @@ export function PaymentScheduleTab({
           >
             {t('contract.generate_payment_form_short')}
           </Button>
+          {canWrite && r.status !== 'paid' && (
+            <Button
+              size="small"
+              icon={<EditOutlined />}
+              onClick={() => handleEdit(r)}
+              title={t('button.edit')}
+            >
+              {t('button.edit')}
+            </Button>
+          )}
           {canWrite && r.status !== 'paid' && (
             <Button
               size="small"
@@ -317,7 +363,15 @@ export function PaymentScheduleTab({
         title={t('contract.schedule_details')}
         extra={
           canWrite && (
-            <Button type="primary" icon={<PlusOutlined />} onClick={() => setDrawerOpen(true)}>
+            <Button
+              type="primary"
+              icon={<PlusOutlined />}
+              onClick={() => {
+                setEditingItem(null)
+                form.resetFields()
+                setDrawerOpen(true)
+              }}
+            >
               {t('contract.new_schedule')}
             </Button>
           )
@@ -338,13 +392,29 @@ export function PaymentScheduleTab({
       </Card>
 
       <Drawer
-        title={t('contract.new_schedule')}
+        title={
+          editingItem
+            ? t('contract.edit_schedule_title', { name: editingItem.label })
+            : t('contract.new_schedule')
+        }
         width={640}
         open={drawerOpen}
-        onClose={() => setDrawerOpen(false)}
+        onClose={() => {
+          setDrawerOpen(false)
+          setEditingItem(null)
+          form.resetFields()
+        }}
         extra={
           <Space>
-            <Button onClick={() => setDrawerOpen(false)}>{t('button.cancel')}</Button>
+            <Button
+              onClick={() => {
+                setDrawerOpen(false)
+                setEditingItem(null)
+                form.resetFields()
+              }}
+            >
+              {t('button.cancel')}
+            </Button>
             <Button type="primary" onClick={handleSave}>
               {t('button.save')}
             </Button>
@@ -354,7 +424,9 @@ export function PaymentScheduleTab({
         <Alert
           type="info"
           showIcon
-          message={t('contract.schedule_form_help')}
+          message={
+            editingItem ? t('contract.edit_schedule_help') : t('contract.schedule_form_help')
+          }
           style={{ marginBottom: 16 }}
         />
         <Form form={form} layout="vertical">
@@ -366,16 +438,20 @@ export function PaymentScheduleTab({
                     key={field.key}
                     size="small"
                     style={{ marginBottom: 12 }}
-                    title={t('contract.installment_n', { n: field.name + 1 })}
+                    title={
+                      editingItem
+                        ? t('contract.installment_n', { n: editingItem.installment_no })
+                        : t('contract.installment_n', { n: field.name + 1 })
+                    }
                     extra={
-                      fields.length > 1 && (
+                      !editingItem && fields.length > 1 ? (
                         <Button
                           size="small"
                           danger
                           icon={<DeleteOutlined />}
                           onClick={() => remove(field.name)}
                         />
-                      )
+                      ) : null
                     }
                   >
                     <Row gutter={12}>
@@ -442,9 +518,11 @@ export function PaymentScheduleTab({
                     </Form.Item>
                   </Card>
                 ))}
-                <Button type="dashed" onClick={() => add()} block icon={<PlusOutlined />}>
-                  {t('contract.add_installment')}
-                </Button>
+                {!editingItem && (
+                  <Button type="dashed" onClick={() => add()} block icon={<PlusOutlined />}>
+                    {t('contract.add_installment')}
+                  </Button>
+                )}
               </>
             )}
           </Form.List>

@@ -1278,6 +1278,23 @@ export const api = {
   async deleteScheduleItem(contractId: string, installmentNo: number): Promise<void> {
     await client.delete(`/contracts/${contractId}/payment-schedule/${installmentNo}`)
   },
+  async updateScheduleItem(
+    contractId: string,
+    installmentNo: number,
+    body: {
+      label?: string
+      planned_amount?: number | string
+      planned_date?: string | null
+      trigger_type?: string
+      trigger_description?: string | null
+    },
+  ): Promise<PaymentScheduleItem> {
+    const { data } = await client.put<PaymentScheduleItem>(
+      `/contracts/${contractId}/payment-schedule/${installmentNo}`,
+      body,
+    )
+    return data
+  },
   async getPOPaymentSchedule(poId: string): Promise<PaymentScheduleSummary> {
     const { data } = await client.get<PaymentScheduleSummary>(
       `/purchase-orders/${poId}/payment-schedule`,
@@ -1307,6 +1324,23 @@ export const api = {
   },
   async deletePOScheduleItem(poId: string, installmentNo: number): Promise<void> {
     await client.delete(`/purchase-orders/${poId}/payment-schedule/${installmentNo}`)
+  },
+  async updatePOScheduleItem(
+    poId: string,
+    installmentNo: number,
+    body: {
+      label?: string
+      planned_amount?: number | string
+      planned_date?: string | null
+      trigger_type?: string
+      trigger_description?: string | null
+    },
+  ): Promise<PaymentScheduleItem> {
+    const { data } = await client.put<PaymentScheduleItem>(
+      `/purchase-orders/${poId}/payment-schedule/${installmentNo}`,
+      body,
+    )
+    return data
   },
   async getPaymentForecast(
     opts: { months?: number; past_months?: number; anchor?: string } = {},
