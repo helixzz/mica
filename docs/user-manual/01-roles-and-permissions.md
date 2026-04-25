@@ -5,7 +5,7 @@ Mica 的权限模型由三层组成：**角色（Role）** 决定基础能力范
 
 ## 1. 五种角色
 
-Mica 的角色枚举在 [`backend/app/models/__init__.py`](../../backend/app/models/__init__.py) 的 `UserRole` 中声明，系统内一个用户同一时刻在同一公司下**仅持有一个角色**。
+Mica 的角色枚举由后端统一维护，系统内一个用户同一时刻在同一公司下**仅持有一个角色**。
 
 | 角色码（English） | 中文名 | 主要职责 |
 | :--- | :--- | :--- |
@@ -80,7 +80,7 @@ Mica 的角色枚举在 [`backend/app/models/__init__.py`](../../backend/app/mod
 
 ## 3. 字段级权限
 
-字段级权限的权威定义在 [`backend/app/core/field_authz.py`](../../backend/app/core/field_authz.py) 的 `FIELD_PERMISSIONS` 字典中。含义是：**同一条记录的同一份 JSON，对不同角色剪出不同的可见字段集合**——角色看不到的字段不会出现在响应里。
+字段级权限由后端统一控制。含义是：**同一条记录的同一份 JSON，对不同角色剪出不同的可见字段集合**——角色看不到的字段不会出现在响应里。
 
 几个关键举例（以当前实现为准）：
 

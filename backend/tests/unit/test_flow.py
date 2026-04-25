@@ -13,9 +13,11 @@ from app.models import (
     ContractVersion,
     Document,
     PaymentRecord,
+    PaymentSchedule,
     POItem,
     PurchaseOrder,
     PurchaseRequisition,
+    ScheduleItemStatus,
     Supplier,
     User,
 )
@@ -357,6 +359,192 @@ async def test_list_contracts_filters_by_po_id(seeded_db_session):
     contracts = await flow_svc.list_contracts(db, po_id=po1.id)
 
     assert [contract.id for contract in contracts] == [c1.id]
+
+
+async def test_link_po_contract_idempotent(seeded_db_session):
+    db = seeded_db_session
+    user, _supplier, _pr, po = await _create_confirmed_po(db)
+    contract = await flow_svc.create_contract(
+        db, user, po.id, title="Link test", total_amount=Decimal("100")
+    )
+
+    link1 = await flow_svc.link_po_contract(db, user, po.id, contract.id)
+    link2 = await flow_svc.link_po_contract(db, user, po.id, contract.id)
+
+    assert link1.po_id == link2.po_id == po.id
+    assert link1.contract_id == link2.contract_id == contract.id
+
+
+async def test_link_po_contract_second_po(seeded_db_session):
+    db = seeded_db_session
+    user, _supplier, _pr1, po1 = await _create_confirmed_po(db, title="PO A")
+    _u, _s, _pr2, po2 = await _create_confirmed_po(db, title="PO B")
+    contract = await flow_svc.create_contract(
+        db, user, po1.id, title="Shared", total_amount=Decimal("500")
+    )
+
+    await flow_svc.link_po_contract(db, user, po2.id, contract.id)
+
+    linked_pos = await flow_svc.list_linked_pos(db, contract.id)
+    po_ids = {p.id for p in linked_pos}
+    assert po1.id in po_ids
+    assert po2.id in po_ids
+
+
+async def test_list_contracts_for_po_via_link_table(seeded_db_session):
+    db = seeded_db_session
+    user, _supplier, _pr1, po1 = await _create_confirmed_po(db, title="Main PO")
+    _u, _s, _pr2, po2 = await _create_confirmed_po(db, title="Other PO")
+    c_main = await flow_svc.create_contract(
+        db, user, po1.id, title="Main contract", total_amount=Decimal("100")
+    )
+    c_other = await flow_svc.create_contract(
+        db, user, po2.id, title="Other contract", total_amount=Decimal("200")
+    )
+    await flow_svc.link_po_contract(db, user, po1.id, c_other.id)
+
+    contracts = await flow_svc.list_contracts(db, po_id=po1.id)
+    ids = {c.id for c in contracts}
+
+    assert c_main.id in ids
+    assert c_other.id in ids
+
+
+async def test_unlink_po_contract_blocks_last_primary_link(seeded_db_session):
+    db = seeded_db_session
+    user, _supplier, _pr, po = await _create_confirmed_po(db)
+    contract = await flow_svc.create_contract(
+        db, user, po.id, title="Only link", total_amount=Decimal("100")
+    )
+
+    with pytest.raises(HTTPException) as exc:
+        await flow_svc.unlink_po_contract(db, user, po.id, contract.id)
+
+    assert exc.value.status_code == 409
+    assert exc.value.detail == "po_contract_link.cannot_unlink_primary"
+
+
+async def test_link_po_contract_rejects_currency_mismatch(seeded_db_session):
+    db = seeded_db_session
+    user, _supplier, _pr1, po1 = await _create_confirmed_po(db, title="PO A")
+    _u, _s, _pr2, po2 = await _create_confirmed_po(db, title="PO B")
+    contract = await flow_svc.create_contract(
+        db, user, po1.id, title="Shared", total_amount=Decimal("100")
+    )
+
+    po2.currency = "USD"
+    await db.commit()
+
+    with pytest.raises(HTTPException) as exc:
+        await flow_svc.link_po_contract(db, user, po2.id, contract.id)
+
+    assert exc.value.status_code == 409
+    assert exc.value.detail == "po_contract_link.currency_mismatch"
+
+
+async def test_link_po_contract_rejects_supplier_mismatch(seeded_db_session):
+    db = seeded_db_session
+    user, supplier, _pr1, po1 = await _create_confirmed_po(db, title="PO A")
+    _u, _s, _pr2, po2 = await _create_confirmed_po(db, title="PO B")
+    contract = await flow_svc.create_contract(
+        db, user, po1.id, title="Shared", total_amount=Decimal("100")
+    )
+
+    other_supplier = Supplier(
+        code=f"SUP-{uuid4().hex[:8]}",
+        name="Alt Supplier",
+        payee_name="Alt Supplier",
+        payee_bank="Bank",
+        payee_bank_account="1234567890",
+        tax_number="TAX-ALT",
+    )
+    db.add(other_supplier)
+    await db.flush()
+    assert other_supplier.id != supplier.id
+    po2.supplier_id = other_supplier.id
+    await db.commit()
+
+    with pytest.raises(HTTPException) as exc:
+        await flow_svc.link_po_contract(db, user, po2.id, contract.id)
+
+    assert exc.value.status_code == 409
+    assert exc.value.detail == "po_contract_link.supplier_mismatch"
+
+
+async def test_unlink_po_contract_succeeds_when_other_links_exist(seeded_db_session):
+    db = seeded_db_session
+    user, _supplier, _pr1, po1 = await _create_confirmed_po(db, title="PO A")
+    _u, _s, _pr2, po2 = await _create_confirmed_po(db, title="PO B")
+    contract = await flow_svc.create_contract(
+        db, user, po1.id, title="Shared", total_amount=Decimal("100")
+    )
+    await flow_svc.link_po_contract(db, user, po2.id, contract.id)
+
+    await flow_svc.unlink_po_contract(db, user, po2.id, contract.id)
+
+    linked_pos = await flow_svc.list_linked_pos(db, contract.id)
+    po_ids = {p.id for p in linked_pos}
+    assert po1.id in po_ids
+    assert po2.id not in po_ids
+
+
+async def test_unlink_po_contract_blocks_when_payments_exist(seeded_db_session):
+    db = seeded_db_session
+    user, _supplier, _pr1, po1 = await _create_confirmed_po(db, title="PO A")
+    _u, _s, _pr2, po2 = await _create_confirmed_po(db, title="PO B")
+    contract = await flow_svc.create_contract(
+        db, user, po1.id, title="Shared", total_amount=Decimal("100")
+    )
+    await flow_svc.link_po_contract(db, user, po2.id, contract.id)
+
+    await flow_svc.create_payment(
+        db,
+        user,
+        po2.id,
+        amount=Decimal("50"),
+        contract_id=contract.id,
+        payment_date=date(2026, 4, 25),
+    )
+
+    with pytest.raises(HTTPException) as exc:
+        await flow_svc.unlink_po_contract(db, user, po2.id, contract.id)
+
+    assert exc.value.status_code == 409
+    assert exc.value.detail == "po_contract_link.has_payments"
+
+
+async def test_create_payment_blocks_contract_schedule_on_secondary_po(seeded_db_session):
+    db = seeded_db_session
+    user, _supplier, _pr1, po1 = await _create_confirmed_po(db, title="PO A")
+    _u, _s, _pr2, po2 = await _create_confirmed_po(db, title="PO B")
+    contract = await flow_svc.create_contract(
+        db, user, po1.id, title="Shared", total_amount=Decimal("100")
+    )
+    await flow_svc.link_po_contract(db, user, po2.id, contract.id)
+
+    schedule = PaymentSchedule(
+        contract_id=contract.id,
+        installment_no=1,
+        label="First payment",
+        planned_amount=Decimal("40"),
+        status=ScheduleItemStatus.PLANNED.value,
+    )
+    db.add(schedule)
+    await db.commit()
+
+    with pytest.raises(HTTPException) as exc:
+        await flow_svc.create_payment(
+            db,
+            user,
+            po2.id,
+            amount=Decimal("40"),
+            contract_id=contract.id,
+            schedule_item_id=schedule.id,
+            payment_date=date(2026, 4, 25),
+        )
+
+    assert exc.value.status_code == 409
+    assert exc.value.detail == "payment.schedule_requires_primary_po"
 
 
 async def test_update_contract_modifies_fields_and_creates_new_version(seeded_db_session):

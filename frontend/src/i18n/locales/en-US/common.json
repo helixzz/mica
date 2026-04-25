@@ -511,9 +511,9 @@
     "document_templates": "Document Templates",
     "document_template": {
       "intro_title": "Document Templates",
-      "intro_body": "Manage Word templates for business documents. Use [placeholder] markers in your template to indicate fields to be filled (e.g. [PO Number], [Payee Name], [Amount in Words]). The system will intelligently fill these placeholders using data from the PO, contract, and payment schedule when a user triggers generation.",
+      "intro_body": "Manage Word or Excel templates for business documents. Use [placeholder] markers in your template to indicate fields to be filled (e.g. [PO Number], [Payee Name], [Amount in Words]). The system will intelligently fill these placeholders using data from the PO, contract, and payment schedule when a user triggers generation.",
       "syntax_title": "Placeholder syntax",
-      "syntax_body": "Wrap field descriptions in square brackets inside your Word template, e.g. [PO Number], [Payment Date YYYY-MM-DD]. Date format tokens YYYY/MM/DD are replaced with the installment's actual/planned date. Placeholders containing '大写' output the Chinese uppercase amount (e.g. '肆佰伍拾万元整').",
+      "syntax_body": "Wrap field descriptions in square brackets inside your Word or Excel template, e.g. [PO Number], [Payment Date YYYY-MM-DD]. Date format tokens YYYY/MM/DD are replaced with the installment's actual/planned date. Placeholders containing '大写' output the Chinese uppercase amount (e.g. '肆佰伍拾万元整').",
       "syntax_examples": "Examples: [PO编号] · [合同编号] · [供应商名称] · [收款单位名称] · [收款单位开户行] · [银行账号] · [本期付款金额(大写)] · [付款日期 YYYY年MM月DD日]",
       "name": "Template Name",
       "template_file": "Template File",
@@ -521,7 +521,7 @@
       "filename_template": "Generated Filename Format",
       "filename_template_help": "Output filename pattern, also supports [placeholders]. e.g. FinancePaymentForm_[PO Number]_[Installment]_[Payment Date YYYYMMDD]",
       "description": "Description",
-      "upload": "Upload .docx",
+      "upload": "Upload .docx/.xlsx",
       "preview_placeholders": "Preview Placeholders",
       "edit_title": "Edit Template: {{name}}",
       "placeholders_title": "Template Placeholders: {{name}}",
@@ -968,6 +968,17 @@
     "payment_confirm_delete_title": "Delete this payment record?",
     "payment_confirm_delete_body": "Only pending payments can be deleted. Reverse confirmed payments first.",
     "no_contracts_hint": "No contracts linked to this PO yet. Use \"Create Contract\" above before recording payments.",
+    "link_existing_contract": "Link Existing Contract",
+    "link_existing_contract_help": "Link an existing contract to this PO as a secondary association. The contract's original PO remains its primary PO.",
+    "link_existing_contract_placeholder": "Select a contract to link",
+    "no_available_contracts": "No additional contracts are available to link.",
+    "link_success": "Contract linked",
+    "unlink": "Unlink",
+    "unlink_contract": "Unlink contract",
+    "unlink_contract_title": "Unlink contract {{number}}?",
+    "unlink_contract_body": "This only removes the secondary association from the current PO. The contract's primary PO remains unchanged.",
+    "unlink_success": "Contract unlinked",
+    "primary_contract": "Primary PO",
     "invoice_help": "Record the supplier's invoice number, date, tax info, and supporting files so later matching and payment review stay traceable."
   }
 }

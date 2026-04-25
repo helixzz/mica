@@ -113,7 +113,7 @@
 
 ### 流程图
 
-[图 5 · IT 采购员日常工作流](./_diagrams.md#5-it-采购员日常工作流)——完整图见 `_diagrams.md` 文件第 5 节。
+[图 5 · IT 采购员日常工作流](./_diagrams.md)——完整图见 `_diagrams.md` 文件对应章节。
 
 ```mermaid
 flowchart TD
@@ -220,7 +220,7 @@ flowchart TD
 
 ### 流程图
 
-[图 6 · 部门负责人审批工作流](./_diagrams.md#6-部门负责人审批工作流)
+[图 6 · 部门负责人审批工作流](./_diagrams.md)
 
 ```mermaid
 flowchart TD
@@ -322,7 +322,7 @@ flowchart TD
 
 ### 流程图
 
-[图 7 · 财务审核员工作流](./_diagrams.md#7-财务审核员工作流)
+[图 7 · 财务审核员工作流](./_diagrams.md)
 
 ```mermaid
 flowchart TD
@@ -454,7 +454,7 @@ flowchart TD
 - **仪表盘 Dashboard**
 - **待办审批 My Approvals**（作为审批人的兜底候选）
 - **采购申请 / 采购订单 / 合同 / 交货批次 / 付款记录 / 发票** — 全量可见
-- **系统管理 Admin Console** — 仅管理员可见，六个 Tab：系统参数、LLM 模型、AI 场景路由、用户管理、AI 调用日志、审计日志（详见 [第 4 章｜功能参考 · 管理员控制台](./04-features.md#管理员控制台)）
+- **系统管理 Admin Console** — 仅管理员可见，六个 Tab：系统参数、LLM 模型、AI 场景路由、用户管理、AI 调用日志、审计日志（详见 [第 4 章｜功能参考](./04-features.md)）
 
 ### 典型一天
 
@@ -490,7 +490,7 @@ flowchart TD
 
 7. **代审批（兜底）**
    - 某部门负责人休假，团队反映审批堵住了。
-   - 进入**待办审批 My Approvals**，看到堆积的审批任务（代码层面：`admin` 可以处置任一 `pending` 任务，见 [`backend/app/services/approval.py:117-119`](../../backend/app/services/approval.py)）。
+   - 进入**待办审批 My Approvals**，看到堆积的审批任务（代码层面：`admin` 可以处理任一 `pending` 任务）。
    - 逐条审阅、做出决定，在**审批意见 Comment** 里注明"代 XXX 审批"以便审计回溯。审计日志 Tab 里这些动作都有自动留痕。
 
 8. **数据纠错**
@@ -533,7 +533,7 @@ flowchart TD
    在**系统管理 Admin Console → 用户管理 Users** Tab 点**新增**即可填表创建。如果需要批量导入或脚本化操作，仍可通过后端 CLI / 直接写入 `users` 表（需哈希密码）。
 
 3. **管理员能看到其它角色看不到的敏感字段吗？**
-   可以。字段级权限（见 [`backend/app/core/field_authz.py`](../../backend/app/core/field_authz.py)）对管理员放行所有字段，这也意味着管理员账号的泄露代价极大——请强制开启双因素或 SSO，并严格限制账号数量在 1–2 个。
+   可以。字段级权限会对管理员放行所有字段，这也意味着管理员账号的泄露代价极大——请强制开启双因素或 SSO，并严格限制账号数量在 1–2 个。
 
 ---
 

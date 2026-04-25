@@ -81,6 +81,7 @@ pip-delete-this-directory.txt
 
 # 虚拟环境
 .venv/
+.venv-docs/
 venv/
 env/
 ENV/

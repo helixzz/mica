@@ -25,7 +25,6 @@ import {
   Upload,
   message,
 } from 'antd'
-import type { ColumnsType } from 'antd/es/table'
 import { useCallback, useEffect, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { useNavigate, useParams } from 'react-router-dom'
@@ -42,17 +41,6 @@ import { useAuth } from '@/auth/useAuth'
 import { ContractFormModal } from '@/components/ContractFormModal'
 import { PaymentScheduleTab } from '@/components/PaymentScheduleTab'
 import { fmtAmount } from '@/utils/format'
-
-function StatusTag({ status }: { status: string }) {
-  const colorMap: Record<string, string> = {
-    planned: 'default',
-    due: 'warning',
-    paid: 'success',
-    partially_paid: 'processing',
-    cancelled: 'error',
-  }
-  return <Tag color={colorMap[status] || 'default'}>{status}</Tag>
-}
 
 export function ContractDetailPage() {
   const { t } = useTranslation()
@@ -101,15 +89,23 @@ export function ContractDetailPage() {
   }, [load, id])
 
   useEffect(() => {
-    if (!contract?.po_id) {
+    if (!contract) {
       setShipments([])
       return
     }
-    api
-      .listShipments(contract.po_id)
-      .then(setShipments)
-      .catch(() => setShipments([]))
-  }, [contract?.po_id])
+
+    const linkedPoIds = Array.from(
+      new Set([contract.po_id, ...(contract.linked_pos ?? []).map((po) => po.id)]),
+    )
+
+    void Promise.all(linkedPoIds.map((poId) => api.listShipments(poId).catch(() => []))).then(
+      (groups) => {
+        const merged = groups.flat()
+        const deduped = Array.from(new Map(merged.map((row) => [row.id, row])).values())
+        setShipments(deduped)
+      },
+    )
+  }, [contract])
 
   const openOcrViewer = async (doc: ContractAttachment) => {
     if (!id) return
@@ -213,37 +209,56 @@ export function ContractDetailPage() {
         <Space direction="vertical" size="large" style={{ width: '100%' }}>
           <Card
             title={t('contract.linked_po')}
-            extra={
-              <Button
-                size="small"
-                icon={<EyeOutlined />}
-                onClick={() => navigate(`/purchase-orders/${contract.po_id}`)}
-              >
-                {t('contract.view_po')}
-              </Button>
-            }
           >
-            <Descriptions bordered size="small" column={3}>
-              <Descriptions.Item label={t('field.po_number')}>
-                {contract.po_number ? (
-                  <a onClick={() => navigate(`/purchase-orders/${contract.po_id}`)}>
-                    {contract.po_number}
-                  </a>
-                ) : (
-                  <Typography.Text type="secondary">-</Typography.Text>
-                )}
-              </Descriptions.Item>
-              <Descriptions.Item label={t('field.po_status')}>
-                {contract.po_status ? (
-                  <Tag>{t(`status.${contract.po_status}` as 'status.confirmed')}</Tag>
-                ) : (
-                  '-'
-                )}
-              </Descriptions.Item>
-              <Descriptions.Item label={t('field.supplier')}>
-                {contract.supplier_name || '-'}
-              </Descriptions.Item>
-            </Descriptions>
+            <Space direction="vertical" size="middle" style={{ width: '100%' }}>
+              <Descriptions bordered size="small" column={1}>
+                <Descriptions.Item label={t('field.supplier')}>
+                  {contract.supplier_name || '-'}
+                </Descriptions.Item>
+              </Descriptions>
+              <Table
+                rowKey="id"
+                pagination={false}
+                size="small"
+                dataSource={contract.linked_pos ?? []}
+                locale={{ emptyText: t('message.no_data') }}
+                columns={[
+                  {
+                    title: t('field.po_number'),
+                    dataIndex: 'po_number',
+                    render: (value: string, row: NonNullable<Contract['linked_pos']>[number]) => (
+                      <a onClick={() => navigate(`/purchase-orders/${row.id}`)}>{value}</a>
+                    ),
+                  },
+                  {
+                    title: t('field.po_status'),
+                    dataIndex: 'status',
+                    render: (value: string) => (
+                      <Tag>{t(`status.${value}` as 'status.confirmed')}</Tag>
+                    ),
+                  },
+                  {
+                    title: t('field.total_amount'),
+                    align: 'right',
+                    render: (_: unknown, row: NonNullable<Contract['linked_pos']>[number]) =>
+                      fmtAmount(row.total_amount, row.currency),
+                  },
+                  {
+                    title: t('common.actions'),
+                    width: 120,
+                    render: (_: unknown, row: NonNullable<Contract['linked_pos']>[number]) => (
+                      <Button
+                        size="small"
+                        icon={<EyeOutlined />}
+                        onClick={() => navigate(`/purchase-orders/${row.id}`)}
+                      >
+                        {t('contract.view_po')}
+                      </Button>
+                    ),
+                  },
+                ]}
+              />
+            </Space>
           </Card>
 
           <Card>
@@ -360,18 +375,23 @@ export function ContractDetailPage() {
         </Space>
       ),
       children: (
-        <Card
-          title={t('contract.shipments_title')}
-          extra={
-            <Button
-              size="small"
-              icon={<EyeOutlined />}
-              onClick={() => navigate(`/purchase-orders/${contract.po_id}`)}
-            >
-              {t('contract.manage_in_po')}
-            </Button>
-          }
-        >
+          <Card
+            title={t('contract.shipments_title')}
+            extra={
+              <Space wrap>
+                {(contract.linked_pos ?? []).map((po) => (
+                  <Button
+                    key={po.id}
+                    size="small"
+                    icon={<EyeOutlined />}
+                    onClick={() => navigate(`/purchase-orders/${po.id}`)}
+                  >
+                    {t('contract.manage_in_po')} · {po.po_number}
+                  </Button>
+                ))}
+              </Space>
+            }
+          >
           {shipments.length === 0 ? (
             <Empty description={t('contract.no_shipments_hint')} />
           ) : (

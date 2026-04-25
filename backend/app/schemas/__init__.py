@@ -421,6 +421,7 @@ class ContractOut(BaseModel):
     expiry_date: date | None
     notes: str | None
     created_at: datetime
+    linked_pos: list[dict[str, JSONValue]] = Field(default_factory=list)
 
 
 class ContractVersionOut(BaseModel):

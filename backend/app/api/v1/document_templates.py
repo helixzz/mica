@@ -18,6 +18,9 @@ from app.services import document_templates as svc
 
 router = APIRouter()
 
+_DOCX_CONTENT_TYPE = "application/vnd.openxmlformats-officedocument.wordprocessingml.document"
+_XLSX_CONTENT_TYPE = "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+
 
 class DocumentTemplateOut(BaseModel):
     model_config = ConfigDict(from_attributes=True)
@@ -126,7 +129,9 @@ async def upload_document_template(
         raise HTTPException(404, "template.not_found")
 
     content = await file.read()
-    if not file.filename or not file.filename.lower().endswith(".docx"):
+    if not file.filename or not (
+        file.filename.lower().endswith(".docx") or file.filename.lower().endswith(".xlsx")
+    ):
         raise HTTPException(400, "template.only_docx_supported")
 
     import hashlib
@@ -151,7 +156,9 @@ async def upload_document_template(
         original_filename=file.filename,
         content_type=(
             file.content_type
-            or "application/vnd.openxmlformats-officedocument.wordprocessingml.document"
+            or (
+                _XLSX_CONTENT_TYPE if file.filename.lower().endswith(".xlsx") else _DOCX_CONTENT_TYPE
+            )
         ),
         file_size=len(content),
         content_hash=content_hash,
@@ -213,9 +220,10 @@ async def generate_schedule_document(
 ):
     _ = user
     content, filename = await svc.generate_payment_document(db, template_code, schedule_item_id)
+    media_type = _XLSX_CONTENT_TYPE if filename.lower().endswith(".xlsx") else _DOCX_CONTENT_TYPE
     return Response(
         content=content,
-        media_type=("application/vnd.openxmlformats-officedocument.wordprocessingml.document"),
+        media_type=media_type,
         headers={
             "Content-Disposition": f'attachment; filename="{filename}"',
             "Content-Length": str(len(content)),

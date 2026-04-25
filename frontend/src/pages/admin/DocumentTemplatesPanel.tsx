@@ -159,7 +159,7 @@ export function DocumentTemplatesPanel() {
             render: (_, r) => (
               <Space size="small" wrap>
                 <Upload
-                  accept=".docx"
+                  accept=".docx,.xlsx"
                   showUploadList={false}
                   beforeUpload={(file) => handleUpload(r, file)}
                 >

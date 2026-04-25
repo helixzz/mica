@@ -184,6 +184,13 @@ export interface Contract {
   expiry_date: string | null
   notes: string | null
   created_at: string
+  linked_pos?: {
+    id: string
+    po_number: string
+    status: string
+    total_amount: string
+    currency: string
+  }[]
 }
 
 export interface ContractVersion {
@@ -790,6 +797,30 @@ export const api = {
       '/contracts/suggest-number',
     )
     return data
+  },
+  async listLinkedPos(contractId: string): Promise<{
+    id: string
+    po_number: string
+    status: string
+    total_amount: string
+    amount_paid: string
+    currency: string
+  }[]> {
+    const { data } = await client.get(`/contracts/${contractId}/linked-pos`)
+    return data as {
+      id: string
+      po_number: string
+      status: string
+      total_amount: string
+      amount_paid: string
+      currency: string
+    }[]
+  },
+  async linkPoContract(poId: string, contractId: string): Promise<void> {
+    await client.post(`/purchase-orders/${poId}/contracts/${contractId}`)
+  },
+  async unlinkPoContract(poId: string, contractId: string): Promise<void> {
+    await client.delete(`/purchase-orders/${poId}/contracts/${contractId}`)
   },
   async updateContract(
     contractId: string,

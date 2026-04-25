@@ -335,10 +335,16 @@ async def notify_expiring_contracts(
     created = 0
     scanned = len(contracts)
     for contract in contracts:
+        linked_po_ids = [str(contract.po_id)]
+        for link in getattr(contract, "po_links", []) or []:
+            po_id = str(link.po_id)
+            if po_id not in linked_po_ids:
+                linked_po_ids.append(po_id)
         meta = {
             "contract_number": contract.contract_number,
             "expiry_date": contract.expiry_date.isoformat() if contract.expiry_date else None,
             "po_id": str(contract.po_id),
+            "linked_po_ids": linked_po_ids,
         }
         purchase_order = await session.get(PurchaseOrder, contract.po_id)
         if purchase_order is not None and purchase_order.created_by_id:

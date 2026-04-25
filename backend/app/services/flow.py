@@ -5,7 +5,7 @@ from decimal import Decimal
 from uuid import UUID
 
 from fastapi import HTTPException
-from sqlalchemy import func, select
+from sqlalchemy import func, or_, select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
@@ -20,6 +20,7 @@ from app.models import (
     PaymentRecord,
     PaymentSchedule,
     PaymentStatus,
+    POContractLink,
     POItem,
     POStatus,
     PurchaseOrder,
@@ -127,6 +128,8 @@ async def create_contract(
     )
     db.add(contract)
     await db.flush()
+    db.add(POContractLink(po_id=po.id, contract_id=contract.id))
+    await db.flush()
     await contract_svc.create_contract_version(
         db,
         contract=contract,
@@ -153,8 +156,161 @@ async def list_contracts(db: AsyncSession, po_id: UUID | None = None) -> list[Co
         .options(selectinload(Contract.po), selectinload(Contract.supplier))
     )
     if po_id:
-        stmt = stmt.where(Contract.po_id == po_id)
+        linked_ids = (
+            (
+                await db.execute(
+                    select(POContractLink.contract_id).where(POContractLink.po_id == po_id)
+                )
+            )
+            .scalars()
+            .all()
+        )
+        if linked_ids:
+            stmt = stmt.where(or_(Contract.po_id == po_id, Contract.id.in_(linked_ids)))
+        else:
+            stmt = stmt.where(Contract.po_id == po_id)
     return list((await db.execute(stmt)).scalars().all())
+
+
+async def list_linked_pos(db: AsyncSession, contract_id: UUID) -> list[PurchaseOrder]:
+    contract = (
+        await db.execute(select(Contract).where(Contract.id == contract_id))
+    ).scalar_one_or_none()
+    if contract is None:
+        raise HTTPException(404, "contract.not_found")
+
+    link_ids = (
+        (
+            await db.execute(
+                select(POContractLink.po_id).where(POContractLink.contract_id == contract_id)
+            )
+        )
+        .scalars()
+        .all()
+    )
+    po_ids: set[UUID] = set(link_ids)
+    if contract.po_id:
+        po_ids.add(contract.po_id)
+    if not po_ids:
+        return []
+    rows = (
+        (
+            await db.execute(
+                select(PurchaseOrder)
+                .where(PurchaseOrder.id.in_(po_ids))
+                .order_by(PurchaseOrder.po_number)
+            )
+        )
+        .scalars()
+        .all()
+    )
+    return list(rows)
+
+
+async def link_po_contract(
+    db: AsyncSession,
+    actor: User,
+    po_id: UUID,
+    contract_id: UUID,
+) -> POContractLink:
+    po = await _load_po(db, po_id)
+    if po is None:
+        raise HTTPException(404, "po.not_found")
+    contract = await _load_contract(db, contract_id)
+
+    existing = (
+        await db.execute(
+            select(POContractLink).where(
+                POContractLink.po_id == po_id,
+                POContractLink.contract_id == contract_id,
+            )
+        )
+    ).scalar_one_or_none()
+    if existing is not None:
+        return existing
+
+    primary_po = await _load_po(db, contract.po_id)
+    if primary_po is None:
+        raise HTTPException(404, "po.not_found")
+    if po.supplier_id != contract.supplier_id:
+        raise HTTPException(409, "po_contract_link.supplier_mismatch")
+    if po.company_id != primary_po.company_id:
+        raise HTTPException(409, "po_contract_link.company_mismatch")
+    if po.currency != contract.currency:
+        raise HTTPException(409, "po_contract_link.currency_mismatch")
+
+    link = POContractLink(po_id=po_id, contract_id=contract_id)
+    db.add(link)
+    await _audit_write(
+        db,
+        actor,
+        "po_contract.linked",
+        "contract",
+        str(contract.id),
+        meta={"po_id": str(po_id), "po_number": po.po_number},
+    )
+    await db.commit()
+    return link
+
+
+async def unlink_po_contract(
+    db: AsyncSession,
+    actor: User,
+    po_id: UUID,
+    contract_id: UUID,
+) -> None:
+    po = await _load_po(db, po_id)
+    if po is None:
+        raise HTTPException(404, "po.not_found")
+    contract = await _load_contract(db, contract_id)
+
+    link = (
+        await db.execute(
+            select(POContractLink).where(
+                POContractLink.po_id == po_id,
+                POContractLink.contract_id == contract_id,
+            )
+        )
+    ).scalar_one_or_none()
+    if link is None:
+        raise HTTPException(404, "po_contract_link.not_found")
+
+    if contract.po_id == po_id:
+        raise HTTPException(409, "po_contract_link.cannot_unlink_primary")
+
+    other_links = (
+        await db.execute(
+            select(func.count(POContractLink.po_id)).where(
+                POContractLink.contract_id == contract_id,
+                POContractLink.po_id != po_id,
+            )
+        )
+    ).scalar_one()
+    is_primary_po = contract.po_id == po_id
+    if other_links == 0 and is_primary_po:
+        raise HTTPException(409, "po_contract_link.cannot_remove_last")
+
+    has_payments = (
+        await db.execute(
+            select(func.count(PaymentRecord.id)).where(
+                PaymentRecord.contract_id == contract_id,
+                PaymentRecord.po_id == po_id,
+            )
+        )
+    ).scalar_one()
+    if has_payments > 0:
+        raise HTTPException(409, "po_contract_link.has_payments")
+
+    await db.delete(link)
+    await _audit_write(
+        db,
+        actor,
+        "po_contract.unlinked",
+        "contract",
+        str(contract.id),
+        meta={"po_id": str(po_id), "po_number": po.po_number},
+    )
+    await db.commit()
 
 
 async def get_contract(db: AsyncSession, contract_id: UUID) -> Contract:
@@ -545,7 +701,16 @@ async def create_payment(
     if contract is None:
         raise HTTPException(404, "contract.not_found")
     if contract.po_id != po_id:
-        raise HTTPException(409, "payment.contract_po_mismatch")
+        link_exists = (
+            await db.execute(
+                select(func.count(POContractLink.po_id)).where(
+                    POContractLink.po_id == po_id,
+                    POContractLink.contract_id == contract_id,
+                )
+            )
+        ).scalar_one()
+        if not link_exists:
+            raise HTTPException(409, "payment.contract_po_mismatch")
 
     if schedule_item_id is not None:
         schedule_item = (
@@ -553,6 +718,8 @@ async def create_payment(
         ).scalar_one_or_none()
         if schedule_item is None:
             raise HTTPException(404, "schedule_item.not_found")
+        if schedule_item.contract_id is not None and contract.po_id != po_id:
+            raise HTTPException(409, "payment.schedule_requires_primary_po")
         if schedule_item.contract_id != contract_id and schedule_item.po_id != po_id:
             raise HTTPException(409, "payment.schedule_parent_mismatch")
 
@@ -637,7 +804,16 @@ async def update_payment(
             if contract is None:
                 raise HTTPException(404, "contract.not_found")
             if contract.po_id != record.po_id:
-                raise HTTPException(409, "payment.contract_po_mismatch")
+                link_exists = (
+                    await db.execute(
+                        select(func.count(POContractLink.po_id)).where(
+                            POContractLink.po_id == record.po_id,
+                            POContractLink.contract_id == candidate,
+                        )
+                    )
+                ).scalar_one()
+                if not link_exists:
+                    raise HTTPException(409, "payment.contract_po_mismatch")
             changes["contract_id"] = {
                 "from": str(record.contract_id) if record.contract_id else None,
                 "to": str(candidate),
@@ -662,6 +838,14 @@ async def update_payment(
                 ).scalar_one_or_none()
                 if new_item is None:
                     raise HTTPException(404, "schedule_item.not_found")
+                if new_item.contract_id is not None:
+                    contract = (
+                        await db.execute(select(Contract).where(Contract.id == new_contract_id))
+                    ).scalar_one_or_none()
+                    if contract is None:
+                        raise HTTPException(404, "contract.not_found")
+                    if contract.po_id != record.po_id:
+                        raise HTTPException(409, "payment.schedule_requires_primary_po")
                 if new_item.contract_id != new_contract_id and new_item.po_id != record.po_id:
                     raise HTTPException(409, "payment.schedule_parent_mismatch")
                 if record.status == PaymentStatus.CONFIRMED.value:

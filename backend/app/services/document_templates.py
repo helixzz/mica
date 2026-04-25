@@ -22,6 +22,7 @@ from app.models import (
     Document,
     DocumentTemplate,
     PaymentSchedule,
+    POContractLink,
     PurchaseOrder,
     Supplier,
 )
@@ -75,6 +76,18 @@ def extract_placeholders(content_bytes: bytes | None, filename_template: str) ->
                         _add(cell.text)
         except Exception:
             logger.exception("template: failed to parse docx for placeholder extraction")
+
+        try:
+            from openpyxl import load_workbook
+
+            workbook = load_workbook(io.BytesIO(content_bytes))
+            for sheet in workbook.worksheets:
+                for row in sheet.iter_rows():
+                    for cell in row:
+                        if isinstance(cell.value, str):
+                            _add(cell.value)
+        except Exception:
+            logger.debug("template: content is not a readable xlsx workbook", exc_info=True)
 
     return found
 
@@ -406,6 +419,30 @@ def substitute_docx(content_bytes: bytes, mapping: dict[str, str]) -> bytes:
     return buf.getvalue()
 
 
+def substitute_xlsx(content_bytes: bytes, mapping: dict[str, str]) -> bytes:
+    from openpyxl import load_workbook
+    from openpyxl.cell.cell import MergedCell
+
+    workbook = load_workbook(io.BytesIO(content_bytes))
+    for sheet in workbook.worksheets:
+        for row in sheet.iter_rows():
+            for cell in row:
+                if isinstance(cell, MergedCell):
+                    continue
+                if not isinstance(cell.value, str):
+                    continue
+                if not PLACEHOLDER_RE.search(cell.value):
+                    continue
+                cell.value = PLACEHOLDER_RE.sub(
+                    lambda match: mapping.get(match.group(1).strip(), ""),
+                    cell.value,
+                )
+
+    buf = io.BytesIO()
+    workbook.save(buf)
+    return buf.getvalue()
+
+
 async def generate_payment_document(
     db: AsyncSession,
     template_code: str,
@@ -445,9 +482,26 @@ async def generate_payment_document(
         supplier = contract.supplier
     elif schedule.po is not None:
         po = schedule.po
-        contract = (
-            await db.execute(select(Contract).where(Contract.po_id == po.id).limit(1))
-        ).scalar_one_or_none()
+        linked_contract_ids = (
+            (
+                await db.execute(
+                    select(POContractLink.contract_id).where(POContractLink.po_id == po.id)
+                )
+            )
+            .scalars()
+            .all()
+        )
+        contract_ids = [po_contract_id for po_contract_id in linked_contract_ids]
+        if not contract_ids:
+            contract = (
+                await db.execute(select(Contract).where(Contract.po_id == po.id).limit(1))
+            ).scalar_one_or_none()
+        elif len(contract_ids) == 1:
+            contract = (
+                await db.execute(select(Contract).where(Contract.id == contract_ids[0]).limit(1))
+            ).scalar_one_or_none()
+        else:
+            contract = None
         if contract is None:
             raise HTTPException(
                 409,
@@ -463,16 +517,22 @@ async def generate_payment_document(
         raise HTTPException(409, "template.supplier_missing")
 
     file_bytes = _read_document_bytes(template.template_document)
+    original_filename = template.template_document.original_filename.lower()
 
     context = build_context(po, contract, supplier, schedule)
     placeholders = extract_placeholders(file_bytes, template.filename_template)
     mapping = await resolve_all_placeholders(db, placeholders, context)
 
-    generated_bytes = substitute_docx(file_bytes, mapping)
+    if original_filename.endswith(".xlsx"):
+        generated_bytes = substitute_xlsx(file_bytes, mapping)
+        output_ext = ".xlsx"
+    else:
+        generated_bytes = substitute_docx(file_bytes, mapping)
+        output_ext = ".docx"
     filename_base = render_filename(template.filename_template, mapping)
     if not filename_base:
         filename_base = f"{template.code}_{schedule.installment_no}"
-    filename = f"{filename_base}.docx"
+    filename = f"{filename_base}{output_ext}"
 
     return generated_bytes, filename
 

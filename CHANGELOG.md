@@ -7,6 +7,63 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [v0.9.15] — 2026-04-25
+
+### 新增
+
+- **PO ↔ 合同关联跨链可见**：
+  - ContractDetail 顶部"关联采购订单"卡片改为**所有关联 PO 列表**（主 PO + 次级关联 PO），点击可直接跳转对应 PO。
+  - 合同 "交货记录" Tab 现在聚合所有关联 PO 下的交货批次，不再只显示主 PO 交货。
+  - PO 详情页新增"关联已有合同 / 解除关联"按钮与弹窗，对非主 PO 的关联合同显示"解除关联"，对主 PO 显示"主采购订单"标签。
+  - 合同详情返回体新增 `linked_pos` 字段；新增后端 API：
+    - `GET /contracts/{id}/linked-pos`
+    - `POST /purchase-orders/{po_id}/contracts/{contract_id}`（关联）
+    - `DELETE /purchase-orders/{po_id}/contracts/{contract_id}`（解除关联）
+- **AI 模板化单据生成支持 .xlsx**：
+  - 管理员后台模板上传接受 `.docx` 与 `.xlsx` 两种文件类型。
+  - 占位符提取现在支持 `.xlsx` 单元格文本；替换走 `openpyxl`，跳过合并单元格，保留工作簿结构。
+  - 付款计划一键生成时，根据模板扩展名自动返回 `.docx` 或 `.xlsx`，并使用正确的 MIME 类型。
+- **文档中心重构（GitDocs 大修）**：
+  - 把单文件 `admin-guide.md` 拆分为 7 份独立章节：部署与运维、HTTPS/TLS、系统管理控制台、SAML SSO、权限架构、备份恢复、故障排查与升级。
+  - 新增英文版用户手册与管理员指南（`docs/user-manual/en/`）。
+  - 改写中文首页说明，调整 `mkdocs.yml` 为"中文 / English" 双语导航。
+
+### 改进与守卫
+
+- **PO↔合同关联安全护栏**（基于 Oracle 审阅建议）：
+  - 拒绝解除合同的**主 PO** 关联；
+  - 关联新 PO 时校验供应商、币种、公司一致；
+  - 合同付款计划的付款必须在该合同的主 PO 下登记；
+  - 已存在付款记录的 PO 不允许解除关联。
+- **次级链接元数据同步**：
+  - 合同版本快照 (`contract_snapshot`) 与合同到期通知元数据均包含 `linked_po_ids`，便于审计与排查。
+- **文档站点**：修复若干用户手册内部失效的锚点链接，并移除所有指向后端源码文件的相对链接，让 `mkdocs build` 在仓库本地零 warning。
+
+### 修复
+
+- **付款文档生成的合同推导**：付款计划隶属 PO 但未直接挂合同时，系统按 `po_contract_links` 唯一关联合同推导；多合同歧义时明确返回 `template.contract_required_for_generation`。
+
+### 测试
+
+- 后端 `test_flow.py` 新增覆盖：
+  - 主 PO 解除关联被拒绝
+  - 供应商 / 币种不匹配关联被拒绝
+  - 次级 PO 下执行合同付款计划被拒绝
+  - 已有付款时解除关联被拒绝
+- 后端 `test_document_templates.py` 新增覆盖：
+  - 从 `.xlsx` 模板中抽取占位符
+  - `substitute_xlsx` 占位符替换
+  - 付款计划生成按 `.xlsx` / `.docx` 扩展名正确返回文件
+  - 多关联合同时的歧义拒绝
+- 在容器化环境中执行：`tests/unit/test_flow.py` 46 passed；`tests/unit/test_document_templates.py` 23 passed。
+
+### 版本与元数据
+
+- 版本号：`backend/pyproject.toml`、`frontend/package.json`、`backend/app/config.py`、`deploy/.env.example`、`AGENTS.md` 全部对齐到 `0.9.15`。
+- 清理了 README 与 AGENTS.md 中遗留的 `0.9.5` 旧版本引用。
+
+---
+
 ## [v0.9.14] — 2026-04-25
 
 ### 新增

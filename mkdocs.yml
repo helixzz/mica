@@ -46,18 +46,44 @@ theme:
     repo: fontawesome/brands/github
 
 nav:
-  - 首页: README.md
-  - 用户手册:
-    - 概述: 00-introduction.md
-    - 角色与权限: 01-roles-and-permissions.md
-    - 全局业务工作流: 02-global-workflow.md
-    - 各角色工作流: 03-per-role-workflow.md
-    - 功能参考: 04-features.md
-    - 常见问题: 05-faq.md
-  - 管理员指南:
-    - 部署 · 配置 · 运维: admin-guide.md
-  - 附录:
-    - 流程图集: _diagrams.md
+  - 中文:
+    - 首页: README.md
+    - 用户手册:
+      - 概述: 00-introduction.md
+      - 角色与权限: 01-roles-and-permissions.md
+      - 全局业务工作流: 02-global-workflow.md
+      - 各角色工作流: 03-per-role-workflow.md
+      - 功能参考: 04-features.md
+      - 常见问题: 05-faq.md
+    - 管理员指南:
+      - 导读: admin/00-overview.md
+      - 部署与运维: admin/01-deployment-and-ops.md
+      - HTTPS / TLS: admin/02-https-and-tls.md
+      - 系统管理控制台: admin/03-system-console.md
+      - SAML SSO: admin/04-saml-sso.md
+      - 权限架构: admin/05-permissions.md
+      - 备份与恢复: admin/06-backup-restore.md
+      - 故障排查与升级: admin/07-troubleshooting-and-upgrade.md
+    - 附录:
+      - 流程图集: _diagrams.md
+  - English:
+    - Home: en/README.md
+    - User Manual:
+      - Introduction: en/00-introduction.md
+      - Roles and Permissions: en/01-roles-and-permissions.md
+      - Global Workflow: en/02-global-workflow.md
+      - Per-Role Workflows: en/03-per-role-workflow.md
+      - Feature Reference: en/04-features.md
+      - FAQ: en/05-faq.md
+    - Admin Guide:
+      - Overview: en/admin/00-overview.md
+      - Deployment and Operations: en/admin/01-deployment-and-ops.md
+      - HTTPS / TLS: en/admin/02-https-and-tls.md
+      - System Console: en/admin/03-system-console.md
+      - SAML SSO: en/admin/04-saml-sso.md
+      - Permission Model: en/admin/05-permissions.md
+      - Backup and Restore: en/admin/06-backup-restore.md
+      - Troubleshooting and Upgrade: en/admin/07-troubleshooting-and-upgrade.md
 
 markdown_extensions:
   - admonition

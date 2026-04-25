@@ -511,9 +511,9 @@
     "document_templates": "模板管理",
     "document_template": {
       "intro_title": "模板管理",
-      "intro_body": "在此处管理业务单据的 Word 模板。模板中使用 [占位符] 标注待填字段（例如 [PO编号]、[收款单位名称]、[本期付款金额(大写)]）。系统会在用户触发生成时，根据 PO、合同和付款计划的上下文智能填充这些占位符。",
+      "intro_body": "在此处管理业务单据的 Word 或 Excel 模板。模板中使用 [占位符] 标注待填字段（例如 [PO编号]、[收款单位名称]、[本期付款金额(大写)]）。系统会在用户触发生成时，根据 PO、合同和付款计划的上下文智能填充这些占位符。",
       "syntax_title": "占位符语法",
-      "syntax_body": "在 Word 模板中使用方括号包裹字段描述，如 [PO编号]、[付款日期 YYYY年MM月DD日]。日期格式令牌 YYYY/MM/DD 会被替换为该付款计划的实际/计划日期；含「大写」的占位符会输出大写金额（如「肆佰伍拾万元整」）。",
+      "syntax_body": "在 Word 或 Excel 模板中使用方括号包裹字段描述，如 [PO编号]、[付款日期 YYYY年MM月DD日]。日期格式令牌 YYYY/MM/DD 会被替换为该付款计划的实际/计划日期；含「大写」的占位符会输出大写金额（如「肆佰伍拾万元整」）。",
       "syntax_examples": "示例：[PO编号] · [合同编号] · [供应商名称] · [收款单位名称] · [收款单位开户行] · [银行账号] · [本期付款金额(大写)] · [本期付款金额(数字)] · [付款日期 YYYY年MM月DD日]",
       "name": "模板名称",
       "template_file": "模板文件",
@@ -521,7 +521,7 @@
       "filename_template": "生成文件名格式",
       "filename_template_help": "下载时生成文件名的格式，同样支持 [占位符]。例：财务付款表_[PO编号]_[付款期次]_[付款日期YYYYMMDD]",
       "description": "说明",
-      "upload": "上传 .docx 模板",
+      "upload": "上传 .docx/.xlsx 模板",
       "preview_placeholders": "预览占位符",
       "edit_title": "编辑模板：{{name}}",
       "placeholders_title": "模板占位符：{{name}}",
@@ -968,6 +968,17 @@
     "payment_confirm_delete_title": "删除该付款记录？",
     "payment_confirm_delete_body": "仅可删除未确认（pending）的付款记录。已确认的付款请先撤销再删除。",
     "no_contracts_hint": "此订单尚未关联任何合同。在上方点击「创建合同」补充合同信息后，才能记录付款。",
+    "link_existing_contract": "关联已有合同",
+    "link_existing_contract_help": "将已有合同作为次级关联挂到当前 PO 下。合同原本的主采购订单不会改变。",
+    "link_existing_contract_placeholder": "选择要关联的合同",
+    "no_available_contracts": "当前没有可继续关联的其他合同。",
+    "link_success": "合同已关联",
+    "unlink": "解除关联",
+    "unlink_contract": "解除合同关联",
+    "unlink_contract_title": "确认解除合同 {{number}} 的关联？",
+    "unlink_contract_body": "此操作只会移除当前 PO 的次级关联，不会改变该合同的主采购订单。",
+    "unlink_success": "合同关联已解除",
+    "primary_contract": "主采购订单",
     "invoice_help": "录入供应商发票号、日期、税务信息和附件，确保后续匹配、付款和审计链路都可追溯。"
   }
 }

@@ -1,6 +1,8 @@
 import {
+  DisconnectOutlined,
   DownloadOutlined,
   FileTextOutlined,
+  LinkOutlined,
   PlusOutlined,
   UploadOutlined,
 } from '@ant-design/icons'
@@ -70,6 +72,7 @@ export function PODetailPage() {
   const [paymentOpen, setPaymentOpen] = useState(false)
   const [invoiceOpen, setInvoiceOpen] = useState(false)
   const [contractOpen, setContractOpen] = useState(false)
+  const [linkContractOpen, setLinkContractOpen] = useState(false)
   const [editingPayment, setEditingPayment] = useState<PaymentRecord | null>(null)
   const [busy, setBusy] = useState(false)
 
@@ -98,6 +101,26 @@ export function PODetailPage() {
   useEffect(() => {
     void loadAll()
   }, [id])
+
+  const handleUnlinkContract = (contract: Contract) => {
+    if (!po) return
+    Modal.confirm({
+      title: t('po.unlink_contract_title', { number: contract.contract_number }),
+      content: t('po.unlink_contract_body'),
+      okText: t('po.unlink'),
+      okType: 'danger',
+      cancelText: t('button.cancel'),
+      onOk: async () => {
+        try {
+          await api.unlinkPoContract(po.id, contract.id)
+          void message.success(t('po.unlink_success'))
+          void loadAll()
+        } catch (e) {
+          void message.error(extractError(e).detail)
+        }
+      },
+    })
+  }
 
   if (!po) return <div>{t('message.loading')}</div>
 
@@ -394,16 +417,27 @@ export function PODetailPage() {
             children: (
               <>
                 <div style={{ marginBottom: 12, textAlign: 'right' }}>
-                  {canCreateContract && (
-                    <Button
-                      type="primary"
-                      icon={<FileTextOutlined />}
-                      onClick={() => setContractOpen(true)}
-                      disabled={po.status === 'draft' || po.status === 'cancelled'}
-                    >
-                      {t('contract.create_btn')}
-                    </Button>
-                  )}
+                  <Space>
+                    {canCreateContract && (
+                      <Button
+                        icon={<LinkOutlined />}
+                        onClick={() => setLinkContractOpen(true)}
+                        disabled={po.status === 'draft' || po.status === 'cancelled'}
+                      >
+                        {t('po.link_existing_contract')}
+                      </Button>
+                    )}
+                    {canCreateContract && (
+                      <Button
+                        type="primary"
+                        icon={<FileTextOutlined />}
+                        onClick={() => setContractOpen(true)}
+                        disabled={po.status === 'draft' || po.status === 'cancelled'}
+                      >
+                        {t('contract.create_btn')}
+                      </Button>
+                    )}
+                  </Space>
                 </div>
                 {contracts.length === 0 ? (
                   <Typography.Text type="secondary">
@@ -439,6 +473,25 @@ export function PODetailPage() {
                       },
                       { title: t('field.signed_date'), dataIndex: 'signed_date' },
                       { title: t('field.expiry_date'), dataIndex: 'expiry_date' },
+                      {
+                        title: t('common.actions'),
+                        width: 100,
+                        render: (_: unknown, r: Contract) =>
+                          r.po_id !== po.id ? (
+                            <Button
+                              size="small"
+                              icon={<DisconnectOutlined />}
+                              onClick={() => handleUnlinkContract(r)}
+                              title={t('po.unlink_contract')}
+                            >
+                              {t('po.unlink')}
+                            </Button>
+                          ) : (
+                            <Typography.Text type="secondary" style={{ fontSize: 11 }}>
+                              {t('po.primary_contract')}
+                            </Typography.Text>
+                          ),
+                      },
                     ]}
                   />
                 )}
@@ -496,6 +549,16 @@ export function PODetailPage() {
           navigate(`/contracts/${saved.id}`)
         }}
       />
+      <LinkContractModal
+        open={linkContractOpen}
+        po={po}
+        alreadyLinkedIds={contracts.map((c) => c.id)}
+        onClose={() => setLinkContractOpen(false)}
+        onLinked={() => {
+          setLinkContractOpen(false)
+          void loadAll()
+        }}
+      />
       <PaymentEditModal
         open={editingPayment !== null}
         payment={editingPayment}
@@ -516,6 +579,89 @@ interface ModalProps {
   onDone: () => void
   busy: boolean
   setBusy: (b: boolean) => void
+}
+
+interface LinkContractModalProps {
+  open: boolean
+  po: PurchaseOrder
+  alreadyLinkedIds: string[]
+  onClose: () => void
+  onLinked: () => void
+}
+
+function LinkContractModal({
+  open,
+  po,
+  alreadyLinkedIds,
+  onClose,
+  onLinked,
+}: LinkContractModalProps) {
+  const { t } = useTranslation()
+  const [options, setOptions] = useState<Contract[]>([])
+  const [selectedId, setSelectedId] = useState<string | null>(null)
+  const [loading, setLoading] = useState(false)
+
+  useEffect(() => {
+    if (!open) return
+    setLoading(true)
+    setSelectedId(null)
+    api
+      .listContracts()
+      .then((list) => {
+        const filtered = list.filter((contract) => !alreadyLinkedIds.includes(contract.id))
+        setOptions(filtered)
+      })
+      .catch(() => setOptions([]))
+      .finally(() => setLoading(false))
+  }, [alreadyLinkedIds, open])
+
+  const submit = async () => {
+    if (!selectedId) return
+    try {
+      setLoading(true)
+      await api.linkPoContract(po.id, selectedId)
+      void message.success(t('po.link_success'))
+      onLinked()
+    } catch (e) {
+      void message.error(extractError(e).detail)
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  return (
+    <Modal
+      title={t('po.link_existing_contract')}
+      open={open}
+      onCancel={onClose}
+      onOk={submit}
+      confirmLoading={loading}
+      okButtonProps={{ disabled: !selectedId }}
+    >
+      <Space direction="vertical" style={{ width: '100%' }}>
+        <Typography.Text type="secondary">
+          {t('po.link_existing_contract_help')}
+        </Typography.Text>
+        <Select
+          showSearch
+          value={selectedId ?? undefined}
+          placeholder={t('po.link_existing_contract_placeholder')}
+          onChange={(value) => setSelectedId(value)}
+          loading={loading}
+          options={options.map((contract) => ({
+            value: contract.id,
+            label: `${contract.contract_number} · ${contract.title} · ${contract.po_number ?? '-'}`,
+          }))}
+          optionFilterProp="label"
+        />
+        {options.length === 0 && !loading ? (
+          <Typography.Text type="secondary">
+            {t('po.no_available_contracts')}
+          </Typography.Text>
+        ) : null}
+      </Space>
+    </Modal>
+  )
 }
 
 function ShipmentModal({ open, po, onClose, onDone, busy, setBusy }: ModalProps) {

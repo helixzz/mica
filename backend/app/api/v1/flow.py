@@ -8,7 +8,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.security import CurrentUser, require_roles
 from app.db import get_db
-from app.models import Contract
+from app.models import Contract, PurchaseOrder
 from app.schemas import (
     ContractCreateIn,
     ContractOut,
@@ -34,11 +34,22 @@ from app.services import export_excel, flow
 router = APIRouter()
 
 
-def _contract_to_out(c: Contract) -> ContractOut:
+def _contract_to_out(c: Contract, linked_pos: list[PurchaseOrder] | None = None) -> ContractOut:
     data = ContractOut.model_validate(c)
     data.po_number = c.po.po_number if c.po else None
     data.po_status = c.po.status if c.po else None
     data.supplier_name = c.supplier.name if c.supplier else None
+    if linked_pos is not None:
+        data.linked_pos = [
+            {
+                "id": str(p.id),
+                "po_number": p.po_number,
+                "status": p.status,
+                "total_amount": str(p.total_amount),
+                "currency": p.currency,
+            }
+            for p in linked_pos
+        ]
     return data
 
 
@@ -92,7 +103,8 @@ async def get_contract(
     db: Annotated[AsyncSession, Depends(get_db)],
 ):
     c = await flow.get_contract(db, contract_id)
-    return _contract_to_out(c)
+    linked = await flow.list_linked_pos(db, contract_id)
+    return _contract_to_out(c, linked_pos=linked)
 
 
 @router.patch("/contracts/{contract_id}", response_model=ContractOut, tags=["flow"])
@@ -130,6 +142,58 @@ async def delete_contract(
     _role: Annotated[None, Depends(require_roles("admin"))],
 ) -> Response:
     await flow.delete_contract(db, user, contract_id)
+    return Response(status_code=status.HTTP_204_NO_CONTENT)
+
+
+@router.get("/contracts/{contract_id}/linked-pos", tags=["flow"])
+async def list_linked_pos(
+    contract_id: UUID,
+    _user: CurrentUser,
+    db: Annotated[AsyncSession, Depends(get_db)],
+):
+    pos = await flow.list_linked_pos(db, contract_id)
+    return [
+        {
+            "id": str(p.id),
+            "po_number": p.po_number,
+            "status": p.status,
+            "total_amount": str(p.total_amount),
+            "amount_paid": str(p.amount_paid),
+            "currency": p.currency,
+        }
+        for p in pos
+    ]
+
+
+@router.post(
+    "/purchase-orders/{po_id}/contracts/{contract_id}",
+    status_code=status.HTTP_201_CREATED,
+    tags=["flow"],
+)
+async def link_po_contract(
+    po_id: UUID,
+    contract_id: UUID,
+    user: CurrentUser,
+    db: Annotated[AsyncSession, Depends(get_db)],
+    _role: Annotated[None, Depends(require_roles("admin", "procurement_mgr", "it_buyer"))],
+):
+    await flow.link_po_contract(db, user, po_id, contract_id)
+    return {"po_id": str(po_id), "contract_id": str(contract_id), "linked": True}
+
+
+@router.delete(
+    "/purchase-orders/{po_id}/contracts/{contract_id}",
+    status_code=status.HTTP_204_NO_CONTENT,
+    tags=["flow"],
+)
+async def unlink_po_contract(
+    po_id: UUID,
+    contract_id: UUID,
+    user: CurrentUser,
+    db: Annotated[AsyncSession, Depends(get_db)],
+    _role: Annotated[None, Depends(require_roles("admin", "procurement_mgr", "it_buyer"))],
+) -> Response:
+    await flow.unlink_po_contract(db, user, po_id, contract_id)
     return Response(status_code=status.HTTP_204_NO_CONTENT)
 
 
