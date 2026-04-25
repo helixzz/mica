@@ -7,6 +7,24 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [v0.9.20] — 2026-04-25
+
+### 修复（生产 hotfix）
+
+- **PO 详情页编辑/删除/执行付款期 404 错误**: v0.9.18 的 `build_summary_for` 把链接合同上的付款期合并进了 PO 视图，但 `update_schedule_item` / `delete_schedule_item` / `execute_schedule_item` / `link_invoice` 的 lookup 仍然只过滤 `PaymentSchedule.po_id == po.id` —— 用户在 PO 详情页点击编辑实际挂在合同上的某期会得到 `schedule_item.not_found`。
+- 新增 `_find_schedule_item(db, parent, installment_no)` 辅助，复用 `_list_schedules_for_summary` 的并集逻辑，所有 PO-scoped 写操作现在能命中链接合同上的期次。
+
+### 测试
+
+- `tests/unit/test_payment_schedule.py` 新增 2 条回归：`test_po_scoped_update_reaches_legacy_linked_contract_installment`、`test_po_scoped_delete_reaches_m2m_linked_contract_installment`。
+- 容器内 `pytest tests/` **369 passed**。
+
+### 元数据
+
+- 版本对齐 `0.9.20`：`backend/pyproject.toml`、`frontend/package.json`、`backend/app/config.py`、`deploy/.env.example`、`AGENTS.md`、`README` 徽章。
+
+---
+
 ## [v0.9.19] — 2026-04-25
 
 ### 改进
