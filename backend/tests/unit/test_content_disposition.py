@@ -9,13 +9,13 @@ def test_content_disposition_ascii_filename_is_latin1_safe():
 
 
 def test_content_disposition_chinese_filename_is_latin1_safe():
-    filename = "AcmeProcure_供应商全名_货款_HT-2026-001_500000.00_20260425.xlsx"
+    filename = "示例公司_供应商全名_货款_HT-2026-001_500000.00_20260425.xlsx"
     header = _content_disposition(filename)
 
     header.encode("latin-1")
 
     assert "filename*=UTF-8''" in header
-    assert "%E4%BD%B3%E6%9C%9F" in header
+    assert "%E7%A4%BA%E4%BE%8B" in header
     assert 'filename="' in header
 
 

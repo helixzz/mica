@@ -11,7 +11,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### 修复（生产 hotfix）
 
-- **生成付款表 500 错误**: 含中文的文件名（如 `AcmeProcure_供应商_货款_HT-2026-001_500000.00_20260425.xlsx`）触发 `UnicodeEncodeError: 'latin-1' codec can't encode characters` —— Starlette/uvicorn 用 latin-1 编码响应头，原始 `Content-Disposition: attachment; filename="..."` 直接抛 500。改为 RFC 5987 双格式：ASCII 兜底 `filename="..."` + `filename*=UTF-8''<percent-encoded>`，前端 `generateScheduleDocument()` 优先解析 `filename*=`。
+- **生成付款表 500 错误**: 含中文的文件名（如 `示例公司_供应商_货款_HT-2026-001_500000.00_20260425.xlsx`）触发 `UnicodeEncodeError: 'latin-1' codec can't encode characters` —— Starlette/uvicorn 用 latin-1 编码响应头，原始 `Content-Disposition: attachment; filename="..."` 直接抛 500。改为 RFC 5987 双格式：ASCII 兜底 `filename="..."` + `filename*=UTF-8''<percent-encoded>`，前端 `generateScheduleDocument()` 优先解析 `filename*=`。
 - **PO 详情页"付款计划"看不到关联合同的付款排期**: v0.9.15 引入 `po_contract_links` (PO↔Contract M:N) 之后，`build_summary_for(po_id=...)` 仍只过滤 `PaymentSchedule.po_id == po.id`，挂在合同上的 schedules 不会出现在 PO 视图。修复为并集：`PaymentSchedule.po_id == po.id` ∪ `PaymentSchedule.contract_id IN (legacy Contract.po_id ∪ po_contract_links)`。
 
 ### 改进
@@ -35,7 +35,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### 修复
 
-- **付款表格智能填充端到端可用**：v0.9.16 重构 LLM 路由后，生产上传的实际 xlsx 模板（AcmeProcure 财务付款表）大量字段仍生成为空。本次的精准修复：
+- **付款表格智能填充端到端可用**：v0.9.16 重构 LLM 路由后，生产上传的实际 xlsx 模板（示例财务付款表）大量字段仍生成为空。本次的精准修复：
   - `build_context()` 增加 `actor` / `company` / `today` / `payment` 四组数据，API 层默认传入当前用户 + PO 所属公司；
   - `DETERMINISTIC_RESOLVERS` 新增 12 条正则覆盖：付款方公司全名 / 四字简称、收款方公司全称、付款金额、生成日期、当前用户全名、付款性质简称等真实模板里出现的占位符；
   - `_enrich_with_computed` 的日期处理根据「生成 / 当前 / 今天 / 本单据」关键字选择 `today.iso`，避免把生成日期错填为付款计划日期；
@@ -205,8 +205,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - 默认窗口：过去 3 个月 + 当前月 + 未来 3 个月（共 7 个月）
   - 当前月在柱状图和明细表中都做了视觉突出（浅棕背景、加粗月份文本、"本月" 标注）
   - 后端 `payment_forecast` 新增 `past_months` 和 `anchor`（YYYY-MM）参数；老调用（`months=6`）继续可用
-- **合同编号自定义 + ACME 自动建议**：
-  - 合同编号默认格式从 `CT-{YYYY}-{NNNN}` 改为 `ACME{YYYYMMDD}{SEQ}`，SEQ 三位数字每天从 001 起递增，例：`ACME20260425001`
+- **合同编号自定义 + 可配置前缀自动建议**：
+- 合同编号默认格式从 `CT-{YYYY}-{NNNN}` 改为 `<PREFIX>{YYYYMMDD}{SEQ}`，前缀由系统参数 `contract.number_prefix` 配置（默认 `ACME`），SEQ 三位数字每天从 001 起递增，例：`ACME20260425001`
   - 创建合同对话框把合同编号设为可编辑字段，默认填入后端建议值，右侧"重新生成"按钮可刷新建议
   - 后端新增 `GET /contracts/suggest-number` 端点；若用户输入的编号与已有记录冲突返回 409 `contract.number_duplicate`
 
@@ -223,7 +223,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### 测试 & 文档
 
-- 后端新增 3 条回归测试（ACME 格式前缀 / 自定义编号成功 / 重复编号 409 拒绝）
+- 后端新增 3 条回归测试（前缀格式 / 自定义编号成功 / 重复编号 409 拒绝）
 - 后端总测试数 305 → 308
 - **测试覆盖度评估**：
   - Backend: pytest 308 tests, **行覆盖 73%** (app/ 6842 行 / 1872 未覆盖)
