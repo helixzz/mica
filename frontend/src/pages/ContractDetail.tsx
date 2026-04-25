@@ -292,7 +292,7 @@ export function ContractDetailPage() {
             title={t('contract.scan_archive')}
             extra={
               <Upload
-                accept=".pdf,.ofd,.xml,.jpg,.jpeg,.png,.tiff"
+                accept=".pdf,.ofd,.xml,.jpg,.jpeg,.png,.tiff,.gif,.webp,.bmp,.xlsx,.xls,.docx,.doc,.csv,.txt,.zip"
                 beforeUpload={handleUpload}
                 showUploadList={false}
                 maxCount={1}

@@ -25,7 +25,18 @@ ALLOWED_CONTENT_TYPES = {
     "application/octet-stream",
     "image/jpeg",
     "image/png",
+    "image/gif",
+    "image/webp",
     "image/tiff",
+    "image/bmp",
+    "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+    "application/vnd.ms-excel",
+    "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+    "application/msword",
+    "text/csv",
+    "text/plain",
+    "application/zip",
+    "application/x-zip-compressed",
 }
 
 
