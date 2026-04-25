@@ -38,10 +38,39 @@ export function PRDetailPage() {
   const [pr, setPr] = useState<PurchaseRequisition | null>(null)
   const [suppliers, setSuppliers] = useState<Supplier[]>([])
   const [busy, setBusy] = useState(false)
+  const [downstream, setDownstream] = useState<{
+    purchase_orders: {
+      id: string
+      po_number: string
+      status: string
+      total_amount: string
+      currency: string
+      supplier_name: string | null
+    }[]
+    contracts: {
+      id: string
+      contract_number: string
+      title: string
+      status: string
+      total_amount: string
+      currency: string
+      po_id: string
+      supplier_name: string | null
+    }[]
+  }>({ purchase_orders: [], contracts: [] })
 
   const load = () => {
     if (!id) return
     void api.getPR(id).then(setPr)
+    void api
+      .getPRDownstream(id)
+      .then((d) =>
+        setDownstream({
+          purchase_orders: d.purchase_orders,
+          contracts: d.contracts,
+        }),
+      )
+      .catch(() => setDownstream({ purchase_orders: [], contracts: [] }))
   }
 
   useEffect(() => {
@@ -222,6 +251,119 @@ export function PRDetailPage() {
           ]}
         />
       </Card>
+
+      {(downstream.purchase_orders.length > 0 || downstream.contracts.length > 0) && (
+        <Card title={t('pr.related_records_title')}>
+          <Space direction="vertical" size="middle" style={{ width: '100%' }}>
+            {downstream.purchase_orders.length > 0 && (
+              <div>
+                <Typography.Text strong>{t('pr.related_pos_title')}</Typography.Text>
+                <Table
+                  size="small"
+                  rowKey="id"
+                  pagination={false}
+                  style={{ marginTop: 8 }}
+                  dataSource={downstream.purchase_orders}
+                  columns={[
+                    {
+                      title: t('field.po_number'),
+                      dataIndex: 'po_number',
+                      render: (v: string, r) => (
+                        <a onClick={() => navigate(`/purchase-orders/${r.id}`)}>{v}</a>
+                      ),
+                    },
+                    {
+                      title: t('field.status'),
+                      dataIndex: 'status',
+                      render: (v: string) => (
+                        <Tag>{t(`status.${v}` as 'status.confirmed')}</Tag>
+                      ),
+                    },
+                    {
+                      title: t('field.supplier'),
+                      dataIndex: 'supplier_name',
+                      render: (v: string | null) => v || '-',
+                    },
+                    {
+                      title: t('field.total_amount'),
+                      dataIndex: 'total_amount',
+                      align: 'right',
+                      render: (v: string, r) => fmtAmount(v, r.currency),
+                    },
+                    {
+                      title: '',
+                      key: 'action',
+                      width: 120,
+                      render: (_: unknown, r) => (
+                        <Button
+                          size="small"
+                          onClick={() => navigate(`/purchase-orders/${r.id}`)}
+                        >
+                          {t('pr.open_po')}
+                        </Button>
+                      ),
+                    },
+                  ]}
+                />
+              </div>
+            )}
+
+            {downstream.contracts.length > 0 && (
+              <div>
+                <Typography.Text strong>{t('pr.related_contracts_title')}</Typography.Text>
+                <Table
+                  size="small"
+                  rowKey="id"
+                  pagination={false}
+                  style={{ marginTop: 8 }}
+                  dataSource={downstream.contracts}
+                  columns={[
+                    {
+                      title: t('field.contract_number'),
+                      dataIndex: 'contract_number',
+                      render: (v: string, r) => (
+                        <a onClick={() => navigate(`/contracts/${r.id}`)}>{v}</a>
+                      ),
+                    },
+                    { title: t('field.title'), dataIndex: 'title' },
+                    {
+                      title: t('field.status'),
+                      dataIndex: 'status',
+                      render: (v: string) => (
+                        <Tag>{t(`status.${v}` as 'status.active')}</Tag>
+                      ),
+                    },
+                    {
+                      title: t('field.supplier'),
+                      dataIndex: 'supplier_name',
+                      render: (v: string | null) => v || '-',
+                    },
+                    {
+                      title: t('field.total_amount'),
+                      dataIndex: 'total_amount',
+                      align: 'right',
+                      render: (v: string, r) => fmtAmount(v, r.currency),
+                    },
+                    {
+                      title: '',
+                      key: 'action',
+                      width: 120,
+                      render: (_: unknown, r) => (
+                        <Button
+                          size="small"
+                          onClick={() => navigate(`/contracts/${r.id}`)}
+                        >
+                          {t('pr.open_contract')}
+                        </Button>
+                      ),
+                    },
+                  ]}
+                />
+              </div>
+            )}
+          </Space>
+        </Card>
+      )}
 
       {(canDecide || canSubmit || canSupplementQuote) && (
         <div className="mobile-action-bar" style={{

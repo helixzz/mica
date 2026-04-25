@@ -443,6 +443,11 @@
   },
   "pr": {
     "items_required": "Please add at least one item before submitting",
+    "related_records_title": "Related Records",
+    "related_pos_title": "Generated Purchase Orders",
+    "related_contracts_title": "Linked Contracts",
+    "open_po": "Open PO",
+    "open_contract": "Open Contract",
     "guide_title": "Fill in Purchase Request",
     "guide_title_field": "Title: briefly describe what you need",
     "guide_required_fields": "Company / Cost Center / Expense Type: required for finance",

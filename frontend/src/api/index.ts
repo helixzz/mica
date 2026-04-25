@@ -723,6 +723,54 @@ export const api = {
     const { data } = await client.get<PurchaseRequisition>(`/purchase-requisitions/${id}`)
     return data
   },
+  async getPRDownstream(id: string): Promise<{
+    purchase_orders: {
+      id: string
+      po_number: string
+      status: string
+      total_amount: string
+      currency: string
+      supplier_id: string | null
+      supplier_name: string | null
+      created_at: string | null
+    }[]
+    contracts: {
+      id: string
+      contract_number: string
+      title: string
+      status: string
+      total_amount: string
+      currency: string
+      po_id: string
+      supplier_id: string | null
+      supplier_name: string | null
+    }[]
+  }> {
+    const { data } = await client.get(`/purchase-requisitions/${id}/downstream`)
+    return data as {
+      purchase_orders: {
+        id: string
+        po_number: string
+        status: string
+        total_amount: string
+        currency: string
+        supplier_id: string | null
+        supplier_name: string | null
+        created_at: string | null
+      }[]
+      contracts: {
+        id: string
+        contract_number: string
+        title: string
+        status: string
+        total_amount: string
+        currency: string
+        po_id: string
+        supplier_id: string | null
+        supplier_name: string | null
+      }[]
+    }
+  },
   async createPR(payload: {
     title: string
     business_reason?: string

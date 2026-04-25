@@ -443,6 +443,11 @@
   },
   "pr": {
     "items_required": "提交审批前请至少填写一项物料",
+    "related_records_title": "关联记录",
+    "related_pos_title": "已生成的采购订单",
+    "related_contracts_title": "关联合同",
+    "open_po": "打开订单",
+    "open_contract": "打开合同",
     "guide_title": "填写采购需求",
     "guide_title_field": "标题：简要描述你需要采购什么",
     "guide_required_fields": "公司主体 / 成本中心 / 开支类型：必填，用于财务归属",

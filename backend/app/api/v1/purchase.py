@@ -56,6 +56,15 @@ async def get_pr(
     return PROut.model_validate(pr)
 
 
+@router.get("/purchase-requisitions/{pr_id}/downstream", tags=["purchase"])
+async def get_pr_downstream(
+    pr_id: UUID,
+    user: CurrentUser,
+    db: Annotated[AsyncSession, Depends(get_db)],
+):
+    return await svc.get_pr_downstream(db, user, pr_id)
+
+
 @router.patch("/purchase-requisitions/{pr_id}", response_model=PROut, tags=["purchase"])
 async def update_pr(
     pr_id: UUID,

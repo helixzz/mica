@@ -421,6 +421,28 @@ async def test_convert_pr_to_po_creates_order_from_approved_pr(seeded_db_session
     assert refreshed_pr.status == PRStatus.CONVERTED.value
 
 
+async def test_get_pr_downstream_returns_generated_po_and_primary_contract(seeded_db_session):
+    from app.services import flow as flow_svc
+
+    db = seeded_db_session
+    actor = await _get_user(db, "alice")
+    supplier = await _get_supplier(db)
+    pr = await _create_pr(db, actor, supplier.id)
+    await _mark_pr_approved(db, pr)
+    po = await purchase_svc.convert_pr_to_po(db, actor, pr.id)
+    contract = await flow_svc.create_contract(
+        db, actor, po.id, title="Downstream link", total_amount=Decimal("100")
+    )
+
+    data = await purchase_svc.get_pr_downstream(db, actor, pr.id)
+
+    po_ids = [p["id"] for p in data["purchase_orders"]]
+    contract_ids = [c["id"] for c in data["contracts"]]
+    assert str(po.id) in po_ids
+    assert str(contract.id) in contract_ids
+    assert data["contracts"][0]["po_id"] == str(po.id)
+
+
 async def test_convert_pr_to_po_requires_approved_pr(seeded_db_session):
     db = seeded_db_session
     actor = await _get_user(db, "alice")

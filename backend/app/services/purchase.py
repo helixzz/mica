@@ -12,7 +12,9 @@ from sqlalchemy.orm import selectinload
 
 from app.models import (
     AuditLog,
+    Contract,
     JSONValue,
+    POContractLink,
     POItem,
     POStatus,
     PRItem,
@@ -20,6 +22,7 @@ from app.models import (
     PurchaseOrder,
     PurchaseRequisition,
     SKUPriceRecord,
+    Supplier,
     User,
     UserRole,
 )
@@ -400,6 +403,108 @@ async def get_pr(db: AsyncSession, actor: User, pr_id: UUID) -> PurchaseRequisit
     ):
         raise HTTPException(403, "insufficient_role")
     return pr
+
+
+async def get_pr_downstream(
+    db: AsyncSession, actor: User, pr_id: UUID
+) -> dict[str, list[dict[str, JSONValue]]]:
+    pr = await get_pr(db, actor, pr_id)
+
+    pos = list(
+        (
+            await db.execute(
+                select(PurchaseOrder)
+                .where(PurchaseOrder.pr_id == pr.id)
+                .order_by(PurchaseOrder.created_at.desc())
+            )
+        )
+        .scalars()
+        .all()
+    )
+    po_ids = [p.id for p in pos]
+
+    contracts: list[Contract] = []
+    if po_ids:
+        primary = (
+            (
+                await db.execute(
+                    select(Contract)
+                    .where(Contract.po_id.in_(po_ids))
+                    .options(selectinload(Contract.supplier))
+                )
+            )
+            .scalars()
+            .all()
+        )
+        contracts.extend(primary)
+
+        linked_contract_ids = list(
+            (
+                await db.execute(
+                    select(POContractLink.contract_id).where(POContractLink.po_id.in_(po_ids))
+                )
+            )
+            .scalars()
+            .all()
+        )
+        if linked_contract_ids:
+            known = {c.id for c in contracts}
+            extra_ids = [cid for cid in linked_contract_ids if cid not in known]
+            if extra_ids:
+                extra = (
+                    (
+                        await db.execute(
+                            select(Contract)
+                            .where(Contract.id.in_(extra_ids))
+                            .options(selectinload(Contract.supplier))
+                        )
+                    )
+                    .scalars()
+                    .all()
+                )
+                contracts.extend(extra)
+
+    supplier_ids = {p.supplier_id for p in pos}
+    supplier_ids.update(c.supplier_id for c in contracts)
+    supplier_ids.discard(None)  # type: ignore[arg-type]
+    supplier_map: dict[UUID, str] = {}
+    if supplier_ids:
+        rows = (
+            (await db.execute(select(Supplier).where(Supplier.id.in_(supplier_ids))))
+            .scalars()
+            .all()
+        )
+        supplier_map = {s.id: s.name for s in rows}
+
+    return {
+        "purchase_orders": [
+            {
+                "id": str(p.id),
+                "po_number": p.po_number,
+                "status": p.status,
+                "total_amount": str(p.total_amount),
+                "currency": p.currency,
+                "supplier_id": str(p.supplier_id) if p.supplier_id else None,
+                "supplier_name": supplier_map.get(p.supplier_id) if p.supplier_id else None,
+                "created_at": p.created_at.isoformat() if p.created_at else None,
+            }
+            for p in pos
+        ],
+        "contracts": [
+            {
+                "id": str(c.id),
+                "contract_number": c.contract_number,
+                "title": c.title,
+                "status": c.status,
+                "total_amount": str(c.total_amount),
+                "currency": c.currency,
+                "po_id": str(c.po_id),
+                "supplier_id": str(c.supplier_id) if c.supplier_id else None,
+                "supplier_name": supplier_map.get(c.supplier_id) if c.supplier_id else None,
+            }
+            for c in contracts
+        ],
+    }
 
 
 async def list_pos(db: AsyncSession, actor: User) -> list[PurchaseOrder]:
