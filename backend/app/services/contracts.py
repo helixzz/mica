@@ -237,15 +237,9 @@ def to_dict(cd: ContractDocument, d: Document) -> dict[str, object]:
 
 
 def contract_snapshot(contract: Contract) -> dict[str, object]:
-    linked_po_ids = [str(contract.po_id)]
-    for link in getattr(contract, "po_links", []) or []:
-        po_id = str(link.po_id)
-        if po_id not in linked_po_ids:
-            linked_po_ids.append(po_id)
     return {
         "contract_number": contract.contract_number,
         "po_id": str(contract.po_id),
-        "linked_po_ids": linked_po_ids,
         "supplier_id": str(contract.supplier_id),
         "title": contract.title,
         "current_version": contract.current_version,

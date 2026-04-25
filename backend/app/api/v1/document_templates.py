@@ -157,7 +157,9 @@ async def upload_document_template(
         content_type=(
             file.content_type
             or (
-                _XLSX_CONTENT_TYPE if file.filename.lower().endswith(".xlsx") else _DOCX_CONTENT_TYPE
+                _XLSX_CONTENT_TYPE
+                if file.filename.lower().endswith(".xlsx")
+                else _DOCX_CONTENT_TYPE
             )
         ),
         file_size=len(content),

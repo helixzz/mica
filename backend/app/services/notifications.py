@@ -17,6 +17,7 @@ from app.models import (
     NotificationCategory,
     NotificationChannel,
     NotificationSubscription,
+    POContractLink,
     PurchaseOrder,
     SKUPriceAnomaly,
     User,
@@ -336,10 +337,19 @@ async def notify_expiring_contracts(
     scanned = len(contracts)
     for contract in contracts:
         linked_po_ids = [str(contract.po_id)]
-        for link in getattr(contract, "po_links", []) or []:
-            po_id = str(link.po_id)
-            if po_id not in linked_po_ids:
-                linked_po_ids.append(po_id)
+        link_rows = (
+            (
+                await session.execute(
+                    select(POContractLink.po_id).where(POContractLink.contract_id == contract.id)
+                )
+            )
+            .scalars()
+            .all()
+        )
+        for link_po_id in link_rows:
+            linked_po_id = str(link_po_id)
+            if linked_po_id not in linked_po_ids:
+                linked_po_ids.append(linked_po_id)
         meta = {
             "contract_number": contract.contract_number,
             "expiry_date": contract.expiry_date.isoformat() if contract.expiry_date else None,

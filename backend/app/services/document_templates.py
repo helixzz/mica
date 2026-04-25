@@ -491,7 +491,7 @@ async def generate_payment_document(
             .scalars()
             .all()
         )
-        contract_ids = [po_contract_id for po_contract_id in linked_contract_ids]
+        contract_ids = list(linked_contract_ids)
         if not contract_ids:
             contract = (
                 await db.execute(select(Contract).where(Contract.po_id == po.id).limit(1))
