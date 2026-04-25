@@ -7,6 +7,32 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [v0.9.19] — 2026-04-25
+
+### 改进
+
+- **合同付款计划可编辑**：合同详情页的付款计划 tab 新增编辑按钮，支持修改期次的金额 / 日期 / 触发方式（已执行或部分执行的期次不可编辑）。
+- **i18n 缺失补齐**：合同列表 / 付款计划 tab 表头的「操作」列等多个 `field.*` key 缺失导致渲染原 key 字符串。本次集中补齐两个 locale 中所有引用但未定义的 key。
+- **合同编号前缀改为系统参数 `contract.number_prefix`**：原来硬编码的租户专用前缀已删除，每个部署可在 Admin → 系统参数 中设置自己的前缀；留空则自动按 `ACMEYYYYMMDD` 兜底。生产升级后管理员需手动把前缀设回想要的值（一次性操作）。
+- **租户名 denylist CI 检查**：新增 `Tenant-name denylist` GitHub Actions job，每次 push / PR 扫描仓库工作树，发现历史上出现过的租户专用标识符则中断构建。模式经过字符类 / UTF-8 hex 混淆，防止扫描器误命中自身。
+- **历史重写**：使用 `git filter-repo` 把所有历史 commit / tag 中出现的租户专有名词替换为中性占位符（`ACME` / `Acme Procurement Co.` / `示例公司`）。所有 SHA 已全量改变；旧的 fork / clone 需要重新拉取。
+- **GitHub Release notes 同步更新**：v0.9.13 / v0.9.17 / v0.9.18 的发布说明已重新编辑，移除特定租户引用。
+
+### 数据迁移
+
+- `0026_contract_number_prefix_param`：在 system_parameters 表中插入 `contract.number_prefix`（空字符串默认）。
+
+### 测试
+
+- `test_flow.py` 新增 `test_suggest_contract_number_uses_default_acme_prefix_when_unset` + `test_suggest_contract_number_honors_system_parameter_prefix`，锁定双路径（默认 / 配置覆盖）。
+- 容器内 `pytest tests/` **367 passed**，CI 全绿。
+
+### 元数据
+
+- 版本对齐 `0.9.19`：`backend/pyproject.toml`、`frontend/package.json`、`backend/app/config.py`、`deploy/.env.example`、`AGENTS.md`、`README` 徽章。
+
+---
+
 ## [v0.9.18] — 2026-04-25
 
 ### 修复（生产 hotfix）
