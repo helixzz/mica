@@ -1139,8 +1139,17 @@ export const api = {
     const disposition = response.headers['content-disposition'] as string | undefined
     let filename = 'generated.docx'
     if (disposition) {
-      const match = disposition.match(/filename="?([^";]+)"?/i)
-      if (match) filename = decodeURIComponent(match[1])
+      const utf8Match = disposition.match(/filename\*=UTF-8''([^;]+)/i)
+      if (utf8Match) {
+        try {
+          filename = decodeURIComponent(utf8Match[1])
+        } catch {
+          filename = utf8Match[1]
+        }
+      } else {
+        const match = disposition.match(/filename="?([^";]+)"?/i)
+        if (match) filename = decodeURIComponent(match[1])
+      }
     }
     return { blob: response.data as Blob, filename }
   },

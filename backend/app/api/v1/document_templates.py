@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import uuid
 from typing import Annotated
+from urllib.parse import quote
 from uuid import UUID
 
 from fastapi import APIRouter, Depends, File, Form, HTTPException, UploadFile
@@ -20,6 +21,19 @@ router = APIRouter()
 
 _DOCX_CONTENT_TYPE = "application/vnd.openxmlformats-officedocument.wordprocessingml.document"
 _XLSX_CONTENT_TYPE = "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+
+
+def _content_disposition(filename: str) -> str:
+    """Build an RFC 6266 Content-Disposition header that supports non-ASCII filenames.
+
+    Starlette/uvicorn encode response headers as latin-1, so a raw Chinese
+    ``filename="..."`` raises UnicodeEncodeError on send. We provide an ASCII
+    fallback in ``filename=`` plus an RFC 5987 ``filename*=UTF-8''<pct>`` that
+    every modern browser prefers.
+    """
+    ascii_fallback = filename.encode("ascii", "ignore").decode("ascii") or "download"
+    quoted = quote(filename, safe="")
+    return f"attachment; filename=\"{ascii_fallback}\"; filename*=UTF-8''{quoted}"
 
 
 class DocumentTemplateOut(BaseModel):
@@ -229,7 +243,7 @@ async def generate_schedule_document(
         content=content,
         media_type=media_type,
         headers={
-            "Content-Disposition": f'attachment; filename="{filename}"',
+            "Content-Disposition": _content_disposition(filename),
             "Content-Length": str(len(content)),
         },
     )
