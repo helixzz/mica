@@ -7,6 +7,35 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [v0.9.16] — 2026-04-25
+
+### 新增
+
+- **付款表格模板占位符改为 LLM 优先**：
+  - 之前是硬编码正则匹配，[] 内自然语言说明永远到不了 LLM。
+  - 现在按占位符分类路由：文件名 / 银行账号+税号 **始终** 走 deterministic；短 canonical key（PO编号 / 合同编号 / 付款期次）默认 deterministic，仅 miss 时回退 LLM；含中文标点或长文本的自然语言占位符 LLM 优先，deterministic 兜底。
+  - 日期格式化 + 大写金额的 `_enrich_with_computed` 作为最终权威步骤，覆盖 LLM 输出避免模型幻觉。
+  - 新增 seed：`AIFeatureRouting(feature_code=document_generation, enabled=False)`，管理员在 Admin 控制台一键启用。
+- **仪表盘月度付款追踪补齐计划金额盲区**：
+  - 之前只统计 `planned_date` 落在当前窗口的 PaymentSchedule；挂在合同下、但未排期（`planned_date is null`）或日期落在窗口外的计划金额被隐藏，导致“只见已付不见计划”。
+  - 后端 `payment_forecast` 新增 `undated_planned` 与 `out_of_window_planned` 两个聚合字段。
+  - 前端 PaymentTracker 只在两者 > 0 时额外渲染两个 Statistic 块：**未排期计划金额** / **窗口外计划支出**。
+
+### 修复
+
+- **交货批次 / 合同扫描件附件支持 Office 文档**：之前 `ALLOWED_CONTENT_TYPES` 仅白名单 PDF / OFD / XML / image，上传 `.xlsx` 返回 HTTP 415。
+  - 放宽后端白名单：新增 xlsx / xls / docx / doc / csv / txt / zip / gif / webp / bmp。
+  - 同步扩宽 ContractDetail 扫描件归档 `<Upload accept>` 过滤器；Shipments 页面原本就没有 accept 过滤。
+  - 发票上传入口保持窄白名单不变（发票抽取器只支持 PDF / OFD / XML / image）。
+
+### 测试 & 元数据
+
+- 后端新增 5 条占位符路由契约测试（自然语言分类、敏感字段拦截、文件名路径跳过 LLM、LLM 空响应回退、computed 覆盖）。
+- 容器化运行：`test_document_templates.py` 29 passed；`test_documents.py + test_payment_schedule.py` 30 passed。
+- 版本号对齐到 0.9.16：`backend/pyproject.toml`、`frontend/package.json`、`backend/app/config.py`、`deploy/.env.example`、`AGENTS.md`、`README` 徽章。
+
+---
+
 ## [v0.9.15] — 2026-04-25
 
 ### 新增
