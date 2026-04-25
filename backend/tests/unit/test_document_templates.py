@@ -234,12 +234,14 @@ def test_resolve_deterministic_real_world_finance_form_placeholders():
 
 def test_resolve_deterministic_payment_narrative_handles_long_descriptions():
     context = _sample_context()
-    assert svc.resolve_placeholder_deterministic(
-        "付款的极简概括，例如服务费、货款", context
-    ) == "Annual Hardware"
-    assert svc.resolve_placeholder_deterministic(
-        "采购付款的性质简称（例如货款、服务费）", context
-    ) == "Annual Hardware"
+    assert (
+        svc.resolve_placeholder_deterministic("付款的极简概括，例如服务费、货款", context)
+        == "Annual Hardware"
+    )
+    assert (
+        svc.resolve_placeholder_deterministic("采购付款的性质简称（例如货款、服务费）", context)
+        == "Annual Hardware"
+    )
 
 
 def test_enrich_computed_today_date_uses_today_not_schedule_date():
@@ -398,7 +400,7 @@ async def test_resolve_all_falls_back_when_llm_returns_empty(monkeypatch):
 @pytest.mark.asyncio
 async def test_resolve_all_computed_overrides_llm_for_dates_and_upper_amount(monkeypatch):
     async def _llm(_db, placeholders, _context):
-        return {p: "WRONG" for p in placeholders}
+        return dict.fromkeys(placeholders, "WRONG")
 
     monkeypatch.setattr(svc, "resolve_placeholders_with_llm", _llm)
 
@@ -415,7 +417,15 @@ async def test_resolve_all_computed_overrides_llm_for_dates_and_upper_amount(mon
 
 @pytest.mark.asyncio
 async def test_generate_payment_document_uses_single_linked_contract_for_po_schedule(monkeypatch):
-    po = SimpleNamespace(id=uuid4(), supplier_id=uuid4(), company_id=None, po_number="PO-1", currency="CNY", total_amount="100", status="confirmed")
+    po = SimpleNamespace(
+        id=uuid4(),
+        supplier_id=uuid4(),
+        company_id=None,
+        po_number="PO-1",
+        currency="CNY",
+        total_amount="100",
+        status="confirmed",
+    )
     contract = SimpleNamespace(
         id=uuid4(),
         po=po,
@@ -500,7 +510,15 @@ async def test_generate_payment_document_uses_single_linked_contract_for_po_sche
 
 @pytest.mark.asyncio
 async def test_generate_payment_document_rejects_ambiguous_multiple_linked_contracts(monkeypatch):
-    po = SimpleNamespace(id=uuid4(), supplier_id=uuid4(), company_id=None, po_number="PO-1", currency="CNY", total_amount="100", status="confirmed")
+    po = SimpleNamespace(
+        id=uuid4(),
+        supplier_id=uuid4(),
+        company_id=None,
+        po_number="PO-1",
+        currency="CNY",
+        total_amount="100",
+        status="confirmed",
+    )
     schedule = SimpleNamespace(
         id=uuid4(),
         contract=None,
