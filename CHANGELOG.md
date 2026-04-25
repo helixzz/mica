@@ -7,6 +7,30 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [v0.9.18] — 2026-04-25
+
+### 修复（生产 hotfix）
+
+- **生成付款表 500 错误**: 含中文的文件名（如 `AcmeProcure_供应商_货款_HT-2026-001_500000.00_20260425.xlsx`）触发 `UnicodeEncodeError: 'latin-1' codec can't encode characters` —— Starlette/uvicorn 用 latin-1 编码响应头，原始 `Content-Disposition: attachment; filename="..."` 直接抛 500。改为 RFC 5987 双格式：ASCII 兜底 `filename="..."` + `filename*=UTF-8''<percent-encoded>`，前端 `generateScheduleDocument()` 优先解析 `filename*=`。
+- **PO 详情页"付款计划"看不到关联合同的付款排期**: v0.9.15 引入 `po_contract_links` (PO↔Contract M:N) 之后，`build_summary_for(po_id=...)` 仍只过滤 `PaymentSchedule.po_id == po.id`，挂在合同上的 schedules 不会出现在 PO 视图。修复为并集：`PaymentSchedule.po_id == po.id` ∪ `PaymentSchedule.contract_id IN (legacy Contract.po_id ∪ po_contract_links)`。
+
+### 改进
+
+- **Admin → 模型路由**: 启用列从只读 Tag 改为可交互 Switch；启用未开启的 LLM 路由会先弹 Popconfirm 提醒"将调用大模型 API、可能产生 token 费用"，禁用直接生效。这意味着管理员现在可以一键打开 `document_generation` 让真正的 LLM 接管尚未被 deterministic 覆盖的占位符（v0.9.17 默认 enabled=false 因此始终未触发）。
+
+### 测试
+
+- `tests/unit/test_payment_schedule.py` 新增 2 条回归：`test_po_summary_includes_legacy_linked_contract_schedule`、`test_po_summary_includes_m2m_linked_contract_schedule`。
+- 新增 `tests/unit/test_content_disposition.py` 3 条契约测试，锁定 ASCII / 中文 / 纯非 ASCII 文件名都能 latin-1 编码通过。
+- 容器内 `pytest tests/` **363 passed**。
+- 前端 `tsc --noEmit` 与 `vite build` 全绿。
+
+### 元数据
+
+- 版本对齐 `0.9.18`：`backend/pyproject.toml`、`frontend/package.json`、`backend/app/config.py`、`deploy/.env.example`、`AGENTS.md`、`README` 徽章。
+
+---
+
 ## [v0.9.17] — 2026-04-25
 
 ### 修复
