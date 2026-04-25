@@ -386,7 +386,7 @@ async def payment_forecast(
         )
         planned_sched = Decimal(str((await db.execute(planned_from_schedule)).scalar()))
         planned_pending = Decimal(str((await db.execute(planned_from_pending_records)).scalar()))
-        planned = planned_sched + planned_pending
+        planned_forward = planned_sched + planned_pending
 
         paid_q = select(func.coalesce(func.sum(PaymentRecord.amount), 0)).where(
             PaymentRecord.payment_date >= month_start,
@@ -395,12 +395,17 @@ async def payment_forecast(
         )
         paid = Decimal(str((await db.execute(paid_q)).scalar()))
 
+        planned = planned_forward if planned_forward >= paid else paid
+        remaining = planned - paid
+        if remaining < 0:
+            remaining = Decimal("0")
+
         month_buckets.append(
             {
                 "month": f"{y}-{m:02d}",
                 "planned": planned,
                 "paid": paid,
-                "remaining": planned - paid,
+                "remaining": remaining,
             }
         )
 

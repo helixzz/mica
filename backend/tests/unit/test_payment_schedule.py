@@ -514,3 +514,40 @@ async def test_payment_forecast_includes_pending_records_in_planned(seeded_db_se
 
     grand_planned = sum(Decimal(str(m["planned"])) for m in result["months"])
     assert grand_planned >= Decimal("1200000")
+
+
+async def test_payment_forecast_remaining_never_negative(seeded_db_session):
+    """Stand-alone CONFIRMED payments without a matching schedule must not push
+    the month bucket's remaining below zero. The user's mental model: any
+    confirmed payment is by definition within plan, so remaining should clamp
+    to 0 and planned should at least equal paid for that month.
+    """
+    from datetime import date as _date
+
+    from app.models import PaymentRecord, PaymentStatus
+
+    po = await _ensure_standalone_po(seeded_db_session)
+    pay_date = _date.today().replace(day=15)
+
+    seeded_db_session.add(
+        PaymentRecord(
+            id=new_uuid(),
+            payment_number=f"PAY-RETRO-{uuid4().hex[:6]}",
+            po_id=po.id,
+            contract_id=None,
+            installment_no=1,
+            amount=Decimal("4500000"),
+            currency="CNY",
+            due_date=pay_date,
+            payment_date=pay_date,
+            payment_method="bank_transfer",
+            status=PaymentStatus.CONFIRMED.value,
+        )
+    )
+    await seeded_db_session.flush()
+
+    result = await svc.payment_forecast(seeded_db_session, months=1)
+
+    bucket = result["months"][0]
+    assert Decimal(str(bucket["remaining"])) == Decimal("0")
+    assert Decimal(str(bucket["planned"])) >= Decimal(str(bucket["paid"]))
