@@ -252,6 +252,13 @@ async def _seed_ai_if_missing(db: AsyncSession) -> None:
                 max_tokens=1500,
                 enabled=True,
             ),
+            AIFeatureRouting(
+                feature_code="document_generation",
+                primary_model_id=demo_model.id,
+                temperature=Decimal("0.00"),
+                max_tokens=1200,
+                enabled=False,
+            ),
         ]
     )
     await db.commit()

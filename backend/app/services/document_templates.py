@@ -350,30 +350,89 @@ def _enrich_with_computed(
     return None
 
 
+_NL_HINT_SUBSTRINGS = ("请", "根据", "基于", "写成", "改写", "改成", "描述", "说明", "生成", "总结")
+_NL_PUNCT_CHARS = "，。；：？！（）、 "
+_NL_MIN_LENGTH = 12
+
+
+def _looks_like_natural_language(description: str) -> bool:
+    """Return True if the placeholder is an instruction/description, not a short canonical key."""
+    text = description.strip()
+    if len(text) >= _NL_MIN_LENGTH:
+        return True
+    for token in _NL_HINT_SUBSTRINGS:
+        if token in text:
+            return True
+    for ch in _NL_PUNCT_CHARS:
+        if ch in text:
+            return True
+    return False
+
+
+_SENSITIVE_KEYWORDS = ("银行账号", "账号", "开户行", "税号", "tax", "bank", "account")
+
+
+def _is_sensitive_description(description: str) -> bool:
+    """Sensitive placeholders (bank account / tax id) must never be filled by the LLM."""
+    lower = description.lower()
+    return any(tok.lower() in lower for tok in _SENSITIVE_KEYWORDS)
+
+
 async def resolve_all_placeholders(
     db: AsyncSession,
     placeholders: list[str],
     context: dict[str, Any],
+    *,
+    filename_placeholders: set[str] | None = None,
 ) -> dict[str, str]:
+    """Resolve placeholders by routing class.
+
+    Routing contract (tests enforce this):
+    - filename placeholders → deterministic + computed only (never LLM)
+    - sensitive placeholders (bank / tax) → deterministic only
+    - short canonical placeholders → deterministic; LLM as fallback if no hit
+    - natural-language placeholders → LLM is primary; deterministic is fallback
+    - computed enrichment (dates / 大写金额) runs last and overrides everything
+    """
+
+    filename_set: set[str] = set(filename_placeholders or ())
     resolved: dict[str, str] = {}
-    deterministic: list[str] = []
-    unresolved: list[str] = []
+    deterministic_hits: dict[str, str] = {}
+    llm_candidates: list[str] = []
 
     for p in placeholders:
         value = resolve_placeholder_deterministic(p, context)
         if value is not None:
-            resolved[p] = value
-            deterministic.append(p)
-        else:
-            unresolved.append(p)
+            deterministic_hits[p] = value
 
-    if unresolved:
-        llm_results = await resolve_placeholders_with_llm(db, unresolved, context)
-        for p in unresolved:
-            resolved[p] = llm_results.get(p, "")
+        if p in filename_set:
+            resolved[p] = value if value is not None else ""
+            continue
+
+        if _is_sensitive_description(p):
+            resolved[p] = value if value is not None else ""
+            continue
+
+        if _looks_like_natural_language(p):
+            llm_candidates.append(p)
+            continue
+
+        if value is not None:
+            resolved[p] = value
+        else:
+            llm_candidates.append(p)
+
+    if llm_candidates:
+        llm_results = await resolve_placeholders_with_llm(db, llm_candidates, context)
+        for p in llm_candidates:
+            llm_value = llm_results.get(p, "")
+            if llm_value:
+                resolved[p] = llm_value
+            else:
+                resolved[p] = deterministic_hits.get(p, "")
 
     for p in placeholders:
-        enriched = _enrich_with_computed(p, context, resolved.get(p) or None)
+        enriched = _enrich_with_computed(p, context, None)
         if enriched is not None:
             resolved[p] = enriched
 
@@ -520,8 +579,14 @@ async def generate_payment_document(
     original_filename = template.template_document.original_filename.lower()
 
     context = build_context(po, contract, supplier, schedule)
+    filename_only = extract_placeholders(None, template.filename_template)
     placeholders = extract_placeholders(file_bytes, template.filename_template)
-    mapping = await resolve_all_placeholders(db, placeholders, context)
+    mapping = await resolve_all_placeholders(
+        db,
+        placeholders,
+        context,
+        filename_placeholders=set(filename_only),
+    )
 
     if original_filename.endswith(".xlsx"):
         generated_bytes = substitute_xlsx(file_bytes, mapping)

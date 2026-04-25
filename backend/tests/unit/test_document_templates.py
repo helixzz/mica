@@ -246,6 +246,108 @@ async def test_resolve_all_falls_back_gracefully_without_llm(monkeypatch):
     assert mapping["unknown_field"] == ""
 
 
+def test_natural_language_classifier_detects_instruction_text():
+    assert svc._looks_like_natural_language("请根据合同条款写一句开票抬头") is True
+    assert svc._looks_like_natural_language("基于合同备注总结付款条件") is True
+    assert svc._looks_like_natural_language("供应商，开户银行（建议）") is True
+    assert svc._looks_like_natural_language("PO编号") is False
+    assert svc._looks_like_natural_language("合同编号") is False
+    assert svc._looks_like_natural_language("付款期次") is False
+
+
+def test_sensitive_description_blocks_llm():
+    assert svc._is_sensitive_description("银行账号") is True
+    assert svc._is_sensitive_description("收款单位开户行") is True
+    assert svc._is_sensitive_description("纳税人税号") is True
+    assert svc._is_sensitive_description("供应商名称") is False
+
+
+@pytest.mark.asyncio
+async def test_resolve_all_routes_natural_language_to_llm(monkeypatch):
+    seen: dict[str, list[str]] = {"placeholders": []}
+
+    async def _llm(_db, placeholders, _context):
+        seen["placeholders"] = list(placeholders)
+        return {p: f"LLM:{p}" for p in placeholders}
+
+    monkeypatch.setattr(svc, "resolve_placeholders_with_llm", _llm)
+
+    context = _sample_context()
+    nl_placeholder = "请根据合同重写为正式的开票抬头说明"
+    mapping = await svc.resolve_all_placeholders(
+        db=SimpleNamespace(),
+        placeholders=["PO编号", nl_placeholder, "银行账号"],
+        context=context,
+    )
+
+    assert nl_placeholder in seen["placeholders"]
+    assert "PO编号" not in seen["placeholders"]
+    assert "银行账号" not in seen["placeholders"]
+    assert mapping[nl_placeholder] == f"LLM:{nl_placeholder}"
+    assert mapping["PO编号"] == "PO-2026-0001"
+    assert mapping["银行账号"] == "6222 0800 1234 5678"
+
+
+@pytest.mark.asyncio
+async def test_resolve_all_filename_placeholders_skip_llm(monkeypatch):
+    called: dict[str, int] = {"count": 0}
+
+    async def _llm(_db, placeholders, _context):
+        called["count"] += 1
+        return {p: f"LLM:{p}" for p in placeholders}
+
+    monkeypatch.setattr(svc, "resolve_placeholders_with_llm", _llm)
+
+    context = _sample_context()
+    instruction = "请根据合同生成一段说明文字"
+    mapping = await svc.resolve_all_placeholders(
+        db=SimpleNamespace(),
+        placeholders=[instruction, "PO编号"],
+        context=context,
+        filename_placeholders={instruction, "PO编号"},
+    )
+
+    assert called["count"] == 0
+    assert mapping[instruction] == ""
+    assert mapping["PO编号"] == "PO-2026-0001"
+
+
+@pytest.mark.asyncio
+async def test_resolve_all_falls_back_when_llm_returns_empty(monkeypatch):
+    async def _llm(_db, _placeholders, _context):
+        return {}
+
+    monkeypatch.setattr(svc, "resolve_placeholders_with_llm", _llm)
+
+    context = _sample_context()
+    nl_placeholder = "请根据合同重写为正式的开票抬头说明"
+    mapping = await svc.resolve_all_placeholders(
+        db=SimpleNamespace(),
+        placeholders=[nl_placeholder],
+        context=context,
+    )
+
+    assert mapping[nl_placeholder] == ""
+
+
+@pytest.mark.asyncio
+async def test_resolve_all_computed_overrides_llm_for_dates_and_upper_amount(monkeypatch):
+    async def _llm(_db, placeholders, _context):
+        return {p: "WRONG" for p in placeholders}
+
+    monkeypatch.setattr(svc, "resolve_placeholders_with_llm", _llm)
+
+    context = _sample_context()
+    mapping = await svc.resolve_all_placeholders(
+        db=SimpleNamespace(),
+        placeholders=["付款日期YYYYMMDD", "本期付款金额(大写)"],
+        context=context,
+    )
+
+    assert mapping["付款日期YYYYMMDD"] == "20260425"
+    assert mapping["本期付款金额(大写)"] == "伍佰万元整"
+
+
 @pytest.mark.asyncio
 async def test_generate_payment_document_uses_single_linked_contract_for_po_schedule(monkeypatch):
     po = SimpleNamespace(id=uuid4(), supplier_id=uuid4(), po_number="PO-1", currency="CNY", total_amount="100", status="confirmed")
