@@ -17,6 +17,7 @@ from app.models import (
     PaymentRecord,
     PaymentSchedule,
     PaymentStatus,
+    POContractLink,
     PurchaseOrder,
     ScheduleItemStatus,
 )
@@ -86,6 +87,48 @@ def _parent_filter(parent: _Parent):
     return PaymentSchedule.po_id == parent.id
 
 
+async def _list_schedules_for_summary(db: AsyncSession, parent: _Parent) -> list[PaymentSchedule]:
+    """Return every PaymentSchedule that belongs to the parent.
+
+    For PO parents this is the union of (a) schedules attached directly to
+    the PO and (b) schedules attached to any contract linked to that PO,
+    either via ``Contract.po_id`` (legacy single-PO) or ``po_contract_links``
+    (M:N introduced in v0.9.15). Without this union the PO detail page
+    misses every payment installment that lives on its contracts.
+    """
+    if parent.kind == "contract":
+        result = await db.execute(
+            select(PaymentSchedule)
+            .where(PaymentSchedule.contract_id == parent.id)
+            .order_by(PaymentSchedule.installment_no)
+        )
+        return list(result.scalars().all())
+
+    linked_contract_ids = set(
+        (await db.execute(select(Contract.id).where(Contract.po_id == parent.id))).scalars().all()
+    )
+    linked_contract_ids.update(
+        (
+            await db.execute(
+                select(POContractLink.contract_id).where(POContractLink.po_id == parent.id)
+            )
+        )
+        .scalars()
+        .all()
+    )
+
+    conditions = [PaymentSchedule.po_id == parent.id]
+    if linked_contract_ids:
+        conditions.append(PaymentSchedule.contract_id.in_(linked_contract_ids))
+
+    from sqlalchemy import or_ as _or
+
+    result = await db.execute(
+        select(PaymentSchedule).where(_or(*conditions)).order_by(PaymentSchedule.installment_no)
+    )
+    return list(result.scalars().all())
+
+
 async def get_contract_with_schedules(db: AsyncSession, contract_id: UUID) -> Contract:
     result = await db.execute(
         select(Contract).where(Contract.id == contract_id).options(selectinload(Contract.schedules))
@@ -118,17 +161,7 @@ async def build_summary_for(
     po_id: UUID | None = None,
 ) -> dict:
     parent = await _resolve_parent(db, contract_id=contract_id, po_id=po_id)
-    items = list(
-        (
-            await db.execute(
-                select(PaymentSchedule)
-                .where(_parent_filter(parent))
-                .order_by(PaymentSchedule.installment_no)
-            )
-        )
-        .scalars()
-        .all()
-    )
+    items = await _list_schedules_for_summary(db, parent)
     planned_total = sum((s.planned_amount for s in items), Decimal("0"))
     paid_total = sum((s.actual_amount or Decimal("0") for s in items), Decimal("0"))
     return {

@@ -408,6 +408,62 @@ async def test_po_level_schedule_isolation_from_contract_schedules(seeded_db_ses
     assert {i.label for i in ct_items} == {"contract-only"}
 
 
+async def test_po_summary_includes_legacy_linked_contract_schedule(seeded_db_session):
+    db = seeded_db_session
+    contract = await _ensure_contract(db)
+    po_id = contract.po_id
+
+    await svc.replace_schedule(
+        db,
+        [
+            {
+                "installment_no": 1,
+                "label": "contract-installment-1",
+                "planned_amount": Decimal("20000"),
+            },
+            {
+                "installment_no": 2,
+                "label": "contract-installment-2",
+                "planned_amount": Decimal("28000"),
+            },
+        ],
+        contract_id=contract.id,
+    )
+
+    summary = await svc.build_summary_for(db, po_id=po_id)
+    labels = {i.label for i in summary["items"]}
+    assert "contract-installment-1" in labels
+    assert "contract-installment-2" in labels
+    assert summary["planned_total"] == Decimal("48000")
+
+
+async def test_po_summary_includes_m2m_linked_contract_schedule(seeded_db_session):
+    from app.models import POContractLink
+
+    db = seeded_db_session
+    po = await _ensure_standalone_po(db)
+    contract = await _ensure_contract(db)
+
+    db.add(POContractLink(po_id=po.id, contract_id=contract.id))
+    await db.flush()
+
+    await svc.replace_schedule(
+        db,
+        [{"installment_no": 1, "label": "linked-only", "planned_amount": Decimal("48000")}],
+        contract_id=contract.id,
+    )
+    await svc.replace_schedule(
+        db,
+        [{"installment_no": 1, "label": "po-direct", "planned_amount": Decimal("5000")}],
+        po_id=po.id,
+    )
+
+    summary = await svc.build_summary_for(db, po_id=po.id)
+    labels = {i.label for i in summary["items"]}
+    assert labels == {"linked-only", "po-direct"}
+    assert summary["planned_total"] == Decimal("53000")
+
+
 async def test_payment_schedule_requires_exactly_one_parent(seeded_db_session):
     from fastapi import HTTPException
 
