@@ -187,6 +187,33 @@ export function PaymentTracker({ title }: PaymentTrackerProps) {
             </Col>
           </Row>
 
+          {(Number(data.undated_planned) > 0 || Number(data.out_of_window_planned) > 0) && (
+            <Row gutter={16} style={{ marginBottom: 16 }}>
+              {Number(data.undated_planned) > 0 && (
+                <Col xs={12} md={6}>
+                  <Statistic
+                    title={t('dashboard.tracker_undated_planned')}
+                    value={Number(data.undated_planned)}
+                    prefix="¥"
+                    precision={2}
+                    valueStyle={{ color: PLANNED_COLOR }}
+                  />
+                </Col>
+              )}
+              {Number(data.out_of_window_planned) > 0 && (
+                <Col xs={12} md={6}>
+                  <Statistic
+                    title={t('dashboard.tracker_out_of_window_planned')}
+                    value={Number(data.out_of_window_planned)}
+                    prefix="¥"
+                    precision={2}
+                    valueStyle={{ color: PLANNED_COLOR }}
+                  />
+                </Col>
+              )}
+            </Row>
+          )}
+
           {data.months.length === 0 ||
           data.months.every((m) => Number(m.planned) === 0 && Number(m.paid) === 0) ? (
             <Empty description={t('dashboard.tracker_window_empty')} style={{ margin: '32px 0' }} />

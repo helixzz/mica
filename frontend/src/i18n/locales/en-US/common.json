@@ -275,6 +275,8 @@
     "tracker_window_planned": "Planned in Window",
     "tracker_window_paid": "Paid in Window",
     "tracker_window_remaining": "Remaining in Window",
+    "tracker_undated_planned": "Undated Planned Amount",
+    "tracker_out_of_window_planned": "Planned Outside Current Window",
     "tracker_window_empty": "No planned or actual payments in this window",
     "tracker_prev": "Previous",
     "tracker_next": "Next",

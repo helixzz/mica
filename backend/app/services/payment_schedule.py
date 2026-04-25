@@ -412,11 +412,41 @@ async def payment_forecast(
     )
     paid_to_date = Decimal(str((await db.execute(paid_to_date_q)).scalar()))
 
+    undated_planned_q = select(func.coalesce(func.sum(PaymentSchedule.planned_amount), 0)).where(
+        PaymentSchedule.planned_date.is_(None),
+        PaymentSchedule.status.in_(
+            (ScheduleItemStatus.PLANNED.value, ScheduleItemStatus.DUE.value)
+        ),
+    )
+    undated_planned = Decimal(str((await db.execute(undated_planned_q)).scalar()))
+
+    if month_buckets:
+        window_start = date.fromisoformat(f"{month_buckets[0]['month']}-01")
+        last_month_str = month_buckets[-1]["month"]
+        ly, lm = (int(x) for x in last_month_str.split("-"))
+        if lm == 12:
+            window_end = date(ly + 1, 1, 1)
+        else:
+            window_end = date(ly, lm + 1, 1)
+        out_of_window_q = select(func.coalesce(func.sum(PaymentSchedule.planned_amount), 0)).where(
+            PaymentSchedule.planned_date.isnot(None),
+            (PaymentSchedule.planned_date < window_start)
+            | (PaymentSchedule.planned_date >= window_end),
+            PaymentSchedule.status.in_(
+                (ScheduleItemStatus.PLANNED.value, ScheduleItemStatus.DUE.value)
+            ),
+        )
+        out_of_window_planned = Decimal(str((await db.execute(out_of_window_q)).scalar()))
+    else:
+        out_of_window_planned = Decimal("0")
+
     return {
         "months": month_buckets,
         "grand_planned": grand_planned,
         "grand_paid": grand_paid,
         "paid_to_date": paid_to_date,
+        "undated_planned": undated_planned,
+        "out_of_window_planned": out_of_window_planned,
     }
 
 

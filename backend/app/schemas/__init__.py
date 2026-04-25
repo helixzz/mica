@@ -995,3 +995,5 @@ class PaymentForecastOut(BaseModel):
     grand_planned: Decimal
     grand_paid: Decimal
     paid_to_date: Decimal = Decimal(0)
+    undated_planned: Decimal = Decimal(0)
+    out_of_window_planned: Decimal = Decimal(0)

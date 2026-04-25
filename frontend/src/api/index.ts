@@ -555,6 +555,8 @@ export interface PaymentForecast {
   grand_planned: string
   grand_paid: string
   paid_to_date: string
+  undated_planned: string
+  out_of_window_planned: string
 }
 
 export interface ClassificationItem {
