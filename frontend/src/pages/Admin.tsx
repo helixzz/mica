@@ -74,7 +74,7 @@ export function AdminPage() {
           { key: 'system', label: t('admin.system_info'), children: <SystemInfoPanel /> },
           { key: 'companies', label: t('admin.companies'), children: <CompaniesTab /> },
           { key: 'departments', label: t('admin.departments'), children: <DepartmentsTab /> },
-          { key: 'system_params', label: t('admin.system_params'), children: <SystemParamsTab /> },
+          { key: 'system_params', label: t('admin.system_params.tab_label'), children: <SystemParamsTab /> },
           { key: 'approval_rules', label: t('admin.approval_rules'), children: <ApprovalRulesTab /> },
           { key: 'classification', label: t('admin.classification'), children: <ClassificationTab /> },
           { key: 'document_templates', label: t('admin.document_templates'), children: <DocumentTemplatesPanel /> },
