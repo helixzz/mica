@@ -464,6 +464,58 @@ async def test_po_summary_includes_m2m_linked_contract_schedule(seeded_db_sessio
     assert summary["planned_total"] == Decimal("53000")
 
 
+async def test_po_scoped_update_reaches_legacy_linked_contract_installment(seeded_db_session):
+    db = seeded_db_session
+    contract = await _ensure_contract(db)
+    po_id = contract.po_id
+
+    await svc.replace_schedule(
+        db,
+        [{"installment_no": 2, "label": "original", "planned_amount": Decimal("48000")}],
+        contract_id=contract.id,
+    )
+
+    updated = await svc.update_schedule_item(
+        db,
+        installment_no=2,
+        updates={"label": "updated-via-po", "planned_amount": Decimal("60000")},
+        po_id=po_id,
+    )
+
+    assert updated.label == "updated-via-po"
+    assert updated.planned_amount == Decimal("60000")
+    assert updated.contract_id == contract.id
+
+
+async def test_po_scoped_delete_reaches_m2m_linked_contract_installment(seeded_db_session):
+    from app.models import PaymentSchedule, POContractLink
+
+    db = seeded_db_session
+    po = await _ensure_standalone_po(db)
+    contract = await _ensure_contract(db)
+    db.add(POContractLink(po_id=po.id, contract_id=contract.id))
+    await db.flush()
+
+    await svc.replace_schedule(
+        db,
+        [{"installment_no": 1, "label": "to-delete", "planned_amount": Decimal("48000")}],
+        contract_id=contract.id,
+    )
+
+    await svc.delete_schedule_item(db, installment_no=1, po_id=po.id)
+
+    remaining = (
+        (
+            await db.execute(
+                select(PaymentSchedule).where(PaymentSchedule.contract_id == contract.id)
+            )
+        )
+        .scalars()
+        .all()
+    )
+    assert remaining == []
+
+
 async def test_payment_schedule_requires_exactly_one_parent(seeded_db_session):
     from fastapi import HTTPException
 

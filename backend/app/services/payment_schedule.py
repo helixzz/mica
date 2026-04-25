@@ -129,6 +129,23 @@ async def _list_schedules_for_summary(db: AsyncSession, parent: _Parent) -> list
     return list(result.scalars().all())
 
 
+async def _find_schedule_item(
+    db: AsyncSession, parent: _Parent, installment_no: int
+) -> PaymentSchedule | None:
+    """Locate one installment within the parent's full schedule union.
+
+    Mirrors ``_list_schedules_for_summary`` so PO-scoped writes (update /
+    delete / execute) reach installments that live on a linked contract.
+    Without this, v0.9.18's read-side union created a UI affordance the
+    write-side endpoints couldn't honor (404 schedule_item.not_found).
+    """
+    items = await _list_schedules_for_summary(db, parent)
+    for item in items:
+        if item.installment_no == installment_no:
+            return item
+    return None
+
+
 async def get_contract_with_schedules(db: AsyncSession, contract_id: UUID) -> Contract:
     result = await db.execute(
         select(Contract).where(Contract.id == contract_id).options(selectinload(Contract.schedules))
@@ -224,13 +241,7 @@ async def update_schedule_item(
     po_id: UUID | None = None,
 ) -> PaymentSchedule:
     parent = await _resolve_parent(db, contract_id=contract_id, po_id=po_id)
-    result = await db.execute(
-        select(PaymentSchedule).where(
-            _parent_filter(parent),
-            PaymentSchedule.installment_no == installment_no,
-        )
-    )
-    item = result.scalar_one_or_none()
+    item = await _find_schedule_item(db, parent, installment_no)
     if item is None:
         raise HTTPException(404, "schedule_item.not_found")
 
@@ -250,13 +261,7 @@ async def delete_schedule_item(
     po_id: UUID | None = None,
 ) -> None:
     parent = await _resolve_parent(db, contract_id=contract_id, po_id=po_id)
-    result = await db.execute(
-        select(PaymentSchedule).where(
-            _parent_filter(parent),
-            PaymentSchedule.installment_no == installment_no,
-        )
-    )
-    item = result.scalar_one_or_none()
+    item = await _find_schedule_item(db, parent, installment_no)
     if item is None:
         raise HTTPException(404, "schedule_item.not_found")
     if item.status in (ScheduleItemStatus.PAID.value, ScheduleItemStatus.PARTIALLY_PAID.value):
@@ -278,13 +283,7 @@ async def execute_schedule_item(
 ) -> PaymentSchedule:
     parent = await _resolve_parent(db, contract_id=contract_id, po_id=po_id)
 
-    result = await db.execute(
-        select(PaymentSchedule).where(
-            _parent_filter(parent),
-            PaymentSchedule.installment_no == installment_no,
-        )
-    )
-    item = result.scalar_one_or_none()
+    item = await _find_schedule_item(db, parent, installment_no)
     if item is None:
         raise HTTPException(404, "schedule_item.not_found")
     if item.status == ScheduleItemStatus.PAID.value:
@@ -345,13 +344,7 @@ async def link_invoice(
     po_id: UUID | None = None,
 ) -> PaymentSchedule:
     parent = await _resolve_parent(db, contract_id=contract_id, po_id=po_id)
-    result = await db.execute(
-        select(PaymentSchedule).where(
-            _parent_filter(parent),
-            PaymentSchedule.installment_no == installment_no,
-        )
-    )
-    item = result.scalar_one_or_none()
+    item = await _find_schedule_item(db, parent, installment_no)
     if item is None:
         raise HTTPException(404, "schedule_item.not_found")
 
