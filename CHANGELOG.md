@@ -7,6 +7,29 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [v0.9.24] — 2026-04-25
+
+### 新功能
+
+- **PO 列表丰富列 + 用户自定义列可见性**：`POListOut` 扩展为含 `pr_number`、`supplier_name`、`supplier_code`、`amount_paid`、`amount_invoiced`、`qty_received`、`source_type`（service 端 selectinload `supplier` + `pr` 一次性载入，避免 N+1）。前端 PO 列表 11 列可选，右上角齿轮按钮打开列设置 Popover，每列独立勾选 + 一键恢复默认。
+- **通用列设置基础组件**：新增 `usePersistedColumns` hook + `<ColumnSettings>` 组件，存储位置 `localStorage:mica:column-prefs:<id>`，每个列表独立命名空间。后续 PR 列表 / Contracts 列表 / Suppliers 列表可一行接入复用。
+
+### API 变更
+
+- `GET /api/v1/purchase-orders` 响应字段扩展（向后兼容：仅新增字段）。
+- 前端类型从 `PurchaseOrder[]` 拆出独立的 `PurchaseOrderListItem[]`，区分列表/详情两种视图。Dashboard / Shipments 已同步迁移。
+
+### 测试
+
+- 新增 `test_polist_schema_includes_supplier_and_pr_metadata` 锁定新字段契约。
+- 容器内 `pytest tests/` **375 passed**。
+
+### 元数据
+
+- 版本对齐 `0.9.24`：`backend/pyproject.toml`、`frontend/package.json`、`backend/app/config.py`、`deploy/.env.example`、`AGENTS.md`、`README` 徽章。
+
+---
+
 ## [v0.9.23] — 2026-04-25
 
 ### 修复（生产 hotfix）

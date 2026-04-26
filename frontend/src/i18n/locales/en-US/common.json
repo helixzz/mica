@@ -117,7 +117,14 @@
     "contact_name": "Contact",
     "contact_phone": "Phone",
     "contact_email": "Email",
-    "actions": "Actions"
+    "actions": "Actions",
+    "source_type": "Source"
+  },
+  "column_settings": {
+    "title": "Column visibility",
+    "button": "Columns",
+    "hint": "Toggle which columns to display. Preferences are stored in this browser only.",
+    "reset": "Reset to default"
   },
   "status": {
     "draft": "Draft",

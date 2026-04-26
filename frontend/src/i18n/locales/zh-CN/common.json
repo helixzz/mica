@@ -117,7 +117,14 @@
     "contact_name": "联系人",
     "contact_phone": "电话",
     "contact_email": "邮箱",
-    "actions": "操作"
+    "actions": "操作",
+    "source_type": "来源"
+  },
+  "column_settings": {
+    "title": "列显示设置",
+    "button": "列设置",
+    "hint": "勾选要显示的列，取消勾选则隐藏。设置仅保存在当前浏览器。",
+    "reset": "恢复默认"
   },
   "status": {
     "draft": "草稿",
