@@ -644,3 +644,19 @@ async def test_convert_pr_to_po_auto_fills_sku_price_records(seeded_db_session):
     assert records[0].item_id == item.id
     assert records[0].supplier_id == supplier.id
     assert records[0].price == Decimal("200")
+
+
+async def test_polist_schema_exposes_created_at_for_frontend(seeded_db_session):
+    from app.schemas import POListOut
+
+    db = seeded_db_session
+    actor = await _get_user(db, "alice")
+    supplier = await _get_supplier(db)
+    pr = await _create_pr(db, actor, supplier.id)
+    await _mark_pr_approved(db, pr)
+    po = (await purchase_svc.convert_pr_to_po(db, actor, pr.id))[0]
+
+    serialised = POListOut.model_validate(po).model_dump()
+    assert "created_at" in serialised
+    assert "updated_at" in serialised
+    assert serialised["created_at"] is not None

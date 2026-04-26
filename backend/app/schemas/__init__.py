@@ -371,6 +371,8 @@ class POListOut(BaseModel):
     status: str
     currency: str
     total_amount: Decimal
+    created_at: datetime
+    updated_at: datetime
 
 
 class PRConversionPreviewItem(BaseModel):
