@@ -580,7 +580,14 @@ async def get_pr_downstream(
 
 async def list_pos(db: AsyncSession, actor: User) -> list[PurchaseOrder]:
     _ = actor
-    stmt = select(PurchaseOrder).order_by(PurchaseOrder.created_at.desc())
+    stmt = (
+        select(PurchaseOrder)
+        .options(
+            selectinload(PurchaseOrder.supplier),
+            selectinload(PurchaseOrder.pr),
+        )
+        .order_by(PurchaseOrder.created_at.desc())
+    )
     result = await db.execute(stmt)
     return list(result.scalars().all())
 

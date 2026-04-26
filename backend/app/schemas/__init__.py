@@ -8,7 +8,7 @@ from decimal import Decimal
 from typing import Literal
 from uuid import UUID
 
-from pydantic import BaseModel, ConfigDict, Field, field_validator
+from pydantic import BaseModel, ConfigDict, Field, field_validator, model_validator
 
 from app.models import JSONValue
 
@@ -367,12 +367,43 @@ class POListOut(BaseModel):
     id: UUID
     po_number: str
     pr_id: UUID
+    pr_number: str | None = None
     supplier_id: UUID
+    supplier_name: str | None = None
+    supplier_code: str | None = None
     status: str
     currency: str
     total_amount: Decimal
+    amount_paid: Decimal
+    amount_invoiced: Decimal
+    qty_received: Decimal
+    source_type: str
     created_at: datetime
     updated_at: datetime
+
+    @model_validator(mode="before")
+    @classmethod
+    def _flatten_relationships(cls, value):
+        if isinstance(value, dict):
+            return value
+        return {
+            "id": value.id,
+            "po_number": value.po_number,
+            "pr_id": value.pr_id,
+            "pr_number": getattr(getattr(value, "pr", None), "pr_number", None),
+            "supplier_id": value.supplier_id,
+            "supplier_name": getattr(getattr(value, "supplier", None), "name", None),
+            "supplier_code": getattr(getattr(value, "supplier", None), "code", None),
+            "status": value.status,
+            "currency": value.currency,
+            "total_amount": value.total_amount,
+            "amount_paid": value.amount_paid,
+            "amount_invoiced": value.amount_invoiced,
+            "qty_received": value.qty_received,
+            "source_type": value.source_type,
+            "created_at": value.created_at,
+            "updated_at": value.updated_at,
+        }
 
 
 class PRConversionPreviewItem(BaseModel):

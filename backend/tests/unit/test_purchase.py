@@ -662,6 +662,35 @@ async def test_polist_schema_exposes_created_at_for_frontend(seeded_db_session):
     assert serialised["created_at"] is not None
 
 
+async def test_polist_schema_includes_supplier_and_pr_metadata(seeded_db_session):
+    from app.schemas import POListOut
+
+    db = seeded_db_session
+    actor = await _get_user(db, "alice")
+    supplier = await _get_supplier(db)
+    pr = await _create_pr(db, actor, supplier.id)
+    await _mark_pr_approved(db, pr)
+    pos = await purchase_svc.list_pos(db, actor)
+    pos_for_pr = [p for p in pos if p.pr_id == pr.id]
+    if not pos_for_pr:
+        await purchase_svc.convert_pr_to_po(db, actor, pr.id)
+        pos = await purchase_svc.list_pos(db, actor)
+        pos_for_pr = [p for p in pos if p.pr_id == pr.id]
+    assert pos_for_pr, "expected at least one PO in list for the PR"
+    po = pos_for_pr[0]
+
+    serialised = POListOut.model_validate(po).model_dump()
+
+    assert serialised["supplier_id"] == supplier.id
+    assert serialised["supplier_name"] == supplier.name
+    assert serialised["supplier_code"] == supplier.code
+    assert serialised["pr_number"] == pr.pr_number
+    assert "amount_paid" in serialised
+    assert "amount_invoiced" in serialised
+    assert "qty_received" in serialised
+    assert "source_type" in serialised
+
+
 def test_pr_conversion_preview_group_schema_shape():
     from app.schemas import PRConversionPreviewGroup
 
