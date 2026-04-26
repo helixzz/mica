@@ -9,9 +9,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [v0.9.22] — 2026-04-25
 
+### 修复
+
+- **PO 列表「创建时间」列显示 Invalid Date**：`POListOut` schema 没有 `created_at` / `updated_at` 字段，前端 `new Date(undefined).toLocaleString()` 渲染为 `Invalid Date`。给 schema 补上两个字段，前端无需改动（其 type 已经是更宽的 `PurchaseOrder`）。新增 `test_polist_schema_exposes_created_at_for_frontend` 锁定契约。
+
 ### 改进
 
-- **首页排版调整**：把「付款追踪」面板移到「待审批项目」/「告警」上方，以反映财务侧关心的优先级。仅排版变动，无功能差异。
+- **首页排版调整**：把「付款追踪」面板移到「待审批项目」/「告警」上方，反映财务侧关心的优先级。仅排版变动，无功能差异。
+
+### 测试
+
+- 容器内 `pytest tests/` **373 passed**，CI 全绿。
 
 ### 元数据
 
