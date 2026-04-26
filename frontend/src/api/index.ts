@@ -154,6 +154,25 @@ export interface PurchaseOrder {
   items: POItem[]
 }
 
+export interface PRConversionPreviewItem {
+  pr_item_id: string
+  line_no: number
+  item_name: string
+  qty: string
+  uom: string
+  unit_price: string | null
+  amount: string
+}
+
+export interface PRConversionPreviewGroup {
+  supplier_id: string
+  supplier_name: string | null
+  supplier_code: string | null
+  item_count: number
+  subtotal: string
+  items: PRConversionPreviewItem[]
+}
+
 export interface DocumentTemplate {
   id: string
   code: string
@@ -799,9 +818,15 @@ export const api = {
     )
     return data
   },
-  async convertToPO(id: string): Promise<PurchaseOrder> {
-    const { data } = await client.post<PurchaseOrder>(
+  async convertToPO(id: string): Promise<PurchaseOrder[]> {
+    const { data } = await client.post<PurchaseOrder[]>(
       `/purchase-requisitions/${id}/convert-to-po`
+    )
+    return data
+  },
+  async previewPRConversion(id: string): Promise<PRConversionPreviewGroup[]> {
+    const { data } = await client.get<PRConversionPreviewGroup[]>(
+      `/purchase-requisitions/${id}/conversion-preview`
     )
     return data
   },

@@ -7,6 +7,31 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [v0.9.21] — 2026-04-25
+
+### 改进
+
+- **多供应商 PR → 多 PO 自动拆分**：当一份采购需求涉及多家供应商时，原来直接报 `pr.multiple_suppliers_not_supported_in_skeleton` 拒绝转单。现在按 `supplier_id` 分组、原子事务一次创建 N 个 PO（每家一单）；`POItem.pr_item_id` 仍指向原 PR 行，留下完整溯源。SKU 价格库为每个 PO 各自记录一行（按 `source_ref=PO号`）。
+- **Coupa 风格预览**：点击「生成采购订单」先调用新的 `GET /purchase-requisitions/{id}/conversion-preview` 显示拆分预览（每家供应商的物料数 / 小计），用户确认后才真正写库。N=1 时预览只有一行，体验和老流程一致。
+- **新错误码 `pr.items_missing_supplier`**：替代之前的 skeleton fence。任意明细行未指定供应商即拒绝转单（422），中英文已加 i18n。
+
+### API 变更
+
+- `POST /api/v1/purchase-requisitions/{id}/convert-to-po` 响应类型 `POOut` → `list[POOut]`。前端是唯一消费者已同步更新；外部集成需注意。
+- 新增 `GET /api/v1/purchase-requisitions/{id}/conversion-preview` 返回 `list[PRConversionPreviewGroup]`（read-only，不变更状态）。
+
+### 测试
+
+- `tests/unit/test_purchase.py` 重写老的 multi-supplier 拒绝测试为 split happy-path；新增 N=2 / N=3 / 缺供应商 / 预览正确性 4 条测试。
+- `tests/test_walking_skeleton.py` + `tests/unit/test_flow.py` 调整 `convert_pr_to_po` 调用点适配 `list[PO]` 返回。
+- 容器内 `pytest tests/` **372 passed**。
+
+### 元数据
+
+- 版本对齐 `0.9.21`：`backend/pyproject.toml`、`frontend/package.json`、`backend/app/config.py`、`deploy/.env.example`、`AGENTS.md`、`README` 徽章。
+
+---
+
 ## [v0.9.20] — 2026-04-25
 
 ### 修复（生产 hotfix）

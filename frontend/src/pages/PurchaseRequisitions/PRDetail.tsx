@@ -14,7 +14,12 @@ import { useEffect, useMemo, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { useNavigate, useParams } from 'react-router-dom'
 
-import { api, type PurchaseRequisition, type Supplier } from '@/api'
+import {
+  api,
+  type PRConversionPreviewGroup,
+  type PurchaseRequisition,
+  type Supplier,
+} from '@/api'
 import { extractError } from '@/api/client'
 import { fmtAmount, fmtQty } from '@/utils/format'
 import { useAuth } from '@/auth/useAuth'
@@ -135,16 +140,94 @@ export function PRDetailPage() {
 
   const runConvert = async () => {
     setBusy(true)
+    let preview: PRConversionPreviewGroup[] = []
     try {
-      const po = await api.convertToPO(pr.id)
-      void message.success(t('message.convert_success', { po_number: po.po_number }))
-      navigate(`/purchase-orders/${po.id}`)
+      preview = await api.previewPRConversion(pr.id)
     } catch (e) {
       const err = extractError(e)
       void message.error(err.detail || t('error.unexpected'))
-    } finally {
       setBusy(false)
+      return
     }
+
+    if (preview.length === 0) {
+      void message.error(t('error.unexpected'))
+      setBusy(false)
+      return
+    }
+
+    const totalSubtotal = preview.reduce((sum, g) => sum + Number(g.subtotal || 0), 0)
+    const itemCount = preview.reduce((sum, g) => sum + g.item_count, 0)
+
+    Modal.confirm({
+      title: t('pr.convert_preview_title', { count: preview.length }),
+      width: 640,
+      okText: t('pr.convert_preview_confirm', { count: preview.length }),
+      cancelText: t('button.cancel'),
+      icon: null,
+      content: (
+        <div>
+          <Typography.Paragraph type="secondary" style={{ marginBottom: 12 }}>
+            {t('pr.convert_preview_summary', {
+              suppliers: preview.length,
+              items: itemCount,
+              total: fmtAmount(String(totalSubtotal), pr.currency || 'CNY'),
+            })}
+          </Typography.Paragraph>
+          <Table
+            size="small"
+            rowKey="supplier_id"
+            pagination={false}
+            dataSource={preview}
+            columns={[
+              {
+                title: t('field.supplier'),
+                dataIndex: 'supplier_name',
+                render: (v: string | null, r) => v || r.supplier_code || r.supplier_id,
+              },
+              {
+                title: t('pr.convert_preview_item_count'),
+                dataIndex: 'item_count',
+                width: 80,
+                align: 'right' as const,
+              },
+              {
+                title: t('pr.convert_preview_subtotal'),
+                dataIndex: 'subtotal',
+                align: 'right' as const,
+                render: (v: string) => fmtAmount(v, pr.currency || 'CNY'),
+              },
+            ]}
+          />
+        </div>
+      ),
+      onCancel: () => {
+        setBusy(false)
+      },
+      onOk: async () => {
+        try {
+          const pos = await api.convertToPO(pr.id)
+          if (pos.length === 1) {
+            void message.success(
+              t('message.convert_success', { po_number: pos[0].po_number }),
+            )
+          } else {
+            void message.success(
+              t('message.convert_success_multi', {
+                count: pos.length,
+                po_numbers: pos.map((p) => p.po_number).join('、'),
+              }),
+            )
+          }
+          navigate(`/purchase-orders/${pos[0].id}`)
+        } catch (e) {
+          const err = extractError(e)
+          void message.error(err.detail || t('error.unexpected'))
+        } finally {
+          setBusy(false)
+        }
+      },
+    })
   }
 
   return (
