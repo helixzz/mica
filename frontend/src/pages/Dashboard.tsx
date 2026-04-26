@@ -172,6 +172,10 @@ export function DashboardPage() {
         </Col>
       </Row>
 
+      {(isProcurementMgr || isFinanceAuditor || role === 'admin') && (
+        <PaymentTracker />
+      )}
+
       <Row gutter={[16, 16]}>
         <Col xs={24} lg={12}>
           <Section
@@ -281,10 +285,6 @@ export function DashboardPage() {
           </Section>
         </Col>
       </Row>
-
-      {(isProcurementMgr || isFinanceAuditor || role === 'admin') && (
-        <PaymentTracker />
-      )}
 
       <Section title={t('dashboard.quick_actions')}>
         <Space wrap size="middle">
