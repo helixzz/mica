@@ -7,6 +7,23 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [v0.9.23] — 2026-04-25
+
+### 修复（生产 hotfix）
+
+- **多供应商 PR 转换 500 错误**：v0.9.22 在修 `POListOut` 字段时，不慎把 `amount_paid` / `amount_invoiced` / `created_at` 三个字段也追加到了紧挨着定义的 `PRConversionPreviewGroup` 上。于是 `GET /purchase-requisitions/{id}/conversion-preview` 返回体按 Pydantic schema 校验时，每组预览都缺这 3 个字段 → `ResponseValidationError` 12 条 → 500。根本修复：从 `PRConversionPreviewGroup` 删除这 3 个错位字段，回到 v0.9.21 时的 6 字段形状。
+- 新增 `test_pr_conversion_preview_group_schema_shape` 固化 schema 字段集合，防止同类问题再发生。
+
+### 测试
+
+- 容器内 `pytest tests/` **374 passed**，CI 全绿。
+
+### 元数据
+
+- 版本对齐 `0.9.23`：`backend/pyproject.toml`、`frontend/package.json`、`backend/app/config.py`、`deploy/.env.example`、`AGENTS.md`、`README` 徽章。
+
+---
+
 ## [v0.9.22] — 2026-04-25
 
 ### 修复
