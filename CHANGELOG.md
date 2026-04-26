@@ -7,6 +7,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [v0.9.22] — 2026-04-25
+
+### 改进
+
+- **首页排版调整**：把「付款追踪」面板移到「待审批项目」/「告警」上方，以反映财务侧关心的优先级。仅排版变动，无功能差异。
+
+### 元数据
+
+- 版本对齐 `0.9.22`：`backend/pyproject.toml`、`frontend/package.json`、`backend/app/config.py`、`deploy/.env.example`、`AGENTS.md`、`README` 徽章。
+
+---
+
 ## [v0.9.21] — 2026-04-25
 
 ### 改进
