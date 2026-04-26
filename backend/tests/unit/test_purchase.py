@@ -660,3 +660,22 @@ async def test_polist_schema_exposes_created_at_for_frontend(seeded_db_session):
     assert "created_at" in serialised
     assert "updated_at" in serialised
     assert serialised["created_at"] is not None
+
+
+def test_pr_conversion_preview_group_schema_shape():
+    from app.schemas import PRConversionPreviewGroup
+
+    fields = set(PRConversionPreviewGroup.model_fields.keys())
+    assert fields == {
+        "supplier_id",
+        "supplier_name",
+        "supplier_code",
+        "item_count",
+        "subtotal",
+        "items",
+    }, (
+        "PRConversionPreviewGroup must NOT contain PO-specific fields. "
+        "v0.9.22 regression: amount_paid / amount_invoiced / created_at were "
+        "accidentally appended and caused a 500 ResponseValidationError on "
+        "GET /purchase-requisitions/{id}/conversion-preview."
+    )

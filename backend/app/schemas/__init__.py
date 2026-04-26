@@ -392,9 +392,6 @@ class PRConversionPreviewGroup(BaseModel):
     item_count: int
     subtotal: Decimal
     items: list[PRConversionPreviewItem]
-    amount_paid: Decimal
-    amount_invoiced: Decimal
-    created_at: datetime
 
 
 class ContractCreateIn(BaseModel):
