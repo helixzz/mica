@@ -22,7 +22,7 @@ import {
   type ContractExpiring,
   type DashboardMetrics,
   type PRListItem,
-  type PurchaseOrder,
+  type PurchaseOrderListItem,
   type SKUAnomaly,
 } from '@/api'
 import { useAuth } from '@/auth/useAuth'
@@ -39,7 +39,7 @@ export function DashboardPage() {
 
   const [loading, setLoading] = useState(true)
   const [prs, setPrs] = useState<PRListItem[]>([])
-  const [pos, setPos] = useState<PurchaseOrder[]>([])
+  const [pos, setPos] = useState<PurchaseOrderListItem[]>([])
   const [pending, setPending] = useState<ApprovalTask[]>([])
   const [contracts, setContracts] = useState<ContractExpiring[]>([])
   const [anomalies, setAnomalies] = useState<SKUAnomaly[]>([])

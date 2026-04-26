@@ -4,7 +4,7 @@ import type { ColumnsType } from 'antd/es/table'
 import { useEffect, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 
-import { api, type PurchaseOrder, type Shipment } from '@/api'
+import { api, type PurchaseOrder, type PurchaseOrderListItem, type Shipment } from '@/api'
 import { fmtQty } from '@/utils/format'
 
 const STATUS_COLORS: Record<string, string> = {
@@ -28,7 +28,7 @@ export function ShipmentsPage() {
   const [form] = Form.useForm()
 
   const [createOpen, setCreateOpen] = useState(false)
-  const [poList, setPoList] = useState<PurchaseOrder[]>([])
+  const [poList, setPoList] = useState<PurchaseOrderListItem[]>([])
   const [selectedPO, setSelectedPO] = useState<PurchaseOrder | null>(null)
   const [createLines, setCreateLines] = useState<{ po_item_id: string; qty_shipped: number }[]>([])
   const [createCarrier, setCreateCarrier] = useState('')

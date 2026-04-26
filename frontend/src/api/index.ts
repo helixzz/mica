@@ -138,7 +138,10 @@ export interface PurchaseOrder {
   id: string
   po_number: string
   pr_id: string
+  pr_number?: string | null
   supplier_id: string
+  supplier_name?: string | null
+  supplier_code?: string | null
   company_id: string
   status: string
   currency: string
@@ -152,6 +155,25 @@ export interface PurchaseOrder {
   created_at: string
   updated_at: string
   items: POItem[]
+}
+
+export interface PurchaseOrderListItem {
+  id: string
+  po_number: string
+  pr_id: string
+  pr_number?: string | null
+  supplier_id: string
+  supplier_name?: string | null
+  supplier_code?: string | null
+  status: string
+  currency: string
+  total_amount: string
+  amount_paid: string
+  amount_invoiced: string
+  qty_received: string
+  source_type: string
+  created_at: string
+  updated_at: string
 }
 
 export interface PRConversionPreviewItem {
@@ -830,8 +852,8 @@ export const api = {
     )
     return data
   },
-  async listPOs(): Promise<PurchaseOrder[]> {
-    const { data } = await client.get<PurchaseOrder[]>('/purchase-orders')
+  async listPOs(): Promise<PurchaseOrderListItem[]> {
+    const { data } = await client.get<PurchaseOrderListItem[]>('/purchase-orders')
     return data
   },
   async getPO(id: string): Promise<PurchaseOrder> {
