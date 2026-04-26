@@ -67,7 +67,7 @@ async def _create_confirmed_po(
     pr = await purchase_svc.create_pr(db, user, payload)
     pr.status = "approved"
     await db.commit()
-    po = await purchase_svc.convert_pr_to_po(db, user, pr.id)
+    po = (await purchase_svc.convert_pr_to_po(db, user, pr.id))[0]
     return user, supplier, pr, po
 
 

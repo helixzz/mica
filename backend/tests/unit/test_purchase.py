@@ -408,9 +408,11 @@ async def test_convert_pr_to_po_creates_order_from_approved_pr(seeded_db_session
     pr = await _create_pr(db, actor, supplier.id)
     await _mark_pr_approved(db, pr)
 
-    po = await purchase_svc.convert_pr_to_po(db, actor, pr.id)
+    pos = await purchase_svc.convert_pr_to_po(db, actor, pr.id)
     refreshed_pr = await purchase_svc.get_pr(db, actor, pr.id)
 
+    assert len(pos) == 1
+    po = pos[0]
     assert po.pr_id == pr.id
     assert po.supplier_id == supplier.id
     assert po.status == POStatus.CONFIRMED.value
@@ -429,7 +431,8 @@ async def test_get_pr_downstream_returns_generated_po_and_primary_contract(seede
     supplier = await _get_supplier(db)
     pr = await _create_pr(db, actor, supplier.id)
     await _mark_pr_approved(db, pr)
-    po = await purchase_svc.convert_pr_to_po(db, actor, pr.id)
+    pos = await purchase_svc.convert_pr_to_po(db, actor, pr.id)
+    po = pos[0]
     contract = await flow_svc.create_contract(
         db, actor, po.id, title="Downstream link", total_amount=Decimal("100")
     )
@@ -456,7 +459,7 @@ async def test_convert_pr_to_po_requires_approved_pr(seeded_db_session):
     assert exc.value.detail == "pr.must_be_approved_to_convert"
 
 
-async def test_convert_pr_to_po_rejects_multiple_suppliers(seeded_db_session):
+async def test_convert_pr_to_po_splits_by_supplier_atomically(seeded_db_session):
     db = seeded_db_session
     actor = await _get_user(db, "alice")
     supplier1 = await _get_supplier(db, "SUP-DELL")
@@ -466,11 +469,76 @@ async def test_convert_pr_to_po_rejects_multiple_suppliers(seeded_db_session):
         actor,
         PRCreateIn(
             title="Mixed Supplier PR",
-            business_reason="Testing",
+            business_reason="Testing multi-supplier split",
             currency="CNY",
             items=[
                 _pr_item(1, "Server", "1", "1000", supplier_id=supplier1.id),
-                _pr_item(2, "Laptop", "1", "2000", supplier_id=supplier2.id),
+                _pr_item(2, "Server-2", "2", "1500", supplier_id=supplier1.id),
+                _pr_item(3, "Laptop", "1", "2000", supplier_id=supplier2.id),
+            ],
+        ),
+    )
+    await _mark_pr_approved(db, pr)
+
+    pos = await purchase_svc.convert_pr_to_po(db, actor, pr.id)
+    refreshed_pr = await purchase_svc.get_pr(db, actor, pr.id)
+
+    assert len(pos) == 2
+    by_supplier = {p.supplier_id: p for p in pos}
+    assert set(by_supplier.keys()) == {supplier1.id, supplier2.id}
+    po1 = by_supplier[supplier1.id]
+    po2 = by_supplier[supplier2.id]
+    assert len(po1.items) == 2
+    assert len(po2.items) == 1
+    assert po1.total_amount == Decimal("1000") + Decimal("3000")
+    assert po2.total_amount == Decimal("2000")
+    assert po1.po_number != po2.po_number
+    assert refreshed_pr.status == PRStatus.CONVERTED.value
+
+
+async def test_convert_pr_to_po_three_suppliers_split(seeded_db_session):
+    db = seeded_db_session
+    actor = await _get_user(db, "alice")
+    s1 = await _get_supplier(db, "SUP-DELL")
+    s2 = await _get_supplier(db, "SUP-LENOVO")
+    s3 = await _get_supplier(db, "SUP-APPLE")
+    pr = await purchase_svc.create_pr(
+        db,
+        actor,
+        PRCreateIn(
+            title="Three-way",
+            business_reason="Testing",
+            currency="CNY",
+            items=[
+                _pr_item(1, "A", "1", "100", supplier_id=s1.id),
+                _pr_item(2, "B", "1", "200", supplier_id=s2.id),
+                _pr_item(3, "C", "1", "300", supplier_id=s3.id),
+            ],
+        ),
+    )
+    await _mark_pr_approved(db, pr)
+
+    pos = await purchase_svc.convert_pr_to_po(db, actor, pr.id)
+
+    assert len(pos) == 3
+    assert {p.supplier_id for p in pos} == {s1.id, s2.id, s3.id}
+    assert sum(p.total_amount for p in pos) == Decimal("600")
+
+
+async def test_convert_pr_to_po_rejects_items_missing_supplier(seeded_db_session):
+    db = seeded_db_session
+    actor = await _get_user(db, "alice")
+    supplier = await _get_supplier(db, "SUP-DELL")
+    pr = await purchase_svc.create_pr(
+        db,
+        actor,
+        PRCreateIn(
+            title="Incomplete supplier PR",
+            business_reason="Testing",
+            currency="CNY",
+            items=[
+                _pr_item(1, "Has supplier", "1", "1000", supplier_id=supplier.id),
+                _pr_item(2, "No supplier", "1", "500", supplier_id=None),
             ],
         ),
     )
@@ -480,7 +548,41 @@ async def test_convert_pr_to_po_rejects_multiple_suppliers(seeded_db_session):
         await purchase_svc.convert_pr_to_po(db, actor, pr.id)
 
     assert exc.value.status_code == 422
-    assert exc.value.detail == "pr.multiple_suppliers_not_supported_in_skeleton"
+    assert exc.value.detail == "pr.items_missing_supplier"
+
+
+async def test_preview_pr_conversion_returns_supplier_groups(seeded_db_session):
+    db = seeded_db_session
+    actor = await _get_user(db, "alice")
+    s1 = await _get_supplier(db, "SUP-DELL")
+    s2 = await _get_supplier(db, "SUP-LENOVO")
+    pr = await purchase_svc.create_pr(
+        db,
+        actor,
+        PRCreateIn(
+            title="Preview test",
+            business_reason="Testing",
+            currency="CNY",
+            items=[
+                _pr_item(1, "Server", "1", "1000", supplier_id=s1.id),
+                _pr_item(2, "Server-2", "2", "1500", supplier_id=s1.id),
+                _pr_item(3, "Laptop", "1", "2000", supplier_id=s2.id),
+            ],
+        ),
+    )
+    await _mark_pr_approved(db, pr)
+
+    groups = await purchase_svc.preview_pr_conversion(db, actor, pr.id)
+
+    assert len(groups) == 2
+    by_supplier = {g["supplier_id"]: g for g in groups}
+    assert by_supplier[s1.id]["item_count"] == 2
+    assert by_supplier[s1.id]["subtotal"] == Decimal("1000") + Decimal("3000")
+    assert by_supplier[s2.id]["item_count"] == 1
+    assert by_supplier[s2.id]["subtotal"] == Decimal("2000")
+
+    refreshed_pr = await purchase_svc.get_pr(db, actor, pr.id)
+    assert refreshed_pr.status == PRStatus.APPROVED.value
 
 
 async def test_convert_pr_to_po_assigns_sequential_po_numbers(seeded_db_session):
@@ -492,8 +594,8 @@ async def test_convert_pr_to_po_assigns_sequential_po_numbers(seeded_db_session)
     await _mark_pr_approved(db, pr1)
     await _mark_pr_approved(db, pr2)
 
-    po1 = await purchase_svc.convert_pr_to_po(db, actor, pr1.id)
-    po2 = await purchase_svc.convert_pr_to_po(db, actor, pr2.id)
+    po1 = (await purchase_svc.convert_pr_to_po(db, actor, pr1.id))[0]
+    po2 = (await purchase_svc.convert_pr_to_po(db, actor, pr2.id))[0]
 
     assert int(po2.po_number.split("-")[-1]) == int(po1.po_number.split("-")[-1]) + 1
 
@@ -521,7 +623,8 @@ async def test_convert_pr_to_po_auto_fills_sku_price_records(seeded_db_session):
     pr = await purchase_svc.create_pr(db, actor, payload)
     await _mark_pr_approved(db, pr)
 
-    po = await purchase_svc.convert_pr_to_po(db, actor, pr.id)
+    pos = await purchase_svc.convert_pr_to_po(db, actor, pr.id)
+    po = pos[0]
 
     from app.models import SKUPriceRecord
 

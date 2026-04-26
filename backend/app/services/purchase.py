@@ -287,78 +287,149 @@ async def decide_pr(
     return result
 
 
-async def convert_pr_to_po(db: AsyncSession, actor: User, pr_id: UUID) -> PurchaseOrder:
+async def _build_supplier_groups(pr: PurchaseRequisition) -> dict[UUID, list[PRItem]]:
+    missing = [i for i in pr.items if not i.supplier_id]
+    if missing:
+        raise HTTPException(422, "pr.items_missing_supplier")
+    groups: dict[UUID, list[PRItem]] = {}
+    for item in pr.items:
+        groups.setdefault(item.supplier_id, []).append(item)
+    return groups
+
+
+async def preview_pr_conversion(db: AsyncSession, actor: User, pr_id: UUID) -> list[dict]:
     pr = await _load_pr(db, pr_id)
     if pr is None:
         raise HTTPException(404, "pr.not_found")
     if pr.status != PRStatus.APPROVED.value:
         raise HTTPException(409, "pr.must_be_approved_to_convert")
+    if not pr.items:
+        raise HTTPException(422, "pr.no_items")
 
-    supplier_ids = {i.supplier_id for i in pr.items if i.supplier_id}
-    if len(supplier_ids) != 1:
-        raise HTTPException(422, "pr.multiple_suppliers_not_supported_in_skeleton")
-    (supplier_id,) = supplier_ids
+    groups = await _build_supplier_groups(pr)
 
-    po_number = await _next_po_number(db)
-    po = PurchaseOrder(
-        po_number=po_number,
-        pr_id=pr.id,
-        supplier_id=supplier_id,
-        company_id=pr.company_id,
-        status=POStatus.CONFIRMED.value,
-        currency=pr.currency,
-        total_amount=pr.total_amount,
-        source_type="manual",
-        created_by_id=actor.id,
+    supplier_rows = (
+        (await db.execute(select(Supplier).where(Supplier.id.in_(list(groups.keys())))))
+        .scalars()
+        .all()
     )
-    db.add(po)
-    await db.flush()
-    for i, pr_item in enumerate(pr.items, start=1):
-        db.add(
-            POItem(
-                po_id=po.id,
-                pr_item_id=pr_item.id,
-                line_no=i,
-                item_id=pr_item.item_id,
-                item_name=pr_item.item_name,
-                specification=pr_item.specification,
-                qty=pr_item.qty,
-                uom=pr_item.uom,
-                unit_price=pr_item.unit_price,
-                amount=pr_item.amount,
-            )
+    supplier_by_id = {s.id: s for s in supplier_rows}
+
+    out: list[dict] = []
+    for supplier_id, items in groups.items():
+        supplier = supplier_by_id.get(supplier_id)
+        subtotal = sum((Decimal(str(i.amount or 0)) for i in items), Decimal("0"))
+        out.append(
+            {
+                "supplier_id": supplier_id,
+                "supplier_name": supplier.name if supplier else None,
+                "supplier_code": supplier.code if supplier else None,
+                "item_count": len(items),
+                "subtotal": subtotal,
+                "items": [
+                    {
+                        "pr_item_id": i.id,
+                        "line_no": i.line_no,
+                        "item_name": i.item_name,
+                        "qty": i.qty,
+                        "uom": i.uom,
+                        "unit_price": i.unit_price,
+                        "amount": i.amount,
+                    }
+                    for i in items
+                ],
+            }
         )
 
-    pr.status = PRStatus.CONVERTED.value
+    out.sort(key=lambda g: (g["supplier_name"] or "", str(g["supplier_id"])))
+    return out
 
-    for pr_item in pr.items:
-        if pr_item.item_id and pr_item.unit_price and pr_item.unit_price > 0:
+
+async def convert_pr_to_po(db: AsyncSession, actor: User, pr_id: UUID) -> list[PurchaseOrder]:
+    pr = await _load_pr(db, pr_id)
+    if pr is None:
+        raise HTTPException(404, "pr.not_found")
+    if pr.status != PRStatus.APPROVED.value:
+        raise HTTPException(409, "pr.must_be_approved_to_convert")
+    if not pr.items:
+        raise HTTPException(422, "pr.no_items")
+
+    groups = await _build_supplier_groups(pr)
+
+    created_pos: list[PurchaseOrder] = []
+    for supplier_id, items in groups.items():
+        po_number = await _next_po_number(db)
+        subtotal = sum((Decimal(str(i.amount or 0)) for i in items), Decimal("0"))
+        po = PurchaseOrder(
+            po_number=po_number,
+            pr_id=pr.id,
+            supplier_id=supplier_id,
+            company_id=pr.company_id,
+            status=POStatus.CONFIRMED.value,
+            currency=pr.currency,
+            total_amount=subtotal,
+            source_type="manual",
+            created_by_id=actor.id,
+        )
+        db.add(po)
+        await db.flush()
+
+        for i, pr_item in enumerate(items, start=1):
             db.add(
-                SKUPriceRecord(
+                POItem(
+                    po_id=po.id,
+                    pr_item_id=pr_item.id,
+                    line_no=i,
                     item_id=pr_item.item_id,
-                    supplier_id=supplier_id,
-                    price=pr_item.unit_price,
-                    currency=pr.currency or "CNY",
-                    quotation_date=datetime.now(UTC).date(),
-                    source_type="actual_po",
-                    source_ref=po_number,
-                    entered_by_id=actor.id,
+                    item_name=pr_item.item_name,
+                    specification=pr_item.specification,
+                    qty=pr_item.qty,
+                    uom=pr_item.uom,
+                    unit_price=pr_item.unit_price,
+                    amount=pr_item.amount,
                 )
             )
+            if pr_item.item_id and pr_item.unit_price and pr_item.unit_price > 0:
+                db.add(
+                    SKUPriceRecord(
+                        item_id=pr_item.item_id,
+                        supplier_id=supplier_id,
+                        price=pr_item.unit_price,
+                        currency=pr.currency or "CNY",
+                        quotation_date=datetime.now(UTC).date(),
+                        source_type="actual_po",
+                        source_ref=po_number,
+                        entered_by_id=actor.id,
+                    )
+                )
 
-    await _audit(
-        db,
-        actor,
-        "po.created_from_pr",
-        "purchase_order",
-        str(po.id),
-        metadata={"pr_id": str(pr.id), "pr_number": pr.pr_number, "po_number": po.po_number},
-    )
+        await _audit(
+            db,
+            actor,
+            "po.created_from_pr",
+            "purchase_order",
+            str(po.id),
+            metadata={
+                "pr_id": str(pr.id),
+                "pr_number": pr.pr_number,
+                "po_number": po.po_number,
+                "supplier_id": str(supplier_id),
+                "split_count": len(groups),
+            },
+        )
+        created_pos.append(po)
+
+    pr.status = PRStatus.CONVERTED.value
     await db.commit()
-    result = await _load_po(db, po.id)
-    if result is None:
-        raise HTTPException(404, "po.not_found")
-    return result
+
+    refreshed: list[PurchaseOrder] = []
+    for po in created_pos:
+        loaded = await _load_po(db, po.id)
+        if loaded is None:
+            raise HTTPException(404, "po.not_found")
+        refreshed.append(loaded)
+    refreshed.sort(key=lambda p: p.po_number)
+    return refreshed
 
 
 async def _load_pr(db: AsyncSession, pr_id: UUID) -> PurchaseRequisition | None:

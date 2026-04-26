@@ -371,6 +371,25 @@ class POListOut(BaseModel):
     status: str
     currency: str
     total_amount: Decimal
+
+
+class PRConversionPreviewItem(BaseModel):
+    pr_item_id: UUID
+    line_no: int
+    item_name: str
+    qty: Decimal
+    uom: str
+    unit_price: Decimal | None
+    amount: Decimal
+
+
+class PRConversionPreviewGroup(BaseModel):
+    supplier_id: UUID
+    supplier_name: str | None
+    supplier_code: str | None
+    item_count: int
+    subtotal: Decimal
+    items: list[PRConversionPreviewItem]
     amount_paid: Decimal
     amount_invoiced: Decimal
     created_at: datetime

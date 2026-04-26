@@ -73,7 +73,10 @@ async def test_walking_skeleton_end_to_end(seeded_client):
         f"/api/v1/purchase-requisitions/{pr_id}/convert-to-po", headers=alice_headers
     )
     assert r.status_code == 201, r.text
-    po = r.json()
+    pos = r.json()
+    assert isinstance(pos, list)
+    assert len(pos) == 1
+    po = pos[0]
     assert po["status"] == "confirmed"
     assert float(po["total_amount"]) == 48000.0
     assert po["po_number"].startswith("PO-")

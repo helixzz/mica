@@ -10,6 +10,7 @@ from app.db import get_db
 from app.schemas import (
     POListOut,
     POOut,
+    PRConversionPreviewGroup,
     PRCreateIn,
     PRDecisionIn,
     PRListOut,
@@ -97,9 +98,22 @@ async def decide_pr(
     return PROut.model_validate(pr)
 
 
+@router.get(
+    "/purchase-requisitions/{pr_id}/conversion-preview",
+    response_model=list[PRConversionPreviewGroup],
+    tags=["purchase"],
+)
+async def preview_pr_conversion(
+    pr_id: UUID,
+    user: CurrentUser,
+    db: Annotated[AsyncSession, Depends(get_db)],
+):
+    return await svc.preview_pr_conversion(db, user, pr_id)
+
+
 @router.post(
     "/purchase-requisitions/{pr_id}/convert-to-po",
-    response_model=POOut,
+    response_model=list[POOut],
     status_code=status.HTTP_201_CREATED,
     tags=["purchase"],
 )
@@ -108,8 +122,8 @@ async def convert_pr_to_po(
     user: CurrentUser,
     db: Annotated[AsyncSession, Depends(get_db)],
 ):
-    po = await svc.convert_pr_to_po(db, user, pr_id)
-    return POOut.model_validate(po)
+    pos = await svc.convert_pr_to_po(db, user, pr_id)
+    return [POOut.model_validate(po) for po in pos]
 
 
 @router.get("/purchase-orders", response_model=list[POListOut], tags=["purchase"])
