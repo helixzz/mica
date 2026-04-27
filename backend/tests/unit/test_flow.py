@@ -798,6 +798,73 @@ async def test_create_shipment_raises_for_missing_po(seeded_db_session):
     assert exc.value.detail == "po.not_found"
 
 
+async def test_create_shipment_accepts_optional_contract_link(seeded_db_session):
+    db = seeded_db_session
+    user, _supplier, _pr, po = await _create_confirmed_po(db)
+    contract = await flow_svc.create_contract(
+        db, user, po.id, title="Shipment-linkable contract", total_amount=Decimal("1000")
+    )
+
+    shipment = await flow_svc.create_shipment(
+        db,
+        user,
+        po.id,
+        items_in=[{"po_item_id": po.items[0].id, "qty_shipped": Decimal("1")}],
+        contract_id=contract.id,
+    )
+
+    assert shipment.contract_id == contract.id
+
+
+async def test_create_shipment_rejects_unknown_contract(seeded_db_session):
+    db = seeded_db_session
+    user, _supplier, _pr, po = await _create_confirmed_po(db)
+
+    with pytest.raises(HTTPException) as exc:
+        await flow_svc.create_shipment(
+            db,
+            user,
+            po.id,
+            items_in=[{"po_item_id": po.items[0].id, "qty_shipped": Decimal("1")}],
+            contract_id=uuid4(),
+        )
+
+    assert exc.value.status_code == 404
+    assert exc.value.detail == "contract.not_found"
+
+
+async def test_list_shipments_by_contract_returns_direct_and_po_linked(seeded_db_session):
+    db = seeded_db_session
+    user, _supplier, _pr, po = await _create_confirmed_po(db)
+    contract = await flow_svc.create_contract(
+        db, user, po.id, title="Contract-filter test", total_amount=Decimal("1000")
+    )
+
+    direct_shipment = await flow_svc.create_shipment(
+        db,
+        user,
+        po.id,
+        items_in=[{"po_item_id": po.items[0].id, "qty_shipped": Decimal("1")}],
+        contract_id=contract.id,
+    )
+    po_only_shipment = await flow_svc.create_shipment(
+        db,
+        user,
+        po.id,
+        items_in=[{"po_item_id": po.items[1].id, "qty_shipped": Decimal("1")}],
+    )
+
+    shipments = await flow_svc.list_shipments(db, contract_id=contract.id)
+    ids = {s.id for s in shipments}
+
+    assert direct_shipment.id in ids
+    assert po_only_shipment.id in ids, (
+        "shipments on a PO that is the contract's legacy po_id must appear "
+        "in the contract-filtered list, mirroring the v0.9.18 PaymentSchedule "
+        "union pattern"
+    )
+
+
 async def test_create_payment_creates_pending_record_without_updating_po_amount_paid(
     seeded_db_session,
 ):

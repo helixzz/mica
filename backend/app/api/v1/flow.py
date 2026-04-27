@@ -215,6 +215,7 @@ async def create_shipment(
         expected_date=payload.expected_date,
         actual_date=payload.actual_date,
         notes=payload.notes,
+        contract_id=payload.contract_id,
     )
     return ShipmentOut.model_validate(s)
 
@@ -224,8 +225,12 @@ async def list_shipments(
     user: CurrentUser,
     db: Annotated[AsyncSession, Depends(get_db)],
     po_id: UUID | None = None,
+    contract_id: UUID | None = None,
 ):
-    return [ShipmentOut.model_validate(s) for s in await flow.list_shipments(db, po_id)]
+    return [
+        ShipmentOut.model_validate(s)
+        for s in await flow.list_shipments(db, po_id=po_id, contract_id=contract_id)
+    ]
 
 
 @router.post("/shipments/items/{shipment_item_id}/serials", tags=["flow"])

@@ -603,6 +603,9 @@ class Shipment(Base, TimestampMixin):
     po_id: Mapped[UUID] = mapped_column(
         PGUUID(as_uuid=True), ForeignKey("purchase_orders.id"), nullable=False
     )
+    contract_id: Mapped[UUID | None] = mapped_column(
+        PGUUID(as_uuid=True), ForeignKey("contracts.id", ondelete="SET NULL"), nullable=True
+    )
     batch_no: Mapped[int] = mapped_column(Integer, default=1, nullable=False)
     is_default: Mapped[bool] = mapped_column(default=False, nullable=False)
     status: Mapped[str] = mapped_column(
@@ -618,6 +621,7 @@ class Shipment(Base, TimestampMixin):
     notes: Mapped[str | None] = mapped_column(Text)
 
     po: Mapped[PurchaseOrder] = relationship()
+    contract: Mapped[Contract | None] = relationship()
     received_by: Mapped[User | None] = relationship()
     items: Mapped[list[ShipmentItem]] = relationship(
         back_populates="shipment", cascade="all, delete-orphan", order_by="ShipmentItem.line_no"

@@ -477,10 +477,16 @@ async def create_shipment(
     expected_date=None,
     actual_date=None,
     notes: str | None = None,
+    contract_id: UUID | None = None,
 ) -> Shipment:
     po = await _load_po(db, po_id)
     if po is None:
         raise HTTPException(404, "po.not_found")
+
+    if contract_id is not None:
+        contract = await db.get(Contract, contract_id)
+        if contract is None:
+            raise HTTPException(404, "contract.not_found")
 
     existing_count = (
         await db.execute(select(func.count(Shipment.id)).where(Shipment.po_id == po_id))
@@ -491,6 +497,7 @@ async def create_shipment(
     shipment = Shipment(
         shipment_number=shipment_number,
         po_id=po_id,
+        contract_id=contract_id,
         batch_no=batch_no,
         is_default=(batch_no == 1),
         status=ShipmentStatus.ARRIVED.value if actual_date else ShipmentStatus.IN_TRANSIT.value,
@@ -547,12 +554,41 @@ async def create_shipment(
     return result.scalar_one()
 
 
-async def list_shipments(db: AsyncSession, po_id: UUID | None = None) -> list[Shipment]:
+async def list_shipments(
+    db: AsyncSession,
+    po_id: UUID | None = None,
+    contract_id: UUID | None = None,
+) -> list[Shipment]:
     stmt = (
         select(Shipment).options(selectinload(Shipment.items)).order_by(Shipment.created_at.desc())
     )
     if po_id:
         stmt = stmt.where(Shipment.po_id == po_id)
+    elif contract_id:
+        from sqlalchemy import or_
+
+        contract = await db.get(Contract, contract_id)
+        if contract is None:
+            raise HTTPException(404, "contract.not_found")
+        legacy_po_ids = set(
+            (await db.execute(select(Contract.po_id).where(Contract.id == contract_id)))
+            .scalars()
+            .all()
+        )
+        m2m_po_ids = set(
+            (
+                await db.execute(
+                    select(POContractLink.po_id).where(POContractLink.contract_id == contract_id)
+                )
+            )
+            .scalars()
+            .all()
+        )
+        all_po_ids = legacy_po_ids | m2m_po_ids
+        conditions = [Shipment.contract_id == contract_id]
+        if all_po_ids:
+            conditions.append(Shipment.po_id.in_(all_po_ids))
+        stmt = stmt.where(or_(*conditions))
     return list((await db.execute(stmt)).scalars().all())
 
 

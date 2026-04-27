@@ -494,6 +494,7 @@ class ShipmentItemIn(BaseModel):
 
 class ShipmentCreateIn(BaseModel):
     po_id: UUID
+    contract_id: UUID | None = None
     items: list[ShipmentItemIn] = Field(..., min_length=1)
     carrier: str | None = None
     tracking_number: str | None = None
@@ -518,6 +519,7 @@ class ShipmentOut(BaseModel):
     id: UUID
     shipment_number: str
     po_id: UUID
+    contract_id: UUID | None = None
     batch_no: int
     is_default: bool
     status: str
@@ -537,6 +539,7 @@ class ShipmentUpdate(BaseModel):
     expected_date: date | None = None
     actual_date: date | None = None
     notes: str | None = None
+    contract_id: UUID | None = None
 
 
 class ShipmentAttachIn(BaseModel):
