@@ -559,6 +559,8 @@ export interface DashboardMetrics {
   pending_approvals: TrendInfo
   expiring_contracts_30d: number
   price_anomalies_pending: number
+  invoices_pending_match: number
+  invoices_mismatched: number
 }
 
 export interface PaymentScheduleItemInput {

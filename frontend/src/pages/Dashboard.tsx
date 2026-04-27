@@ -229,7 +229,7 @@ export function DashboardPage() {
           <Section title={t('dashboard.alerts')}>
             {loading ? (
               <div style={{ padding: token.paddingXL, textAlign: 'center' }}>{t('message.loading')}</div>
-            ) : contracts.length === 0 && anomalies.length === 0 ? (
+            ) : contracts.length === 0 && anomalies.length === 0 && (metrics?.invoices_pending_match ?? 0) + (metrics?.invoices_mismatched ?? 0) === 0 ? (
               <EmptyState illustration="welcome" title={t('dashboard.no_alerts')} />
             ) : (
               <Space direction="vertical" size="middle" style={{ width: '100%' }}>
@@ -280,6 +280,41 @@ export function DashboardPage() {
                               <Text type="secondary">{item.observed_price}</Text>
                             </Space>
                           }
+                        />
+                      </List.Item>
+                    )}
+                  />
+                )}
+                {((metrics?.invoices_pending_match ?? 0) + (metrics?.invoices_mismatched ?? 0)) > 0 && (
+                  <List
+                    header={<Text strong>{t('dashboard.pending_invoices')}</Text>}
+                    itemLayout="horizontal"
+                    dataSource={[
+                      ...(metrics?.invoices_pending_match
+                        ? [{ key: 'match', count: metrics.invoices_pending_match, kind: 'pending_match' as const }]
+                        : []),
+                      ...(metrics?.invoices_mismatched
+                        ? [{ key: 'mismatch', count: metrics.invoices_mismatched, kind: 'mismatched' as const }]
+                        : []),
+                    ]}
+                    renderItem={(item) => (
+                      <List.Item
+                        actions={[<Link key="v" to="/invoices">{t('dashboard.view_all')}</Link>]}
+                      >
+                        <List.Item.Meta
+                          avatar={
+                            <Avatar
+                              style={{
+                                backgroundColor: item.kind === 'mismatched' ? token.colorErrorBg : token.colorWarningBg,
+                                color: item.kind === 'mismatched' ? token.colorError : token.colorWarning,
+                              }}
+                              icon={<FileTextOutlined />}
+                            />
+                          }
+                          title={t('dashboard.invoice_alert_count', {
+                            count: item.count,
+                            status: t(`status.${item.kind}` as 'status.pending_match'),
+                          })}
                         />
                       </List.Item>
                     )}

@@ -15,6 +15,8 @@ from app.db import get_db
 from app.models import (
     ApprovalTask,
     Contract,
+    Invoice,
+    InvoiceStatus,
     PurchaseOrder,
     PurchaseRequisition,
     SKUPriceAnomaly,
@@ -39,6 +41,8 @@ class DashboardMetricsOut(BaseModel):
     pending_approvals: TrendOut
     expiring_contracts_30d: int
     price_anomalies_pending: int
+    invoices_pending_match: int
+    invoices_mismatched: int
 
 
 @dataclass
@@ -154,6 +158,27 @@ async def get_dashboard_metrics(
         or 0
     )
 
+    pending_match = int(
+        (
+            await db.execute(
+                select(func.count(Invoice.id)).where(
+                    Invoice.status == InvoiceStatus.PENDING_MATCH.value
+                )
+            )
+        ).scalar()
+        or 0
+    )
+    mismatched = int(
+        (
+            await db.execute(
+                select(func.count(Invoice.id)).where(
+                    Invoice.status == InvoiceStatus.MISMATCHED.value
+                )
+            )
+        ).scalar()
+        or 0
+    )
+
     return DashboardMetricsOut(
         pr_count=_make_trend(pr_curr, pr_prev),
         po_count=_make_trend(po_curr, po_prev),
@@ -161,4 +186,6 @@ async def get_dashboard_metrics(
         pending_approvals=_make_trend(pend_curr, pend_prev),
         expiring_contracts_30d=expiring_soon,
         price_anomalies_pending=anomalies_pending,
+        invoices_pending_match=pending_match,
+        invoices_mismatched=mismatched,
     )
