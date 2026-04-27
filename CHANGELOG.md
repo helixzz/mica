@@ -7,6 +7,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [v0.9.30] — 2026-04-27
+
+### 改进
+
+- **Admin 用户编辑表单文案优化**：zh-CN 中"关联成本中心"和"关联部门"的描述从之前的乱码文本更正为清晰一致的中文："可多选，用于 Requester 角色的行级可见范围过滤"。
+
+### 元数据
+
+- 版本对齐 `0.9.30`：`backend/pyproject.toml`、`frontend/package.json`、`backend/app/config.py`、`deploy/.env.example`、`AGENTS.md`、`README` 徽章。
+
+---
+
 ## [v0.9.29] — 2026-04-27
 
 ### 新功能
