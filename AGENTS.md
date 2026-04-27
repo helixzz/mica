@@ -9,7 +9,7 @@
 - **Mica（觅采）** — 企业内部采购管理系统（Internal Procurement Management System）
 - **规模**：单公司 < 100 员工、月 < 300 单的 IT 部门内部使用
 - **License**：Apache 2.0
-- **状态**：v0.9.28（2026-04-27）· [CHANGELOG.md](./CHANGELOG.md) · [Release](https://github.com/helixzz/mica/releases/tag/v0.9.28)
+- **状态**：v0.9.29（2026-04-27）· [CHANGELOG.md](./CHANGELOG.md) · [Release](https://github.com/helixzz/mica/releases/tag/v0.9.29)
 - **设计准则**：效率优先 > 扩展性 > 标准化管控
 - **仓库**：`git@github.com:helixzz/mica.git`（main 分支）
 

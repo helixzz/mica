@@ -7,6 +7,28 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [v0.9.29] — 2026-04-27
+
+### 新功能
+
+- **Requester 按成本中心 + 部门的行级可见范围**:requester 用户只能看到与自己相关的 PR/PO/Contract/Shipment/Payment/Invoice。关联方式为 **M:N,OR 语义** —— 用户可绑定多个成本中心和多个部门,命中任一即对 requester 可见,外加始终可见自己提的 PR。
+  - 新增两个 M:N 表:`user_cost_centers`、`user_departments`(迁移 0028),同时把现有用户的 `department_id` 单值 FK 回填到新表中
+  - 后端 `core/scoping.py` 统一了 6 类业务实体的列表查询过滤(`visible_pr_id_subquery`),仅对 requester 角色生效,admin / it_buyer / dept_manager 等角色不受影响
+  - Admin 用户管理新增两个多选控件(成本中心 / 部门),创建/编辑用户时可配置。`UserOutAdmin` 响应包含 `cost_center_ids` 和 `department_ids`
+- **`get_pr` 权限收紧**:requester 访问不是自己相关的 PR 时返回 403(之前无限制)
+
+### 测试
+
+- `tests/unit/test_purchase.py` 新增 5 条回归:
+  - requester 无绑定仅见自己 / cost-center 匹配 / department 匹配 / OR 语义 / admin 不受影响
+- 容器内 `pytest tests/` **395 passed**,前端 `tsc --noEmit` + `vite build` 全绿
+
+### 元数据
+
+- 版本对齐 `0.9.29`:`backend/pyproject.toml`、`frontend/package.json`、`backend/app/config.py`、`deploy/.env.example`、`AGENTS.md`、`README` 徽章。
+
+---
+
 ## [v0.9.28] — 2026-04-27
 
 ### 新功能
