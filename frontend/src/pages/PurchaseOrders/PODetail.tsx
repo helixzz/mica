@@ -49,6 +49,7 @@ import { getToken } from '@/api/client'
 import { useAuth } from '@/auth/useAuth'
 import { ContractFormModal } from '@/components/ContractFormModal'
 import { PaymentScheduleTab } from '@/components/PaymentScheduleTab'
+import { ShipmentActions } from '@/components/ShipmentActions'
 import { fmtAmount, fmtQty } from '@/utils/format'
 
 function statusTag(s: string): string {
@@ -85,7 +86,7 @@ export function PODetailPage() {
     const [po0, pr0, sh, pay, inv, ct] = await Promise.all([
       api.getPO(id),
       api.getPOProgress(id).catch(() => null),
-      api.listShipments(id).catch(() => []),
+      api.listShipments({ po_id: id }).catch(() => []),
       api.listPayments(id).catch(() => []),
       api.listInvoices(id).catch(() => []),
       api.listContracts(id).catch(() => [] as Contract[]),
@@ -254,6 +255,13 @@ export function PODetailPage() {
                     { title: t('field.tracking_number'), dataIndex: 'tracking_number' },
                     { title: t('field.expected_date'), dataIndex: 'expected_date' },
                     { title: t('field.actual_date'), dataIndex: 'actual_date' },
+                    {
+                      title: t('common.actions'),
+                      width: 140,
+                      render: (_: unknown, r) => (
+                        <ShipmentActions shipment={r} onChanged={() => void loadAll()} />
+                      ),
+                    },
                   ]}
                   expandable={{
                     expandedRowRender: (r) => (

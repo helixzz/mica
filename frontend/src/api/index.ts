@@ -259,6 +259,7 @@ export interface Shipment {
   id: string
   shipment_number: string
   po_id: string
+  contract_id: string | null
   batch_no: number
   is_default: boolean
   status: string
@@ -948,12 +949,13 @@ export const api = {
     })
     return data
   },
-  async listShipments(po_id?: string): Promise<Shipment[]> {
-    const { data } = await client.get<Shipment[]>('/shipments', { params: { po_id } })
+  async listShipments(opts?: { po_id?: string; contract_id?: string }): Promise<Shipment[]> {
+    const { data } = await client.get<Shipment[]>('/shipments', { params: opts })
     return data
   },
   async createShipment(payload: {
     po_id: string
+    contract_id?: string | null
     items: { po_item_id: string; qty_shipped: number; qty_received?: number }[]
     carrier?: string | null
     tracking_number?: string | null

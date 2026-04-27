@@ -40,6 +40,7 @@ import { extractError } from '@/api/client'
 import { useAuth } from '@/auth/useAuth'
 import { ContractFormModal } from '@/components/ContractFormModal'
 import { PaymentScheduleTab } from '@/components/PaymentScheduleTab'
+import { ShipmentActions } from '@/components/ShipmentActions'
 import { fmtAmount } from '@/utils/format'
 
 export function ContractDetailPage() {
@@ -91,24 +92,24 @@ export function ContractDetailPage() {
     }
   }, [load, id])
 
-  useEffect(() => {
-    if (!contract) {
+  const reloadShipments = useCallback(() => {
+    if (!id) {
       setShipments([])
       return
     }
+    void api
+      .listShipments({ contract_id: id })
+      .then(setShipments)
+      .catch(() => setShipments([]))
+  }, [id])
 
-    const linkedPoIds = Array.from(
-      new Set([contract.po_id, ...(contract.linked_pos ?? []).map((po) => po.id)]),
-    )
-
-    void Promise.all(linkedPoIds.map((poId) => api.listShipments(poId).catch(() => []))).then(
-      (groups) => {
-        const merged = groups.flat()
-        const deduped = Array.from(new Map(merged.map((row) => [row.id, row])).values())
-        setShipments(deduped)
-      },
-    )
-  }, [contract])
+  useEffect(() => {
+    if (!contract || !id) {
+      setShipments([])
+      return
+    }
+    reloadShipments()
+  }, [contract, id, reloadShipments])
 
   const openOcrViewer = async (doc: ContractAttachment) => {
     if (!id) return
@@ -418,6 +419,13 @@ export function ContractDetailPage() {
                   render: (v: string | null) => v || '-' },
                 { title: t('field.actual_date'), dataIndex: 'actual_date',
                   render: (v: string | null) => v || '-' },
+                {
+                  title: t('common.actions'),
+                  width: 140,
+                  render: (_: unknown, r) => (
+                    <ShipmentActions shipment={r} onChanged={reloadShipments} />
+                  ),
+                },
               ]}
             />
           )}
