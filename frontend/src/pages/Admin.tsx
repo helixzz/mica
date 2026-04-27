@@ -438,6 +438,7 @@ function UsersPanel() {
   const [resetForm] = Form.useForm()
   const [companies, setCompanies] = useState<any[]>([])
   const [departments, setDepartments] = useState<any[]>([])
+  const [costCenters, setCostCenters] = useState<any[]>([])
 
   const deptMap = Object.fromEntries(departments.map(d => [d.id, d.name_zh]))
 
@@ -450,12 +451,13 @@ function UsersPanel() {
     load()
     api.companies(true).then(setCompanies)
     api.departments().then(setDepartments)
+    api.listCostCenters(true).then(setCostCenters)
   }, [])
 
   const openCreate = () => {
     setEditingUser(null)
     form.resetFields()
-    form.setFieldsValue({ role: 'requester', preferred_locale: 'zh-CN' })
+    form.setFieldsValue({ role: 'requester', preferred_locale: 'zh-CN', cost_center_ids: [], department_ids: [] })
     setDrawerOpen(true)
   }
 
@@ -469,6 +471,8 @@ function UsersPanel() {
       role: user.role,
       company_id: user.company_id,
       department_id: user.department_id,
+      cost_center_ids: user.cost_center_ids || [],
+      department_ids: user.department_ids || [],
       preferred_locale: user.preferred_locale,
     })
     setDrawerOpen(true)
@@ -619,6 +623,20 @@ function UsersPanel() {
           </Form.Item>
           <Form.Item name="department_id" label={t('admin.department_label')}>
             <Select allowClear options={departments.map(d => ({ value: d.id, label: d.name_zh }))} />
+          </Form.Item>
+          <Form.Item name="cost_center_ids" label={t('admin.cost_center_label', 'Cost Centers')}>
+            <Select
+              allowClear
+              mode="multiple"
+              options={costCenters.map((c) => ({ value: c.id, label: `${c.code} - ${c.label_zh}` }))}
+            />
+          </Form.Item>
+          <Form.Item name="department_ids" label={t('admin.department_ids_label', 'Departments')}>
+            <Select
+              allowClear
+              mode="multiple"
+              options={departments.map((d) => ({ value: d.id, label: `${d.code} - ${d.name_zh}` }))}
+            />
           </Form.Item>
           <Form.Item name="preferred_locale" label={t('admin.locale_label')}>
             <Select options={[{ value: 'zh-CN', label: 'zh-CN' }, { value: 'en-US', label: 'en-US' }]} />

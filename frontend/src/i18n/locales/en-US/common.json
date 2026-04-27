@@ -778,6 +778,8 @@
     "role_label": "Role",
     "company_label": "Company",
     "department_label": "Department",
+    "cost_center_label": "Cost Centers (multi-select)",
+    "department_ids_label": "Departments (multi-select, recommended for requesters)",
     "locale_label": "Locale Preference"
   },
   "validation": {

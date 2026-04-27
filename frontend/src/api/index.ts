@@ -1169,6 +1169,8 @@ export const api = {
     role: string
     company_id: string
     department_id?: string | null
+    cost_center_ids?: string[]
+    department_ids?: string[]
     preferred_locale?: string
   }): Promise<Record<string, unknown>> {
     const { data } = await client.post('/admin/users', body)

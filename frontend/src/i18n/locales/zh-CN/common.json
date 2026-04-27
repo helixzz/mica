@@ -778,6 +778,8 @@
     "role_label": "角色",
     "company_label": "所属公司",
     "department_label": "所属部门",
+    "cost_center_label": "关联成本中心（可多选）",
+    "department_ids_label": "关联部门（勾选逐审批Filter- Requester仅见关联部/成本中心）",
     "locale_label": "语言偏好"
   },
   "validation": {
