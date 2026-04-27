@@ -7,6 +7,40 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [v0.9.27] — 2026-04-27
+
+### 新功能
+
+- **首页发票追踪面板**：Dashboard 新增 `<InvoiceTracker />`，紧接在 `<PaymentTracker />` 之后，仅对 procurement_mgr / finance_auditor / admin 可见。展示月度「应开票 / 已开票 / 待开票」三个维度 + 跨时间窗口的累计总额。
+  - **应开票额 (月度)**：该月新建的 confirmed/partially_received/fully_received/closed 状态 PO 的 `total_amount` 合计 —— 反映该月"新增了多少可开票金额"
+  - **已开票额 (月度)**：该月开出的 invoice 的 `total_amount` 合计（排除 cancelled）
+  - **待开票额 (月度)**：`max(月应开票 - 月已开票, 0)`，镜像 v0.9.17 PaymentTracker 的非负夹逻辑
+  - **累计总额**：不受窗口限制，反映**当下真实的债务状态**（总应开票 / 总已开票 / 总待开票）
+- 组件 `InvoiceTrackerChart.tsx` 抄 PaymentForecastChart 模式（SVG 双色柱状图 + 表格 + 窗口前后切换）。新色:应开票 `#B48A6A`(水獭棕)/ 已开票 `#1677ff`(蓝)/ 待开票 `#d4380d`(警示红)。
+
+### API
+
+- 新增 `GET /api/v1/dashboard/invoice-forecast` (`months`/`past_months`/`anchor` query params)。返回 `InvoiceForecastOut`。
+
+### 测试
+
+- `tests/unit/test_payment_schedule.py` 新增 3 条：
+  - `test_invoice_forecast_returns_monthly_buckets` — 基本结构
+  - `test_invoice_forecast_counts_confirmed_po_as_invoiceable` — confirmed PO 计入 invoiceable
+  - `test_invoice_forecast_excludes_draft_po_from_invoiceable` — draft PO 不计入
+  - `test_invoice_forecast_pending_never_negative` — 月度 pending 夹到 0
+- 容器内 `pytest tests/` **385 passed**。
+
+### i18n
+
+- 新增 11 个前端 key: `dashboard.invoice_tracker` / `invoice_tracker_empty` / `invoiceable_amount` / `invoiced_amount` / `pending_to_invoice` / `invoiceable_to_date` / `invoiced_to_date` / `pending_to_invoice_to_date` / `tracker_window_invoiced`(zh-CN + en-US 各一份)。
+
+### 元数据
+
+- 版本对齐 `0.9.27`：`backend/pyproject.toml`、`frontend/package.json`、`backend/app/config.py`、`deploy/.env.example`、`AGENTS.md`、`README` 徽章。
+
+---
+
 ## [v0.9.26] — 2026-04-27
 
 ### 修复
