@@ -7,6 +7,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [v0.9.31] — 2026-04-27
+
+### 维护
+
+- **lxml 版本加定上限**：`>=5.3.0` → `>=5.3.0,<7`。之前无上限的 `>=5.3.0` 导致 pip 解析器搜索 5.3~6.1 等大量版本，用于 Docker 构建的容器网络偶发抖动时报 `No matching distribution found for lxml>=5.3.0`。现在锁在 `<7` 减少解析空间。
+
+### 元数据
+
+- 版本对齐 `0.9.31`：`backend/pyproject.toml`、`frontend/package.json`、`backend/app/config.py`、`deploy/.env.example`、`AGENTS.md`、`README` 徽章。
+
+---
+
 ## [v0.9.30] — 2026-04-27
 
 ### 改进
