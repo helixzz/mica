@@ -417,6 +417,8 @@ class UserCreateIn(BaseModel):
     ]
     company_id: UUID
     department_id: UUID | None = None
+    cost_center_ids: list[UUID] = Field(default_factory=list)
+    department_ids: list[UUID] = Field(default_factory=list)
     preferred_locale: str = "zh-CN"
 
 
@@ -437,6 +439,8 @@ class UserOutAdmin(BaseModel):
     department_id: UUID | None
     department_code: str | None = None
     department_name_zh: str | None = None
+    cost_center_ids: list[UUID] = Field(default_factory=list)
+    department_ids: list[UUID] = Field(default_factory=list)
     preferred_locale: str
     is_active: bool
     is_local_admin: bool
@@ -458,6 +462,8 @@ def _user_to_admin_out(u: User) -> UserOutAdmin:
         department_id=u.department_id,
         department_code=u.department.code if u.department else None,
         department_name_zh=u.department.name_zh if u.department else None,
+        cost_center_ids=[],
+        department_ids=[],
         preferred_locale=u.preferred_locale,
         is_active=u.is_active,
         is_local_admin=u.is_local_admin,
@@ -465,6 +471,36 @@ def _user_to_admin_out(u: User) -> UserOutAdmin:
         last_login_at=u.last_login_at,
         created_at=u.created_at,
     )
+
+
+async def _user_to_admin_out_with_m2m(db, u: User) -> UserOutAdmin:
+    from app.models import user_cost_centers, user_departments
+
+    cc_rows = (
+        (
+            await db.execute(
+                select(user_cost_centers.c.cost_center_id).where(
+                    user_cost_centers.c.user_id == u.id
+                )
+            )
+        )
+        .scalars()
+        .all()
+    )
+    dep_rows = (
+        (
+            await db.execute(
+                select(user_departments.c.department_id).where(user_departments.c.user_id == u.id)
+            )
+        )
+        .scalars()
+        .all()
+    )
+
+    out = _user_to_admin_out(u)
+    out.cost_center_ids = list(cc_rows)
+    out.department_ids = list(dep_rows)
+    return out
 
 
 @router.get("/users", tags=["admin"])
@@ -483,7 +519,10 @@ async def list_users(
         .scalars()
         .all()
     )
-    return [_user_to_admin_out(u) for u in rows]
+    out = []
+    for u in rows:
+        out.append(await _user_to_admin_out_with_m2m(db, u))
+    return out
 
 
 @router.post("/users", status_code=201, tags=["admin"])
@@ -508,6 +547,19 @@ async def create_user(
         preferred_locale=payload.preferred_locale,
     )
     db.add(u)
+    await db.flush()
+
+    if payload.cost_center_ids:
+        from app.models import user_cost_centers
+
+        for cc_id in payload.cost_center_ids:
+            await db.execute(user_cost_centers.insert().values(user_id=u.id, cost_center_id=cc_id))
+    if payload.department_ids:
+        from app.models import user_departments
+
+        for dep_id in payload.department_ids:
+            await db.execute(user_departments.insert().values(user_id=u.id, department_id=dep_id))
+
     db.add(
         AuditLog(
             actor_id=user.id,
@@ -520,7 +572,7 @@ async def create_user(
     )
     await db.commit()
     await db.refresh(u, attribute_names=["company", "department"])
-    return _user_to_admin_out(u)
+    return await _user_to_admin_out_with_m2m(db, u)
 
 
 @router.post("/users/{user_id}/reset-password", status_code=204, tags=["admin"])
@@ -611,6 +663,8 @@ class UserUpdateIn(BaseModel):
     ) = None
     company_id: UUID | None = None
     department_id: UUID | None = None
+    cost_center_ids: list[UUID] | None = None
+    department_ids: list[UUID] | None = None
     preferred_locale: str | None = None
     is_active: bool | None = None
 
@@ -622,17 +676,42 @@ async def update_user(
     user: CurrentUser,
     db: Annotated[AsyncSession, Depends(get_db)],
 ):
+    from sqlalchemy import delete as sqla_delete
+
+    from app.models import user_cost_centers, user_departments
+
     u = await db.get(User, user_id)
     if u is None:
         raise HTTPException(404, "user.not_found")
     changes: dict[str, object] = {}
     for field_name in payload.model_fields_set:
+        if field_name in ("cost_center_ids", "department_ids"):
+            continue
         new_val = getattr(payload, field_name)
         if new_val is not None or field_name == "department_id":
             old_val = getattr(u, field_name)
             if old_val != new_val:
                 changes[field_name] = {"old": str(old_val), "new": str(new_val)}
                 setattr(u, field_name, new_val)
+
+    if payload.cost_center_ids is not None:
+        await db.execute(
+            sqla_delete(user_cost_centers).where(user_cost_centers.c.user_id == user_id)
+        )
+        for cc_id in payload.cost_center_ids:
+            await db.execute(
+                user_cost_centers.insert().values(user_id=user_id, cost_center_id=cc_id)
+            )
+        changes["cost_center_ids"] = {"old": "...", "new": str(payload.cost_center_ids)}
+
+    if payload.department_ids is not None:
+        await db.execute(sqla_delete(user_departments).where(user_departments.c.user_id == user_id))
+        for dep_id in payload.department_ids:
+            await db.execute(
+                user_departments.insert().values(user_id=user_id, department_id=dep_id)
+            )
+        changes["department_ids"] = {"old": "...", "new": str(payload.department_ids)}
+
     if changes:
         db.add(
             AuditLog(
@@ -647,7 +726,7 @@ async def update_user(
         await db.commit()
         await db.refresh(u)
     await db.refresh(u, attribute_names=["company", "department"])
-    return _user_to_admin_out(u)
+    return await _user_to_admin_out_with_m2m(db, u)
 
 
 @router.get("/audit-logs", tags=["admin"])

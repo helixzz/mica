@@ -93,7 +93,7 @@ async def list_contracts(
     db: Annotated[AsyncSession, Depends(get_db)],
     po_id: UUID | None = None,
 ):
-    return [_contract_to_out(c) for c in await flow.list_contracts(db, po_id)]
+    return [_contract_to_out(c) for c in await flow.list_contracts(db, po_id, actor=user)]
 
 
 @router.get("/contracts/{contract_id}", response_model=ContractOut, tags=["flow"])
@@ -229,7 +229,7 @@ async def list_shipments(
 ):
     return [
         ShipmentOut.model_validate(s)
-        for s in await flow.list_shipments(db, po_id=po_id, contract_id=contract_id)
+        for s in await flow.list_shipments(db, po_id=po_id, contract_id=contract_id, actor=user)
     ]
 
 
@@ -375,7 +375,7 @@ async def list_payments(
     db: Annotated[AsyncSession, Depends(get_db)],
     po_id: UUID | None = None,
 ):
-    payments = await flow.list_payments(db, po_id)
+    payments = await flow.list_payments(db, po_id, actor=user)
     contract_ids = {p.contract_id for p in payments if p.contract_id is not None}
     contract_map: dict[UUID, str] = {}
     if contract_ids:
@@ -471,7 +471,7 @@ async def list_invoices(
     if po_id:
         rows = await flow.list_invoices_for_po(db, po_id)
     else:
-        rows = await flow.list_invoices(db)
+        rows = await flow.list_invoices(db, actor=user)
     return [InvoiceListOut.model_validate(i) for i in rows]
 
 

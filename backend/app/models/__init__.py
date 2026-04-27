@@ -9,6 +9,7 @@ from uuid import UUID
 
 from sqlalchemy import (
     CheckConstraint,
+    Column,
     Date,
     DateTime,
     ForeignKey,
@@ -16,9 +17,11 @@ from sqlalchemy import (
     Integer,
     Numeric,
     String,
+    Table,
     Text,
     UniqueConstraint,
     desc,
+    text,
 )
 from sqlalchemy import (
     Enum as SQLEnum,
@@ -242,6 +245,12 @@ class User(Base, TimestampMixin):
 
     company: Mapped[Company] = relationship(back_populates="users")
     department: Mapped[Department | None] = relationship()
+    cost_centers: Mapped[list[CostCenter]] = relationship(
+        secondary="user_cost_centers",
+    )
+    departments: Mapped[list[Department]] = relationship(
+        secondary="user_departments",
+    )
 
     __table_args__ = (
         CheckConstraint(
@@ -252,6 +261,53 @@ class User(Base, TimestampMixin):
             name="valid_role",
         ),
     )
+
+
+user_cost_centers = Table(
+    "user_cost_centers",
+    Base.metadata,
+    Column(
+        "user_id",
+        PGUUID(as_uuid=True),
+        ForeignKey("users.id", ondelete="CASCADE"),
+        primary_key=True,
+    ),
+    Column(
+        "cost_center_id",
+        PGUUID(as_uuid=True),
+        ForeignKey("cost_centers.id", ondelete="CASCADE"),
+        primary_key=True,
+    ),
+    Column(
+        "created_at",
+        DateTime(timezone=True),
+        nullable=False,
+        server_default=text("now()"),
+    ),
+)
+
+user_departments = Table(
+    "user_departments",
+    Base.metadata,
+    Column(
+        "user_id",
+        PGUUID(as_uuid=True),
+        ForeignKey("users.id", ondelete="CASCADE"),
+        primary_key=True,
+    ),
+    Column(
+        "department_id",
+        PGUUID(as_uuid=True),
+        ForeignKey("departments.id", ondelete="CASCADE"),
+        primary_key=True,
+    ),
+    Column(
+        "created_at",
+        DateTime(timezone=True),
+        nullable=False,
+        server_default=text("now()"),
+    ),
+)
 
 
 class Supplier(Base, TimestampMixin):

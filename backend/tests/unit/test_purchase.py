@@ -10,6 +10,9 @@ from sqlalchemy.orm import selectinload
 
 from app.models import (
     ApprovalInstance,
+    Company,
+    CostCenter,
+    Department,
     Item,
     POStatus,
     PRStatus,
@@ -17,6 +20,8 @@ from app.models import (
     Supplier,
     User,
     UserRole,
+    user_cost_centers,
+    user_departments,
 )
 from app.schemas import PRCreateIn, PRItemIn, PRUpdateIn
 from app.services import purchase as purchase_svc
@@ -875,3 +880,176 @@ async def test_save_pr_supplier_quotes_respects_line_filter(seeded_db_session):
     written = await purchase_svc.save_pr_supplier_quotes(db, actor, pr.id, selected_line_nos=[1])
     assert len(written) == 1
     assert written[0].source_ref == f"{pr.pr_number}-L1"
+
+
+async def _make_requester(seeded_db_session) -> User:
+    db = seeded_db_session
+    user = (
+        (await db.execute(select(User).where(User.role == UserRole.REQUESTER.value)))
+        .scalars()
+        .first()
+    )
+    if user is not None:
+        return user
+    company = (await db.execute(select(Company))).scalars().first()
+    user = User(
+        username=f"scoped-req-{uuid4().hex[:6]}",
+        email=f"scoped-req-{uuid4().hex[:6]}@test.local",
+        display_name="Scoped Requester",
+        password_hash="test",
+        role=UserRole.REQUESTER.value,
+        company_id=company.id,
+        preferred_locale="zh-CN",
+    )
+    db.add(user)
+    await db.flush()
+    return user
+
+
+async def test_requester_sees_own_prs_only_by_default(seeded_db_session):
+    db = seeded_db_session
+    user = await _make_requester(db)
+    supplier = await _get_supplier(db)
+    other = await _get_user(db, "bob")
+    ctx1 = await _find_or_create_cost_center(db, "CC-SCOPE1")
+    ctx2 = await _find_or_create_cost_center(db, "CC-SCOPE2")
+
+    my_pr = await _create_pr_in_context(db, user, supplier.id, cost_center_id=ctx1.id)
+    other_pr = await _create_pr_in_context(db, other, supplier.id, cost_center_id=ctx2.id)
+
+    prs = await purchase_svc.list_prs_for_user(db, user)
+
+    ids = {p.id for p in prs}
+    assert my_pr.id in ids
+    assert other_pr.id not in ids, (
+        "requester without cost_center/department bindings should only see own PRs"
+    )
+
+
+async def _find_or_create_cost_center(db, code: str):
+    existing = (
+        await db.execute(select(CostCenter).where(CostCenter.code == code))
+    ).scalar_one_or_none()
+    if existing:
+        return existing
+    cc = CostCenter(code=code, label_zh=code, label_en=code)
+    db.add(cc)
+    await db.flush()
+    return cc
+
+
+async def _find_or_create_department(db, code: str, company_id=None):
+    dept = (
+        await db.execute(select(Department).where(Department.code == code))
+    ).scalar_one_or_none()
+    if dept:
+        return dept
+    if company_id is None:
+        company = (
+            (await db.execute(select(Company).where(Company.is_enabled.is_(True))))
+            .scalars()
+            .first()
+        )
+        company_id = company.id
+    dept = Department(code=code, name_zh=code, name_en=code, company_id=company_id)
+    db.add(dept)
+    await db.flush()
+    return dept
+
+
+async def _create_pr_in_context(
+    db, actor: User, supplier_id, *, cost_center_id=None, department_id=None
+):
+    pr = PurchaseRequisition(
+        pr_number=f"PR-{uuid4().hex[:6]}",
+        title="Scoping test",
+        business_reason="Testing",
+        status=PRStatus.APPROVED.value,
+        requester_id=actor.id,
+        company_id=actor.company_id,
+        department_id=department_id or actor.department_id,
+        cost_center_id=cost_center_id,
+        currency="CNY",
+        total_amount=Decimal("1000"),
+    )
+    db.add(pr)
+    await db.flush()
+    return pr
+
+
+async def test_requester_with_cost_center_sees_that_cost_center_pr(seeded_db_session):
+    db = seeded_db_session
+    user = await _make_requester(db)
+    other = await _get_user(db, "bob")
+    supplier = await _get_supplier(db)
+    cc = await _find_or_create_cost_center(db, "CC-FINANCE")
+
+    await db.execute(user_cost_centers.insert().values(user_id=user.id, cost_center_id=cc.id))
+    await db.flush()
+
+    in_scope_pr = await _create_pr_in_context(db, other, supplier.id, cost_center_id=cc.id)
+    other_cc = await _find_or_create_cost_center(db, "CC-OTHER")
+    out_pr = await _create_pr_in_context(db, other, supplier.id, cost_center_id=other_cc.id)
+
+    prs = await purchase_svc.list_prs_for_user(db, user)
+    ids = {p.id for p in prs}
+    assert in_scope_pr.id in ids, "requester should see PR with matching cost center"
+    assert out_pr.id not in ids, "requester should not see PR with unrelated cost center"
+
+
+async def test_requester_with_department_sees_that_department_pr(seeded_db_session):
+    db = seeded_db_session
+    user = await _make_requester(db)
+    other = await _get_user(db, "bob")
+    supplier = await _get_supplier(db)
+    dept = await _find_or_create_department(db, "DEPT-ENG")
+
+    await db.execute(user_departments.insert().values(user_id=user.id, department_id=dept.id))
+    await db.flush()
+
+    in_scope_pr = await _create_pr_in_context(db, other, supplier.id, department_id=dept.id)
+    other_dept = await _find_or_create_department(db, "DEPT-SALES")
+    out_pr = await _create_pr_in_context(db, other, supplier.id, department_id=other_dept.id)
+
+    prs = await purchase_svc.list_prs_for_user(db, user)
+    ids = {p.id for p in prs}
+    assert in_scope_pr.id in ids
+    assert out_pr.id not in ids
+
+
+async def test_requester_cost_center_scoping_is_or_not_and(seeded_db_session):
+    db = seeded_db_session
+    user = await _make_requester(db)
+    other = await _get_user(db, "bob")
+    supplier = await _get_supplier(db)
+    cc = await _find_or_create_cost_center(db, "CC-OR-TEST")
+    dept = await _find_or_create_department(db, "DEPT-OR-TEST")
+
+    await db.execute(user_cost_centers.insert().values(user_id=user.id, cost_center_id=cc.id))
+    await db.execute(user_departments.insert().values(user_id=user.id, department_id=dept.id))
+    await db.flush()
+
+    pr_cc = await _create_pr_in_context(db, other, supplier.id, cost_center_id=cc.id)
+    pr_dept = await _create_pr_in_context(db, other, supplier.id, department_id=dept.id)
+    unrelated_cc = await _find_or_create_cost_center(db, "CC-UNRELATED")
+    pr_unrelated = await _create_pr_in_context(
+        db, other, supplier.id, cost_center_id=unrelated_cc.id
+    )
+
+    prs = await purchase_svc.list_prs_for_user(db, user)
+    ids = {p.id for p in prs}
+    assert pr_cc.id in ids, "cost-center match should be visible"
+    assert pr_dept.id in ids, "department match should be visible"
+    assert pr_unrelated.id not in ids, "unrelated should still be hidden"
+
+
+async def test_admin_not_affected_by_scoping(seeded_db_session):
+    db = seeded_db_session
+    admin = await _get_user(db, "admin")
+    supplier = await _get_supplier(db)
+    cc = await _find_or_create_cost_center(db, "CC-ADMINTEST")
+
+    await _create_pr_in_context(db, admin, supplier.id, cost_center_id=cc.id)
+
+    prs = await purchase_svc.list_prs_for_user(db, admin)
+    assert len(prs) >= 1, "admin should see all PRs regardless of scoping"

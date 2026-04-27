@@ -155,7 +155,11 @@ async def create_contract(
     return contract
 
 
-async def list_contracts(db: AsyncSession, po_id: UUID | None = None) -> list[Contract]:
+async def list_contracts(
+    db: AsyncSession,
+    po_id: UUID | None = None,
+    actor: User | None = None,
+) -> list[Contract]:
     stmt = (
         select(Contract)
         .order_by(Contract.created_at.desc())
@@ -175,6 +179,16 @@ async def list_contracts(db: AsyncSession, po_id: UUID | None = None) -> list[Co
             stmt = stmt.where(or_(Contract.po_id == po_id, Contract.id.in_(linked_ids)))
         else:
             stmt = stmt.where(Contract.po_id == po_id)
+    if actor is not None:
+        from app.core.scoping import visible_pr_id_subquery
+
+        visible_pr_ids = await visible_pr_id_subquery(db, actor)
+        if visible_pr_ids is not None:
+            stmt = stmt.where(
+                Contract.po_id.in_(
+                    select(PurchaseOrder.id).where(PurchaseOrder.pr_id.in_(visible_pr_ids))
+                )
+            )
     return list((await db.execute(stmt)).scalars().all())
 
 
@@ -558,6 +572,7 @@ async def list_shipments(
     db: AsyncSession,
     po_id: UUID | None = None,
     contract_id: UUID | None = None,
+    actor: User | None = None,
 ) -> list[Shipment]:
     stmt = (
         select(Shipment).options(selectinload(Shipment.items)).order_by(Shipment.created_at.desc())
@@ -589,6 +604,16 @@ async def list_shipments(
         if all_po_ids:
             conditions.append(Shipment.po_id.in_(all_po_ids))
         stmt = stmt.where(or_(*conditions))
+    if actor is not None:
+        from app.core.scoping import visible_pr_id_subquery
+
+        visible_pr_ids = await visible_pr_id_subquery(db, actor)
+        if visible_pr_ids is not None:
+            stmt = stmt.where(
+                Shipment.po_id.in_(
+                    select(PurchaseOrder.id).where(PurchaseOrder.pr_id.in_(visible_pr_ids))
+                )
+            )
     return list((await db.execute(stmt)).scalars().all())
 
 
@@ -1024,10 +1049,24 @@ async def confirm_payment(
     return record
 
 
-async def list_payments(db: AsyncSession, po_id: UUID | None = None) -> list[PaymentRecord]:
+async def list_payments(
+    db: AsyncSession,
+    po_id: UUID | None = None,
+    actor: User | None = None,
+) -> list[PaymentRecord]:
     stmt = select(PaymentRecord).order_by(PaymentRecord.created_at.desc())
     if po_id:
         stmt = stmt.where(PaymentRecord.po_id == po_id)
+    if actor is not None:
+        from app.core.scoping import visible_pr_id_subquery
+
+        visible_pr_ids = await visible_pr_id_subquery(db, actor)
+        if visible_pr_ids is not None:
+            stmt = stmt.where(
+                PaymentRecord.po_id.in_(
+                    select(PurchaseOrder.id).where(PurchaseOrder.pr_id.in_(visible_pr_ids))
+                )
+            )
     return list((await db.execute(stmt)).scalars().all())
 
 
@@ -1234,11 +1273,29 @@ async def create_invoice(
     return loaded, validations
 
 
-async def list_invoices(db: AsyncSession, po_item_ids: list[UUID] | None = None) -> list[Invoice]:
+async def list_invoices(
+    db: AsyncSession,
+    po_item_ids: list[UUID] | None = None,
+    actor: User | None = None,
+) -> list[Invoice]:
     stmt = select(Invoice).order_by(Invoice.created_at.desc())
     if po_item_ids:
         sub = select(InvoiceLine.invoice_id).where(InvoiceLine.po_item_id.in_(po_item_ids))
         stmt = stmt.where(Invoice.id.in_(sub))
+    if actor is not None:
+        from app.core.scoping import visible_pr_id_subquery
+
+        visible_pr_ids = await visible_pr_id_subquery(db, actor)
+        if visible_pr_ids is not None:
+            visible_po_item_ids = select(POItem.id).where(
+                POItem.po_id.in_(
+                    select(PurchaseOrder.id).where(PurchaseOrder.pr_id.in_(visible_pr_ids))
+                )
+            )
+            sub = select(InvoiceLine.invoice_id).where(
+                InvoiceLine.po_item_id.in_(visible_po_item_ids)
+            )
+            stmt = stmt.where(Invoice.id.in_(sub))
     return list((await db.execute(stmt)).scalars().all())
 
 
