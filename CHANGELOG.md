@@ -7,6 +7,36 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [v0.9.25] — 2026-04-27
+
+### 新功能 / 改进
+
+- **交货批次可关联合同**：`Shipment` 模型新增可选 `contract_id` FK（迁移 0027），`POST /shipments` / `PATCH /shipments/{id}` 均接受 `contract_id`。`GET /shipments?contract_id=...` 走并集（直接挂合同的 shipment ∪ 该合同关联 PO 上的 shipment），镜像 v0.9.18 的 PaymentSchedule 合并修复。
+- **交货批次操作入口三处统一**：抽出可复用前端组件：
+  - `<ShipmentActions>` —— 编辑 / 附件 / 删除 3 个按钮 + 内嵌 Drawer state
+  - `<ShipmentEditDrawer>` —— 编辑表单
+  - `<ShipmentAttachmentsDrawer>` —— 附件列表 + 上传 + 下载 + 删除
+  - Shipments 独立页、PO 详情 Shipments tab、Contract 详情 Shipments tab 三处一致。
+- **附件下载入口**：此前上传后只有「删除」按钮，文件无处查看。现在列表行支持点文件名或下载按钮触发浏览器下载。
+
+### 后端
+
+- `list_shipments()` 签名扩展：`list_shipments(db, po_id=None, contract_id=None)`，`GET /shipments` 接受 `contract_id` query param。
+- `create_shipment()` 接受 `contract_id`，合同不存在返回 404。
+- 3 条新回归测试 + 1 条原测试补 `assert`：**378 passed**。
+
+### 前端
+
+- `api.listShipments()` 签名由 `(po_id?)` 改为 `(opts?: {po_id?; contract_id?})`。PODetail 调用点同步（`listShipments({ po_id: id })`）；ContractDetail 改为单次 `listShipments({ contract_id: id })`。
+- `Shipment` TS interface 新增 `contract_id: string | null`。
+- 新增 i18n key：`button.download`、`shipment.attachments_short`、`shipment.no_attachments`（zh-CN + en-US）。
+
+### 元数据
+
+- 版本对齐 `0.9.25`：`backend/pyproject.toml`、`frontend/package.json`、`backend/app/config.py`、`deploy/.env.example`、`AGENTS.md`、`README` 徽章。
+
+---
+
 ## [v0.9.24] — 2026-04-25
 
 ### 新功能
