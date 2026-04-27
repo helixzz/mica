@@ -12,7 +12,7 @@ from fastapi import HTTPException
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.models import AuditLog, JSONValue, SystemParameter, User, UserRole
+from app.models import AuditLog, Company, Department, JSONValue, SystemParameter, User, UserRole
 
 _MISSING = object()
 _FLOAT_LIKE = (int, float, str)
@@ -144,6 +144,35 @@ class SystemParamsService:
                 parsed = urlparse(value)
                 if parsed.scheme not in {"http", "https"} or not parsed.netloc:
                     raise HTTPException(400, "saml.misconfigured")
+            return
+        if key == "auth.saml.jit.default_company_code":
+            if isinstance(value, str) and value.strip():
+                company = (
+                    await session.execute(
+                        select(Company).where(
+                            Company.code == value.strip(),
+                            Company.is_deleted.is_(False),
+                            Company.is_enabled.is_(True),
+                        )
+                    )
+                ).scalar_one_or_none()
+                if company is None:
+                    raise HTTPException(400, "saml.company_code_not_found")
+            return
+        if key == "auth.saml.jit.default_department_code":
+            if isinstance(value, str) and value.strip():
+                dept = (
+                    await session.execute(
+                        select(Department).where(
+                            Department.code == value.strip(),
+                            Department.is_deleted.is_(False),
+                            Department.is_enabled.is_(True),
+                        )
+                    )
+                ).scalar_one_or_none()
+                if dept is None:
+                    raise HTTPException(400, "saml.department_code_not_found")
+            return
 
     async def get(
         self, session: AsyncSession, key: str, default: JSONValue | object = None

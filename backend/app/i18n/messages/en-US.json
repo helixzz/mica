@@ -18,6 +18,8 @@
     "default_company_required": "A default company must be configured before enabling SAML JIT provisioning",
     "default_department_not_found": "Configured SAML default department was not found",
     "default_role_invalid": "Configured SAML default role is invalid",
+    "company_code_not_found": "The specified company code does not exist or is disabled",
+    "department_code_not_found": "The specified department code does not exist or is disabled",
     "group_mapping_invalid": "Configured SAML group mapping is invalid",
     "missing_external_id": "SAML response is missing the external identity"
   },

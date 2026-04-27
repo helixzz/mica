@@ -18,6 +18,8 @@
     "default_company_required": "启用 SAML 自动建用户前必须配置默认公司",
     "default_department_not_found": "SAML 默认部门不存在",
     "default_role_invalid": "SAML 默认角色无效",
+    "company_code_not_found": "指定的公司编码不存在或已被禁用",
+    "department_code_not_found": "指定的部门编码不存在或已被禁用",
     "group_mapping_invalid": "SAML 用户组映射配置无效",
     "missing_external_id": "SAML 响应中缺少外部身份标识"
   },

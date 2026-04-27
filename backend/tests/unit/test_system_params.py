@@ -284,3 +284,50 @@ async def test_reset_restores_default_and_writes_audit_log(svc, seeded_db_sessio
 
 async def test_module_level_singleton_exists():
     assert isinstance(system_params, SystemParamsService)
+
+
+async def test_update_rejects_unknown_default_company_code(svc, seeded_db_session):
+    actor = await _alice(seeded_db_session)
+
+    with pytest.raises(HTTPException) as exc:
+        await svc.update(
+            seeded_db_session,
+            "auth.saml.jit.default_company_code",
+            "DOES-NOT-EXIST",
+            str(actor.id),
+        )
+
+    assert exc.value.status_code == 400
+    assert exc.value.detail == "saml.company_code_not_found"
+
+
+async def test_update_accepts_existing_default_company_code(svc, seeded_db_session):
+    from app.models import Company
+
+    actor = await _alice(seeded_db_session)
+    company = (
+        (await seeded_db_session.execute(select(Company).where(Company.is_enabled.is_(True))))
+        .scalars()
+        .first()
+    )
+    assert company is not None
+
+    updated = await svc.update(
+        seeded_db_session,
+        "auth.saml.jit.default_company_code",
+        company.code,
+        str(actor.id),
+    )
+    assert updated.value == company.code
+
+
+async def test_update_accepts_blank_default_company_code(svc, seeded_db_session):
+    actor = await _alice(seeded_db_session)
+
+    updated = await svc.update(
+        seeded_db_session,
+        "auth.saml.jit.default_company_code",
+        "",
+        str(actor.id),
+    )
+    assert updated.value == ""
