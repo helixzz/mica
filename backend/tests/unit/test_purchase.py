@@ -708,3 +708,170 @@ def test_pr_conversion_preview_group_schema_shape():
         "accidentally appended and caused a 500 ResponseValidationError on "
         "GET /purchase-requisitions/{id}/conversion-preview."
     )
+
+
+async def _create_pr_with_one_eligible_item(seeded_db_session):
+    db = seeded_db_session
+    actor = await _get_user(db, "alice")
+    supplier = await _get_supplier(db)
+    item = await _get_item(db)
+    pr = await purchase_svc.create_pr(
+        db,
+        actor,
+        PRCreateIn(
+            title="Quote candidate test",
+            business_reason="Testing",
+            currency="CNY",
+            items=[
+                PRItemIn(
+                    line_no=1,
+                    item_id=item.id,
+                    item_name=item.name,
+                    qty=Decimal("3"),
+                    unit_price=Decimal("250"),
+                    supplier_id=supplier.id,
+                ),
+            ],
+        ),
+    )
+    return db, actor, supplier, item, pr
+
+
+async def test_list_pr_quote_candidates_returns_eligible_lines(seeded_db_session):
+    db, actor, supplier, item, pr = await _create_pr_with_one_eligible_item(seeded_db_session)
+
+    candidates = await purchase_svc.list_pr_quote_candidates(db, actor, pr.id)
+
+    assert len(candidates) == 1
+    c = candidates[0]
+    assert c["item_id"] == item.id
+    assert c["supplier_id"] == supplier.id
+    assert c["unit_price"] == Decimal("250")
+    assert c["already_exists"] is False
+    assert c["already_up_to_date"] is False
+    assert c["source_ref"] == f"{pr.pr_number}-L1"
+
+
+async def test_list_pr_quote_candidates_skips_lines_without_item_id(seeded_db_session):
+    db = seeded_db_session
+    actor = await _get_user(db, "alice")
+    supplier = await _get_supplier(db)
+    pr = await purchase_svc.create_pr(
+        db,
+        actor,
+        PRCreateIn(
+            title="No item id",
+            business_reason="Testing",
+            currency="CNY",
+            items=[
+                PRItemIn(
+                    line_no=1,
+                    item_name="Free-text item without SKU",
+                    qty=Decimal("1"),
+                    unit_price=Decimal("100"),
+                    supplier_id=supplier.id,
+                ),
+            ],
+        ),
+    )
+
+    candidates = await purchase_svc.list_pr_quote_candidates(db, actor, pr.id)
+    assert candidates == []
+
+
+async def test_save_pr_supplier_quotes_creates_record_and_is_idempotent(seeded_db_session):
+    from app.models import SKUPriceRecord
+
+    db, actor, supplier, item, pr = await _create_pr_with_one_eligible_item(seeded_db_session)
+
+    written = await purchase_svc.save_pr_supplier_quotes(db, actor, pr.id)
+    assert len(written) == 1
+    rec = written[0]
+    assert rec.item_id == item.id
+    assert rec.supplier_id == supplier.id
+    assert rec.price == Decimal("250")
+    assert rec.source_type == "supplier_quote"
+    assert rec.source_ref == f"{pr.pr_number}-L1"
+
+    written_again = await purchase_svc.save_pr_supplier_quotes(db, actor, pr.id)
+    assert len(written_again) == 1
+    assert written_again[0].id == rec.id
+
+    rows = (
+        (
+            await db.execute(
+                select(SKUPriceRecord).where(SKUPriceRecord.source_ref == f"{pr.pr_number}-L1")
+            )
+        )
+        .scalars()
+        .all()
+    )
+    assert len(rows) == 1
+
+
+async def test_save_pr_supplier_quotes_updates_when_price_changes(seeded_db_session):
+    from app.models import PRItem, SKUPriceRecord
+
+    db, actor, _supplier, _item, pr = await _create_pr_with_one_eligible_item(seeded_db_session)
+
+    await purchase_svc.save_pr_supplier_quotes(db, actor, pr.id)
+
+    pr_item = (
+        await db.execute(select(PRItem).where(PRItem.pr_id == pr.id, PRItem.line_no == 1))
+    ).scalar_one()
+    pr_item.unit_price = Decimal("280")
+    await db.flush()
+
+    written = await purchase_svc.save_pr_supplier_quotes(db, actor, pr.id)
+    assert len(written) == 1
+    assert written[0].price == Decimal("280")
+
+    rows = (
+        (
+            await db.execute(
+                select(SKUPriceRecord).where(SKUPriceRecord.source_ref == f"{pr.pr_number}-L1")
+            )
+        )
+        .scalars()
+        .all()
+    )
+    assert len(rows) == 1
+    assert rows[0].price == Decimal("280")
+
+
+async def test_save_pr_supplier_quotes_respects_line_filter(seeded_db_session):
+    db = seeded_db_session
+    actor = await _get_user(db, "alice")
+    supplier = await _get_supplier(db)
+    item = await _get_item(db)
+    pr = await purchase_svc.create_pr(
+        db,
+        actor,
+        PRCreateIn(
+            title="Two-line filter test",
+            business_reason="Testing",
+            currency="CNY",
+            items=[
+                PRItemIn(
+                    line_no=1,
+                    item_id=item.id,
+                    item_name=item.name,
+                    qty=Decimal("1"),
+                    unit_price=Decimal("100"),
+                    supplier_id=supplier.id,
+                ),
+                PRItemIn(
+                    line_no=2,
+                    item_id=item.id,
+                    item_name=item.name,
+                    qty=Decimal("1"),
+                    unit_price=Decimal("200"),
+                    supplier_id=supplier.id,
+                ),
+            ],
+        ),
+    )
+
+    written = await purchase_svc.save_pr_supplier_quotes(db, actor, pr.id, selected_line_nos=[1])
+    assert len(written) == 1
+    assert written[0].source_ref == f"{pr.pr_number}-L1"

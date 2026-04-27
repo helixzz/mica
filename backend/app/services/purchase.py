@@ -597,3 +597,170 @@ async def get_po(db: AsyncSession, po_id: UUID) -> PurchaseOrder:
     if po is None:
         raise HTTPException(404, "po.not_found")
     return po
+
+
+_SUPPLIER_QUOTE_SOURCE_TYPE = "supplier_quote"
+
+
+def _quote_source_ref(pr_number: str, line_no: int) -> str:
+    return f"{pr_number}-L{line_no}"
+
+
+async def list_pr_quote_candidates(db: AsyncSession, actor: User, pr_id: UUID) -> list[dict]:
+    pr = await _load_pr(db, pr_id)
+    if pr is None:
+        raise HTTPException(404, "pr.not_found")
+    _ = actor
+
+    eligible_items = [
+        i
+        for i in pr.items
+        if i.item_id is not None
+        and i.supplier_id is not None
+        and i.unit_price is not None
+        and i.unit_price > 0
+    ]
+    if not eligible_items:
+        return []
+
+    source_refs = [_quote_source_ref(pr.pr_number, i.line_no) for i in eligible_items]
+    existing_rows = (
+        (
+            await db.execute(
+                select(SKUPriceRecord).where(
+                    SKUPriceRecord.source_type == _SUPPLIER_QUOTE_SOURCE_TYPE,
+                    SKUPriceRecord.source_ref.in_(source_refs),
+                )
+            )
+        )
+        .scalars()
+        .all()
+    )
+    existing_by_ref = {r.source_ref: r for r in existing_rows}
+
+    suppliers_map = {
+        s.id: s
+        for s in (
+            (
+                await db.execute(
+                    select(Supplier).where(Supplier.id.in_([i.supplier_id for i in eligible_items]))
+                )
+            )
+            .scalars()
+            .all()
+        )
+    }
+
+    candidates: list[dict] = []
+    for item in eligible_items:
+        ref = _quote_source_ref(pr.pr_number, item.line_no)
+        existing = existing_by_ref.get(ref)
+        already_persisted_same_price = (
+            existing is not None
+            and existing.price == item.unit_price
+            and existing.supplier_id == item.supplier_id
+        )
+        supplier = suppliers_map.get(item.supplier_id)
+        candidates.append(
+            {
+                "pr_item_id": item.id,
+                "line_no": item.line_no,
+                "item_id": item.item_id,
+                "item_name": item.item_name,
+                "supplier_id": item.supplier_id,
+                "supplier_name": supplier.name if supplier else None,
+                "supplier_code": supplier.code if supplier else None,
+                "unit_price": item.unit_price,
+                "currency": pr.currency or "CNY",
+                "source_ref": ref,
+                "already_exists": existing is not None,
+                "already_up_to_date": already_persisted_same_price,
+            }
+        )
+    return candidates
+
+
+async def save_pr_supplier_quotes(
+    db: AsyncSession,
+    actor: User,
+    pr_id: UUID,
+    selected_line_nos: list[int] | None = None,
+) -> list[SKUPriceRecord]:
+    pr = await _load_pr(db, pr_id)
+    if pr is None:
+        raise HTTPException(404, "pr.not_found")
+
+    line_filter = set(selected_line_nos) if selected_line_nos is not None else None
+
+    eligible_items = [
+        i
+        for i in pr.items
+        if i.item_id is not None
+        and i.supplier_id is not None
+        and i.unit_price is not None
+        and i.unit_price > 0
+        and (line_filter is None or i.line_no in line_filter)
+    ]
+    if not eligible_items:
+        return []
+
+    today = datetime.now(UTC).date()
+    source_refs = [_quote_source_ref(pr.pr_number, i.line_no) for i in eligible_items]
+    existing_rows = (
+        (
+            await db.execute(
+                select(SKUPriceRecord).where(
+                    SKUPriceRecord.source_type == _SUPPLIER_QUOTE_SOURCE_TYPE,
+                    SKUPriceRecord.source_ref.in_(source_refs),
+                )
+            )
+        )
+        .scalars()
+        .all()
+    )
+    existing_by_ref = {r.source_ref: r for r in existing_rows}
+
+    written: list[SKUPriceRecord] = []
+    for item in eligible_items:
+        ref = _quote_source_ref(pr.pr_number, item.line_no)
+        existing = existing_by_ref.get(ref)
+        if existing is not None:
+            if existing.price == item.unit_price and existing.supplier_id == item.supplier_id:
+                written.append(existing)
+                continue
+            existing.price = item.unit_price
+            existing.supplier_id = item.supplier_id
+            existing.currency = pr.currency or "CNY"
+            existing.quotation_date = today
+            existing.entered_by_id = actor.id
+            written.append(existing)
+        else:
+            row = SKUPriceRecord(
+                item_id=item.item_id,
+                supplier_id=item.supplier_id,
+                price=item.unit_price,
+                currency=pr.currency or "CNY",
+                quotation_date=today,
+                source_type=_SUPPLIER_QUOTE_SOURCE_TYPE,
+                source_ref=ref,
+                entered_by_id=actor.id,
+            )
+            db.add(row)
+            written.append(row)
+
+    await _audit(
+        db,
+        actor,
+        "sku.supplier_quotes_recorded_from_pr",
+        "purchase_requisition",
+        str(pr.id),
+        metadata={
+            "pr_number": pr.pr_number,
+            "count": len(written),
+            "line_nos": [i.line_no for i in eligible_items],
+        },
+    )
+    await db.commit()
+    for row in written:
+        await db.refresh(row)
+    return written

@@ -425,6 +425,30 @@ class PRConversionPreviewGroup(BaseModel):
     items: list[PRConversionPreviewItem]
 
 
+class PRQuoteCandidate(BaseModel):
+    pr_item_id: UUID
+    line_no: int
+    item_id: UUID
+    item_name: str
+    supplier_id: UUID
+    supplier_name: str | None
+    supplier_code: str | None
+    unit_price: Decimal
+    currency: str
+    source_ref: str
+    already_exists: bool
+    already_up_to_date: bool
+
+
+class PRSaveQuotesIn(BaseModel):
+    line_nos: list[int] | None = None
+
+
+class PRSaveQuotesOut(BaseModel):
+    written_count: int
+    skipped_unchanged_count: int
+
+
 class ContractCreateIn(BaseModel):
     po_id: UUID
     title: str

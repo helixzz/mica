@@ -15,6 +15,9 @@ from app.schemas import (
     PRDecisionIn,
     PRListOut,
     PROut,
+    PRQuoteCandidate,
+    PRSaveQuotesIn,
+    PRSaveQuotesOut,
     PRUpdateIn,
 )
 from app.services import export_pdf
@@ -124,6 +127,44 @@ async def convert_pr_to_po(
 ):
     pos = await svc.convert_pr_to_po(db, user, pr_id)
     return [POOut.model_validate(po) for po in pos]
+
+
+@router.get(
+    "/purchase-requisitions/{pr_id}/quote-candidates",
+    response_model=list[PRQuoteCandidate],
+    tags=["purchase"],
+)
+async def list_pr_quote_candidates(
+    pr_id: UUID,
+    user: CurrentUser,
+    db: Annotated[AsyncSession, Depends(get_db)],
+):
+    return await svc.list_pr_quote_candidates(db, user, pr_id)
+
+
+@router.post(
+    "/purchase-requisitions/{pr_id}/save-quotes",
+    response_model=PRSaveQuotesOut,
+    tags=["purchase"],
+)
+async def save_pr_supplier_quotes(
+    pr_id: UUID,
+    payload: PRSaveQuotesIn,
+    user: CurrentUser,
+    db: Annotated[AsyncSession, Depends(get_db)],
+):
+    candidates_before = await svc.list_pr_quote_candidates(db, user, pr_id)
+    rows = await svc.save_pr_supplier_quotes(db, user, pr_id, payload.line_nos)
+    skipped = sum(
+        1
+        for c in candidates_before
+        if c["already_up_to_date"]
+        and (payload.line_nos is None or c["line_no"] in set(payload.line_nos))
+    )
+    return PRSaveQuotesOut(
+        written_count=len(rows) - skipped,
+        skipped_unchanged_count=skipped,
+    )
 
 
 @router.get("/purchase-orders", response_model=list[POListOut], tags=["purchase"])
