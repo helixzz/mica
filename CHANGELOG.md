@@ -7,6 +7,19 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [v0.9.32] — 2026-04-27
+
+### 新功能
+
+- **Dashboard 新增发票待处理告警**：`/dashboard/metrics` 响应新增 `invoices_pending_match` 和 `invoices_mismatched` 两个字段，统计待匹配和不匹配的发票。首页「告警」板块自动展示：当存在待匹配/不匹配发票时，显示对应行并附查看全部链接。
+- **发票状态 i18n 补齐**：status 节新增 `pending_match`（待匹配）、`matched`（已匹配）、`mismatched`（不匹配），中英双语。
+
+### 元数据
+
+- 版本对齐 `0.9.32`：`backend/pyproject.toml`、`frontend/package.json`、`backend/app/config.py`、`deploy/.env.example`、`AGENTS.md`、`README` 徽章。
+
+---
+
 ## [v0.9.31] — 2026-04-27
 
 ### 维护
