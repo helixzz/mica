@@ -195,6 +195,21 @@ export interface PRConversionPreviewGroup {
   items: PRConversionPreviewItem[]
 }
 
+export interface PRQuoteCandidate {
+  pr_item_id: string
+  line_no: number
+  item_id: string
+  item_name: string
+  supplier_id: string
+  supplier_name: string | null
+  supplier_code: string | null
+  unit_price: string
+  currency: string
+  source_ref: string
+  already_exists: boolean
+  already_up_to_date: boolean
+}
+
 export interface DocumentTemplate {
   id: string
   code: string
@@ -866,6 +881,22 @@ export const api = {
   async previewPRConversion(id: string): Promise<PRConversionPreviewGroup[]> {
     const { data } = await client.get<PRConversionPreviewGroup[]>(
       `/purchase-requisitions/${id}/conversion-preview`
+    )
+    return data
+  },
+  async listPRQuoteCandidates(id: string): Promise<PRQuoteCandidate[]> {
+    const { data } = await client.get<PRQuoteCandidate[]>(
+      `/purchase-requisitions/${id}/quote-candidates`
+    )
+    return data
+  },
+  async savePRSupplierQuotes(
+    id: string,
+    body: { line_nos?: number[] | null } = {},
+  ): Promise<{ written_count: number; skipped_unchanged_count: number }> {
+    const { data } = await client.post<{ written_count: number; skipped_unchanged_count: number }>(
+      `/purchase-requisitions/${id}/save-quotes`,
+      body,
     )
     return data
   },

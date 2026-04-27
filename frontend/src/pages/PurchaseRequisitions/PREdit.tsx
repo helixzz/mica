@@ -8,6 +8,7 @@ import { useNavigate, useParams } from 'react-router-dom'
 import { api, type ClassificationItem, flattenCategoryTree, type Item, type Supplier } from '@/api'
 import { client, extractError } from '@/api/client'
 import { useAuth } from '@/auth/useAuth'
+import { PRQuoteConfirmModal } from '@/components/PRQuoteConfirmModal'
 
 interface LineForm {
   key: number
@@ -38,6 +39,7 @@ export function PREditPage() {
   const [lines, setLines] = useState<LineForm[]>([])
   const [submitting, setSubmitting] = useState(false)
   const [loaded, setLoaded] = useState(false)
+  const [quoteModalOpen, setQuoteModalOpen] = useState(false)
 
   useEffect(() => {
     void api.suppliers().then(setSuppliers)
@@ -149,7 +151,7 @@ export function PREditPage() {
         })),
       })
       void message.success(t('message.saved'))
-      navigate(`/purchase-requisitions/${id}`)
+      setQuoteModalOpen(true)
     } catch (e) {
       void message.error(extractError(e).detail || t('error.save_failed'))
     } finally {
@@ -292,6 +294,17 @@ export function PREditPage() {
         <Button onClick={() => navigate(`/purchase-requisitions/${id}`)}>{t('button.back')}</Button>
         <Button type="primary" onClick={onSave} loading={submitting}>{t('pr.save_changes')}</Button>
       </Space>
+
+      {id && (
+        <PRQuoteConfirmModal
+          prId={id}
+          open={quoteModalOpen}
+          onClose={() => {
+            setQuoteModalOpen(false)
+            navigate(`/purchase-requisitions/${id}`)
+          }}
+        />
+      )}
     </Space>
   )
 }

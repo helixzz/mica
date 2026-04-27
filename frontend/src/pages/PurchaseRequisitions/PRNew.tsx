@@ -24,6 +24,7 @@ import { api, type ClassificationItem, flattenCategoryTree, type Item, type PRIt
 import { client, extractError } from '@/api/client'
 import { useAuth } from '@/auth/useAuth'
 import { AIStreamButton } from '@/components/AIStreamButton'
+import { PRQuoteConfirmModal } from '@/components/PRQuoteConfirmModal'
 
 interface LineForm {
   key: number
@@ -61,6 +62,7 @@ export function PRNewPage() {
     { key: 1, line_no: 1, item_id: null, item_name: '', specification: '', supplier_id: null, qty: 1, uom: 'EA', unit_price: 0 },
   ])
   const [submitting, setSubmitting] = useState(false)
+  const [savedPRId, setSavedPRId] = useState<string | null>(null)
   const { user } = useAuth()
   const isRequester = user?.role === 'requester'
   const [refPrices, setRefPrices] = useState<Record<string, { latest_price: number | null; avg_price: number | null }>>({})
@@ -176,10 +178,11 @@ export function PRNewPage() {
       if (!saveOnly) {
         await api.submitPR(pr.id)
         void message.success(t('message.submit_success'))
+        navigate(`/purchase-requisitions/${pr.id}`)
       } else {
         void message.success(t('message.save_success'))
+        setSavedPRId(pr.id)
       }
-      navigate(`/purchase-requisitions/${pr.id}`)
     } catch (e) {
       const err = extractError(e)
       void message.error(err.detail || t('error.unexpected'))
@@ -445,6 +448,18 @@ export function PRNewPage() {
           {t('button.submit_for_approval')}
         </Button>
       </Space>
+
+      {savedPRId && (
+        <PRQuoteConfirmModal
+          prId={savedPRId}
+          open={!!savedPRId}
+          onClose={() => {
+            const id = savedPRId
+            setSavedPRId(null)
+            navigate(`/purchase-requisitions/${id}`)
+          }}
+        />
+      )}
     </Space>
   )
 }
