@@ -1049,3 +1049,19 @@ class PaymentForecastOut(BaseModel):
     paid_to_date: Decimal = Decimal(0)
     undated_planned: Decimal = Decimal(0)
     out_of_window_planned: Decimal = Decimal(0)
+
+
+class InvoiceForecastMonth(BaseModel):
+    month: str
+    invoiceable: Decimal
+    invoiced: Decimal
+    pending: Decimal
+
+
+class InvoiceForecastOut(BaseModel):
+    months: list[InvoiceForecastMonth]
+    window_invoiceable: Decimal
+    window_invoiced: Decimal
+    grand_invoiceable_to_date: Decimal = Decimal(0)
+    grand_invoiced_to_date: Decimal = Decimal(0)
+    grand_pending_to_date: Decimal = Decimal(0)

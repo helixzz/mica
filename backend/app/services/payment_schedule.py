@@ -14,10 +14,12 @@ from app.db import new_uuid
 from app.models import (
     Contract,
     Invoice,
+    InvoiceStatus,
     PaymentRecord,
     PaymentSchedule,
     PaymentStatus,
     POContractLink,
+    POStatus,
     PurchaseOrder,
     ScheduleItemStatus,
 )
@@ -478,6 +480,101 @@ async def payment_forecast(
         "paid_to_date": paid_to_date,
         "undated_planned": undated_planned,
         "out_of_window_planned": out_of_window_planned,
+    }
+
+
+async def invoice_forecast(
+    db: AsyncSession,
+    months: int = 6,
+    *,
+    anchor: date | None = None,
+    past_months: int = 0,
+) -> dict:
+    today = date.today()
+    anchor_month = (anchor or today).replace(day=1)
+
+    start_offset = -abs(past_months)
+    total = past_months + months
+
+    active_po_statuses = [
+        POStatus.CONFIRMED.value,
+        POStatus.PARTIALLY_RECEIVED.value,
+        POStatus.FULLY_RECEIVED.value,
+        POStatus.CLOSED.value,
+    ]
+    invoiced_statuses = [
+        InvoiceStatus.DRAFT.value,
+        InvoiceStatus.PENDING_MATCH.value,
+        InvoiceStatus.MATCHED.value,
+        InvoiceStatus.MISMATCHED.value,
+        InvoiceStatus.APPROVED.value,
+        InvoiceStatus.PAID.value,
+    ]
+
+    month_buckets: list[dict] = []
+    for i in range(total):
+        offset = start_offset + i
+        y = anchor_month.year + (anchor_month.month + offset - 1) // 12
+        m = (anchor_month.month + offset - 1) % 12 + 1
+        month_start = date(y, m, 1)
+        if m == 12:
+            month_end = date(y + 1, 1, 1)
+        else:
+            month_end = date(y, m + 1, 1)
+
+        invoiceable_q = select(func.coalesce(func.sum(PurchaseOrder.total_amount), 0)).where(
+            PurchaseOrder.created_at >= month_start,
+            PurchaseOrder.created_at < month_end,
+            PurchaseOrder.status.in_(active_po_statuses),
+        )
+        invoiceable = Decimal(str((await db.execute(invoiceable_q)).scalar()))
+
+        invoiced_q = select(func.coalesce(func.sum(Invoice.total_amount), 0)).where(
+            Invoice.invoice_date >= month_start,
+            Invoice.invoice_date < month_end,
+            Invoice.status.in_(invoiced_statuses),
+        )
+        invoiced = Decimal(str((await db.execute(invoiced_q)).scalar()))
+
+        pending = invoiceable - invoiced
+        if pending < 0:
+            pending = Decimal("0")
+
+        month_buckets.append(
+            {
+                "month": f"{y}-{m:02d}",
+                "invoiceable": invoiceable,
+                "invoiced": invoiced,
+                "pending": pending,
+            }
+        )
+
+    grand_invoiceable_to_date_q = select(
+        func.coalesce(func.sum(PurchaseOrder.total_amount), 0)
+    ).where(PurchaseOrder.status.in_(active_po_statuses))
+    grand_invoiceable_to_date = Decimal(
+        str((await db.execute(grand_invoiceable_to_date_q)).scalar())
+    )
+
+    grand_invoiced_to_date_q = select(func.coalesce(func.sum(Invoice.total_amount), 0)).where(
+        Invoice.status.in_(invoiced_statuses)
+    )
+    grand_invoiced_to_date = Decimal(str((await db.execute(grand_invoiced_to_date_q)).scalar()))
+
+    grand_pending_to_date = grand_invoiceable_to_date - grand_invoiced_to_date
+    if grand_pending_to_date < 0:
+        grand_pending_to_date = Decimal("0")
+
+    window_invoiceable = sum((b["invoiceable"] for b in month_buckets), Decimal("0"))
+    window_invoiced = sum((b["invoiced"] for b in month_buckets), Decimal("0"))
+
+    return {
+        "months": month_buckets,
+        "window_invoiceable": window_invoiceable,
+        "window_invoiced": window_invoiced,
+        "grand_invoiceable_to_date": grand_invoiceable_to_date,
+        "grand_invoiced_to_date": grand_invoiced_to_date,
+        "grand_pending_to_date": grand_pending_to_date,
     }
 
 

@@ -9,6 +9,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.core.security import CurrentUser, require_roles
 from app.db import get_db
 from app.schemas import (
+    InvoiceForecastOut,
     PaymentForecastOut,
     PaymentScheduleExecuteIn,
     PaymentScheduleIn,
@@ -244,5 +245,24 @@ async def get_payment_forecast(
         y, m = anchor.split("-")
         anchor_date = _date(int(y), int(m), 1)
     return await svc.payment_forecast(
+        db, months=months, anchor=anchor_date, past_months=past_months
+    )
+
+
+@router.get("/dashboard/invoice-forecast", response_model=InvoiceForecastOut)
+async def get_invoice_forecast(
+    _user: CurrentUser,
+    db: Annotated[AsyncSession, Depends(get_db)],
+    months: Annotated[int, Query(ge=1, le=24)] = 6,
+    past_months: Annotated[int, Query(ge=0, le=24)] = 0,
+    anchor: Annotated[str | None, Query(pattern=r"^\d{4}-\d{2}$")] = None,
+):
+    from datetime import date as _date
+
+    anchor_date: _date | None = None
+    if anchor:
+        y, m = anchor.split("-")
+        anchor_date = _date(int(y), int(m), 1)
+    return await svc.invoice_forecast(
         db, months=months, anchor=anchor_date, past_months=past_months
     )

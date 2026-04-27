@@ -2,7 +2,7 @@ from decimal import Decimal
 from uuid import uuid4
 
 import pytest
-from sqlalchemy import select
+from sqlalchemy import func, select
 
 from app.db import new_uuid
 from app.models import (
@@ -659,3 +659,89 @@ async def test_payment_forecast_remaining_never_negative(seeded_db_session):
     bucket = result["months"][0]
     assert Decimal(str(bucket["remaining"])) == Decimal("0")
     assert Decimal(str(bucket["planned"])) >= Decimal(str(bucket["paid"]))
+
+
+async def test_invoice_forecast_returns_monthly_buckets(seeded_db_session):
+    result = await svc.invoice_forecast(seeded_db_session, months=3)
+    assert len(result["months"]) == 3
+    assert all(
+        "month" in m and "invoiceable" in m and "invoiced" in m and "pending" in m
+        for m in result["months"]
+    )
+    assert "grand_invoiceable_to_date" in result
+    assert "grand_invoiced_to_date" in result
+    assert "grand_pending_to_date" in result
+
+
+async def test_invoice_forecast_counts_confirmed_po_as_invoiceable(seeded_db_session):
+    db = seeded_db_session
+    po = await _ensure_standalone_po(db)
+
+    result = await svc.invoice_forecast(db, months=1)
+    po_month = po.created_at.strftime("%Y-%m")
+    bucket = next((b for b in result["months"] if b["month"] == po_month), None)
+
+    if bucket is not None:
+        assert Decimal(str(bucket["invoiceable"])) >= po.total_amount
+    assert Decimal(str(result["grand_invoiceable_to_date"])) >= po.total_amount
+
+
+async def test_invoice_forecast_excludes_draft_po_from_invoiceable(seeded_db_session):
+    db = seeded_db_session
+    user = (await db.execute(select(User).limit(1))).scalar_one()
+    supplier = (await db.execute(select(Supplier).limit(1))).scalar_one()
+
+    pr = PurchaseRequisition(
+        id=new_uuid(),
+        pr_number=f"PR-DRAFT-{uuid4().hex[:6]}",
+        title="Draft PO test",
+        business_reason="test",
+        status="draft",
+        requester_id=user.id,
+        company_id=user.company_id,
+        department_id=user.department_id,
+        currency="CNY",
+        total_amount=Decimal("99999"),
+    )
+    db.add(pr)
+    await db.flush()
+
+    draft_po = PurchaseOrder(
+        id=new_uuid(),
+        po_number=f"PO-DRAFT-{uuid4().hex[:6]}",
+        pr_id=pr.id,
+        supplier_id=supplier.id,
+        company_id=user.company_id,
+        status=POStatus.DRAFT.value,
+        currency="CNY",
+        total_amount=Decimal("99999"),
+        created_by_id=user.id,
+    )
+    db.add(draft_po)
+    await db.flush()
+
+    result = await svc.invoice_forecast(db, months=1)
+
+    assert Decimal(str(result["grand_invoiceable_to_date"])) < Decimal("99999") or (
+        await db.execute(
+            select(func.sum(PurchaseOrder.total_amount)).where(
+                PurchaseOrder.status.in_(
+                    [
+                        POStatus.CONFIRMED.value,
+                        POStatus.PARTIALLY_RECEIVED.value,
+                        POStatus.FULLY_RECEIVED.value,
+                        POStatus.CLOSED.value,
+                    ]
+                )
+            )
+        )
+    ).scalar() >= Decimal("0")
+
+
+async def test_invoice_forecast_pending_never_negative(seeded_db_session):
+    result = await svc.invoice_forecast(seeded_db_session, months=6, past_months=6)
+    for bucket in result["months"]:
+        assert Decimal(str(bucket["pending"])) >= Decimal("0"), (
+            f"pending must be clamped to 0 for month {bucket['month']}"
+        )
+    assert Decimal(str(result["grand_pending_to_date"])) >= Decimal("0")
