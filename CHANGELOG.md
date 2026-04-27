@@ -7,6 +7,42 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [v0.9.28] — 2026-04-27
+
+### 新功能
+
+- **PR 物料行供应商报价 → SKU 行情库自动写入**：填好 PR 的明细行(物料 + 供应商 + 单价 三项齐全) → 保存后弹窗确认 → 写入 `SKUPriceRecord(source_type="supplier_quote", source_ref="<pr_number>-L<line_no>")`。沿用 v0.9.10 `convert_pr_to_po()` 写 `actual_po` 行情的同一模式,新增的 `supplier_quote` 来源在数据可信度上低于 `actual_po`,但能更早进入 SKU 行情时间序列。
+  - **触发**：保存 PR 时(PRNew save-only / PREdit 保存),提交审批走的是另一路径不打扰
+  - **UI**：弹窗列出符合条件的行,显示「新增 / 更新 / 无变化」三态,用户可逐行勾选
+  - **幂等**：`source_ref` 为 `<pr_number>-L<line_no>`,反复保存同一 PR 同一行不会产生新记录,只会更新价格 / 供应商
+  - **跳过条件**:行无 `item_id`(纯文本物料,未关联 SKU)、无 `supplier_id`、`unit_price <= 0` 任何一项缺失即跳过
+
+### API
+
+- 新增 `GET /api/v1/purchase-requisitions/{id}/quote-candidates` —— read-only,返回符合条件的明细行 + 当前 SKU 行情库的命中状态
+- 新增 `POST /api/v1/purchase-requisitions/{id}/save-quotes` —— 接受可选 `line_nos` 数组(用户在弹窗里勾选的子集),返回 `{written_count, skipped_unchanged_count}`
+
+### 测试
+
+- `tests/unit/test_purchase.py` 新增 5 条:
+  - `test_list_pr_quote_candidates_returns_eligible_lines` — 基本列出
+  - `test_list_pr_quote_candidates_skips_lines_without_item_id` — 纯文本物料不进
+  - `test_save_pr_supplier_quotes_creates_record_and_is_idempotent` — 同一 PR 反复保存无重复
+  - `test_save_pr_supplier_quotes_updates_when_price_changes` — 价格变化时 update 而非 insert
+  - `test_save_pr_supplier_quotes_respects_line_filter` — 用户勾选过滤生效
+- 容器内 `pytest tests/` **390 passed**。
+
+### 前端
+
+- 新增组件 `PRQuoteConfirmModal.tsx`,PRNew(save-only 路径)和 PREdit 都接入
+- 新增 9 个前端 i18n key (`pr.sku_quote_*` + `button.skip`),zh-CN + en-US 各一份
+
+### 元数据
+
+- 版本对齐 `0.9.28`:`backend/pyproject.toml`、`frontend/package.json`、`backend/app/config.py`、`deploy/.env.example`、`AGENTS.md`、`README` 徽章。
+
+---
+
 ## [v0.9.27] — 2026-04-27
 
 ### 新功能
