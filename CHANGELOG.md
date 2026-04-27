@@ -7,6 +7,29 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [v0.9.26] — 2026-04-27
+
+### 修复
+
+- **SAML JIT 默认公司/部门配置防呆**：之前 `auth.saml.jit.default_company_code` 在系统参数里是自由输入字符串，管理员手输错也能保存，等到首次 SAML 登录触发 JIT provisioning 才报 `default_company_required` 500。现在两个 JIT 参数都做了双重防护：
+  - **后端**：`_validate_custom_rules` 增加 referential 校验。`auth.saml.jit.default_company_code` 必须命中 `companies.code` 且公司 `is_enabled=true && is_deleted=false`，否则保存时 400 拒绝并返回 `saml.company_code_not_found`。`auth.saml.jit.default_department_code` 同样校验。两者均允许空字符串（启用兜底逻辑）。
+  - **前端**：SystemParamsTab 检测到这两个 key 时改渲染 `<Select>`，从 `GET /companies` / `GET /departments` 加载选项，杜绝错输。`handleSave` 解析后端 detail 字段，把 `saml.company_code_not_found` / `saml.department_code_not_found` 翻译为友好中英文提示。
+
+### 测试
+
+- `tests/unit/test_system_params.py` 新增 3 条：拒绝不存在的 code / 接受存在的 code / 接受空字符串。容器内 **381 passed**。
+
+### i18n
+
+- 后端 `zh-CN.json` / `en-US.json` 新增 `saml.company_code_not_found` / `saml.department_code_not_found`。
+- 前端 `admin.system_params.*` 增加 6 条相关 key（select_company / select_department / no_companies / no_departments / company_code_not_found / department_code_not_found）。
+
+### 元数据
+
+- 版本对齐 `0.9.26`：`backend/pyproject.toml`、`frontend/package.json`、`backend/app/config.py`、`deploy/.env.example`、`AGENTS.md`、`README` 徽章。
+
+---
+
 ## [v0.9.25] — 2026-04-27
 
 ### 新功能 / 改进
