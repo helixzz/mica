@@ -28,6 +28,7 @@ import {
 import { useAuth } from '@/auth/useAuth'
 import { PageHeader, StatCard, Section, EmptyState } from '@/components/ui'
 import { PaymentTracker } from '@/components/PaymentForecastChart'
+import { InvoiceTracker } from '@/components/InvoiceTrackerChart'
 
 const { Text } = Typography
 
@@ -174,6 +175,10 @@ export function DashboardPage() {
 
       {(isProcurementMgr || isFinanceAuditor || role === 'admin') && (
         <PaymentTracker />
+      )}
+
+      {(isProcurementMgr || isFinanceAuditor || role === 'admin') && (
+        <InvoiceTracker />
       )}
 
       <Row gutter={[16, 16]}>

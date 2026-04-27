@@ -601,6 +601,22 @@ export interface PaymentForecast {
   out_of_window_planned: string
 }
 
+export interface InvoiceForecastMonth {
+  month: string
+  invoiceable: string
+  invoiced: string
+  pending: string
+}
+
+export interface InvoiceForecast {
+  months: InvoiceForecastMonth[]
+  window_invoiceable: string
+  window_invoiced: string
+  grand_invoiceable_to_date: string
+  grand_invoiced_to_date: string
+  grand_pending_to_date: string
+}
+
 export interface ClassificationItem {
   id: string
   code: string
@@ -1396,6 +1412,19 @@ export const api = {
   ): Promise<PaymentForecast> {
     const { months = 6, past_months, anchor } = opts
     const { data } = await client.get<PaymentForecast>('/dashboard/payment-forecast', {
+      params: {
+        months,
+        ...(past_months !== undefined ? { past_months } : {}),
+        ...(anchor ? { anchor } : {}),
+      },
+    })
+    return data
+  },
+  async getInvoiceForecast(
+    opts: { months?: number; past_months?: number; anchor?: string } = {},
+  ): Promise<InvoiceForecast> {
+    const { months = 6, past_months, anchor } = opts
+    const { data } = await client.get<InvoiceForecast>('/dashboard/invoice-forecast', {
       params: {
         months,
         ...(past_months !== undefined ? { past_months } : {}),
