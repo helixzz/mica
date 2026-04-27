@@ -34,7 +34,7 @@ import {
   updateSystemParam,
   resetSystemParam,
 } from '../../api/admin-system-params';
-import { api } from '@/api';
+import { api, type Company, type Department } from '@/api';
 
 const { Title, Text } = Typography;
 const { Panel } = Collapse;
@@ -47,6 +47,8 @@ export const SystemParamsTab: React.FC = () => {
   const [editModalVisible, setEditModalVisible] = useState(false);
   const [editingParam, setEditingParam] = useState<SystemParameter | null>(null);
   const [refreshingMetadata, setRefreshingMetadata] = useState(false);
+  const [companies, setCompanies] = useState<Company[]>([]);
+  const [departments, setDepartments] = useState<Department[]>([]);
   const [form] = Form.useForm();
 
   const fetchParams = async () => {
@@ -63,6 +65,8 @@ export const SystemParamsTab: React.FC = () => {
 
   useEffect(() => {
     fetchParams();
+    void api.companies(true).then(setCompanies).catch(() => setCompanies([]));
+    void api.departments().then(setDepartments).catch(() => setDepartments([]));
   }, []);
 
   const handleEdit = (param: SystemParameter) => {
@@ -81,7 +85,17 @@ export const SystemParamsTab: React.FC = () => {
       setEditModalVisible(false);
       fetchParams();
     } catch (error) {
-      message.error(t('admin.system_params.update_error', 'Failed to update parameter'));
+      const err = error as { response?: { data?: { detail?: string } } };
+      const detail = err?.response?.data?.detail;
+      if (detail === 'saml.company_code_not_found') {
+        message.error(t('admin.system_params.company_code_not_found', '指定的公司编码不存在或已被禁用'));
+      } else if (detail === 'saml.department_code_not_found') {
+        message.error(t('admin.system_params.department_code_not_found', '指定的部门编码不存在或已被禁用'));
+      } else if (detail) {
+        message.error(detail);
+      } else {
+        message.error(t('admin.system_params.update_error', 'Failed to update parameter'));
+      }
     }
   };
 
@@ -214,6 +228,37 @@ export const SystemParamsTab: React.FC = () => {
             { value: 'procurement_mgr', label: t('role.procurement_mgr') },
             { value: 'admin', label: t('role.admin') },
           ]}
+        />
+      );
+    }
+    if (param.key === 'auth.saml.jit.default_company_code') {
+      const enabled = companies.filter((c) => c.is_enabled && !c.is_deleted);
+      return (
+        <Select
+          allowClear
+          showSearch
+          optionFilterProp="label"
+          placeholder={t('admin.system_params.select_company', '选择默认公司（留空将自动使用唯一启用的公司）')}
+          options={enabled.map((c) => ({
+            value: c.code,
+            label: `${c.code} — ${c.name_zh}`,
+          }))}
+          notFoundContent={t('admin.system_params.no_companies', '暂无可选公司')}
+        />
+      );
+    }
+    if (param.key === 'auth.saml.jit.default_department_code') {
+      return (
+        <Select
+          allowClear
+          showSearch
+          optionFilterProp="label"
+          placeholder={t('admin.system_params.select_department', '选择默认部门（可留空，由管理员后续指定）')}
+          options={departments.map((d) => ({
+            value: d.code,
+            label: `${d.code} — ${d.name_zh}`,
+          }))}
+          notFoundContent={t('admin.system_params.no_departments', '暂无可选部门')}
         />
       );
     }

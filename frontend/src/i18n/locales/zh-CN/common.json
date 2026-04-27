@@ -540,7 +540,13 @@
       "update_error": "更新参数失败",
       "reset": "重置为默认值",
       "reset_success": "参数已重置为默认值",
-      "reset_error": "重置参数失败"
+      "reset_error": "重置参数失败",
+      "select_company": "选择默认公司（留空将自动使用唯一启用的公司）",
+      "select_department": "选择默认部门（可留空，由管理员后续指定）",
+      "no_companies": "暂无可选公司",
+      "no_departments": "暂无可选部门",
+      "company_code_not_found": "指定的公司编码不存在或已被禁用",
+      "department_code_not_found": "指定的部门编码不存在或已被禁用"
     },
     "approval_rules": "审批规则",
     "llm_models": "LLM 模型",

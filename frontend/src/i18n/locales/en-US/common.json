@@ -540,7 +540,13 @@
       "update_error": "Failed to update parameter",
       "reset": "Reset to default",
       "reset_success": "Parameter reset to default",
-      "reset_error": "Failed to reset parameter"
+      "reset_error": "Failed to reset parameter",
+      "select_company": "Select default company (leave empty to auto-pick the only enabled company)",
+      "select_department": "Select default department (optional, admins may assign later)",
+      "no_companies": "No companies available",
+      "no_departments": "No departments available",
+      "company_code_not_found": "The specified company code does not exist or is disabled",
+      "department_code_not_found": "The specified department code does not exist or is disabled"
     },
     "approval_rules": "Approval Rules",
     "llm_models": "LLM Models",
