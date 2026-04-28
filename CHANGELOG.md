@@ -7,6 +7,23 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [v0.9.34] — 2026-04-28
+
+### 修复
+
+- **Health endpoint Cerbos 检查修复**：Cerbos URL 从 `/_health` 改为正确的 `/api/health`；degraded 判定加入非 200 响应判分（此前只有当请求抛异常才算 degraded）。
+- **新增 8 条集成测试** (`tests/integration/test_api_flows.py`)：覆盖健康检查、Dashboard metrics、PO 列表字段、付款/发票预测、用户 CRUD M:N、SAML JIT 公司码校验。HTTP 层端到端测试防止 v0.9.23 类 ResponseValidationError 再次逃逸。
+
+### 测试
+
+- **403 passed** (395 unit + 8 integration)。
+
+### 元数据
+
+- 版本对齐 `0.9.34`。
+
+---
+
 ## [v0.9.33] — 2026-04-28
 
 ### 改进
