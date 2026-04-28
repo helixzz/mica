@@ -1110,15 +1110,10 @@ async def create_invoice(
     date_part = f"{now.year:04d}{now.month:02d}{now.day:02d}"
     full_prefix = f"{prefix}{date_part}"
     n = (
-        (
-            await db.execute(
-                select(func.count(Invoice.id)).where(
-                    Invoice.internal_number.startswith(full_prefix)
-                )
-            )
-        ).scalar_one()
-        or 0
-    )
+        await db.execute(
+            select(func.count(Invoice.id)).where(Invoice.internal_number.startswith(full_prefix))
+        )
+    ).scalar_one() or 0
     internal_number = f"{full_prefix}{n + 1:03d}"
 
     po_item_ids = {line.get("po_item_id") for line in lines_in if line.get("po_item_id")}
