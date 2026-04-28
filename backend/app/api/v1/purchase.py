@@ -5,7 +5,7 @@ from fastapi import APIRouter, Depends, status
 from fastapi.responses import Response
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.core.security import CurrentUser
+from app.core.security import CurrentUser, require_roles
 from app.db import get_db
 from app.schemas import (
     POListOut,
@@ -96,6 +96,7 @@ async def decide_pr(
     payload: PRDecisionIn,
     user: CurrentUser,
     db: Annotated[AsyncSession, Depends(get_db)],
+    _role: Annotated[None, Depends(require_roles("admin", "dept_manager", "procurement_mgr"))],
 ):
     pr = await svc.decide_pr(db, user, pr_id, payload)
     return PROut.model_validate(pr)
@@ -124,6 +125,7 @@ async def convert_pr_to_po(
     pr_id: UUID,
     user: CurrentUser,
     db: Annotated[AsyncSession, Depends(get_db)],
+    _role: Annotated[None, Depends(require_roles("admin", "it_buyer", "procurement_mgr"))],
 ):
     pos = await svc.convert_pr_to_po(db, user, pr_id)
     return [POOut.model_validate(po) for po in pos]
@@ -152,6 +154,7 @@ async def save_pr_supplier_quotes(
     payload: PRSaveQuotesIn,
     user: CurrentUser,
     db: Annotated[AsyncSession, Depends(get_db)],
+    _role: Annotated[None, Depends(require_roles("admin", "it_buyer", "procurement_mgr"))],
 ):
     candidates_before = await svc.list_pr_quote_candidates(db, user, pr_id)
     rows = await svc.save_pr_supplier_quotes(db, user, pr_id, payload.line_nos)

@@ -204,6 +204,7 @@ async def create_shipment(
     payload: ShipmentCreateIn,
     user: CurrentUser,
     db: Annotated[AsyncSession, Depends(get_db)],
+    _role: Annotated[None, Depends(require_roles("admin", "it_buyer", "procurement_mgr"))],
 ):
     s = await flow.create_shipment(
         db,
@@ -315,6 +316,10 @@ async def create_payment(
     payload: PaymentCreateIn,
     user: CurrentUser,
     db: Annotated[AsyncSession, Depends(get_db)],
+    _role: Annotated[
+        None,
+        Depends(require_roles("admin", "it_buyer", "procurement_mgr", "finance_auditor")),
+    ],
 ):
     p = await flow.create_payment(
         db,
@@ -422,6 +427,10 @@ async def create_invoice(
     payload: InvoiceCreateIn,
     user: CurrentUser,
     db: Annotated[AsyncSession, Depends(get_db)],
+    _role: Annotated[
+        None,
+        Depends(require_roles("admin", "it_buyer", "procurement_mgr", "finance_auditor")),
+    ],
 ):
     inv, validations = await flow.create_invoice(
         db,

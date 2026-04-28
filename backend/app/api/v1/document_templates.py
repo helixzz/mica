@@ -232,6 +232,10 @@ async def generate_schedule_document(
     schedule_item_id: UUID,
     user: CurrentUser,
     db: Annotated[AsyncSession, Depends(get_db)],
+    _role: Annotated[
+        None,
+        Depends(require_roles("admin", "it_buyer", "procurement_mgr", "finance_auditor")),
+    ],
     template_code: str = Form(...),
 ):
     _ = user

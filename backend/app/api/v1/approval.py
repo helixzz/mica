@@ -4,7 +4,7 @@ from uuid import UUID
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.core.security import CurrentUser
+from app.core.security import CurrentUser, require_roles
 from app.db import get_db
 from app.models import ApprovalTask
 from app.schemas import ApprovalInstanceOut, ApprovalTaskOut, PRDecisionIn
@@ -53,6 +53,10 @@ async def act_on_task(
     payload: PRDecisionIn,
     user: CurrentUser,
     db: Annotated[AsyncSession, Depends(get_db)],
+    _role: Annotated[
+        None,
+        Depends(require_roles("admin", "dept_manager", "procurement_mgr", "finance_auditor")),
+    ],
 ):
     task = await db.get(ApprovalTask, task_id)
     if task is None:

@@ -7,7 +7,7 @@ from fastapi import APIRouter, Depends
 from pydantic import BaseModel, ConfigDict, Field
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.core.security import CurrentUser
+from app.core.security import CurrentUser, require_roles
 from app.db import get_db
 from app.services import sku as sku_svc
 
@@ -72,6 +72,7 @@ async def record_price(
     payload: PriceRecordIn,
     user: CurrentUser,
     db: Annotated[AsyncSession, Depends(get_db)],
+    _role: Annotated[None, Depends(require_roles("admin", "it_buyer", "procurement_mgr"))],
 ):
     record, anomaly = await sku_svc.record_price(
         db,
@@ -139,6 +140,7 @@ async def ack_anomaly(
     payload: AnomalyAckIn,
     user: CurrentUser,
     db: Annotated[AsyncSession, Depends(get_db)],
+    _role: Annotated[None, Depends(require_roles("admin", "it_buyer", "procurement_mgr"))],
 ):
     row = await sku_svc.acknowledge_anomaly(db, user, anomaly_id, payload.notes)
     return AnomalyOut.model_validate(row)
