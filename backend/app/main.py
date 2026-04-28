@@ -6,13 +6,13 @@ from fastapi import FastAPI, Request
 from fastapi.exceptions import RequestValidationError
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
-from app.middleware.request_id import REQUEST_ID_HEADER, RequestIdMiddleware
 from starlette.exceptions import HTTPException as StarletteHTTPException
 
 from app.api import api_router
 from app.config import get_settings
 from app.db import AsyncSessionLocal
 from app.i18n import detect_locale, t
+from app.middleware.request_id import RequestIdMiddleware
 from app.services.seed import seed_dev_data
 
 settings = get_settings()

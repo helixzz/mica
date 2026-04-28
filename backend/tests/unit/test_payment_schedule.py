@@ -745,3 +745,15 @@ async def test_invoice_forecast_pending_never_negative(seeded_db_session):
             f"pending must be clamped to 0 for month {bucket['month']}"
         )
     assert Decimal(str(result["grand_pending_to_date"])) >= Decimal("0")
+
+
+async def test_payment_forecast_includes_contract_remaining(seeded_db_session):
+    db = seeded_db_session
+    contract = await _ensure_contract(db)
+    contract.total_amount = Decimal("50000")
+    await db.flush()
+
+    result = await svc.payment_forecast(db, months=3)
+
+    assert "grand_contract_remaining" in result
+    assert Decimal(str(result["grand_contract_remaining"])) >= Decimal("50000")
