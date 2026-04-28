@@ -66,9 +66,21 @@ async def http_exception_handler(request: Request, exc: StarletteHTTPException):
 @app.exception_handler(RequestValidationError)
 async def validation_exception_handler(request: Request, exc: RequestValidationError):
     locale = detect_locale(request)
+    errors = exc.errors()
+    for error in errors:
+        if "ctx" in error and isinstance(error["ctx"], dict):
+            error["ctx"] = {k: str(v) for k, v in error["ctx"].items()}
+    detail_parts = [
+        f"{'.'.join(str(x) for x in e['loc'] if x != '__root__')}: {e['msg']}" for e in errors
+    ]
     return JSONResponse(
         status_code=422,
-        content={"detail": t("common.validation_error", locale), "errors": exc.errors()},
+        content={
+            "detail": "; ".join(detail_parts)
+            if detail_parts
+            else t("common.validation_error", locale),
+            "errors": errors,
+        },
     )
 
 

@@ -7,6 +7,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [v0.9.36] — 2026-04-28
+
+### 修复
+
+- **SKU 创建报错信息被吞**：Pydantic code validator 的 `ValueError` 在 `RequestValidationError.ctx` 中是不可序列化的。validation_exception_handler 将其传给 JSONResponse → json.dumps 二次崩溃 500 → 前端只看到"操作失败"。修复：ctx 值全转字符串;detail 现包含字段级错误(如 `body.code: code must contain...`)。
+
+## [v0.9.35] — 2026-04-28
+
+### 修复
+
+- **Cerbos 健康检查最终修复**：Cerbos sidecar 的 admin API 默认关闭，`/api/health` 不可达。改为探测 root 页面(Swagger UI,200 OK)。
+
 ## [v0.9.34] — 2026-04-28
 
 ### 修复
