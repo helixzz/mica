@@ -128,6 +128,22 @@ function Protected({ children }: { children: React.ReactNode }) {
   return <>{children}</>
 }
 
+function ProcurementGate({ children }: { children: React.ReactNode }) {
+  const { user } = useAuth()
+  if (!user || user.role === 'requester') {
+    return <Navigate to="/dashboard" replace />
+  }
+  return <>{children}</>
+}
+
+const PROCUREMENT_ROLES = ['admin', 'it_buyer', 'procurement_mgr', 'finance_auditor'] as const
+
+function hideForRequester(children: React.ReactNode) {
+  const user = useAuth.getState().user
+  if (!user || user.role === 'requester') return null
+  return children
+}
+
 export function AppRoutes() {
   return (
     <Suspense fallback={<PageFallback />}>
@@ -152,18 +168,18 @@ export function AppRoutes() {
           <Route path="/purchase-orders/:id" element={<PODetailPage />} />
           <Route path="/contracts" element={<ContractsPage />} />
           <Route path="/contracts/:id" element={<ContractDetailPage />} />
-          <Route path="/shipments" element={<ShipmentsPage />} />
-          <Route path="/payments" element={<PaymentsPage />} />
-          <Route path="/invoices" element={<InvoicesPage />} />
-          <Route path="/invoices/:id" element={<InvoiceDetailPage />} />
-          <Route path="/sku" element={<SKUPage />} />
-          <Route path="/rfqs" element={<RFQListPage />} />
-          <Route path="/rfqs/new" element={<RFQNewPage />} />
-          <Route path="/rfqs/:id" element={<RFQDetailPage />} />
-          <Route path="/suppliers" element={<SuppliersPage />} />
-          <Route path="/suppliers/:id" element={<SupplierDetailPage />} />
-          <Route path="/items" element={<ItemsPage />} />
-          <Route path="/items/:id" element={<ItemDetailPage />} />
+          <Route path="/shipments" element={<ProcurementGate><ShipmentsPage /></ProcurementGate>} />
+          <Route path="/payments" element={<ProcurementGate><PaymentsPage /></ProcurementGate>} />
+          <Route path="/invoices" element={<ProcurementGate><InvoicesPage /></ProcurementGate>} />
+          <Route path="/invoices/:id" element={<ProcurementGate><InvoiceDetailPage /></ProcurementGate>} />
+          <Route path="/sku" element={<ProcurementGate><SKUPage /></ProcurementGate>} />
+          <Route path="/rfqs" element={<ProcurementGate><RFQListPage /></ProcurementGate>} />
+          <Route path="/rfqs/new" element={<ProcurementGate><RFQNewPage /></ProcurementGate>} />
+          <Route path="/rfqs/:id" element={<ProcurementGate><RFQDetailPage /></ProcurementGate>} />
+          <Route path="/suppliers" element={<ProcurementGate><SuppliersPage /></ProcurementGate>} />
+          <Route path="/suppliers/:id" element={<ProcurementGate><SupplierDetailPage /></ProcurementGate>} />
+          <Route path="/items" element={<ProcurementGate><ItemsPage /></ProcurementGate>} />
+          <Route path="/items/:id" element={<ProcurementGate><ItemDetailPage /></ProcurementGate>} />
           <Route path="/admin" element={<AdminPage />} />
           <Route path="/search" element={<SearchResults />} />
           <Route path="/notifications" element={<NotificationCenter />} />

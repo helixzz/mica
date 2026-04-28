@@ -44,6 +44,7 @@ export function AppLayout() {
   const { token } = theme.useToken();
   const { mode, setMode } = useTheme();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const isRequester = user?.role === 'requester';
 
   const onLogout = () => {
     logout();
@@ -67,14 +68,16 @@ export function AppLayout() {
     { key: '/approvals', icon: <AuditOutlined />, label: <Link to="/approvals" onClick={() => setMobileMenuOpen(false)}>{t('nav.approvals')}</Link> },
     { key: '/purchase-requisitions', icon: <SolutionOutlined />, label: <Link to="/purchase-requisitions" onClick={() => setMobileMenuOpen(false)}>{t('nav.purchase_requisitions')}</Link> },
     { key: '/purchase-orders', icon: <FileTextOutlined />, label: <Link to="/purchase-orders" onClick={() => setMobileMenuOpen(false)}>{t('nav.purchase_orders')}</Link> },
-    { key: '/contracts', icon: <ApartmentOutlined />, label: <Link to="/contracts" onClick={() => setMobileMenuOpen(false)}>{t('nav.contracts')}</Link> },
-    { key: '/shipments', icon: <CarOutlined />, label: <Link to="/shipments" onClick={() => setMobileMenuOpen(false)}>{t('nav.shipments')}</Link> },
-    { key: '/payments', icon: <BankOutlined />, label: <Link to="/payments" onClick={() => setMobileMenuOpen(false)}>{t('nav.payments')}</Link> },
-    { key: '/invoices', icon: <DollarOutlined />, label: <Link to="/invoices" onClick={() => setMobileMenuOpen(false)}>{t('nav.invoices')}</Link> },
-    { key: '/sku', icon: <BarChartOutlined />, label: <Link to="/sku" onClick={() => setMobileMenuOpen(false)}>{t('nav.sku')}</Link> },
-    { key: '/items', icon: <DatabaseOutlined />, label: <Link to="/items" onClick={() => setMobileMenuOpen(false)}>{t('nav.items')}</Link> },
-    { key: '/rfqs', icon: <SolutionOutlined />, label: <Link to="/rfqs" onClick={() => setMobileMenuOpen(false)}>{t('nav.rfqs')}</Link> },
-    { key: '/suppliers', icon: <BankOutlined />, label: <Link to="/suppliers" onClick={() => setMobileMenuOpen(false)}>{t('nav.suppliers')}</Link> },
+    ...(isRequester ? [] : [
+      { key: '/contracts', icon: <ApartmentOutlined />, label: <Link to="/contracts" onClick={() => setMobileMenuOpen(false)}>{t('nav.contracts')}</Link> },
+      { key: '/shipments', icon: <CarOutlined />, label: <Link to="/shipments" onClick={() => setMobileMenuOpen(false)}>{t('nav.shipments')}</Link> },
+      { key: '/payments', icon: <BankOutlined />, label: <Link to="/payments" onClick={() => setMobileMenuOpen(false)}>{t('nav.payments')}</Link> },
+      { key: '/invoices', icon: <DollarOutlined />, label: <Link to="/invoices" onClick={() => setMobileMenuOpen(false)}>{t('nav.invoices')}</Link> },
+      { key: '/sku', icon: <BarChartOutlined />, label: <Link to="/sku" onClick={() => setMobileMenuOpen(false)}>{t('nav.sku')}</Link> },
+      { key: '/items', icon: <DatabaseOutlined />, label: <Link to="/items" onClick={() => setMobileMenuOpen(false)}>{t('nav.items')}</Link> },
+      { key: '/rfqs', icon: <SolutionOutlined />, label: <Link to="/rfqs" onClick={() => setMobileMenuOpen(false)}>{t('nav.rfqs')}</Link> },
+      { key: '/suppliers', icon: <BankOutlined />, label: <Link to="/suppliers" onClick={() => setMobileMenuOpen(false)}>{t('nav.suppliers')}</Link> },
+    ]),
     ...(user?.role === 'admin'
       ? [{ key: '/admin', icon: <SettingOutlined />, label: <Link to="/admin" onClick={() => setMobileMenuOpen(false)}>{t('admin.admin_console')}</Link> }]
       : []),
