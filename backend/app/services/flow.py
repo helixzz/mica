@@ -1101,18 +1101,25 @@ async def create_invoice(
 
     from app.services.system_params import system_params
 
-    year = datetime.now(UTC).year
+    now = datetime.now(UTC)
     raw_prefix = await system_params.get(db, "bill.number_prefix", "")
     if isinstance(raw_prefix, str) and raw_prefix.strip():
         prefix = raw_prefix.strip()
     else:
-        prefix = f"INV-{year}-"
+        prefix = "INV"
+    date_part = f"{now.year:04d}{now.month:02d}{now.day:02d}"
+    full_prefix = f"{prefix}{date_part}"
     n = (
-        await db.execute(
-            select(func.count(Invoice.id)).where(Invoice.internal_number.startswith(prefix))
-        )
-    ).scalar_one() or 0
-    internal_number = f"{prefix}{n + 1:04d}"
+        (
+            await db.execute(
+                select(func.count(Invoice.id)).where(
+                    Invoice.internal_number.startswith(full_prefix)
+                )
+            )
+        ).scalar_one()
+        or 0
+    )
+    internal_number = f"{full_prefix}{n + 1:03d}"
 
     po_item_ids = {line.get("po_item_id") for line in lines_in if line.get("po_item_id")}
     po_items_map: dict[str, POItem] = {}
