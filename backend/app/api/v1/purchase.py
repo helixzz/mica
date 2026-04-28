@@ -182,7 +182,7 @@ async def get_po(
     user: CurrentUser,
     db: Annotated[AsyncSession, Depends(get_db)],
 ):
-    po = await svc.get_po(db, po_id)
+    po = await svc.get_po(db, po_id, actor=user)
     return POOut.model_validate(po)
 
 
@@ -192,7 +192,7 @@ async def export_po_pdf(
     user: CurrentUser,
     db: Annotated[AsyncSession, Depends(get_db)],
 ):
-    await svc.get_po(db, po_id)
+    await svc.get_po(db, po_id, actor=user)
     pdf_bytes = await export_pdf.render_po_pdf(db, po_id)
     return Response(
         content=pdf_bytes,

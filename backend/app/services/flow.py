@@ -24,6 +24,7 @@ from app.models import (
     POItem,
     POStatus,
     PurchaseOrder,
+    PurchaseRequisition,
     ScheduleItemStatus,
     SerialNumberEntry,
     Shipment,
@@ -333,7 +334,7 @@ async def unlink_po_contract(
     await db.commit()
 
 
-async def get_contract(db: AsyncSession, contract_id: UUID) -> Contract:
+async def get_contract(db: AsyncSession, contract_id: UUID, actor: User | None = None) -> Contract:
     stmt = (
         select(Contract)
         .where(Contract.id == contract_id)
@@ -342,6 +343,19 @@ async def get_contract(db: AsyncSession, contract_id: UUID) -> Contract:
     contract = (await db.execute(stmt)).scalar_one_or_none()
     if contract is None:
         raise HTTPException(404, "contract.not_found")
+    if actor is not None:
+        from app.core.scoping import is_requester_scoped, visible_pr_filter
+
+        if is_requester_scoped(actor) and contract.po is not None:
+            scope_filter = await visible_pr_filter(db, actor)
+            if scope_filter is not None:
+                check = await db.execute(
+                    select(PurchaseRequisition.id).where(
+                        PurchaseRequisition.id == contract.po.pr_id, scope_filter
+                    )
+                )
+                if check.scalar_one_or_none() is None:
+                    raise HTTPException(403, "insufficient_role")
     return contract
 
 

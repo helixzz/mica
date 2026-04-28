@@ -12,10 +12,11 @@ from app.api import api_router
 from app.config import get_settings
 from app.db import AsyncSessionLocal
 from app.i18n import detect_locale, t
-from app.middleware.request_id import RequestIdMiddleware
+from app.middleware.request_id import RequestIdMiddleware, install_log_filter
 from app.services.seed import seed_dev_data
 
 settings = get_settings()
+install_log_filter()
 
 
 @asynccontextmanager

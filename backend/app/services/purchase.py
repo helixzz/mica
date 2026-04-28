@@ -612,10 +612,23 @@ async def list_pos(db: AsyncSession, actor: User) -> list[PurchaseOrder]:
     return list(result.scalars().all())
 
 
-async def get_po(db: AsyncSession, po_id: UUID) -> PurchaseOrder:
+async def get_po(db: AsyncSession, po_id: UUID, actor: User | None = None) -> PurchaseOrder:
     po = await _load_po(db, po_id)
     if po is None:
         raise HTTPException(404, "po.not_found")
+    if actor is not None:
+        from app.core.scoping import is_requester_scoped, visible_pr_filter
+
+        if is_requester_scoped(actor):
+            scope_filter = await visible_pr_filter(db, actor)
+            if scope_filter is not None:
+                check = await db.execute(
+                    select(PurchaseRequisition.id).where(
+                        PurchaseRequisition.id == po.pr_id, scope_filter
+                    )
+                )
+                if check.scalar_one_or_none() is None:
+                    raise HTTPException(403, "insufficient_role")
     return po
 
 

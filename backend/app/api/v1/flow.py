@@ -102,7 +102,7 @@ async def get_contract(
     user: CurrentUser,
     db: Annotated[AsyncSession, Depends(get_db)],
 ):
-    c = await flow.get_contract(db, contract_id)
+    c = await flow.get_contract(db, contract_id, actor=user)
     linked = await flow.list_linked_pos(db, contract_id)
     return _contract_to_out(c, linked_pos=linked)
 
