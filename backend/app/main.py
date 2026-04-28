@@ -6,6 +6,7 @@ from fastapi import FastAPI, Request
 from fastapi.exceptions import RequestValidationError
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
+from app.middleware.request_id import REQUEST_ID_HEADER, RequestIdMiddleware
 from starlette.exceptions import HTTPException as StarletteHTTPException
 
 from app.api import api_router
@@ -37,6 +38,8 @@ app = FastAPI(
     redoc_url=f"{settings.api_prefix}/redoc",
 )
 
+app.add_middleware(RequestIdMiddleware)
+
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"] if settings.cors_allow_all else settings.cors_origins,
@@ -57,9 +60,14 @@ async def http_exception_handler(request: Request, exc: StarletteHTTPException):
         translated = t(detail, locale)
         if translated != detail:
             detail = translated
+    request_id = getattr(request.state, "request_id", None)
     return JSONResponse(
         status_code=exc.status_code,
-        content={"detail": detail, "code": exc.detail if isinstance(exc.detail, str) else None},
+        content={
+            "detail": detail,
+            "code": exc.detail if isinstance(exc.detail, str) else None,
+            "request_id": request_id,
+        },
     )
 
 
@@ -73,6 +81,7 @@ async def validation_exception_handler(request: Request, exc: RequestValidationE
     detail_parts = [
         f"{'.'.join(str(x) for x in e['loc'] if x != '__root__')}: {e['msg']}" for e in errors
     ]
+    request_id = getattr(request.state, "request_id", None)
     return JSONResponse(
         status_code=422,
         content={
@@ -80,6 +89,7 @@ async def validation_exception_handler(request: Request, exc: RequestValidationE
             if detail_parts
             else t("common.validation_error", locale),
             "errors": errors,
+            "request_id": request_id,
         },
     )
 
