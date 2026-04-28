@@ -39,9 +39,9 @@ def _read_rows(file_bytes: bytes) -> list[dict[str, str]]:
 
 @router.post("/admin/import/suppliers", tags=["import"])
 async def import_suppliers(
-    file: Annotated[UploadFile, File()],
-    _user: Annotated[None, Depends(require_roles("admin", "procurement_mgr", "it_buyer"))],
-    db: Annotated[AsyncSession, Depends(get_db)],
+    file: Annotated[UploadFile, File(...)],
+    _user: CurrentUser,
+    _role: Annotated[None, Depends(require_roles("admin"))],
 ):
     content = await file.read()
     rows = _read_rows(content)
@@ -106,9 +106,9 @@ async def import_items(
 
 @router.post("/admin/import/prices", tags=["import"])
 async def import_prices(
-    file: Annotated[UploadFile, File()],
-    _user: Annotated[None, Depends(require_roles("admin", "procurement_mgr", "it_buyer"))],
-    db: Annotated[AsyncSession, Depends(get_db)],
+    file: Annotated[UploadFile, File(...)],
+    _user: CurrentUser,
+    _role: Annotated[None, Depends(require_roles("admin"))],
 ):
     content = await file.read()
     rows = _read_rows(content)

@@ -194,6 +194,12 @@ async def export_po_pdf(
     po_id: UUID,
     user: CurrentUser,
     db: Annotated[AsyncSession, Depends(get_db)],
+    _role: Annotated[
+        None,
+        Depends(
+            require_roles("admin", "it_buyer", "procurement_mgr", "finance_auditor")
+        ),
+    ],
 ):
     await svc.get_po(db, po_id, actor=user)
     pdf_bytes = await export_pdf.render_po_pdf(db, po_id)
