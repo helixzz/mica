@@ -90,8 +90,11 @@ async def health() -> dict:
 
     try:
         async with httpx.AsyncClient(timeout=2.0) as client:
-            resp = await client.get("http://cerbos:3593/_health")
-            checks["cerbos"] = resp.status_code == 200
+            resp = await client.get("http://cerbos:3593/api/health")
+            ok = resp.status_code == 200
+            checks["cerbos"] = ok
+            if not ok:
+                overall = False
     except Exception:
         checks["cerbos"] = False
         overall = False
