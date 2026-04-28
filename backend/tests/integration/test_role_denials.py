@@ -76,7 +76,7 @@ async def test_admin_can_create_payment(seeded_client):
     po_id = pos[0]["id"]
     r = await seeded_client.post(
         "/api/v1/payments",
-        json={"po_id": po_id, "amount": "10", "contract_id": None},
+        json={"po_id": po_id, "amount": "10"},
         headers=auth,
     )
     assert r.status_code == 201, f"Payment create failed: {r.text}"

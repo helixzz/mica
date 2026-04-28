@@ -1397,3 +1397,33 @@ $ curl -X POST /api/v1/admin/ai-models/{id}/test-connection
 ---
 
 **最后更新**：2026-04-21 · **维护人**：helixzz
+
+---
+
+## [v1.0.0-rc1] — 2026-04-28
+
+### v1.0 Release Candidate
+
+Mica has reached production-grade readiness. This RC consolidates all v0.9.x hardening work.
+
+#### Production Readiness
+
+- **Dependency locking**: all 27 dependencies pinned with sensible upper bounds (prevents build flakiness)
+- **Health endpoint**: `/health` returns structured `{status, checks: {db, cerbos}}`, with degraded detection for partial failures
+- **Integration tests**: 15 tests covering HTTP layer (PR→PO, SAML JIT, dashboard, role denials, admin CRUD)
+- **Request-ID middleware**: every request gets `X-Request-ID` injected into response headers, error bodies, and log records via contextvars
+- **RBAC audit**: 17 backend endpoints now require procurement/finance roles; frontend route guards + nav hiding for requester role
+- **Requester row-level scoping**: M:N cost center + department visibility (OR semantics), applied to 6 entity types across list + detail endpoints
+- **SAML JIT hardening**: write-time referential validation for default company/department codes (prevents crash-at-login)
+- **Denylist CI**: automated scan blocks tenant-specific identifiers from being committed to the public repo
+
+#### Feature highlights (carried from v0.9.x)
+
+- Full procurement lifecycle: PR → approval → multi-supplier PO split → contract M:N → shipment → payment → invoice
+- Dashboard: PaymentTracker (monthly forecast), InvoiceTracker (invoiceable vs invoiced), alerts (contract expiry, price anomalies, pending invoices)
+- AI-powered document generation (payment forms, templates)
+- Configurable contract/bill number prefixes via system parameters
+- i18n: zh-CN / en-US coverage across UI and backend messages
+- Column visibility customization with localStorage persistence
+- SKU price records auto-recorded from PR supplier quotes and PO actual prices
+
