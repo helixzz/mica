@@ -80,3 +80,21 @@ async def test_admin_can_create_payment(seeded_client):
         headers=auth,
     )
     assert r.status_code == 201, f"Payment create failed: {r.text}"
+
+
+@pytest.mark.asyncio
+async def test_requester_denied_on_shipment_list(seeded_client):
+    auth = await _login_as(seeded_client, "bob")
+    r = await seeded_client.get("/api/v1/shipments", headers=auth)
+    assert r.status_code == 403
+
+
+@pytest.mark.asyncio
+async def test_requester_denied_on_contract_edit(seeded_client):
+    auth = await _login_as(seeded_client, "bob")
+    r = await seeded_client.patch(
+        "/api/v1/contracts/00000000-0000-0000-0000-000000000001",
+        json={"title": "hack"},
+        headers=auth,
+    )
+    assert r.status_code == 403

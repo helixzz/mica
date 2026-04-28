@@ -225,6 +225,10 @@ async def create_shipment(
 async def list_shipments(
     user: CurrentUser,
     db: Annotated[AsyncSession, Depends(get_db)],
+    _role: Annotated[
+        None,
+        Depends(require_roles("admin", "it_buyer", "procurement_mgr", "finance_auditor")),
+    ],
     po_id: UUID | None = None,
     contract_id: UUID | None = None,
 ):
@@ -378,6 +382,10 @@ async def confirm_payment(
 async def list_payments(
     user: CurrentUser,
     db: Annotated[AsyncSession, Depends(get_db)],
+    _role: Annotated[
+        None,
+        Depends(require_roles("admin", "it_buyer", "procurement_mgr", "finance_auditor")),
+    ],
     po_id: UUID | None = None,
 ):
     payments = await flow.list_payments(db, po_id, actor=user)
@@ -475,6 +483,10 @@ async def create_invoice(
 async def list_invoices(
     user: CurrentUser,
     db: Annotated[AsyncSession, Depends(get_db)],
+    _role: Annotated[
+        None,
+        Depends(require_roles("admin", "it_buyer", "procurement_mgr", "finance_auditor")),
+    ],
     po_id: UUID | None = None,
 ):
     if po_id:
