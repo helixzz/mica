@@ -1099,8 +1099,14 @@ async def create_invoice(
     if supplier is None:
         raise HTTPException(404, "supplier.not_found")
 
+    from app.services.system_params import system_params
+
     year = datetime.now(UTC).year
-    prefix = f"INV-{year}-"
+    raw_prefix = await system_params.get(db, "bill.number_prefix", "")
+    if isinstance(raw_prefix, str) and raw_prefix.strip():
+        prefix = raw_prefix.strip()
+    else:
+        prefix = f"INV-{year}-"
     n = (
         await db.execute(
             select(func.count(Invoice.id)).where(Invoice.internal_number.startswith(prefix))
