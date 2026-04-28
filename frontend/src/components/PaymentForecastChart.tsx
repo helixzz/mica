@@ -185,6 +185,15 @@ export function PaymentTracker({ title }: PaymentTrackerProps) {
                 valueStyle={{ color: '#8B5E3C' }}
               />
             </Col>
+            <Col xs={12} md={6}>
+              <Statistic
+                title={t('dashboard.tracker_contract_remaining')}
+                value={Number(data.grand_contract_remaining)}
+                prefix="¥"
+                precision={2}
+                valueStyle={{ color: PLANNED_COLOR }}
+              />
+            </Col>
           </Row>
 
           {(Number(data.undated_planned) > 0 || Number(data.out_of_window_planned) > 0) && (

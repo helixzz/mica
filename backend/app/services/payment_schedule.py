@@ -13,6 +13,7 @@ from sqlalchemy.orm import selectinload
 from app.db import new_uuid
 from app.models import (
     Contract,
+    ContractStatus,
     Invoice,
     InvoiceStatus,
     PaymentRecord,
@@ -473,6 +474,23 @@ async def payment_forecast(
     else:
         out_of_window_planned = Decimal("0")
 
+    framework_total_q = select(func.coalesce(func.sum(Contract.total_amount), 0)).where(
+        Contract.status == ContractStatus.ACTIVE.value
+    )
+    framework_total = Decimal(str((await db.execute(framework_total_q)).scalar()))
+
+    contract_paid_q = select(func.coalesce(func.sum(PaymentRecord.amount), 0)).where(
+        PaymentRecord.status == PaymentStatus.CONFIRMED.value,
+        PaymentRecord.contract_id.isnot(None),
+        PaymentRecord.contract_id.in_(
+            select(Contract.id).where(Contract.status == ContractStatus.ACTIVE.value)
+        ),
+    )
+    contract_paid = Decimal(str((await db.execute(contract_paid_q)).scalar()))
+    grand_contract_remaining = framework_total - contract_paid
+    if grand_contract_remaining < 0:
+        grand_contract_remaining = Decimal("0")
+
     return {
         "months": month_buckets,
         "grand_planned": grand_planned,
@@ -480,6 +498,7 @@ async def payment_forecast(
         "paid_to_date": paid_to_date,
         "undated_planned": undated_planned,
         "out_of_window_planned": out_of_window_planned,
+        "grand_contract_remaining": grand_contract_remaining,
     }
 
 

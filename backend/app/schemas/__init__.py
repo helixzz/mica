@@ -1073,6 +1073,7 @@ class PaymentForecastOut(BaseModel):
     paid_to_date: Decimal = Decimal(0)
     undated_planned: Decimal = Decimal(0)
     out_of_window_planned: Decimal = Decimal(0)
+    grand_contract_remaining: Decimal = Decimal(0)
 
 
 class InvoiceForecastMonth(BaseModel):

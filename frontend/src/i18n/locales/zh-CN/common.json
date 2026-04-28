@@ -294,6 +294,7 @@
     "tracker_window_remaining": "窗口内待支出",
     "tracker_undated_planned": "未排期计划金额",
     "tracker_out_of_window_planned": "窗口外计划支出",
+    "tracker_contract_remaining": "合同剩余额度",
     "tracker_window_empty": "此时间窗口内无计划或付款记录",
     "tracker_prev": "上一页",
     "tracker_next": "下一页",

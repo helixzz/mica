@@ -616,6 +616,7 @@ export interface PaymentForecast {
   paid_to_date: string
   undated_planned: string
   out_of_window_planned: string
+  grand_contract_remaining: string
 }
 
 export interface InvoiceForecastMonth {
