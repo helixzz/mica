@@ -74,7 +74,34 @@ async def validation_exception_handler(request: Request, exc: RequestValidationE
 
 @app.get("/health", tags=["meta"])
 async def health() -> dict:
-    return {"status": "ok", "app": settings.app_name, "version": settings.app_version}
+    import httpx
+    from sqlalchemy import text
+
+    checks: dict[str, bool | str] = {}
+    overall = True
+
+    try:
+        async with AsyncSessionLocal() as session:
+            await session.execute(text("SELECT 1"))
+        checks["db"] = True
+    except Exception:
+        checks["db"] = False
+        overall = False
+
+    try:
+        async with httpx.AsyncClient(timeout=2.0) as client:
+            resp = await client.get("http://cerbos:3593/_health")
+            checks["cerbos"] = resp.status_code == 200
+    except Exception:
+        checks["cerbos"] = False
+        overall = False
+
+    return {
+        "status": "healthy" if overall else "degraded",
+        "app": settings.app_name,
+        "version": settings.app_version,
+        "checks": checks,
+    }
 
 
 @app.get("/", tags=["meta"])

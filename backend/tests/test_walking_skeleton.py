@@ -110,5 +110,8 @@ async def test_health_endpoint(seeded_client):
     r = await seeded_client.get("/health")
     assert r.status_code == 200
     data = r.json()
-    assert data["status"] == "ok"
+    assert data["status"] in ("healthy", "degraded")
     assert data["app"] == "Mica"
+    assert "version" in data
+    assert "checks" in data
+    assert isinstance(data["checks"], dict)
