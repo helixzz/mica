@@ -7,6 +7,23 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [v0.9.33] — 2026-04-28
+
+### 改进
+
+- **生产级健康检查**：`/health` 端点从 `{"status":"ok"}` 升级为带回 DB 连接 + Cerbos sidecar 可达性检查。返回 `{"status":"healthy|degraded","checks":{"db":bool,"cerbos":bool}}`。DB 不可达或 Cerbos 不可达不会导致 HTTP 500，而是返回 200 并标注 degraded 方便 load balancer / 监控识别。
+- **全部依赖锁定上界**：`pyproject.toml` 中 27/28 个依赖从 `>=X.Y` (无上限) 改为 `>=X.Y,<M`。修复 pip 解析器在 Docker 构建中搜索过多版本导致偶发失败的根因。影响面：fastapi、pydantic、sqlalchemy、cryptography 等核心依赖。
+
+### 测试
+
+- `test_walking_skeleton.py::test_health_endpoint` 验证新 health 结构。**395 passed**。
+
+### 元数据
+
+- 版本对齐 `0.9.33`。
+
+---
+
 ## [v0.9.32] — 2026-04-27
 
 ### 新功能
