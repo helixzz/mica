@@ -871,6 +871,7 @@ async def run_price_anomaly_notifications(
 
 class FeishuSettingsOut(BaseModel):
     app_id: str = ""
+    app_secret: str = ""  # always empty in response — user must re-enter to change
     app_secret_masked: str = ""
     enabled: bool = False
     notify_on_pr: bool = True
@@ -910,6 +911,7 @@ async def get_feishu_settings(
 ) -> FeishuSettingsOut:
     return FeishuSettingsOut(
         app_id=str(await system_params.get(db, "auth.feishu.app_id", "")),
+        app_secret="",  # never return real secret — user re-enters to change
         app_secret_masked=_mask_secret(
             str(await system_params.get(db, "auth.feishu.app_secret", ""))
         ),
