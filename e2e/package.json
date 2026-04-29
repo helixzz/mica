@@ -1,0 +1,16 @@
+{
+  "name": "mica-e2e",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Mica E2E tests with Playwright",
+  "scripts": {
+    "test": "npx playwright test",
+    "test:headed": "npx playwright test --headed",
+    "test:debug": "npx playwright test --debug",
+    "test:report": "npx playwright show-report",
+    "install:browsers": "npx playwright install chromium"
+  },
+  "devDependencies": {
+    "@playwright/test": "^1.52.0"
+  }
+}

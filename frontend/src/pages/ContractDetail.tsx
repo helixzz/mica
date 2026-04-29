@@ -4,15 +4,18 @@ import {
   DownloadOutlined,
   EditOutlined,
   EyeOutlined,
+  HistoryOutlined,
   InboxOutlined,
   StopOutlined,
   UploadOutlined,
 } from '@ant-design/icons'
 import {
+  Badge,
   Button,
   Card,
   Col,
   Descriptions,
+  Drawer,
   Dropdown,
   Empty,
   Modal,
@@ -61,6 +64,10 @@ export function ContractDetailPage() {
     filename: string
     text: string
   }>({ open: false, loading: false, docId: null, filename: '', text: '' })
+  const [versionDrawer, setVersionDrawer] = useState<{
+    open: boolean
+    version: ContractVersion | null
+  }>({ open: false, version: null })
 
   const canWrite = Boolean(
     user && ['admin', 'procurement_mgr', 'it_buyer'].includes(user.role),
@@ -446,14 +453,18 @@ export function ContractDetailPage() {
           dataSource={versions}
           pagination={false}
           size="small"
-          locale={{ emptyText: t('contract.no_versions_hint') }}
+          locale={{ emptyText: t('contract.no_previous_versions') }}
+          onRow={(record) => ({
+            onClick: () => setVersionDrawer({ open: true, version: record }),
+            style: { cursor: 'pointer' },
+          })}
           columns={[
-            { title: t('contract.version_col'), dataIndex: 'version_number', width: 80, render: (v: number) => `v${v}` },
+            { title: t('contract.version_col'), dataIndex: 'version_number', width: 80, render: (v: number) => <Tag color="blue">v{v}</Tag> },
             { title: t('contract.change_type_col'), dataIndex: 'change_type', width: 120, render: (v: string) => <Tag>{v}</Tag> },
             { title: t('field.title'), render: (_: unknown, r: ContractVersion) => (r.snapshot_json as Record<string, unknown>)?.title as string || '-' },
              { title: t('field.total_amount'), render: (_: unknown, r: ContractVersion) => fmtAmount((r.snapshot_json as Record<string, unknown>)?.total_amount as string, contract.currency), align: 'right' as const },
-            { title: t('contract.change_reason_col'), dataIndex: 'change_reason', render: (v: string | null) => v || '-' },
-            { title: t('field.created_at'), dataIndex: 'created_at', render: (v: string) => new Date(v).toLocaleString() },
+            { title: t('contract.change_summary'), dataIndex: 'change_summary', render: (v: string | null) => v || '-' },
+            { title: t('contract.version_created'), dataIndex: 'created_at', render: (v: string) => new Date(v).toLocaleString() },
           ]}
         />
       ),
@@ -468,6 +479,11 @@ export function ContractDetailPage() {
             {contract.contract_number}
           </Typography.Title>
           <Tag>{t(`status.${contract.status}` as 'status.active')}</Tag>
+          <Badge
+            count={`v${contract.current_version}`}
+            style={{ backgroundColor: 'var(--color-primary, #8B5E3C)' }}
+            title={t('contract.current_version_label')}
+          />
         </Space>
         <Space>
           {canWrite && contract.status === 'active' && (
@@ -562,6 +578,60 @@ export function ContractDetailPage() {
           {t('contract.ocr_disclaimer')}
         </Typography.Text>
       </Modal>
+
+      <Drawer
+        title={t('contract.version_detail_title', { version: versionDrawer.version?.version_number ?? '' })}
+        open={versionDrawer.open}
+        onClose={() => setVersionDrawer({ open: false, version: null })}
+        width={480}
+      >
+        {versionDrawer.version && (
+          <Space direction="vertical" size="middle" style={{ width: '100%' }}>
+            <Descriptions bordered size="small" column={1}>
+              <Descriptions.Item label={t('contract.version_col')}>
+                <Tag color="blue">v{versionDrawer.version.version_number}</Tag>
+              </Descriptions.Item>
+              <Descriptions.Item label={t('contract.change_type_col')}>
+                <Tag>{versionDrawer.version.change_type}</Tag>
+              </Descriptions.Item>
+              <Descriptions.Item label={t('contract.change_summary')}>
+                {versionDrawer.version.change_summary || '-'}
+              </Descriptions.Item>
+              <Descriptions.Item label={t('contract.change_reason_col')}>
+                {versionDrawer.version.change_reason || '-'}
+              </Descriptions.Item>
+              <Descriptions.Item label={t('contract.version_created')}>
+                {new Date(versionDrawer.version.created_at).toLocaleString()}
+              </Descriptions.Item>
+            </Descriptions>
+            <Card title={t('contract.version_snapshot')} size="small">
+              <Descriptions bordered size="small" column={1}>
+                <Descriptions.Item label={t('field.title')}>
+                  {(versionDrawer.version.snapshot_json as Record<string, unknown>)?.title as string || '-'}
+                </Descriptions.Item>
+                <Descriptions.Item label={t('field.total_amount')}>
+                  {fmtAmount(
+                    (versionDrawer.version.snapshot_json as Record<string, unknown>)?.total_amount as string,
+                    contract.currency,
+                  )}
+                </Descriptions.Item>
+                <Descriptions.Item label={t('field.signed_date')}>
+                  {(versionDrawer.version.snapshot_json as Record<string, unknown>)?.signed_date as string || '-'}
+                </Descriptions.Item>
+                <Descriptions.Item label={t('field.effective_date')}>
+                  {(versionDrawer.version.snapshot_json as Record<string, unknown>)?.effective_date as string || '-'}
+                </Descriptions.Item>
+                <Descriptions.Item label={t('field.expiry_date')}>
+                  {(versionDrawer.version.snapshot_json as Record<string, unknown>)?.expiry_date as string || '-'}
+                </Descriptions.Item>
+                <Descriptions.Item label={t('field.notes')}>
+                  {(versionDrawer.version.snapshot_json as Record<string, unknown>)?.notes as string || '-'}
+                </Descriptions.Item>
+              </Descriptions>
+            </Card>
+          </Space>
+        )}
+      </Drawer>
 
     </Space>
   )

@@ -94,5 +94,29 @@
   "user.username_exists": "用户名已被占用",
   "user.cannot_delete_self": "不能删除当前登录账号",
   "user.cannot_delete_last_admin": "不能删除最后一位启用状态的管理员",
-  "user.has_references": "该用户已产生业务数据（PR/PO/审批/审计日志），无法硬删除。请改为禁用账号。"
+  "user.has_references": "该用户已产生业务数据（PR/PO/审批/审计日志），无法硬删除。请改为禁用账号。",
+  "feishu": {
+    "not_configured": "飞书应用未配置，请先设置 App ID 和 App Secret",
+    "not_enabled": "飞书集成未启用",
+    "token_failed": "飞书 Token 获取失败",
+    "api_error": "飞书 API 调用失败",
+    "invalid_signature": "飞书签名验证失败",
+    "invalid_body": "飞书回调请求体无效",
+    "test": {
+      "user_not_found": "当前用户在飞书中未找到对应账号",
+      "no_open_id": "当前用户在飞书中没有 open_id"
+    },
+    "card_send_failed": "飞书卡片消息发送失败"
+  },
+  "feishu": {
+    "not_configured": "飞书应用未配置 App ID 或 App Secret",
+    "token_failed": "获取飞书访问令牌失败",
+    "api_error": "飞书 API 调用失败",
+    "invalid_body": "飞书回调请求体无效",
+    "invalid_signature": "飞书回调签名验证失败",
+    "test": {
+      "user_not_found": "当前管理员账号在飞书中未找到对应用户",
+      "no_open_id": "飞书用户缺少 open_id"
+    }
+  }
 }

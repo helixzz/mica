@@ -260,12 +260,14 @@ async def create_contract_version(
     actor: User,
     change_type: str,
     change_reason: str | None = None,
+    change_summary: str | None = None,
 ) -> ContractVersion:
     version = ContractVersion(
         contract_id=contract.id,
         version_number=contract.current_version,
         change_type=change_type,
         change_reason=change_reason,
+        change_summary=change_summary,
         snapshot_json=contract_snapshot(contract),
         changed_by_id=actor.id,
     )
@@ -287,3 +289,17 @@ async def list_contract_versions(db: AsyncSession, contract_id: UUID) -> list[Co
         .all()
     )
     return list(rows)
+
+
+async def get_contract_version(
+    db: AsyncSession, contract_id: UUID, version_number: int
+) -> ContractVersion | None:
+    row = (
+        await db.execute(
+            select(ContractVersion).where(
+                ContractVersion.contract_id == contract_id,
+                ContractVersion.version_number == version_number,
+            )
+        )
+    ).scalar_one_or_none()
+    return row

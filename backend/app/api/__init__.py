@@ -13,6 +13,7 @@ from app.api.v1 import (
     dashboard,
     document_templates,
     documents,
+    feishu_webhook,
     flow,
     import_excel,
     master_data,
@@ -53,3 +54,4 @@ api_router.include_router(import_excel.router)
 api_router.include_router(rfq.router)
 api_router.include_router(recycle_bin.router)
 api_router.include_router(document_templates.router)
+api_router.include_router(feishu_webhook.router)

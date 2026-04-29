@@ -864,3 +864,150 @@ async def run_price_anomaly_notifications(
     db: Annotated[AsyncSession, Depends(get_db)],
 ):
     return await notification_svc.notify_new_price_anomalies(db)
+
+
+# === Feishu integration settings ===
+
+
+class FeishuSettingsOut(BaseModel):
+    app_id: str = ""
+    app_secret_masked: str = ""
+    enabled: bool = False
+    notify_on_pr: bool = True
+    notify_on_approval: bool = True
+    notify_on_po: bool = True
+    notify_on_payment: bool = True
+    notify_on_contract_expiry: bool = True
+    payment_workflow: bool = False
+    approval_code: str = ""
+
+
+class FeishuSettingsIn(BaseModel):
+    app_id: str | None = None
+    app_secret: str | None = None
+    enabled: bool | None = None
+    notify_on_pr: bool | None = None
+    notify_on_approval: bool | None = None
+    notify_on_po: bool | None = None
+    notify_on_payment: bool | None = None
+    notify_on_contract_expiry: bool | None = None
+    payment_workflow: bool | None = None
+    approval_code: str | None = None
+
+
+def _mask_secret(value: str) -> str:
+    if not value:
+        return ""
+    if len(value) <= 8:
+        return "****"
+    return f"{value[:4]}****{value[-4:]}"
+
+
+@router.get("/feishu/settings", tags=["admin"])
+async def get_feishu_settings(
+    user: CurrentUser,
+    db: Annotated[AsyncSession, Depends(get_db)],
+) -> FeishuSettingsOut:
+    return FeishuSettingsOut(
+        app_id=str(await system_params.get(db, "auth.feishu.app_id", "")),
+        app_secret_masked=_mask_secret(
+            str(await system_params.get(db, "auth.feishu.app_secret", ""))
+        ),
+        enabled=bool(await system_params.get(db, "auth.feishu.enabled", False)),
+        notify_on_pr=bool(await system_params.get(db, "auth.feishu.notify_on_pr", True)),
+        notify_on_approval=bool(
+            await system_params.get(db, "auth.feishu.notify_on_approval", True)
+        ),
+        notify_on_po=bool(await system_params.get(db, "auth.feishu.notify_on_po", True)),
+        notify_on_payment=bool(await system_params.get(db, "auth.feishu.notify_on_payment", True)),
+        notify_on_contract_expiry=bool(
+            await system_params.get(db, "auth.feishu.notify_on_contract_expiry", True)
+        ),
+        payment_workflow=bool(await system_params.get(db, "auth.feishu.payment_workflow", False)),
+        approval_code=str(await system_params.get(db, "auth.feishu.approval_code", "")),
+    )
+
+
+@router.put("/feishu/settings", tags=["admin"])
+async def update_feishu_settings(
+    payload: FeishuSettingsIn,
+    user: CurrentUser,
+    db: Annotated[AsyncSession, Depends(get_db)],
+) -> FeishuSettingsOut:
+    updates: dict[str, Any] = {}
+    if payload.app_id is not None:
+        updates["auth.feishu.app_id"] = payload.app_id
+    if payload.app_secret is not None and payload.app_secret:
+        updates["auth.feishu.app_secret"] = payload.app_secret
+    if payload.enabled is not None:
+        updates["auth.feishu.enabled"] = payload.enabled
+    if payload.notify_on_pr is not None:
+        updates["auth.feishu.notify_on_pr"] = payload.notify_on_pr
+    if payload.notify_on_approval is not None:
+        updates["auth.feishu.notify_on_approval"] = payload.notify_on_approval
+    if payload.notify_on_po is not None:
+        updates["auth.feishu.notify_on_po"] = payload.notify_on_po
+    if payload.notify_on_payment is not None:
+        updates["auth.feishu.notify_on_payment"] = payload.notify_on_payment
+    if payload.notify_on_contract_expiry is not None:
+        updates["auth.feishu.notify_on_contract_expiry"] = payload.notify_on_contract_expiry
+    if payload.payment_workflow is not None:
+        updates["auth.feishu.payment_workflow"] = payload.payment_workflow
+    if payload.approval_code is not None:
+        updates["auth.feishu.approval_code"] = payload.approval_code
+
+    for key, value in updates.items():
+        await system_params.update(db, key, value, str(user.id))
+
+    return await get_feishu_settings(user=user, db=db)
+
+
+@router.post("/feishu/test", tags=["admin"])
+async def test_feishu_connection(
+    user: CurrentUser,
+    db: Annotated[AsyncSession, Depends(get_db)],
+) -> dict[str, Any]:
+    from app.services.feishu.client import FeishuClient, FeishuError
+
+    client = FeishuClient(db)
+    try:
+        await client._ensure_token()
+        if not user.email:
+            return {"success": False, "error": "admin user has no email"}
+
+        feishu_user = await client.get_user_by_email(user.email)
+        if not feishu_user:
+            return {
+                "success": True,
+                "token_ok": True,
+                "message_sent": False,
+                "error": "feishu.test.user_not_found",
+            }
+
+        receive_id = feishu_user.get("open_id", "")
+        if not receive_id:
+            return {
+                "success": True,
+                "token_ok": True,
+                "message_sent": False,
+                "error": "feishu.test.no_open_id",
+            }
+
+        from app.services.feishu import messages as feishu_messages
+
+        card = feishu_messages.build_pr_submitted_card(
+            pr_title="测试消息 - Mica 飞书集成",
+            applicant=user.display_name,
+            department="系统管理",
+            amount="¥0.00",
+            line_count=1,
+            pr_url="",
+        )
+        await client.send_card("open_id", receive_id, card)
+        return {"success": True, "token_ok": True, "message_sent": True, "error": None}
+    except FeishuError as e:
+        return {"success": False, "token_ok": False, "message_sent": False, "error": str(e)}
+    except Exception as e:
+        return {"success": False, "token_ok": False, "message_sent": False, "error": str(e)}
+    finally:
+        await client.close()

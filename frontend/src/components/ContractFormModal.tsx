@@ -18,6 +18,7 @@ export interface ContractFormValues {
   expiry_date?: Dayjs | null
   notes?: string | null
   change_reason?: string | null
+  change_summary?: string | null
 }
 
 interface ContractFormModalProps {
@@ -65,6 +66,7 @@ export function ContractFormModal({
         expiry_date: contract.expiry_date ? dayjs(contract.expiry_date) : null,
         notes: contract.notes,
         change_reason: null,
+        change_summary: null,
       })
     } else {
       form.resetFields()
@@ -97,6 +99,7 @@ export function ContractFormModal({
         saved = await api.updateContract(contract.id, {
           ...basePayload,
           change_reason: values.change_reason ?? null,
+          change_summary: values.change_summary ?? null,
         })
       }
       void message.success(
@@ -172,9 +175,14 @@ export function ContractFormModal({
           <Input.TextArea rows={2} />
         </Form.Item>
         {mode === 'edit' && (
-          <Form.Item name="change_reason" label={t('contract.change_reason')}>
-            <Input.TextArea rows={2} placeholder={t('contract.change_reason_placeholder')} />
-          </Form.Item>
+          <>
+            <Form.Item name="change_summary" label={t('contract.change_summary')}>
+              <Input.TextArea rows={2} placeholder={t('contract.change_summary_placeholder')} />
+            </Form.Item>
+            <Form.Item name="change_reason" label={t('contract.change_reason')}>
+              <Input.TextArea rows={2} placeholder={t('contract.change_reason_placeholder')} />
+            </Form.Item>
+          </>
         )}
       </Form>
     </Modal>

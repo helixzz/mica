@@ -255,6 +255,7 @@ export interface ContractVersion {
   version_number: number
   change_type: string
   change_reason: string | null
+  change_summary: string | null
   snapshot_json: Record<string, unknown>
   changed_by_id: string | null
   created_at: string
@@ -927,6 +928,12 @@ export const api = {
     const { data } = await client.get<ContractVersion[]>(`/contracts/${contractId}/versions`)
     return data
   },
+  async getContractVersion(contractId: string, versionNumber: number): Promise<ContractVersion> {
+    const { data } = await client.get<ContractVersion>(
+      `/contracts/${contractId}/versions/${versionNumber}`,
+    )
+    return data
+  },
   async createContract(payload: {
     po_id: string
     title: string
@@ -980,6 +987,7 @@ export const api = {
       expiry_date?: string | null
       notes?: string | null
       change_reason?: string | null
+      change_summary?: string | null
     },
   ): Promise<Contract> {
     const { data } = await client.patch<Contract>(`/contracts/${contractId}`, payload)

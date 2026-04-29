@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import logging
 from collections.abc import Callable, Mapping
 from datetime import UTC, datetime, timedelta
 from uuid import UUID
@@ -24,6 +25,10 @@ from app.models import (
     UserRole,
 )
 from app.services import contracts as contract_svc
+
+logger = logging.getLogger(__name__)
+
+logger = logging.getLogger("mica.notifications")
 
 NotificationText = str | Callable[[User | None], str]
 
@@ -152,7 +157,129 @@ async def create_notification(
     )
     session.add(notification)
     await session.flush()
+
+    await _maybe_send_feishu_card(session, notification)
+
     return notification
+
+
+async def _maybe_send_feishu_card(
+    session: AsyncSession,
+    notification: Notification,
+) -> None:
+    """Send a Feishu card notification if feishu is enabled and category matches."""
+    feishu_categories = {
+        NotificationCategory.FEISHU_PR_SUBMITTED,
+        NotificationCategory.FEISHU_APPROVAL_DECIDED,
+        NotificationCategory.FEISHU_PO_CREATED,
+        NotificationCategory.FEISHU_PAYMENT_PENDING,
+        NotificationCategory.FEISHU_CONTRACT_EXPIRING,
+    }
+    if notification.category not in feishu_categories:
+        return
+
+    try:
+        from app.services.feishu.client import FeishuClient
+        from app.services.system_params import system_params
+
+        enabled = await system_params.get(session, "auth.feishu.enabled", False)
+        if not enabled:
+            return
+
+        user = await session.get(User, notification.user_id)
+        if not user or not user.email:
+            return
+
+        client = FeishuClient(session)
+        try:
+            feishu_user = await client.get_user_by_email(user.email)
+            if not feishu_user:
+                logger.info("feishu: user %s not found in feishu", user.email)
+                return
+
+            receive_id = feishu_user.get("open_id", "")
+            if not receive_id:
+                logger.info("feishu: user %s has no open_id", user.email)
+                return
+
+            card = _build_feishu_card(notification, user)
+            if card is None:
+                return
+
+            await client.send_card("open_id", receive_id, card)
+            logger.info(
+                "feishu: card sent to user=%s category=%s",
+                user.email,
+                notification.category.value,
+            )
+        finally:
+            await client.close()
+    except Exception:
+        logger.warning(
+            "feishu: card send failed for notification %s",
+            notification.id,
+            exc_info=True,
+        )
+
+
+def _build_feishu_card(
+    notification: Notification,
+    user: User,
+) -> dict | None:
+    """Build a Feishu card dict from notification data."""
+    from app.services.feishu import messages as feishu_messages
+
+    meta = notification.meta or {}
+
+    if notification.category == NotificationCategory.FEISHU_PR_SUBMITTED:
+        return feishu_messages.build_pr_submitted_card(
+            pr_title=notification.title,
+            applicant=user.display_name,
+            department=meta.get("department", ""),
+            amount=meta.get("amount", "—"),
+            line_count=int(meta.get("line_count", 0)),
+            pr_url=meta.get("pr_url", ""),
+        )
+
+    if notification.category == NotificationCategory.FEISHU_APPROVAL_DECIDED:
+        return feishu_messages.build_approval_decided_card(
+            pr_title=notification.title,
+            decider=meta.get("decider", ""),
+            result=meta.get("result", "approved"),
+            comment=meta.get("comment", ""),
+            pr_url=meta.get("pr_url", ""),
+        )
+
+    if notification.category == NotificationCategory.FEISHU_PO_CREATED:
+        return feishu_messages.build_po_created_card(
+            po_number=meta.get("po_number", ""),
+            supplier=meta.get("supplier", ""),
+            amount=meta.get("amount", "—"),
+            pr_title=meta.get("pr_title", ""),
+            po_url=meta.get("po_url", ""),
+        )
+
+    if notification.category == NotificationCategory.FEISHU_PAYMENT_PENDING:
+        return feishu_messages.build_payment_pending_card(
+            payment_id=meta.get("payment_id", ""),
+            po_number=meta.get("po_number", ""),
+            supplier=meta.get("supplier", ""),
+            amount=meta.get("amount", "—"),
+            payment_url=meta.get("payment_url", ""),
+        )
+
+    if notification.category == NotificationCategory.FEISHU_CONTRACT_EXPIRING:
+        return feishu_messages.build_contract_expiring_card(
+            contract_number=meta.get("contract_number", ""),
+            supplier=meta.get("supplier", ""),
+            expiry_date=meta.get("expiry_date", ""),
+            days_remaining=int(meta.get("days_remaining", 0)),
+            total_amount=meta.get("total_amount", "—"),
+            used_amount=meta.get("used_amount", "—"),
+            contract_url=meta.get("contract_url", ""),
+        )
+
+    return None
 
 
 async def bulk_notify_role(

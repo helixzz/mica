@@ -413,6 +413,7 @@ async def update_contract(
         actor=actor,
         change_type="updated",
         change_reason=updates.get("change_reason"),
+        change_summary=updates.get("change_summary"),
     )
     await _audit_write(
         db,

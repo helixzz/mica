@@ -196,9 +196,7 @@ async def export_po_pdf(
     db: Annotated[AsyncSession, Depends(get_db)],
     _role: Annotated[
         None,
-        Depends(
-            require_roles("admin", "it_buyer", "procurement_mgr", "finance_auditor")
-        ),
+        Depends(require_roles("admin", "it_buyer", "procurement_mgr", "finance_auditor")),
     ],
 ):
     await svc.get_po(db, po_id, actor=user)

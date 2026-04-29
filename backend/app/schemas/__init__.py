@@ -468,6 +468,7 @@ class ContractUpdateIn(BaseModel):
     expiry_date: date | None = None
     notes: str | None = None
     change_reason: str | None = None
+    change_summary: str | None = None
 
 
 class ContractStatusIn(BaseModel):
@@ -505,6 +506,7 @@ class ContractVersionOut(BaseModel):
     version_number: int
     change_type: str
     change_reason: str | None
+    change_summary: str | None
     snapshot_json: dict[str, JSONValue]
     changed_by_id: UUID | None
     created_at: datetime

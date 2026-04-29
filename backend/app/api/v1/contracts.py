@@ -92,6 +92,24 @@ async def list_versions(
     return [ContractVersionOut.model_validate(row) for row in rows]
 
 
+@router.get(
+    "/contracts/{contract_id}/versions/{version_number}",
+    response_model=ContractVersionOut,
+    tags=["contracts"],
+)
+async def get_version(
+    contract_id: UUID,
+    version_number: int,
+    user: CurrentUser,
+    db: Annotated[AsyncSession, Depends(get_db)],
+):
+    _ = user
+    row = await svc.get_contract_version(db, contract_id, version_number)
+    if row is None:
+        raise HTTPException(404, "contract.version_not_found")
+    return ContractVersionOut.model_validate(row)
+
+
 @router.get("/contracts-search", tags=["contracts"])
 async def search(
     user: CurrentUser,

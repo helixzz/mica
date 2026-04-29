@@ -584,6 +584,7 @@ class ContractVersion(Base, TimestampMixin):
     version_number: Mapped[int] = mapped_column(Integer, nullable=False)
     change_type: Mapped[str] = mapped_column(String(32), default="created", nullable=False)
     change_reason: Mapped[str | None] = mapped_column(Text)
+    change_summary: Mapped[str | None] = mapped_column(String(500))
     snapshot_json: Mapped[dict[str, JSONValue]] = mapped_column(JSONB, nullable=False)
     changed_by_id: Mapped[UUID | None] = mapped_column(PGUUID(as_uuid=True), ForeignKey("users.id"))
 
@@ -1127,6 +1128,7 @@ class SystemParameterCategory(StrEnum):
     PAGINATION = "pagination"
     AUDIT = "audit"
     PAYMENT = "payment"
+    FEISHU = "feishu"
 
 
 class SystemParameter(Base, TimestampMixin):
@@ -1167,6 +1169,11 @@ class NotificationCategory(StrEnum):
     CONTRACT_EXPIRING = "contract_expiring"
     PRICE_ANOMALY = "price_anomaly"
     SYSTEM = "system"
+    FEISHU_PR_SUBMITTED = "feishu_pr_submitted"
+    FEISHU_APPROVAL_DECIDED = "feishu_approval_decided"
+    FEISHU_PO_CREATED = "feishu_po_created"
+    FEISHU_PAYMENT_PENDING = "feishu_payment_pending"
+    FEISHU_CONTRACT_EXPIRING = "feishu_contract_expiring"
 
 
 class NotificationChannel(StrEnum):
