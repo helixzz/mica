@@ -1400,6 +1400,23 @@ $ curl -X POST /api/v1/admin/ai-models/{id}/test-connection
 
 ---
 
+## [v1.0.0-rc6] — 2026-04-29
+
+### 新增
+
+- **审批规则可视化编辑器**：Admin 控制台新增 Approval Rules 选项卡，支持拖拽排序审批阶段、金额阈值配置、多角色串签规则 CRUD。
+- **合同版本管理**：合同编辑时自动创建版本快照，支持变更摘要记录和版本历史查看。
+- **飞书集成（完整实现）**：消息推送（PR 提交/审批决策/PO 生成/付款待审/合同到期）+ 付款审批工作流 + webhook 回调 + Admin 配置页。默认关闭，管理员在控制台配置 App ID/Secret 后启用。
+- **E2E 浏览器测试**：Playwright 47 条测试覆盖登录、导航、PR 流程、PO 流程、仪表盘、管理、搜索。
+- **合同扫描件在线预览**：PDF/图片改为浏览器内嵌展示（Content-Disposition: inline）。
+
+### 变更
+
+- **CI**：Node 版本升级 20 → 24；E2E Playwright 作业加入流水线。
+- 修复 `import_suppliers` / `import_prices` 端点缺少 `db` 参数导致的 ruff F821 错误。
+
+---
+
 ## [v1.0.0-rc4] — 2026-04-29
 
 ### 新增
