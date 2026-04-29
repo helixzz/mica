@@ -39,7 +39,11 @@ class FeishuClient:
             "/open-apis/auth/v3/tenant_access_token/internal",
             json={"app_id": str(app_id), "app_secret": str(app_secret)},
         )
-        data = resp.json()
+        text = resp.text
+        try:
+            data = resp.json()
+        except Exception as err:
+            raise FeishuError(f"feishu.token_failed: HTTP {resp.status_code}: {text[:200]}") from err
         if data.get("code") != 0:
             raise FeishuError(f"feishu.token_failed: {data.get('msg', 'unknown')}")
 
@@ -56,7 +60,11 @@ class FeishuClient:
             "Content-Type": "application/json; charset=utf-8",
         }
         resp = await self._client.request(method, path, json=json_body, headers=headers)
-        data = resp.json()
+        text = resp.text
+        try:
+            data = resp.json()
+        except Exception as err:
+            raise FeishuError(f"feishu.api_error: HTTP {resp.status_code}: {text[:200]}") from err
         if data.get("code") != 0:
             raise FeishuError(f"feishu.api_error: {data.get('code')} {data.get('msg', '')}")
         return data

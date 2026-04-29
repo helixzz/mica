@@ -975,41 +975,31 @@ async def test_feishu_connection(
     client = FeishuClient(db)
     try:
         await client._ensure_token()
+        # Token obtained successfully — check if we can also send a test message
         if not user.email:
-            return {"success": False, "error": "admin user has no email"}
-
-        feishu_user = await client.get_user_by_email(user.email)
-        if not feishu_user:
-            return {
-                "success": True,
-                "token_ok": True,
-                "message_sent": False,
-                "error": "feishu.test.user_not_found",
-            }
-
-        receive_id = feishu_user.get("open_id", "")
-        if not receive_id:
-            return {
-                "success": True,
-                "token_ok": True,
-                "message_sent": False,
-                "error": "feishu.test.no_open_id",
-            }
+            return {"success": True, "token_ok": True, "message_sent": False, "error": "admin user has no email"}
 
         from app.services.feishu import messages as feishu_messages
 
         card = feishu_messages.build_pr_submitted_card(
-            pr_title="测试消息 - Mica 飞书集成",
+            pr_title="Mica Feishu Integration Test",
             applicant=user.display_name,
-            department="系统管理",
-            amount="¥0.00",
+            department="System Admin",
+            amount="—",
             line_count=1,
             pr_url="",
         )
-        await client.send_card("open_id", receive_id, card)
+        # Try sending via email — if user's feishu has email configured, this will work
+        await client.send_card("email", user.email, card)
         return {"success": True, "token_ok": True, "message_sent": True, "error": None}
     except FeishuError as e:
-        return {"success": False, "token_ok": False, "message_sent": False, "error": str(e)}
+        # Token was OK but message failed — likely user not found in feishu by email
+        return {
+            "success": False,
+            "token_ok": True,
+            "message_sent": False,
+            "error": str(e),
+        }
     except Exception as e:
         return {"success": False, "token_ok": False, "message_sent": False, "error": str(e)}
     finally:

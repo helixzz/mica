@@ -192,21 +192,11 @@ async def _maybe_send_feishu_card(
 
         client = FeishuClient(session)
         try:
-            feishu_user = await client.get_user_by_email(user.email)
-            if not feishu_user:
-                logger.info("feishu: user %s not found in feishu", user.email)
-                return
-
-            receive_id = feishu_user.get("open_id", "")
-            if not receive_id:
-                logger.info("feishu: user %s has no open_id", user.email)
-                return
-
             card = _build_feishu_card(notification, user)
             if card is None:
                 return
 
-            await client.send_card("open_id", receive_id, card)
+            await client.send_card("email", user.email, card)
             logger.info(
                 "feishu: card sent to user=%s category=%s",
                 user.email,
