@@ -961,6 +961,7 @@ async def update_feishu_settings(
     for key, value in updates.items():
         await system_params.update(db, key, value, str(user.id))
 
+    await db.commit()
     return await get_feishu_settings(user=user, db=db)
 
 
