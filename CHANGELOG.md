@@ -1400,6 +1400,28 @@ $ curl -X POST /api/v1/admin/ai-models/{id}/test-connection
 
 ---
 
+## [v1.1.1] — 2026-04-29
+
+### 修复
+
+- **飞书集成配置保存失败**（3 处 bug）：
+  - `GET /admin/feishu/settings` 返回 `app_secret_masked` 但前端表单字段为 `app_secret`，字段名不匹配导致密钥永远为空
+  - `FeishuSettingsTab` 的 `Form initialValues` 内联对象每次渲染重建，Ant Design 检测变化后重置表单
+  - `PUT /admin/feishu/settings` 缺少 `await db.commit()`，事务在请求结束时自动回滚，所有写入丢弃
+- 生产部署流程修正：必须通过 `upgrade.sh --tag` 统一部署，不得手动 SSH 部分构建
+
+### 新增
+
+- 水獭吉祥物 favicon（16/32/48/64px ICO）+ apple-touch-icon
+- 顶栏 Logo 替换为 GPT-Image-2 水獭头像
+
+### 文档
+
+- 用户手册新增《飞书集成配置》章节（zh-CN + en-US）
+- 更新功能参考、概述页的版本路线至 v1.1.0
+
+---
+
 ## [v1.1.0] — 2026-04-29
 
 **首个稳定发布版**。rc1–rc6 系列特性集已完整交付，所有 CI 门禁绿色。

@@ -23,6 +23,8 @@ import { Link, Outlet, useLocation, useNavigate } from 'react-router-dom';
 
 import { LanguageSwitcher } from '../LanguageSwitcher';
 import { useAuth } from '@/auth/useAuth';
+import logoOtter from '@/assets/logo-otter.png';
+import logoOtter2x from '@/assets/logo-otter@2x.png';
 import { useTheme } from '@/theme/ThemeProvider';
 
 const { Header, Sider, Content, Footer } = Layout;
@@ -89,29 +91,14 @@ export function AppLayout() {
   const Logo = () => (
     <Link to="/dashboard" style={{ textDecoration: 'none', display: 'flex', alignItems: 'center' }}>
       <Space size="small" style={{ display: 'flex', alignItems: 'center', cursor: 'pointer' }}>
-        <svg width="32" height="32" viewBox="0 0 64 64" xmlns="http://www.w3.org/2000/svg" style={{ display: 'block' }}>
-          {/* Otter face */}
-          <circle cx="32" cy="34" r="24" fill={token.colorPrimary} />
-          {/* Ears */}
-          <circle cx="12" cy="16" r="6" fill={token.colorPrimary} />
-          <circle cx="52" cy="16" r="6" fill={token.colorPrimary} />
-          <circle cx="12" cy="16" r="3.5" fill={token.colorPrimaryBg} />
-          <circle cx="52" cy="16" r="3.5" fill={token.colorPrimaryBg} />
-          {/* Face patch */}
-          <ellipse cx="32" cy="40" rx="16" ry="12" fill={token.colorPrimaryBg} />
-          {/* Nose */}
-          <ellipse cx="32" cy="36" rx="4" ry="2.5" fill={token.colorPrimaryActive} />
-          {/* Eyes */}
-          <circle cx="22" cy="30" r="3.5" fill={token.colorPrimaryActive} />
-          <circle cx="42" cy="30" r="3.5" fill={token.colorPrimaryActive} />
-          <circle cx="23" cy="29" r="1.2" fill="white" />
-          <circle cx="43" cy="29" r="1.2" fill="white" />
-          {/* Whisker dots */}
-          <circle cx="20" cy="40" r="1" fill={token.colorPrimaryActive} opacity="0.5" />
-          <circle cx="44" cy="40" r="1" fill={token.colorPrimaryActive} opacity="0.5" />
-          {/* Smile */}
-          <path d="M27,44 Q32,48 37,44" fill="none" stroke={token.colorPrimaryActive} strokeWidth="1.5" strokeLinecap="round" />
-        </svg>
+        <img
+          src={logoOtter}
+          srcSet={`${logoOtter2x} 2x`}
+          width={32}
+          height={32}
+          alt="Mica"
+          style={{ display: 'block', borderRadius: '50%' }}
+        />
         <Text
           className="logo-text"
           style={{
