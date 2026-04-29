@@ -667,6 +667,7 @@ class UserUpdateIn(BaseModel):
     department_ids: list[UUID] | None = None
     preferred_locale: str | None = None
     is_active: bool | None = None
+    feishu_open_id: str | None = None
 
 
 @router.patch("/users/{user_id}", tags=["admin"])
@@ -994,8 +995,11 @@ async def test_feishu_connection(
             line_count=1,
             pr_url="",
         )
-        # Try sending via email — if user's feishu has email configured, this will work
-        await client.send_card("email", user.email, card)
+        # Prefer open_id if stored; fallback to email
+        if user.feishu_open_id:
+            await client.send_card("open_id", user.feishu_open_id, card)
+        else:
+            await client.send_card("email", user.email, card)
         return {"success": True, "token_ok": True, "message_sent": True, "error": None}
     except FeishuError as e:
         # Token was OK but message failed — likely user not found in feishu by email

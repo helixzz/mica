@@ -196,11 +196,16 @@ async def _maybe_send_feishu_card(
             if card is None:
                 return
 
-            await client.send_card("email", user.email, card)
+            # Prefer open_id if stored; fallback to email
+            if user.feishu_open_id:
+                await client.send_card("open_id", user.feishu_open_id, card)
+            else:
+                await client.send_card("email", user.email, card)
             logger.info(
-                "feishu: card sent to user=%s category=%s",
+                "feishu: card sent to user=%s category=%s via=%s",
                 user.email,
                 notification.category.value,
+                "open_id" if user.feishu_open_id else "email",
             )
         finally:
             await client.close()

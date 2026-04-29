@@ -241,6 +241,7 @@ class User(Base, TimestampMixin):
     is_local_admin: Mapped[bool] = mapped_column(default=False, nullable=False)
     auth_provider: Mapped[str] = mapped_column(String(32), default="local", nullable=False)
     sso_external_id: Mapped[str | None] = mapped_column(String(255), unique=True)
+    feishu_open_id: Mapped[str | None] = mapped_column(String(128), nullable=True)
     last_login_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
 
     company: Mapped[Company] = relationship(back_populates="users")
