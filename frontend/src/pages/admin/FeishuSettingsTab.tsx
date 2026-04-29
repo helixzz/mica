@@ -97,6 +97,11 @@ export const FeishuSettingsTab: React.FC = () => {
 
   return (
     <div className="feishu-settings-tab">
+      {loading && (
+        <div style={{ textAlign: 'center', padding: '40px 0', position: 'absolute', top: 0, left: 0, right: 0, zIndex: 10 }}>
+          <Spin size="large" />
+        </div>
+      )}
       <Form
         form={form}
         layout="vertical"

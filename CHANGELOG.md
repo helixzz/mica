@@ -1,3 +1,11 @@
+## [v1.1.3] — 2026-04-29
+
+### 修复
+
+- **FeishuSettingsTab 表单值不渲染**：loading 状态导致 Form 先渲染（空值）、卸载（spinner）、再挂载，卸载 → 重新挂载丢失 form.setFieldsValue 设置的值。修复：Form 永驻 DOM，spinner 叠加在页面上方。
+
+---
+
 # Changelog
 
 All notable changes to Mica will be documented in this file.
