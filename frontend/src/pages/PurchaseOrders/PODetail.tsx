@@ -51,6 +51,8 @@ import { ContractFormModal } from '@/components/ContractFormModal'
 import { PaymentScheduleTab } from '@/components/PaymentScheduleTab'
 import { ShipmentActions } from '@/components/ShipmentActions'
 import { fmtAmount, fmtQty } from '@/utils/format'
+import { AutosaveBanner, AutosaveUnavailableBanner } from '@/components/AutosaveBanner'
+import { useAutosave } from '@/hooks/useAutosave'
 
 function statusTag(s: string): string {
   return s
@@ -680,6 +682,8 @@ function ShipmentModal({ open, po, onClose, onDone, busy, setBusy }: ModalProps)
   const [carrier, setCarrier] = useState('')
   const [tracking, setTracking] = useState('')
   const [actualDate, setActualDate] = useState<dayjs.Dayjs | null>(dayjs())
+  const autosaveShipment = useAutosave(`po-shipment-${po.id}`)
+  const [autosaveDismissedShipment, setAutosaveDismissedShipment] = useState(false)
 
   useEffect(() => {
     if (open) {
@@ -691,6 +695,15 @@ function ShipmentModal({ open, po, onClose, onDone, busy, setBusy }: ModalProps)
     }
   }, [open, po])
 
+  useEffect(() => {
+    autosaveShipment.save({
+      lines,
+      carrier,
+      tracking,
+      actualDate: actualDate?.toISOString() ?? null,
+    })
+  })
+
   const submit = async () => {
     try {
       setBusy(true)
@@ -701,6 +714,7 @@ function ShipmentModal({ open, po, onClose, onDone, busy, setBusy }: ModalProps)
         tracking_number: tracking || null,
         actual_date: actualDate ? actualDate.format('YYYY-MM-DD') : null,
       })
+      autosaveShipment.clear()
       void message.success(t('message.shipment_recorded'))
       onDone()
     } catch (e) {
@@ -712,6 +726,22 @@ function ShipmentModal({ open, po, onClose, onDone, busy, setBusy }: ModalProps)
 
   return (
     <Modal title={t('button.record_shipment')} open={open} onCancel={onClose} onOk={submit} confirmLoading={busy} width={800}>
+      {!autosaveDismissedShipment && autosaveShipment.hasAutosave && autosaveShipment.savedAt && (
+        <AutosaveBanner
+          savedAt={autosaveShipment.savedAt}
+          onRestore={() => {
+            const v = autosaveShipment.restore()
+            if (v) {
+              if (v.lines) setLines(v.lines as typeof lines)
+              if (v.carrier !== undefined) setCarrier(v.carrier as string)
+              if (v.tracking !== undefined) setTracking(v.tracking as string)
+              if (v.actualDate) setActualDate(dayjs(v.actualDate as string))
+            }
+          }}
+          onDismiss={() => setAutosaveDismissedShipment(true)}
+        />
+      )}
+      {!autosaveShipment.storageAvailable && <AutosaveUnavailableBanner />}
       <Space direction="vertical" style={{ width: '100%' }}>
         <Typography.Text type="secondary">
           {t('po.shipment_help')}
@@ -771,6 +801,8 @@ function PaymentModal({ open, po, onClose, onDone, busy, setBusy }: ModalProps) 
   const [scheduleOptions, setScheduleOptions] = useState<PaymentScheduleItem[]>([])
   const [scheduleItemId, setScheduleItemId] = useState<string | null>(null)
   const [contractFormOpen, setContractFormOpen] = useState(false)
+  const autosavePayment = useAutosave(`po-payment-${po.id}`)
+  const [autosaveDismissedPayment, setAutosaveDismissedPayment] = useState(false)
 
   const loadContracts = async () => {
     try {
@@ -808,6 +840,18 @@ function PaymentModal({ open, po, onClose, onDone, busy, setBusy }: ModalProps) 
       .catch(() => setScheduleOptions([]))
   }, [contractId])
 
+  useEffect(() => {
+    autosavePayment.save({
+      amount,
+      method,
+      dueDate: dueDate?.toISOString() ?? null,
+      payDate: payDate?.toISOString() ?? null,
+      txRef,
+      contractId,
+      scheduleItemId,
+    })
+  })
+
   const submit = async () => {
     if (!contractId) {
       void message.error(t('po.payment_contract_required'))
@@ -825,6 +869,7 @@ function PaymentModal({ open, po, onClose, onDone, busy, setBusy }: ModalProps) 
         payment_method: method,
         transaction_ref: txRef || null,
       })
+      autosavePayment.clear()
       void message.success(t('message.payment_recorded'))
       onDone()
     } catch (e) {
@@ -847,6 +892,27 @@ function PaymentModal({ open, po, onClose, onDone, busy, setBusy }: ModalProps) 
         okButtonProps={{ disabled: noContractsYet || !contractId }}
         width={600}
       >
+        {!autosaveDismissedPayment && autosavePayment.hasAutosave && autosavePayment.savedAt && (
+          <AutosaveBanner
+            savedAt={autosavePayment.savedAt}
+            onRestore={() => {
+              const v = autosavePayment.restore()
+              if (v) {
+                if (v.amount !== undefined) setAmount(v.amount as number)
+                if (v.method !== undefined) setMethod(v.method as string)
+                if (v.dueDate) setDueDate(dayjs(v.dueDate as string))
+                else setDueDate(null)
+                if (v.payDate) setPayDate(dayjs(v.payDate as string))
+                else setPayDate(null)
+                if (v.txRef !== undefined) setTxRef(v.txRef as string)
+                if (v.contractId !== undefined) setContractId(v.contractId as string | null)
+                if (v.scheduleItemId !== undefined) setScheduleItemId(v.scheduleItemId as string | null)
+              }
+            }}
+            onDismiss={() => setAutosaveDismissedPayment(true)}
+          />
+        )}
+        {!autosavePayment.storageAvailable && <AutosaveUnavailableBanner />}
         <Form layout="vertical">
           <Typography.Text type="secondary" style={{ display: 'block', marginBottom: 12 }}>
             {t('po.payment_help')}
@@ -973,6 +1039,8 @@ function PaymentEditModal({ open, payment, onClose, onSaved }: PaymentEditModalP
   const [contractOptions, setContractOptions] = useState<Contract[]>([])
   const [scheduleOptions, setScheduleOptions] = useState<PaymentScheduleItem[]>([])
   const [busy, setBusy] = useState(false)
+  const autosavePaymentEdit = useAutosave(`po-payment-edit-${payment?.id}`)
+  const [autosaveDismissedPaymentEdit, setAutosaveDismissedPaymentEdit] = useState(false)
 
   useEffect(() => {
     if (!open || !payment) return
@@ -1008,6 +1076,19 @@ function PaymentEditModal({ open, payment, onClose, onSaved }: PaymentEditModalP
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [contractId])
 
+  useEffect(() => {
+    autosavePaymentEdit.save({
+      amount,
+      dueDate: dueDate?.toISOString() ?? null,
+      payDate: payDate?.toISOString() ?? null,
+      method,
+      txRef,
+      notes,
+      contractId,
+      scheduleItemId,
+    })
+  })
+
   const submit = async () => {
     if (!payment) return
     if (!contractId) {
@@ -1031,6 +1112,7 @@ function PaymentEditModal({ open, payment, onClose, onSaved }: PaymentEditModalP
         patch.schedule_item_id = scheduleItemId
       }
       await api.updatePayment(payment.id, patch)
+      autosavePaymentEdit.clear()
       void message.success(t('message.save_success'))
       onSaved()
     } catch (e) {
@@ -1049,6 +1131,28 @@ function PaymentEditModal({ open, payment, onClose, onSaved }: PaymentEditModalP
       confirmLoading={busy}
       width={600}
     >
+      {!autosaveDismissedPaymentEdit && autosavePaymentEdit.hasAutosave && autosavePaymentEdit.savedAt && (
+        <AutosaveBanner
+          savedAt={autosavePaymentEdit.savedAt}
+          onRestore={() => {
+            const v = autosavePaymentEdit.restore()
+            if (v) {
+              if (v.amount !== undefined) setAmount(v.amount as number)
+              if (v.dueDate) setDueDate(dayjs(v.dueDate as string))
+              else setDueDate(null)
+              if (v.payDate) setPayDate(dayjs(v.payDate as string))
+              else setPayDate(null)
+              if (v.method !== undefined) setMethod(v.method as string)
+              if (v.txRef !== undefined) setTxRef(v.txRef as string)
+              if (v.notes !== undefined) setNotes(v.notes as string)
+              if (v.contractId !== undefined) setContractId(v.contractId as string | null)
+              if (v.scheduleItemId !== undefined) setScheduleItemId(v.scheduleItemId as string | null)
+            }
+          }}
+          onDismiss={() => setAutosaveDismissedPaymentEdit(true)}
+        />
+      )}
+      {!autosavePaymentEdit.storageAvailable && <AutosaveUnavailableBanner />}
       <Form layout="vertical">
         <Form.Item label={t('po.payment_linked_contract')} required>
           <Select
@@ -1157,6 +1261,8 @@ function InvoiceModal({ open, po, onClose, onDone, busy, setBusy }: ModalProps) 
       tax_amount: 0,
     }))
   )
+  const autosaveInvoice = useAutosave(`po-invoice-${po.id}`)
+  const [autosaveDismissedInvoice, setAutosaveDismissedInvoice] = useState(false)
 
   useEffect(() => {
     if (open) {
@@ -1173,6 +1279,17 @@ function InvoiceModal({ open, po, onClose, onDone, busy, setBusy }: ModalProps) 
       })))
     }
   }, [open, po])
+
+  useEffect(() => {
+    autosaveInvoice.save({
+      invoiceNumber,
+      invoiceDate: invoiceDate.toISOString(),
+      dueDate: dueDate?.toISOString() ?? null,
+      taxNumber,
+      attachments,
+      lines,
+    })
+  })
 
   const handleUpload = async (file: File) => {
     try {
@@ -1230,6 +1347,7 @@ function InvoiceModal({ open, po, onClose, onDone, busy, setBusy }: ModalProps) 
         attachment_document_ids: attachments.map((a) => a.id),
         lines: lines.filter((l) => l.qty > 0),
       })
+      autosaveInvoice.clear()
       const warns = result.validations.filter((v) => v.severity === 'warn')
       if (warns.length > 0) {
         const details = warns.map((w) => t('po.line_overage', { line: w.line_no, msg: w.message, overage: w.overage })).join('; ')
@@ -1247,6 +1365,25 @@ function InvoiceModal({ open, po, onClose, onDone, busy, setBusy }: ModalProps) 
 
   return (
     <Modal title={t('button.record_invoice')} open={open} onCancel={onClose} onOk={submit} confirmLoading={busy} width={960}>
+      {!autosaveDismissedInvoice && autosaveInvoice.hasAutosave && autosaveInvoice.savedAt && (
+        <AutosaveBanner
+          savedAt={autosaveInvoice.savedAt}
+          onRestore={() => {
+            const v = autosaveInvoice.restore()
+            if (v) {
+              if (v.invoiceNumber !== undefined) setInvoiceNumber(v.invoiceNumber as string)
+              if (v.invoiceDate) setInvoiceDate(dayjs(v.invoiceDate as string))
+              if (v.dueDate) setDueDate(dayjs(v.dueDate as string))
+              else setDueDate(null)
+              if (v.taxNumber !== undefined) setTaxNumber(v.taxNumber as string)
+              if (v.attachments) setAttachments(v.attachments as typeof attachments)
+              if (v.lines) setLines(v.lines as typeof lines)
+            }
+          }}
+          onDismiss={() => setAutosaveDismissedInvoice(true)}
+        />
+      )}
+      {!autosaveInvoice.storageAvailable && <AutosaveUnavailableBanner />}
       <Typography.Text type="secondary" style={{ display: 'block', marginBottom: 12 }}>
         {t('po.invoice_help')}
       </Typography.Text>
