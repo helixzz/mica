@@ -644,6 +644,9 @@ function UsersPanel() {
           <Form.Item name="preferred_locale" label={t('admin.locale_label')}>
             <Select options={[{ value: 'zh-CN', label: 'zh-CN' }, { value: 'en-US', label: 'en-US' }]} />
           </Form.Item>
+          <Form.Item name="feishu_open_id" label={t('admin.feishu_open_id_label', 'Feishu Open ID')} help={t('admin.feishu_open_id_help', 'Optional feishu user ID for notifications')}>
+            <Input placeholder="ou_..." />
+          </Form.Item>
         </Form>
       </Drawer>
       <Modal

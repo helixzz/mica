@@ -790,7 +790,9 @@
     "department_label": "所属部门",
     "cost_center_label": "关联成本中心（可多选，用于 Requester 角色的行级可见范围过滤）",
     "department_ids_label": "关联部门（可多选，用于 Requester 角色的行级可见范围过滤）",
-    "locale_label": "语言偏好"
+    "locale_label": "语言偏好",
+    "feishu_open_id_label": "飞书用户 Open ID",
+    "feishu_open_id_help": "选填，填写后飞书消息通知将通过 Open ID 精准推送至该用户"
   },
   "validation": {
     "select_company": "请选择公司主体",

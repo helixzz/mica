@@ -789,7 +789,9 @@
     "department_label": "Department",
     "cost_center_label": "Cost Centers (multi-select)",
     "department_ids_label": "Departments (multi-select, recommended for requesters)",
-    "locale_label": "Locale Preference"
+    "locale_label": "Locale Preference",
+    "feishu_open_id_label": "Feishu Open ID",
+    "feishu_open_id_help": "Optional. Feishu notifications will be sent to this user via Open ID"
   },
   "validation": {
     "select_company": "Please select company",

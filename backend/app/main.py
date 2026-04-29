@@ -1,5 +1,6 @@
 """FastAPI application entry point."""
 
+import logging
 from contextlib import asynccontextmanager
 
 from fastapi import FastAPI, Request
@@ -14,6 +15,8 @@ from app.db import AsyncSessionLocal
 from app.i18n import detect_locale, t
 from app.middleware.request_id import RequestIdMiddleware, install_log_filter
 from app.services.seed import seed_dev_data
+
+logging.basicConfig(level=logging.INFO, force=True)
 
 settings = get_settings()
 install_log_filter()
