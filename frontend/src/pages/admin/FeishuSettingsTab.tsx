@@ -29,6 +29,19 @@ interface FeishuSettings {
   payment_workflow: boolean;
 }
 
+const FEISHU_INITIAL_VALUES: FeishuSettings = {
+  enabled: false,
+  app_id: '',
+  app_secret: '',
+  approval_code: '',
+  notify_on_pr: false,
+  notify_on_approval: false,
+  notify_on_po: false,
+  notify_on_payment: false,
+  notify_on_contract_expiry: false,
+  payment_workflow: false,
+};
+
 export const FeishuSettingsTab: React.FC = () => {
   const { t } = useTranslation();
   const [form] = Form.useForm<FeishuSettings>();
@@ -88,20 +101,22 @@ export const FeishuSettingsTab: React.FC = () => {
     );
   }
 
+  const FEISHU_INITIAL = {
+    enabled: false,
+    notify_on_pr: false,
+    notify_on_approval: false,
+    notify_on_po: false,
+    notify_on_payment: false,
+    notify_on_contract_expiry: false,
+    payment_workflow: false,
+  };
+
   return (
     <div className="feishu-settings-tab">
       <Form
         form={form}
         layout="vertical"
-        initialValues={{
-          enabled: false,
-          notify_on_pr: false,
-          notify_on_approval: false,
-          notify_on_po: false,
-          notify_on_payment: false,
-          notify_on_contract_expiry: false,
-          payment_workflow: false,
-        }}
+        initialValues={FEISHU_INITIAL_VALUES}
         onValuesChange={(changedValues) => {
           if ('enabled' in changedValues) {
             setEnabled(changedValues.enabled);
