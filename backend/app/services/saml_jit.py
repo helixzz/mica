@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+import json
+import logging
 from datetime import UTC, datetime
 from uuid import UUID
 
@@ -10,6 +12,8 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.i18n import t
 from app.models import AuditLog, User
 from app.services.saml_config import SamlConfig, resolve_default_company, resolve_department
+
+logger = logging.getLogger(__name__)
 
 
 def _first_attribute(attributes: dict[str, list[str]], candidates: list[str]) -> str | None:
@@ -44,6 +48,7 @@ async def upsert_saml_user(
     attributes: dict[str, list[str]],
     locale: str,
 ) -> User:
+    logger.info("SAML claims received: %s", json.dumps(attributes))
     email = _first_attribute(attributes, config.email_attribute_candidates())
     if not email:
         raise HTTPException(400, t("saml.missing_email", locale))
