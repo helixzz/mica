@@ -1,125 +1,108 @@
-import React, { useEffect, useState } from 'react';
-import { useTranslation } from 'react-i18next';
+import React, { useEffect, useRef, useState } from 'react'
+import { useTranslation } from 'react-i18next'
 import {
-  Card,
-  Typography,
-  Switch,
-  Input,
   Button,
-  Space,
+  Card,
   Divider,
-  message,
-  Spin,
   Form,
-} from 'antd';
-import { client } from '@/api/client';
+  Input,
+  message,
+  Space,
+  Spin,
+  Switch,
+  Typography,
+} from 'antd'
+import { client } from '@/api/client'
 
-const { Title, Text } = Typography;
+const { Title, Text } = Typography
 
 interface FeishuSettings {
-  enabled: boolean;
-  app_id: string;
-  app_secret: string;
-  approval_code: string;
-  notify_on_pr: boolean;
-  notify_on_approval: boolean;
-  notify_on_po: boolean;
-  notify_on_payment: boolean;
-  notify_on_contract_expiry: boolean;
-  payment_workflow: boolean;
+  enabled: boolean
+  app_id: string
+  app_secret: string
+  approval_code: string
+  notify_on_pr: boolean
+  notify_on_approval: boolean
+  notify_on_po: boolean
+  notify_on_payment: boolean
+  notify_on_contract_expiry: boolean
+  payment_workflow: boolean
 }
 
-const FEISHU_INITIAL_VALUES: FeishuSettings = {
-  enabled: false,
-  app_id: '',
-  app_secret: '',
-  approval_code: '',
-  notify_on_pr: false,
-  notify_on_approval: false,
-  notify_on_po: false,
-  notify_on_payment: false,
-  notify_on_contract_expiry: false,
-  payment_workflow: false,
-};
-
 export const FeishuSettingsTab: React.FC = () => {
-  const { t } = useTranslation();
-  const [form] = Form.useForm<FeishuSettings>();
-  const [loading, setLoading] = useState(false);
-  const [saving, setSaving] = useState(false);
-  const [testing, setTesting] = useState(false);
-  const [enabled, setEnabled] = useState(false);
-
-  const fetchSettings = async () => {
-    setLoading(true);
-    try {
-      const { data } = await client.get<FeishuSettings>('/admin/feishu/settings');
-      form.setFieldsValue(data);
-      setEnabled(data.enabled);
-    } catch (error) {
-      console.error('Failed to fetch feishu settings', error);
-    } finally {
-      setLoading(false);
-    }
-  };
+  const { t } = useTranslation()
+  const [form] = Form.useForm<FeishuSettings>()
+  const [loading, setLoading] = useState(false)
+  const [saving, setSaving] = useState(false)
+  const [testing, setTesting] = useState(false)
+  const [enabled, setEnabled] = useState(false)
+  const mountedRef = useRef(false)
 
   useEffect(() => {
-    fetchSettings();
-  }, []);
+    mountedRef.current = true
+    setLoading(true)
+    client
+      .get<FeishuSettings>('/admin/feishu/settings')
+      .then(({ data }) => {
+        if (mountedRef.current) {
+          form.setFieldsValue(data)
+          setEnabled(data.enabled)
+        }
+      })
+      .catch((error) => {
+        console.error('Failed to fetch feishu settings', error)
+      })
+      .finally(() => {
+        if (mountedRef.current) setLoading(false)
+      })
+    return () => {
+      mountedRef.current = false
+    }
+  }, [form])
 
   const handleSave = async () => {
     try {
-      const values = await form.validateFields();
-      setSaving(true);
-      await client.put('/admin/feishu/settings', values);
-      message.success(t('feishu.save_success', 'Settings saved successfully'));
-    } catch (error) {
-      message.error(t('feishu.save_failed', 'Failed to save settings'));
+      setSaving(true)
+      const values = await form.validateFields()
+      await client.put('/admin/feishu/settings', values)
+      message.success(t('feishu.save_success', 'Settings saved successfully'))
+    } catch (error: any) {
+      const detail = error?.response?.data?.detail || error?.message || 'Unknown error'
+      message.error(`${t('feishu.save_failed', 'Failed to save settings')}: ${detail}`)
     } finally {
-      setSaving(false);
+      setSaving(false)
     }
-  };
+  }
 
   const handleTest = async () => {
     try {
-      setTesting(true);
-      await client.post('/admin/feishu/test');
-      message.success(t('feishu.test_success', 'Connection successful'));
+      setTesting(true)
+      await client.post('/admin/feishu/test')
+      message.success(t('feishu.test_success', 'Connection successful'))
     } catch (error: any) {
-      const detail = error?.response?.data?.detail || error.message;
-      message.error(`${t('feishu.test_failed', 'Connection failed')}: ${detail}`);
+      const detail = error?.response?.data?.detail || error?.message || 'Unknown error'
+      message.error(`${t('feishu.test_failed', 'Connection failed')}: ${detail}`)
     } finally {
-      setTesting(false);
+      setTesting(false)
     }
-  };
+  }
 
   if (loading) {
     return (
       <div style={{ textAlign: 'center', padding: '40px 0' }}>
         <Spin size="large" />
       </div>
-    );
+    )
   }
-
-  const FEISHU_INITIAL = {
-    enabled: false,
-    notify_on_pr: false,
-    notify_on_approval: false,
-    notify_on_po: false,
-    notify_on_payment: false,
-    notify_on_contract_expiry: false,
-    payment_workflow: false,
-  };
 
   return (
     <div className="feishu-settings-tab">
       <Form
         form={form}
         layout="vertical"
-        initialValues={FEISHU_INITIAL_VALUES}
         onValuesChange={(changedValues) => {
           if ('enabled' in changedValues) {
-            setEnabled(changedValues.enabled);
+            setEnabled(changedValues.enabled)
           }
         }}
       >
@@ -224,5 +207,5 @@ export const FeishuSettingsTab: React.FC = () => {
         </Card>
       </Form>
     </div>
-  );
-};
+  )
+}

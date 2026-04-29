@@ -1400,6 +1400,14 @@ $ curl -X POST /api/v1/admin/ai-models/{id}/test-connection
 
 ---
 
+## [v1.1.2] — 2026-04-29
+
+### 修复
+
+- **FeishuSettingsTab 表单值刷新后丢失**：Vite/Rollup 生产构建将模块级常量 `FEISHU_INITIAL_VALUES` 内联回 JSX 使用处，每次渲染重建新对象，Ant Design Form 检测 `initialValues` 变化后重置表单。修复：完全移除 `initialValues` prop，依赖 `useEffect` + `setFieldsValue` 从 API 回填所有值。
+
+---
+
 ## [v1.1.1] — 2026-04-29
 
 ### 修复
