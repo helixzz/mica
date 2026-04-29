@@ -1,4 +1,4 @@
-import React, { useEffect, useRef, useState } from 'react'
+import React, { useEffect, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import {
   Button,
@@ -31,34 +31,24 @@ interface FeishuSettings {
 
 export const FeishuSettingsTab: React.FC = () => {
   const { t } = useTranslation()
-  const [form] = Form.useForm<FeishuSettings>()
-  const [loading, setLoading] = useState(false)
+  const [form] = Form.useForm()
+  const [initialValues, setInitialValues] = useState<FeishuSettings | null>(null)
   const [saving, setSaving] = useState(false)
   const [testing, setTesting] = useState(false)
   const [enabled, setEnabled] = useState(false)
-  const mountedRef = useRef(false)
 
   useEffect(() => {
-    mountedRef.current = true
-    setLoading(true)
     client
       .get<FeishuSettings>('/admin/feishu/settings')
       .then(({ data }) => {
-        if (mountedRef.current) {
-          form.setFieldsValue(data)
-          setEnabled(data.enabled)
-        }
+        setInitialValues(data)
+        setEnabled(data.enabled)
       })
       .catch((error) => {
         console.error('Failed to fetch feishu settings', error)
       })
-      .finally(() => {
-        if (mountedRef.current) setLoading(false)
-      })
-    return () => {
-      mountedRef.current = false
-    }
-  }, [form])
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
 
   const handleSave = async () => {
     try {
@@ -87,7 +77,7 @@ export const FeishuSettingsTab: React.FC = () => {
     }
   }
 
-  if (loading) {
+  if (!initialValues) {
     return (
       <div style={{ textAlign: 'center', padding: '40px 0' }}>
         <Spin size="large" />
@@ -97,14 +87,10 @@ export const FeishuSettingsTab: React.FC = () => {
 
   return (
     <div className="feishu-settings-tab">
-      {loading && (
-        <div style={{ textAlign: 'center', padding: '40px 0', position: 'absolute', top: 0, left: 0, right: 0, zIndex: 10 }}>
-          <Spin size="large" />
-        </div>
-      )}
       <Form
         form={form}
         layout="vertical"
+        initialValues={initialValues}
         onValuesChange={(changedValues) => {
           if ('enabled' in changedValues) {
             setEnabled(changedValues.enabled)

@@ -1,3 +1,11 @@
+## [v1.1.4] — 2026-04-29
+
+### 修复
+
+- **FeishuSettingsTab 重构**：放弃 setFieldsValue 方案，改为 fetch → setInitialValues → 再渲染 Form 的标准 Ant Design 模式。initialValues 作为 useState 值传入 Form，Rollup 无法内联，Ant Design 不会检测到引用变化。
+
+---
+
 ## [v1.1.3] — 2026-04-29
 
 ### 修复

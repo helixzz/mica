@@ -23,7 +23,7 @@ class Settings(BaseSettings):
     # ── Application ──
     app_name: str = "Mica"
     app_env: Literal["development", "staging", "production"] = "development"
-    app_version: str = "1.1.3"
+    app_version: str = "1.1.4"
     debug: bool = False
 
     # ── API ──
