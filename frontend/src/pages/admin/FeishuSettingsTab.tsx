@@ -29,10 +29,23 @@ interface FeishuSettings {
   payment_workflow: boolean
 }
 
+function ToggleRow({ checked, onChange, label, desc }: { checked?: boolean; onChange?: (v: boolean) => void; label: string; desc: string }) {
+  return (
+    <div style={{ display: 'flex', alignItems: 'flex-start' }}>
+      <Switch checked={checked} onChange={onChange} style={{ flexShrink: 0, marginTop: 2 }} />
+      <div style={{ marginLeft: 8 }}>
+        <Text>{label}</Text>
+        {desc && <div style={{ color: 'var(--color-text-tertiary)', fontSize: 12 }}>{desc}</div>}
+      </div>
+    </div>
+  )
+}
+
 export const FeishuSettingsTab: React.FC = () => {
   const { t } = useTranslation()
   const [form] = Form.useForm()
   const [initialValues, setInitialValues] = useState<FeishuSettings | null>(null)
+  const [formKey, setFormKey] = useState(0)
   const [saving, setSaving] = useState(false)
   const [testing, setTesting] = useState(false)
   const [enabled, setEnabled] = useState(false)
@@ -43,6 +56,7 @@ export const FeishuSettingsTab: React.FC = () => {
       .then(({ data }) => {
         setInitialValues(data)
         setEnabled(data.enabled)
+        setFormKey((k) => k + 1)
       })
       .catch((error) => {
         console.error('Failed to fetch feishu settings', error)
@@ -87,16 +101,7 @@ export const FeishuSettingsTab: React.FC = () => {
 
   return (
     <div className="feishu-settings-tab">
-      <Form
-        form={form}
-        layout="vertical"
-        initialValues={initialValues}
-        onValuesChange={(changedValues) => {
-          if ('enabled' in changedValues) {
-            setEnabled(changedValues.enabled)
-          }
-        }}
-      >
+      <Form key={formKey} form={form} layout="vertical" initialValues={initialValues}>
         <Card
           title={
             <Space>
@@ -145,35 +150,35 @@ export const FeishuSettingsTab: React.FC = () => {
             <Title level={5}>{t('feishu.notifications', 'Notification Settings')}</Title>
             <Card size="small" style={{ marginBottom: 24 }}>
               <Space direction="vertical" style={{ width: '100%' }}>
-                <Form.Item name="notify_on_pr" valuePropName="checked" style={{ marginBottom: 8 }}>
-                  <Switch /> <Text style={{ marginLeft: 8 }}>{t('feishu.notify_on_pr', 'PR Submitted')}</Text>
-                  <div style={{ color: 'var(--color-text-tertiary)', fontSize: 12, marginLeft: 52 }}>
-                    {t('feishu.notify_on_pr_desc', 'Notify approvers when a PR is submitted')}
-                  </div>
+                <Form.Item name="notify_on_pr" valuePropName="checked" style={{ marginBottom: 0 }}>
+                  <ToggleRow
+                    label={t('feishu.notify_on_pr', 'PR Submitted')}
+                    desc={t('feishu.notify_on_pr_desc', 'Notify approvers when a PR is submitted')}
+                  />
                 </Form.Item>
-                <Form.Item name="notify_on_approval" valuePropName="checked" style={{ marginBottom: 8 }}>
-                  <Switch /> <Text style={{ marginLeft: 8 }}>{t('feishu.notify_on_approval', 'Approval Decided')}</Text>
-                  <div style={{ color: 'var(--color-text-tertiary)', fontSize: 12, marginLeft: 52 }}>
-                    {t('feishu.notify_on_approval_desc', 'Notify requester when PR is approved or rejected')}
-                  </div>
+                <Form.Item name="notify_on_approval" valuePropName="checked" style={{ marginBottom: 0 }}>
+                  <ToggleRow
+                    label={t('feishu.notify_on_approval', 'Approval Decided')}
+                    desc={t('feishu.notify_on_approval_desc', 'Notify requester when PR is approved or rejected')}
+                  />
                 </Form.Item>
-                <Form.Item name="notify_on_po" valuePropName="checked" style={{ marginBottom: 8 }}>
-                  <Switch /> <Text style={{ marginLeft: 8 }}>{t('feishu.notify_on_po', 'PO Created')}</Text>
-                  <div style={{ color: 'var(--color-text-tertiary)', fontSize: 12, marginLeft: 52 }}>
-                    {t('feishu.notify_on_po_desc', 'Notify buyer and requester when PO is created')}
-                  </div>
+                <Form.Item name="notify_on_po" valuePropName="checked" style={{ marginBottom: 0 }}>
+                  <ToggleRow
+                    label={t('feishu.notify_on_po', 'PO Created')}
+                    desc={t('feishu.notify_on_po_desc', 'Notify buyer and requester when PO is created')}
+                  />
                 </Form.Item>
-                <Form.Item name="notify_on_payment" valuePropName="checked" style={{ marginBottom: 8 }}>
-                  <Switch /> <Text style={{ marginLeft: 8 }}>{t('feishu.notify_on_payment', 'Payment Pending')}</Text>
-                  <div style={{ color: 'var(--color-text-tertiary)', fontSize: 12, marginLeft: 52 }}>
-                    {t('feishu.notify_on_payment_desc', 'Notify finance when payment is pending')}
-                  </div>
+                <Form.Item name="notify_on_payment" valuePropName="checked" style={{ marginBottom: 0 }}>
+                  <ToggleRow
+                    label={t('feishu.notify_on_payment', 'Payment Pending')}
+                    desc={t('feishu.notify_on_payment_desc', 'Notify finance when payment is pending')}
+                  />
                 </Form.Item>
                 <Form.Item name="notify_on_contract_expiry" valuePropName="checked" style={{ marginBottom: 0 }}>
-                  <Switch /> <Text style={{ marginLeft: 8 }}>{t('feishu.notify_on_contract_expiry', 'Contract Expiring')}</Text>
-                  <div style={{ color: 'var(--color-text-tertiary)', fontSize: 12, marginLeft: 52 }}>
-                    {t('feishu.notify_on_contract_expiry_desc', 'Notify owner and manager when contract is expiring')}
-                  </div>
+                  <ToggleRow
+                    label={t('feishu.notify_on_contract_expiry', 'Contract Expiring')}
+                    desc={t('feishu.notify_on_contract_expiry_desc', 'Notify owner and manager when contract is expiring')}
+                  />
                 </Form.Item>
               </Space>
             </Card>
@@ -181,7 +186,10 @@ export const FeishuSettingsTab: React.FC = () => {
             <Title level={5}>{t('feishu.payment_workflow', 'Payment Workflow')}</Title>
             <Card size="small" style={{ marginBottom: 24 }}>
               <Form.Item name="payment_workflow" valuePropName="checked" style={{ marginBottom: 0 }}>
-                <Switch /> <Text style={{ marginLeft: 8 }}>{t('feishu.payment_workflow_desc', 'Enable Feishu Approval Workflow for Payments')}</Text>
+                <ToggleRow
+                  label={t('feishu.payment_workflow_desc', 'Enable Feishu Approval Workflow for Payments')}
+                  desc=""
+                />
               </Form.Item>
             </Card>
 
