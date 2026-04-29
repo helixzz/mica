@@ -72,7 +72,7 @@ async def download(
         iterator(),
         media_type=doc.content_type,
         headers={
-            "Content-Disposition": f'attachment; filename="{doc.original_filename}"',
+            "Content-Disposition": f'inline; filename="{doc.original_filename}"',
             "Content-Length": str(doc.file_size),
         },
     )
