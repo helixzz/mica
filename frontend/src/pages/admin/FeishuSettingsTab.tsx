@@ -134,7 +134,6 @@ export const FeishuSettingsTab: React.FC = () => {
                 name="app_secret"
                 label={t('feishu.app_secret', 'App Secret')}
                 help={t('feishu.app_secret_help', 'The App Secret from Feishu Developer Console')}
-                rules={[{ required: enabled, message: t('common.required', 'Required') }]}
               >
                 <Input.Password placeholder="••••••••••••••••" />
               </Form.Item>
