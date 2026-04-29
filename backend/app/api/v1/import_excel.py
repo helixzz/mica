@@ -42,6 +42,7 @@ async def import_suppliers(
     file: Annotated[UploadFile, File(...)],
     _user: CurrentUser,
     _role: Annotated[None, Depends(require_roles("admin"))],
+    db: Annotated[AsyncSession, Depends(get_db)],
 ):
     content = await file.read()
     rows = _read_rows(content)
@@ -109,6 +110,7 @@ async def import_prices(
     file: Annotated[UploadFile, File(...)],
     _user: CurrentUser,
     _role: Annotated[None, Depends(require_roles("admin"))],
+    db: Annotated[AsyncSession, Depends(get_db)],
 ):
     content = await file.read()
     rows = _read_rows(content)
