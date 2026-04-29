@@ -1400,6 +1400,31 @@ $ curl -X POST /api/v1/admin/ai-models/{id}/test-connection
 
 ---
 
+## [v1.1.0] — 2026-04-29
+
+**首个稳定发布版**。rc1–rc6 系列特性集已完整交付，所有 CI 门禁绿色。
+
+### 功能总览
+
+- **采购全流程**：PR → 多级审批 → PO → 多批交货 → 分批付款 → 发票三单匹配
+- **审批引擎**：可视化规则编辑器，按业务类型 + 金额区间自动路由多阶段串签 + 审批代理人
+- **询价管理（RFQ）**：多供应商报价 + 自动最低价定标
+- **合同管理**：全生命周期 + 版本管理 + OCR 全文检索 + 到期预警
+- **发票核销**：AI 抽取（PDF / 图片 → LLM 结构化）+ 人工复核
+- **SKU 行情库**：90 天基准价 + ±20% 异常识别 + 多选价格走势对比图
+- **表单自动保存**：PR 新建/编辑 + PO 交货/付款/发票 modal — localStorage 草稿防丢失
+- **飞书集成**：卡片消息推送 + 付款审批工作流 + webhook 回调，默认关闭可按需启用
+- **权限体系**：Cerbos 字段级 + 行级权限 · 6 种角色 · RBAC 路由守卫 · 审计日志
+- **国际化**：中 / 英双语全覆盖（前端 600+ keys · 后端 200+ 消息）
+- **测试**：pytest 417 passed (backend 73%) · vitest 58 passed (frontend 60%) · Playwright E2E 47 tests
+- **运维**：Docker Compose 一键部署 · backup / restore / upgrade / 零停机滚动
+
+### 技术栈
+
+Python 3.12 · FastAPI · SQLAlchemy 2.x async · Alembic (31 migrations) · PostgreSQL 16 · pg_trgm · Cerbos sidecar · React 18 · TypeScript 5 · Vite · Ant Design 5 · Zustand · LiteLLM SDK · Docker Compose v2 · Nginx
+
+---
+
 ## [v1.0.0-rc6] — 2026-04-29
 
 ### 新增
