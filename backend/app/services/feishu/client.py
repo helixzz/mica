@@ -43,7 +43,9 @@ class FeishuClient:
         try:
             data = resp.json()
         except Exception as err:
-            raise FeishuError(f"feishu.token_failed: HTTP {resp.status_code}: {text[:200]}") from err
+            raise FeishuError(
+                f"feishu.token_failed: HTTP {resp.status_code}: {text[:200]}"
+            ) from err
         if data.get("code") != 0:
             raise FeishuError(f"feishu.token_failed: {data.get('msg', 'unknown')}")
 

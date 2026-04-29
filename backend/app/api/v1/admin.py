@@ -977,7 +977,12 @@ async def test_feishu_connection(
         await client._ensure_token()
         # Token obtained successfully — check if we can also send a test message
         if not user.email:
-            return {"success": True, "token_ok": True, "message_sent": False, "error": "admin user has no email"}
+            return {
+                "success": True,
+                "token_ok": True,
+                "message_sent": False,
+                "error": "admin user has no email",
+            }
 
         from app.services.feishu import messages as feishu_messages
 
