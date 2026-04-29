@@ -8,7 +8,9 @@ import { useNavigate, useParams } from 'react-router-dom'
 import { api, type ClassificationItem, flattenCategoryTree, type Item, type Supplier } from '@/api'
 import { client, extractError } from '@/api/client'
 import { useAuth } from '@/auth/useAuth'
+import { AutosaveBanner, AutosaveUnavailableBanner } from '@/components/AutosaveBanner'
 import { PRQuoteConfirmModal } from '@/components/PRQuoteConfirmModal'
+import { useAutosave } from '@/hooks/useAutosave'
 
 interface LineForm {
   key: number
@@ -40,6 +42,8 @@ export function PREditPage() {
   const [submitting, setSubmitting] = useState(false)
   const [loaded, setLoaded] = useState(false)
   const [quoteModalOpen, setQuoteModalOpen] = useState(false)
+  const autosave = useAutosave(`pr-edit-${id || 'unknown'}`)
+  const [autosaveDismissed, setAutosaveDismissed] = useState(false)
 
   useEffect(() => {
     void api.suppliers().then(setSuppliers)
@@ -49,6 +53,11 @@ export function PREditPage() {
     void api.listLookupValues('expense_type').then(setExpenseTypes)
     void api.getCategoryTree().then((tree) => setProcCategories(flattenCategoryTree(tree)))
   }, [])
+
+  useEffect(() => {
+    const formValues = form.getFieldsValue()
+    autosave.save({ ...formValues, items: lines })
+  })
 
   useEffect(() => {
     if (!id) return
@@ -150,6 +159,7 @@ export function PREditPage() {
           unit_price: l.unit_price || 0,
         })),
       })
+      autosave.clear()
       void message.success(t('message.saved'))
       setQuoteModalOpen(true)
     } catch (e) {
@@ -231,6 +241,26 @@ export function PREditPage() {
 
   return (
     <Space direction="vertical" size="large" style={{ width: '100%' }}>
+      {!autosaveDismissed && autosave.hasAutosave && autosave.savedAt && (
+        <AutosaveBanner
+          savedAt={autosave.savedAt}
+          onRestore={() => {
+            const vals = autosave.restore()
+            if (vals) {
+              const items = vals.items as LineForm[] | undefined
+              if (items) {
+                setLines(items)
+                form.setFieldsValue({ ...vals, items: undefined })
+              } else {
+                form.setFieldsValue(vals as Record<string, unknown>)
+              }
+            }
+          }}
+          onDismiss={() => setAutosaveDismissed(true)}
+        />
+      )}
+      {!autosave.storageAvailable && <AutosaveUnavailableBanner />}
+
       <Card title={t('pr.edit_draft')}>
         <Form form={form} layout="vertical">
           <Row gutter={16}>

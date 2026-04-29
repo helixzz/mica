@@ -721,14 +721,6 @@
     "confirm_delete_user_body": "Hard delete is not reversible. If the user already has related records (PR/PO/approvals/audit logs), deletion will fail — disable the account instead.",
     "operation_failed": "Operation failed",
     "status_col": "Status",
-    "departments": "Departments",
-    "new_department": "New Department",
-    "edit_department": "Edit Department: {{name}}",
-    "department_count": "departments",
-    "department_code": "Department Code",
-    "department_name_zh": "Chinese Name",
-    "department_name_en": "English Name",
-    "department_company": "Company",
     "code_placeholder": "e.g. CC-IT / laptop / capex",
     "label_zh_placeholder": "IT Dept / Laptop / CapEx",
     "saml_help": {
@@ -1063,5 +1055,16 @@
     "unlink_success": "Contract unlinked",
     "primary_contract": "Primary PO",
     "invoice_help": "Record the supplier's invoice number, date, tax info, and supporting files so later matching and payment review stay traceable."
+  },
+  "autosave": {
+    "banner_text": "An unsaved draft from {{time}} was found.",
+    "restore": "Restore draft",
+    "discard": "Discard",
+    "just_now": "just now",
+    "minute_ago": "1 minute ago",
+    "minutes_ago": "{{n}} minutes ago",
+    "hour_ago": "1 hour ago",
+    "hours_ago": "{{n}} hours ago",
+    "unavailable": "Autosave is unavailable — your browser may be in private mode or has disabled local storage. Unsaved changes may be lost."
   }
 }

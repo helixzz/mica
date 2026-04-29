@@ -1400,7 +1400,38 @@ $ curl -X POST /api/v1/admin/ai-models/{id}/test-connection
 
 ---
 
-## [v1.0.0-rc1] — 2026-04-28
+## [v1.0.0-rc4] — 2026-04-29
+
+### 新增
+
+- **表单自动保存（Autosave）**：采购申请新建页（PRNew）和编辑页（PREdit）新增 localStorage 草稿自动保存。
+  - 防抖写入（800ms），切换页面或浏览器崩溃后返回页面时弹出恢复横幅，支持一键恢复或丢弃。
+  - 隐私模式 / localStorage 被禁���时展示 `AutosaveUnavailableBanner` 警告，而非静默丢失数据。
+  - 提交成功后自动清除草稿。
+  - autosave key：`mica:autosave:pr-new` / `mica:autosave:pr-edit:<id>`
+  - i18n：9 条 `autosave.*` 键（zh-CN + en-US）全部覆盖。
+
+---
+
+## [v1.0.0-rc3] — 2026-04-28
+
+### 新增
+
+- **8 条扩展集成测试** (`test_extended_flows.py`)：覆盖合规性采购流程、审批代理、成本中���可见性、RFQ 询价、合同支出、合同到期告警、SKU 价格基准及全局搜索。
+
+---
+
+## [v1.0.0-rc2] — 2026-04-28
+
+### 修复
+
+- **后端角色权限补全**：`list_shipments` / `list_payments` / `list_invoices` 三个 list 端点补加 `require_roles` 检查（rc1 遗漏）。
+- **前端路由守卫**：`ProcurementGate` 拦截 11 条采购/合同/财务路由；AppLayout 导航菜单对 `requester` 角色隐藏 8 个入口。
+- **5 条角色拒绝集成测试** (`test_role_denials.py`)：覆盖 requester 访问 PO/供应商/合同/报表/管理端点应返回 403。
+
+---
+
+
 
 ### v1.0 Release Candidate
 

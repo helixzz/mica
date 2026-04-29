@@ -24,7 +24,9 @@ import { api, type ClassificationItem, flattenCategoryTree, type Item, type PRIt
 import { client, extractError } from '@/api/client'
 import { useAuth } from '@/auth/useAuth'
 import { AIStreamButton } from '@/components/AIStreamButton'
+import { AutosaveBanner, AutosaveUnavailableBanner } from '@/components/AutosaveBanner'
 import { PRQuoteConfirmModal } from '@/components/PRQuoteConfirmModal'
+import { useAutosave } from '@/hooks/useAutosave'
 
 interface LineForm {
   key: number
@@ -41,16 +43,7 @@ interface LineForm {
 export function PRNewPage() {
   const { t } = useTranslation()
   const navigate = useNavigate()
-  const [form] = Form.useForm<{
-    title: string
-    business_reason?: string
-    required_date?: dayjs.Dayjs
-    currency: string
-    cost_center_id?: string
-    expense_type_id?: string
-    procurement_category_id?: string
-    company_id?: string
-  }>()
+  const [form] = Form.useForm()
   const [suppliers, setSuppliers] = useState<Supplier[]>([])
   const [items, setItems] = useState<Item[]>([])
   const [companies, setCompanies] = useState<{ id: string; name_zh: string }[]>([])
@@ -65,6 +58,8 @@ export function PRNewPage() {
   const [savedPRId, setSavedPRId] = useState<string | null>(null)
   const { user } = useAuth()
   const isRequester = user?.role === 'requester'
+  const autosave = useAutosave('pr-new')
+  const [autosaveDismissed, setAutosaveDismissed] = useState(false)
   const [refPrices, setRefPrices] = useState<Record<string, { latest_price: number | null; avg_price: number | null }>>({})
 
   useEffect(() => {
@@ -76,6 +71,11 @@ export function PRNewPage() {
     void api.getCategoryTree().then((tree) => setProcCategories(flattenCategoryTree(tree)))
     void client.get<Record<string, boolean>>('/ai/features-available').then((r) => setAiFeatures(r.data)).catch(() => {})
   }, [])
+
+  useEffect(() => {
+    const formValues = form.getFieldsValue()
+    autosave.save({ ...formValues, items: lines })
+  })
 
   const addLine = () => {
     setLines((ls) => [
@@ -175,6 +175,7 @@ export function PRNewPage() {
         })),
       }
       const pr = await api.createPR(payload)
+      autosave.clear()
       if (!saveOnly) {
         await api.submitPR(pr.id)
         void message.success(t('message.submit_success'))
@@ -324,6 +325,26 @@ export function PRNewPage() {
           }
         />
       )}
+
+      {!autosaveDismissed && autosave.hasAutosave && autosave.savedAt && (
+        <AutosaveBanner
+          savedAt={autosave.savedAt}
+          onRestore={() => {
+            const vals = autosave.restore()
+            if (vals) {
+              const items = vals.items as LineForm[] | undefined
+              if (items) {
+                setLines(items)
+                form.setFieldsValue({ ...vals, items: undefined })
+              } else {
+                form.setFieldsValue(vals as Record<string, unknown>)
+              }
+            }
+          }}
+          onDismiss={() => setAutosaveDismissed(true)}
+        />
+      )}
+      {!autosave.storageAvailable && <AutosaveUnavailableBanner />}
 
       <Card>
         <Form form={form} layout="vertical" initialValues={{ currency: 'CNY' }}>

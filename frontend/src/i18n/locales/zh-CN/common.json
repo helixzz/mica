@@ -281,7 +281,6 @@
     "no_alerts": "暂无预警",
     "pending_invoices": "待处理发票",
     "invoice_alert_count": "{{count}} 张 {{status}} 发票",
-
     "expiring_contracts": "即将到期合同",
     "price_anomalies": "价格异常",
     "anomaly_item": "物料 {{id}}",
@@ -723,14 +722,6 @@
     "confirm_delete_user_body": "硬删除后不可恢复，并且如果用户已经产生业务数据（PR/PO/审批/审计日志），删除会失败 —— 此时请改为禁用账号。",
     "operation_failed": "操作失败",
     "status_col": "状态",
-    "departments": "部门管理",
-    "new_department": "新增部门",
-    "edit_department": "编辑部门：{{name}}",
-    "department_count": "个部门",
-    "department_code": "部门编码",
-    "department_name_zh": "中文名称",
-    "department_name_en": "英文名称",
-    "department_company": "所属公司",
     "code_placeholder": "如 CC-IT / laptop / capex",
     "label_zh_placeholder": "信息技术部 / 笔记本电脑 / 资本性支出",
     "saml_help": {
@@ -1065,5 +1056,16 @@
     "unlink_success": "合同关联已解除",
     "primary_contract": "主采购订单",
     "invoice_help": "录入供应商发票号、日期、税务信息和附件，确保后续匹配、付款和审计链路都可追溯。"
+  },
+  "autosave": {
+    "banner_text": "检测到 {{time}} 的未保存草稿。",
+    "restore": "恢复草稿",
+    "discard": "丢弃",
+    "just_now": "刚刚",
+    "minute_ago": "1 分钟前",
+    "minutes_ago": "{{n}} 分钟前",
+    "hour_ago": "1 小时前",
+    "hours_ago": "{{n}} 小时前",
+    "unavailable": "自动保存不可用（浏览器隐私模式或禁用了本地存储）。关闭页面可能导致未保存的填写内容丢失。"
   }
 }
