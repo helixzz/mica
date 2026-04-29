@@ -11,6 +11,7 @@
 5. [权限架构](05-permissions.md)
 6. [备份与恢复](06-backup-restore.md)
 7. [故障排查与升级](07-troubleshooting-and-upgrade.md)
+8. [飞书集成](08-feishu-integration.md)
 
 ## 本指南覆盖什么
 
@@ -20,5 +21,6 @@
 - ADFS / Microsoft Entra ID 的 SAML SSO 配置
 - 权限架构、Cerbos 策略与合规审计
 - 备份恢复、故障排查与版本升级
+- 飞书集成（消息通知 + 付款审批工作流）
 
 如果你只是普通业务用户，请返回 [首页](../README.md) 或用户手册部分。

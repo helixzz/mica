@@ -11,6 +11,7 @@ This section is for **system administrators, operators, and maintainers** respon
 5. [Permission Model](05-permissions.md)
 6. [Backup and Restore](06-backup-restore.md)
 7. [Troubleshooting and Upgrade](07-troubleshooting-and-upgrade.md)
+8. [Feishu Integration](08-feishu-integration.md)
 
 ## What this guide covers
 
@@ -20,3 +21,4 @@ This section is for **system administrators, operators, and maintainers** respon
 - SAML SSO integration with ADFS and Microsoft Entra ID
 - permission architecture and Cerbos policy usage
 - backup, restore, troubleshooting, and upgrade procedures
+- Feishu integration (message notifications + payment approval workflow)
