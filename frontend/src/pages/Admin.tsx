@@ -477,6 +477,7 @@ function UsersPanel() {
       cost_center_ids: user.cost_center_ids || [],
       department_ids: user.department_ids || [],
       preferred_locale: user.preferred_locale,
+      feishu_open_id: user.feishu_open_id || '',
     })
     setDrawerOpen(true)
   }

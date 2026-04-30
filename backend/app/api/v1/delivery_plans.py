@@ -36,14 +36,22 @@ async def list_plans(
 
 @router.get(
     "/delivery-plans/overview",
-    response_model=list[DeliveryPlanOut],
+    response_model=DeliveryPlanOverview,
     tags=["delivery-plans"],
 )
 async def list_all_plans_overview(
     user: CurrentUser,
     db: Annotated[AsyncSession, Depends(get_db)],
 ):
-    return await svc.list_delivery_plans(db)
+    plans = await svc.list_delivery_plans(db)
+    total_planned = sum(p.planned_qty for p in plans)
+    total_actual = sum(p.actual_qty for p in plans)
+    return DeliveryPlanOverview(
+        total_planned=total_planned,
+        total_actual=total_actual,
+        completion_pct=round(total_actual / total_planned * 100, 1) if total_planned > 0 else 0,
+        plans=plans,
+    )
 
 
 @router.post(
