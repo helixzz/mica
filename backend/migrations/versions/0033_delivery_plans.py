@@ -19,7 +19,7 @@ depends_on: str | Sequence[str] | None = None
 def upgrade() -> None:
     op.create_table(
         "delivery_plans",
-        sa.Column("id", sa.dialects.postgresql.UUID(as_uuid=True), primary_key=True, server_default=sa.func.uuid4()),
+        sa.Column("id", sa.dialects.postgresql.UUID(as_uuid=True), primary_key=True),
         sa.Column("po_id", sa.dialects.postgresql.UUID(as_uuid=True), sa.ForeignKey("purchase_orders.id", ondelete="SET NULL"), nullable=True),
         sa.Column("contract_id", sa.dialects.postgresql.UUID(as_uuid=True), sa.ForeignKey("contracts.id", ondelete="SET NULL"), nullable=True),
         sa.Column("item_id", sa.dialects.postgresql.UUID(as_uuid=True), sa.ForeignKey("items.id"), nullable=False),
