@@ -42,7 +42,6 @@ def _run_alembic_upgrade(db_url: str) -> None:
         cwd=str(BACKEND_ROOT),
         env=env,
         check=True,
-        capture_output=True,
     )
 
 
