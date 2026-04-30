@@ -111,6 +111,13 @@ class ScheduleItemStatus(StrEnum):
     CANCELLED = "cancelled"
 
 
+class DeliveryPlanStatus(StrEnum):
+    PLANNED = "planned"
+    IN_TRANSIT = "in_transit"
+    PARTIAL = "partial"
+    COMPLETE = "complete"
+
+
 class InvoiceLineType(StrEnum):
     PRODUCT = "product"
     FREIGHT = "freight"
@@ -482,6 +489,9 @@ class PurchaseOrder(Base, TimestampMixin):
         back_populates="po",
         cascade="all, delete-orphan",
     )
+    delivery_plans: Mapped[list[DeliveryPlan]] = relationship(
+        back_populates="po", cascade="all, delete-orphan"
+    )
 
 
 class POItem(Base, TimestampMixin):
@@ -552,6 +562,9 @@ class Contract(Base, TimestampMixin):
     po_links: Mapped[list[POContractLink]] = relationship(
         back_populates="contract",
         cascade="all, delete-orphan",
+    )
+    delivery_plans: Mapped[list[DeliveryPlan]] = relationship(
+        back_populates="contract", cascade="all, delete-orphan"
     )
 
 
@@ -1404,3 +1417,43 @@ class DocumentTemplate(Base, TimestampMixin):
     is_enabled: Mapped[bool] = mapped_column(default=True, nullable=False)
 
     template_document: Mapped[Document | None] = relationship(foreign_keys=[template_document_id])
+
+
+class DeliveryPlan(Base, TimestampMixin):
+    __tablename__ = "delivery_plans"
+
+    id: Mapped[UUID] = mapped_column(PGUUID(as_uuid=True), primary_key=True, default=new_uuid)
+    po_id: Mapped[UUID | None] = mapped_column(
+        PGUUID(as_uuid=True), ForeignKey("purchase_orders.id", ondelete="SET NULL"), nullable=True
+    )
+    contract_id: Mapped[UUID | None] = mapped_column(
+        PGUUID(as_uuid=True), ForeignKey("contracts.id", ondelete="SET NULL"), nullable=True
+    )
+    item_id: Mapped[UUID] = mapped_column(
+        PGUUID(as_uuid=True), ForeignKey("items.id"), nullable=False
+    )
+    plan_name: Mapped[str] = mapped_column(String(200), nullable=False)
+    planned_qty: Mapped[int] = mapped_column(Integer, nullable=False)
+    planned_date: Mapped[date] = mapped_column(Date, nullable=False)
+    notes: Mapped[str | None] = mapped_column(Text, nullable=True)
+    status: Mapped[str] = mapped_column(
+        String(32), default=DeliveryPlanStatus.PLANNED.value, nullable=False
+    )
+    created_by_id: Mapped[UUID] = mapped_column(
+        PGUUID(as_uuid=True), ForeignKey("users.id"), nullable=False
+    )
+
+    po: Mapped[PurchaseOrder | None] = relationship(back_populates="delivery_plans")
+    contract: Mapped[Contract | None] = relationship(back_populates="delivery_plans")
+    item: Mapped[Item] = relationship()
+    created_by: Mapped[User] = relationship()
+
+    __table_args__ = (
+        CheckConstraint(
+            "po_id IS NOT NULL OR contract_id IS NOT NULL",
+            name="ck_delivery_plans_po_or_contract",
+        ),
+        Index("ix_delivery_plans_po_date", "po_id", "planned_date"),
+        Index("ix_delivery_plans_contract_date", "contract_id", "planned_date"),
+        Index("ix_delivery_plans_status", "status"),
+    )

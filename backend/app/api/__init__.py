@@ -11,6 +11,7 @@ from app.api.v1 import (
     classification,
     contracts,
     dashboard,
+    delivery_plans,
     document_templates,
     documents,
     feishu_webhook,
@@ -48,6 +49,7 @@ api_router.include_router(notifications.router)
 api_router.include_router(admin.router)
 api_router.include_router(system_params_admin.router)
 api_router.include_router(dashboard.router)
+api_router.include_router(delivery_plans.router)
 api_router.include_router(payment_schedule.router)
 api_router.include_router(classification.router)
 api_router.include_router(import_excel.router)

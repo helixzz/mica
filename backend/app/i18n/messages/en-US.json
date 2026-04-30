@@ -118,5 +118,20 @@
       "user_not_found": "Current admin account not found in Feishu",
       "no_open_id": "Feishu user missing open_id"
     }
+  },
+  "delivery_plan": {
+    "not_found": "Delivery plan not found",
+    "created": "Delivery plan created",
+    "updated": "Delivery plan updated",
+    "deleted": "Delivery plan deleted",
+    "invalid_qty": "Planned quantity must be greater than 0",
+    "missing_po_or_contract": "Delivery plan must be linked to a PO or contract",
+    "qty_exceeds_po": "Planned quantity exceeds PO quantity",
+    "invalid_date": "Invalid delivery date",
+    "already_complete": "Delivery plan is complete and cannot be modified",
+    "plan_name_required": "Plan name is required",
+    "item_not_found": "Item not found",
+    "po_not_found": "Associated purchase order not found",
+    "contract_not_found": "Associated contract not found"
   }
 }

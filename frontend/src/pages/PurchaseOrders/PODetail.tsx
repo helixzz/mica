@@ -48,6 +48,7 @@ import { extractError } from '@/api/client'
 import { getToken } from '@/api/client'
 import { useAuth } from '@/auth/useAuth'
 import { ContractFormModal } from '@/components/ContractFormModal'
+import { DeliveryPlanModal } from '@/components/DeliveryPlanModal'
 import { PaymentScheduleTab } from '@/components/PaymentScheduleTab'
 import { ShipmentActions } from '@/components/ShipmentActions'
 import { fmtAmount, fmtQty } from '@/utils/format'
@@ -70,12 +71,14 @@ export function PODetailPage() {
   const [payments, setPayments] = useState<PaymentRecord[]>([])
   const [invoices, setInvoices] = useState<InvoiceListRow[]>([])
   const [contracts, setContracts] = useState<Contract[]>([])
+  const [deliveryPlans, setDeliveryPlans] = useState<any[]>([])
 
   const [shipmentOpen, setShipmentOpen] = useState(false)
   const [paymentOpen, setPaymentOpen] = useState(false)
   const [invoiceOpen, setInvoiceOpen] = useState(false)
   const [contractOpen, setContractOpen] = useState(false)
   const [linkContractOpen, setLinkContractOpen] = useState(false)
+  const [deliveryPlanOpen, setDeliveryPlanOpen] = useState(false)
   const [editingPayment, setEditingPayment] = useState<PaymentRecord | null>(null)
   const [busy, setBusy] = useState(false)
 
@@ -85,13 +88,14 @@ export function PODetailPage() {
 
   const loadAll = async () => {
     if (!id) return
-    const [po0, pr0, sh, pay, inv, ct] = await Promise.all([
+    const [po0, pr0, sh, pay, inv, ct, dp] = await Promise.all([
       api.getPO(id),
       api.getPOProgress(id).catch(() => null),
       api.listShipments({ po_id: id }).catch(() => []),
       api.listPayments(id).catch(() => []),
       api.listInvoices(id).catch(() => []),
       api.listContracts(id).catch(() => [] as Contract[]),
+      api.getPODeliveryPlan(id).catch(() => ({ all_plans: [] })),
     ])
     setPo(po0)
     setProgress(pr0)
@@ -99,6 +103,7 @@ export function PODetailPage() {
     setPayments(pay)
     setInvoices(inv)
     setContracts(ct)
+    setDeliveryPlans(dp.all_plans)
   }
 
   useEffect(() => {
@@ -233,6 +238,32 @@ export function PODetailPage() {
                    { title: t('field.amount'), dataIndex: 'amount', align: 'right', width: 110, render: (v: string) => fmtAmount(v) },
                 ]}
               />
+            ),
+          },
+          {
+            key: 'delivery-plan',
+            label: t('delivery_plan.title'),
+            children: (
+              <Card>
+                <div style={{ marginBottom: 12, textAlign: 'right' }}>
+                  <Button type="primary" icon={<PlusOutlined />} onClick={() => setDeliveryPlanOpen(true)}>
+                    {t('delivery_plan.new_plan')}
+                  </Button>
+                </div>
+                <Table
+                  rowKey="id"
+                  dataSource={deliveryPlans}
+                  pagination={false}
+                  columns={[
+                    { title: t('delivery_plan.planned_date'), dataIndex: 'planned_date', render: (v: string) => dayjs(v).format('YYYY-MM-DD') },
+                    { title: t('nav.items'), dataIndex: 'item_name' },
+                    { title: t('delivery_plan.plan_name'), dataIndex: 'plan_name' },
+                    { title: t('delivery_plan.planned_qty'), dataIndex: 'planned_qty', align: 'right' },
+                    { title: t('delivery_plan.actual_qty'), dataIndex: 'actual_qty', align: 'right' },
+                    { title: t('delivery_plan.status'), dataIndex: 'status', render: (s: string) => <Tag>{t(`status.${s}`)}</Tag> },
+                  ]}
+                />
+              </Card>
             ),
           },
           {
@@ -577,6 +608,15 @@ export function PODetailPage() {
           setEditingPayment(null)
           void loadAll()
         }}
+      />
+      <DeliveryPlanModal
+        open={deliveryPlanOpen}
+        onClose={() => setDeliveryPlanOpen(false)}
+        onSuccess={() => {
+          setDeliveryPlanOpen(false)
+          void loadAll()
+        }}
+        poId={po.id}
       />
     </Space>
   )

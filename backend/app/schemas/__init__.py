@@ -1093,3 +1093,55 @@ class InvoiceForecastOut(BaseModel):
     grand_invoiceable_to_date: Decimal = Decimal(0)
     grand_invoiced_to_date: Decimal = Decimal(0)
     grand_pending_to_date: Decimal = Decimal(0)
+
+
+class DeliveryPlanCreate(BaseModel):
+    po_id: UUID | None = None
+    contract_id: UUID | None = None
+    item_id: UUID
+    plan_name: str = Field(..., min_length=1, max_length=200)
+    planned_qty: int = Field(..., gt=0)
+    planned_date: date
+    notes: str | None = None
+
+    @model_validator(mode="after")
+    def check_po_or_contract(self) -> DeliveryPlanCreate:
+        if self.po_id is None and self.contract_id is None:
+            raise ValueError("delivery_plan.missing_po_or_contract")
+        return self
+
+
+class DeliveryPlanUpdate(BaseModel):
+    po_id: UUID | None = None
+    contract_id: UUID | None = None
+    item_id: UUID | None = None
+    plan_name: str | None = Field(default=None, min_length=1, max_length=200)
+    planned_qty: int | None = Field(default=None, gt=0)
+    planned_date: date | None = None
+    notes: str | None = None
+    status: str | None = None
+
+
+class DeliveryPlanOut(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+    id: UUID
+    po_id: UUID | None = None
+    contract_id: UUID | None = None
+    item_id: UUID
+    item_name: str | None = None
+    plan_name: str
+    planned_qty: int
+    planned_date: date
+    actual_qty: int = 0
+    actual_date: date | None = None
+    status: str
+    notes: str | None = None
+    created_at: datetime
+    updated_at: datetime
+
+
+class DeliveryPlanOverview(BaseModel):
+    total_planned: int = 0
+    total_actual: int = 0
+    completion_pct: float = 0.0
+    plans: list[DeliveryPlanOut] = Field(default_factory=list)

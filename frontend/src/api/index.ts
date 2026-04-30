@@ -696,7 +696,85 @@ export interface InvoiceExtractResult {
   error: string | null
 }
 
+export interface DeliveryPlan {
+  id: string
+  po_id?: string
+  contract_id?: string
+  item_id: string
+  item_name: string
+  plan_name: string
+  planned_qty: number
+  planned_date: string
+  actual_qty: number
+  actual_date?: string
+  status: string
+  notes?: string
+  created_at: string
+  updated_at: string
+}
+
+export interface DeliveryPlanOverview {
+  total_planned: number
+  total_actual: number
+  completion_pct: number
+  plans: DeliveryPlan[]
+}
+
+export interface PODeliverySummary {
+  po_plans: DeliveryPlan[]
+  contract_plans: DeliveryPlan[]
+  all_plans: DeliveryPlan[]
+  summary: {
+    total_planned: number
+    total_actual: number
+    completion_pct: number
+  }
+}
+
+export interface DeliveryPlanCreate {
+  po_id?: string
+  contract_id?: string
+  item_id: string
+  plan_name: string
+  planned_qty: number
+  planned_date: string
+  notes?: string
+}
+
+export interface DeliveryPlanUpdate {
+  plan_name?: string
+  planned_qty?: number
+  planned_date?: string
+  actual_qty?: number
+  actual_date?: string
+  status?: string
+  notes?: string
+}
+
 export const api = {
+  async listDeliveryPlans(params?: { po_id?: string; contract_id?: string; status?: string }): Promise<DeliveryPlan[]> {
+    const { data } = await client.get<DeliveryPlan[]>('/delivery-plans', { params })
+    return data
+  },
+  async getDeliveryPlansOverview(): Promise<DeliveryPlanOverview> {
+    const { data } = await client.get<DeliveryPlanOverview>('/delivery-plans/overview')
+    return data
+  },
+  async createDeliveryPlan(body: DeliveryPlanCreate): Promise<DeliveryPlan> {
+    const { data } = await client.post<DeliveryPlan>('/delivery-plans', body)
+    return data
+  },
+  async updateDeliveryPlan(id: string, body: DeliveryPlanUpdate): Promise<DeliveryPlan> {
+    const { data } = await client.patch<DeliveryPlan>(`/delivery-plans/${id}`, body)
+    return data
+  },
+  async deleteDeliveryPlan(id: string): Promise<void> {
+    await client.delete(`/delivery-plans/${id}`)
+  },
+  async getPODeliveryPlan(poId: string): Promise<PODeliverySummary> {
+    const { data } = await client.get<PODeliverySummary>(`/purchase-orders/${poId}/delivery-plans`)
+    return data
+  },
   async login(username: string, password: string): Promise<TokenResponse> {
     const { data } = await client.post<TokenResponse>('/auth/login/json', { username, password })
     return data

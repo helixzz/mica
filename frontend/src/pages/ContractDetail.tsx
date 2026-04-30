@@ -6,6 +6,7 @@ import {
   EyeOutlined,
   HistoryOutlined,
   InboxOutlined,
+  PlusOutlined,
   StopOutlined,
   UploadOutlined,
 } from '@ant-design/icons'
@@ -42,6 +43,7 @@ import {
 import { extractError } from '@/api/client'
 import { useAuth } from '@/auth/useAuth'
 import { ContractFormModal } from '@/components/ContractFormModal'
+import { DeliveryPlanModal } from '@/components/DeliveryPlanModal'
 import { PaymentScheduleTab } from '@/components/PaymentScheduleTab'
 import { ShipmentActions } from '@/components/ShipmentActions'
 import { fmtAmount } from '@/utils/format'
@@ -56,7 +58,9 @@ export function ContractDetailPage() {
   const [uploading, setUploading] = useState(false)
   const [versions, setVersions] = useState<ContractVersion[]>([])
   const [shipments, setShipments] = useState<Shipment[]>([])
+  const [deliveryPlans, setDeliveryPlans] = useState<any[]>([])
   const [editOpen, setEditOpen] = useState(false)
+  const [deliveryPlanOpen, setDeliveryPlanOpen] = useState(false)
   const [ocrViewer, setOcrViewer] = useState<{
     open: boolean
     loading: boolean
@@ -90,6 +94,12 @@ export function ContractDetailPage() {
     }
     const att = await api.listContractAttachments(id)
     setAttachments(att)
+    try {
+      const dp = await api.listDeliveryPlans({ contract_id: id })
+      setDeliveryPlans(dp)
+    } catch {
+      setDeliveryPlans([])
+    }
   }, [id])
 
   useEffect(() => {
@@ -358,6 +368,32 @@ export function ContractDetailPage() {
             )}
           </Card>
         </Space>
+      ),
+    },
+    {
+      key: 'delivery-plan',
+      label: t('delivery_plan.title'),
+      children: (
+        <Card>
+          <div style={{ marginBottom: 12, textAlign: 'right' }}>
+            <Button type="primary" icon={<PlusOutlined />} onClick={() => setDeliveryPlanOpen(true)}>
+              {t('delivery_plan.new_plan')}
+            </Button>
+          </div>
+          <Table
+            rowKey="id"
+            dataSource={deliveryPlans}
+            pagination={false}
+            columns={[
+              { title: t('delivery_plan.planned_date'), dataIndex: 'planned_date', render: (v: string) => new Date(v).toLocaleDateString() },
+              { title: t('nav.items'), dataIndex: 'item_name' },
+              { title: t('delivery_plan.plan_name'), dataIndex: 'plan_name' },
+              { title: t('delivery_plan.planned_qty'), dataIndex: 'planned_qty', align: 'right' },
+              { title: t('delivery_plan.actual_qty'), dataIndex: 'actual_qty', align: 'right' },
+              { title: t('delivery_plan.status'), dataIndex: 'status', render: (s: string) => <Tag>{t(`status.${s}`)}</Tag> },
+            ]}
+          />
+        </Card>
       ),
     },
     {
@@ -633,6 +669,15 @@ export function ContractDetailPage() {
         )}
       </Drawer>
 
+      <DeliveryPlanModal
+        open={deliveryPlanOpen}
+        onClose={() => setDeliveryPlanOpen(false)}
+        onSuccess={() => {
+          setDeliveryPlanOpen(false)
+          void load()
+        }}
+        contractId={contract.id}
+      />
     </Space>
   )
 }

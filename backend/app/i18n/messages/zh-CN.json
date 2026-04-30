@@ -108,15 +108,19 @@
     },
     "card_send_failed": "飞书卡片消息发送失败"
   },
-  "feishu": {
-    "not_configured": "飞书应用未配置 App ID 或 App Secret",
-    "token_failed": "获取飞书访问令牌失败",
-    "api_error": "飞书 API 调用失败",
-    "invalid_body": "飞书回调请求体无效",
-    "invalid_signature": "飞书回调签名验证失败",
-    "test": {
-      "user_not_found": "当前管理员账号在飞书中未找到对应用户",
-      "no_open_id": "飞书用户缺少 open_id"
-    }
+  "delivery_plan": {
+    "not_found": "交付计划不存在",
+    "created": "交付计划已创建",
+    "updated": "交付计划已更新",
+    "deleted": "交付计划已删除",
+    "invalid_qty": "交付数量必须大于0",
+    "missing_po_or_contract": "交付计划必须关联采购订单或合同",
+    "qty_exceeds_po": "交付数量不能超过采购订单数量",
+    "invalid_date": "交付日期无效",
+    "already_complete": "该交付计划已完成，不可修改",
+    "plan_name_required": "计划名称不能为空",
+    "item_not_found": "物料不存在",
+    "po_not_found": "关联的采购订单不存在",
+    "contract_not_found": "关联的合同不存在"
   }
 }

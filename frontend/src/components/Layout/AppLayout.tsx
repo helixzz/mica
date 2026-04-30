@@ -73,6 +73,7 @@ export function AppLayout() {
     ...(isRequester ? [] : [
       { key: '/contracts', icon: <ApartmentOutlined />, label: <Link to="/contracts" onClick={() => setMobileMenuOpen(false)}>{t('nav.contracts')}</Link> },
       { key: '/shipments', icon: <CarOutlined />, label: <Link to="/shipments" onClick={() => setMobileMenuOpen(false)}>{t('nav.shipments')}</Link> },
+      { key: '/delivery-plans', icon: <CarOutlined />, label: <Link to="/delivery-plans" onClick={() => setMobileMenuOpen(false)}>{t('nav.delivery_plans')}</Link> },
       { key: '/payments', icon: <BankOutlined />, label: <Link to="/payments" onClick={() => setMobileMenuOpen(false)}>{t('nav.payments')}</Link> },
       { key: '/invoices', icon: <DollarOutlined />, label: <Link to="/invoices" onClick={() => setMobileMenuOpen(false)}>{t('nav.invoices')}</Link> },
       { key: '/sku', icon: <BarChartOutlined />, label: <Link to="/sku" onClick={() => setMobileMenuOpen(false)}>{t('nav.sku')}</Link> },
