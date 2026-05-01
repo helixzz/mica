@@ -79,9 +79,8 @@ class FeishuClient:
     ) -> dict[str, Any]:
         return await self._request(
             "POST",
-            "/open-apis/im/v1/messages",
+            f"/open-apis/im/v1/messages?receive_id_type={receive_id_type}",
             json_body={
-                "receive_id_type": receive_id_type,
                 "receive_id": receive_id,
                 "msg_type": "interactive",
                 "content": json.dumps(card, ensure_ascii=False),
