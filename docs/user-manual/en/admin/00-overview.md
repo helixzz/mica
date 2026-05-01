@@ -22,3 +22,5 @@ This section is for **system administrators, operators, and maintainers** respon
 - permission architecture and Cerbos policy usage
 - backup, restore, troubleshooting, and upgrade procedures
 - Feishu integration (message notifications + payment approval workflow)
+- bulk data import (supplier / item / SKU price Excel templates)
+- contract document online preview
