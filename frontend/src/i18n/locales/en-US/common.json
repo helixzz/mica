@@ -17,12 +17,23 @@
     "notes": "Notes",
     "completion": "Completion",
     "no_plans": "No delivery plans found",
+    "create_first": "Create your first delivery plan",
     "po_plans": "PO Plans",
     "contract_plans": "Contract Plans",
     "all_plans": "All Plans",
     "total_planned": "Total Planned",
     "total_actual": "Total Actual",
-    "type": "Type"
+    "type": "Type",
+    "actions": "Actions",
+    "edit": "Edit",
+    "delete": "Delete",
+    "delete_confirm": "Delete this plan?",
+    "progress": "{{actual}}/{{planned}}",
+    "split": "Split",
+    "bulk_create": "Bulk Create (split into batches)",
+    "batch_count": "Number of Batches",
+    "bulk_create_hint": "Split planned qty into N equal batches with evenly spaced dates",
+    "bulk_created": "Created {{count}} delivery plans"
   },
   "nav": {
     "dashboard": "Dashboard",
@@ -56,6 +67,7 @@
     "reset": "Reset",
     "refresh": "Refresh",
     "download": "Download",
+    "preview": "Preview",
     "skip": "Skip",
     "approve": "Approve",
     "reject": "Reject",
@@ -70,7 +82,8 @@
     "record_shipment": "Record Shipment",
     "record_payment": "Record Payment",
     "record_invoice": "Record Invoice",
-    "close": "Close"
+    "close": "Close",
+    "copy": "Copy"
   },
   "field": {
     "username": "Username",
@@ -174,7 +187,10 @@
     "active": "Active",
     "superseded": "Superseded",
     "terminated": "Terminated",
-    "expired": "Expired"
+    "expired": "Expired",
+    "planned": "Planned",
+    "partial": "Partial",
+    "complete": "Complete"
   },
   "role": {
     "admin": "Administrator",
@@ -554,7 +570,9 @@
     "expense_type_help": "Choose the accounting nature of the request, such as CapEx or OpEx, based on how finance should book it.",
     "category_help": "Optional but recommended. Selecting a procurement category improves reporting and later price analysis.",
     "business_reason_help": "Explain why the purchase is needed, who will use it, and any timing or business impact approvers should know.",
-    "line_items_help": "Add one line per requested item. If the final supplier or price is not fixed yet, submit the item, quantity, and specification first."
+    "line_items_help": "Add one line per requested item. If the final supplier or price is not fixed yet, submit the item, quantity, and specification first.",
+    "copy_button": "Copy PR",
+    "copying_from": "Copying from {{title}}"
   },
   "admin": {
     "departments": "Departments",
@@ -656,7 +674,8 @@
     "admin_only": "Admin access only",
     "admin_console": "Admin Console",
     "tab": {
-      "feishu": "Feishu"
+      "feishu": "Feishu",
+      "import": "Import"
     },
     "new_model": "New Model",
     "edit_model": "Edit Model {{name}}",
@@ -1149,5 +1168,17 @@
     "test_failed": "Connection failed",
     "save_success": "Settings saved successfully",
     "save_failed": "Failed to save settings"
+  },
+  "import": {
+    "title": "Bulk Import",
+    "download_template": "Download Template",
+    "upload": "Upload",
+    "import_suppliers": "Import Suppliers",
+    "import_items": "Import Items",
+    "import_prices": "Import Prices",
+    "result": "Import Result",
+    "created": "Created",
+    "skipped": "Skipped",
+    "errors": "Errors"
   }
 }

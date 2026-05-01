@@ -44,6 +44,7 @@ import { extractError } from '@/api/client'
 import { useAuth } from '@/auth/useAuth'
 import { ContractFormModal } from '@/components/ContractFormModal'
 import { DeliveryPlanModal } from '@/components/DeliveryPlanModal'
+import { DocumentPreview } from '@/components/DocumentPreview'
 import { PaymentScheduleTab } from '@/components/PaymentScheduleTab'
 import { ShipmentActions } from '@/components/ShipmentActions'
 import { fmtAmount } from '@/utils/format'
@@ -72,6 +73,20 @@ export function ContractDetailPage() {
     open: boolean
     version: ContractVersion | null
   }>({ open: false, version: null })
+  const [previewOpen, setPreviewOpen] = useState(false)
+  const [previewUrl, setPreviewUrl] = useState('')
+  const [previewTitle, setPreviewTitle] = useState('')
+
+  const openPreview = async (document_id: string, filename: string) => {
+    try {
+      const { download_url } = await api.getDocumentDownloadUrl(document_id)
+      setPreviewUrl(download_url)
+      setPreviewTitle(filename)
+      setPreviewOpen(true)
+    } catch (e) {
+      void message.error(extractError(e).detail)
+    }
+  }
 
   const canWrite = Boolean(
     user && ['admin', 'procurement_mgr', 'it_buyer'].includes(user.role),
@@ -337,16 +352,14 @@ export function ContractDetailPage() {
                           <Tag>{a.role}</Tag>
                         </Space>
                         <Space style={{ width: '100%' }}>
-                          {a.has_ocr && (
-                            <Button
-                              size="small"
-                              icon={<EyeOutlined />}
-                              onClick={() => openOcrViewer(a)}
-                              block
-                            >
-                              {t('contract.view_ocr')}
-                            </Button>
-                          )}
+                          <Button
+                            size="small"
+                            icon={<EyeOutlined />}
+                            onClick={() => openPreview(a.document_id, a.original_filename)}
+                            block
+                          >
+                            {t('common.preview')}
+                          </Button>
                           <Button
                             size="small"
                             icon={<DownloadOutlined />}
@@ -669,6 +682,12 @@ export function ContractDetailPage() {
         )}
       </Drawer>
 
+      <DocumentPreview
+        open={previewOpen}
+        url={previewUrl}
+        title={previewTitle}
+        onClose={() => setPreviewOpen(false)}
+      />
       <DeliveryPlanModal
         open={deliveryPlanOpen}
         onClose={() => setDeliveryPlanOpen(false)}

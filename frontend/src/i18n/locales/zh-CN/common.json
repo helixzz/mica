@@ -17,12 +17,23 @@
     "notes": "备注",
     "completion": "完成率",
     "no_plans": "暂无交货计划",
+    "create_first": "创建第一个交货计划",
     "po_plans": "订单计划",
     "contract_plans": "合同计划",
     "all_plans": "所有计划",
     "total_planned": "计划总数",
     "total_actual": "实际总数",
-    "type": "类型"
+    "type": "类型",
+    "actions": "操作",
+    "edit": "编辑",
+    "delete": "删除",
+    "delete_confirm": "确定删除此计划？",
+    "progress": "{{actual}}/{{planned}}",
+    "split": "拆分",
+    "bulk_create": "批量创建（拆分为多批）",
+    "batch_count": "批次数量",
+    "bulk_create_hint": "将计划数量均分为 N 批，日期均匀分布",
+    "bulk_created": "已创建 {{count}} 个交货计划"
   },
   "nav": {
     "dashboard": "仪表盘",
@@ -56,6 +67,7 @@
     "reset": "重置",
     "refresh": "刷新",
     "download": "下载",
+    "preview": "预览",
     "skip": "跳过",
     "approve": "批准",
     "reject": "拒绝",
@@ -70,7 +82,8 @@
     "record_shipment": "登记交货",
     "record_payment": "登记付款",
     "record_invoice": "登记发票",
-    "close": "关闭"
+    "close": "关闭",
+    "copy": "复制"
   },
   "field": {
     "username": "用户名",
@@ -174,7 +187,10 @@
     "active": "有效",
     "superseded": "已替代",
     "terminated": "已终止",
-    "expired": "已过期"
+    "expired": "已过期",
+    "planned": "计划中",
+    "partial": "部分完成",
+    "complete": "已完成"
   },
   "role": {
     "admin": "管理员",
@@ -555,7 +571,9 @@
     "expense_type_help": "根据财务入账方式选择开支类型，例如 CapEx / OpEx。",
     "category_help": "建议尽量选择采购种类，便于后续统计分析、比价和台账归档。",
     "business_reason_help": "说明采购原因、使用对象、期望时间以及不采购可能带来的业务影响。",
-    "line_items_help": "每一行填写一项待采购物料。若最终供应商和价格尚未确定，也可以先提交物料、数量和规格。"
+    "line_items_help": "每一行填写一项待采购物料。若最终供应商和价格尚未确定，也可以先提交物料、数量和规格。",
+    "copy_button": "复制采购申请",
+    "copying_from": "正在复制 {{title}}"
   },
   "admin": {
     "departments": "部门管理",
@@ -657,7 +675,8 @@
     "admin_only": "仅管理员可访问此页面",
     "admin_console": "系统管理",
     "tab": {
-      "feishu": "飞书"
+      "feishu": "飞书",
+      "import": "导入"
     },
     "new_model": "新增模型",
     "edit_model": "编辑模型 {{name}}",
@@ -1150,5 +1169,17 @@
     "test_failed": "连接失败",
     "save_success": "设置保存成功",
     "save_failed": "设置保存失败"
+  },
+  "import": {
+    "title": "批量导入",
+    "download_template": "下载模板",
+    "upload": "上传",
+    "import_suppliers": "导入供应商",
+    "import_items": "导入物料",
+    "import_prices": "导入价格",
+    "result": "导入结果",
+    "created": "已创建",
+    "skipped": "已跳过",
+    "errors": "错误"
   }
 }

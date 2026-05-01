@@ -1,4 +1,4 @@
-import { PlusOutlined, SearchOutlined } from '@ant-design/icons'
+import { CopyOutlined, PlusOutlined, SearchOutlined } from '@ant-design/icons'
 import { Button, Input, Space, Table, Tag, Typography } from 'antd'
 import type { ColumnsType } from 'antd/es/table'
 import { useEffect, useRef, useState } from 'react'
@@ -89,6 +89,20 @@ export function PRListPage() {
       render: (v: string) => new Date(v).toLocaleString(),
       sorter: (a, b) => new Date(a.created_at).getTime() - new Date(b.created_at).getTime(),
       defaultSortOrder: 'descend',
+    },
+    {
+      title: t('field.actions'),
+      width: 100,
+      render: (_: unknown, record: PRListItem) => (
+        <Button
+          type="link"
+          size="small"
+          icon={<CopyOutlined />}
+          onClick={() => navigate(`/purchase-requisitions/new/${record.id}`)}
+        >
+          {t('button.copy')}
+        </Button>
+      ),
     },
   ]
 

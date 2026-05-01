@@ -10,6 +10,7 @@ import {
   message,
   theme,
 } from 'antd'
+import { CopyOutlined } from '@ant-design/icons'
 import { useEffect, useMemo, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { useNavigate, useParams } from 'react-router-dom'
@@ -241,6 +242,9 @@ export function PRDetailPage() {
         </Space>
         <Space>
           <Button onClick={() => navigate('/purchase-requisitions')}>{t('button.back')}</Button>
+          <Button icon={<CopyOutlined />} onClick={() => navigate(`/purchase-requisitions/new/${pr.id}`)}>
+            {t('pr.copy_button')}
+          </Button>
           {canEdit && (
             <Button onClick={() => navigate(`/purchase-requisitions/${pr.id}/edit`)}>
               {t('button.edit') || '编辑'}

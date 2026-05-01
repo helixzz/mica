@@ -1,5 +1,5 @@
-import { PlusOutlined } from '@ant-design/icons'
-import { Button, Card, Col, DatePicker, Input, Progress, Row, Select, Space, Table, Tag, Typography, theme } from 'antd'
+import { DeleteOutlined, EditOutlined, PlusOutlined, SplitCellsOutlined } from '@ant-design/icons'
+import { Button, Card, Col, DatePicker, Input, Popconfirm, Progress, Row, Select, Space, Table, Tag, Tooltip, Typography, theme } from 'antd'
 import dayjs from 'dayjs'
 import { useEffect, useState } from 'react'
 import { useTranslation } from 'react-i18next'
@@ -83,6 +83,20 @@ export function DeliveryPlansPage() {
     }
   }
 
+  const handleDelete = async (id: string) => {
+    try {
+      await api.deleteDeliveryPlan(id)
+      loadData()
+    } catch (err: any) {
+      console.error(err)
+    }
+  }
+
+  const handleSplit = (plan: DeliveryPlan) => {
+    setEditingPlan(undefined)
+    setModalOpen(true)
+  }
+
   const getStatusColor = (status: string) => {
     switch (status) {
       case 'planned': return 'blue'
@@ -93,29 +107,42 @@ export function DeliveryPlansPage() {
     }
   }
 
+  const getProgressColor = (status: string) => {
+    switch (status) {
+      case 'complete': return token.colorSuccess
+      case 'partial': return token.colorWarning
+      case 'in_transit': return token.colorWarning
+      default: return token.colorPrimary
+    }
+  }
+
   const columns = [
     {
       title: t('delivery_plan.planned_date'),
       dataIndex: 'planned_date',
       key: 'planned_date',
+      width: 120,
       render: (val: string) => dayjs(val).format('YYYY-MM-DD'),
     },
     {
       title: t('nav.purchase_orders'),
       dataIndex: 'po_id',
       key: 'po_id',
+      width: 140,
       render: (val: string) => pos.find(p => p.id === val)?.po_number || '-',
     },
     {
       title: t('nav.contracts'),
       dataIndex: 'contract_id',
       key: 'contract_id',
+      width: 140,
       render: (val: string) => contracts.find(c => c.id === val)?.contract_number || '-',
     },
     {
       title: t('nav.items'),
       dataIndex: 'item_name',
       key: 'item_name',
+      width: 140,
     },
     {
       title: t('delivery_plan.plan_name'),
@@ -126,27 +153,79 @@ export function DeliveryPlansPage() {
       )
     },
     {
-      title: t('delivery_plan.planned_qty'),
-      dataIndex: 'planned_qty',
-      key: 'planned_qty',
-    },
-    {
-      title: t('delivery_plan.actual_qty'),
-      dataIndex: 'actual_qty',
-      key: 'actual_qty',
-    },
-    {
       title: t('delivery_plan.status'),
       dataIndex: 'status',
       key: 'status',
-      render: (val: string) => <Tag color={getStatusColor(val)}>{t(`status.${val}`)}</Tag>,
+      width: 200,
+      render: (val: string, record: DeliveryPlan) => {
+        const pct = record.planned_qty > 0
+          ? Math.round((record.actual_qty / record.planned_qty) * 100)
+          : 0
+        return (
+          <Tooltip title={t('delivery_plan.progress', { actual: record.actual_qty, planned: record.planned_qty })}>
+            <Space direction="vertical" size={0} style={{ width: '100%' }}>
+              <Tag color={getStatusColor(val)}>{t(`status.${val}`)}</Tag>
+              <Progress
+                percent={pct}
+                size="small"
+                strokeColor={getProgressColor(val)}
+                format={() => `${record.actual_qty}/${record.planned_qty}`}
+                style={{ margin: 0 }}
+              />
+            </Space>
+          </Tooltip>
+        )
+      },
     },
     {
       title: t('delivery_plan.notes'),
       dataIndex: 'notes',
       key: 'notes',
+      ellipsis: true,
+    },
+    {
+      title: t('delivery_plan.actions'),
+      key: 'actions',
+      width: 160,
+      render: (_: any, record: DeliveryPlan) => (
+        <Space size="small">
+          <Tooltip title={t('delivery_plan.edit')}>
+            <Button
+              type="text"
+              size="small"
+              icon={<EditOutlined />}
+              onClick={() => { setEditingPlan(record); setModalOpen(true) }}
+            />
+          </Tooltip>
+          <Tooltip title={t('delivery_plan.split')}>
+            <Button
+              type="text"
+              size="small"
+              icon={<SplitCellsOutlined />}
+              onClick={() => handleSplit(record)}
+            />
+          </Tooltip>
+          <Popconfirm
+            title={t('delivery_plan.delete_confirm')}
+            onConfirm={() => handleDelete(record.id)}
+            okText={t('button.confirm')}
+            cancelText={t('button.cancel')}
+          >
+            <Tooltip title={t('delivery_plan.delete')}>
+              <Button
+                type="text"
+                size="small"
+                danger
+                icon={<DeleteOutlined />}
+              />
+            </Tooltip>
+          </Popconfirm>
+        </Space>
+      ),
     },
   ]
+
+  const hasPlans = overview && overview.plans.length > 0
 
   return (
     <Space direction="vertical" size="large" style={{ width: '100%' }}>
@@ -221,8 +300,17 @@ export function DeliveryPlansPage() {
             />
           </Space>
 
-          {overview?.plans.length === 0 ? (
-            <EmptyState title={t('delivery_plan.no_plans')} description={t('delivery_plan.no_plans')} />
+          {!hasPlans && !loading ? (
+            <EmptyState
+              illustration="empty"
+              title={t('delivery_plan.no_plans')}
+              description={t('delivery_plan.create_first')}
+              action={
+                <Button type="primary" icon={<PlusOutlined />} onClick={() => { setEditingPlan(undefined); setModalOpen(true) }}>
+                  {t('delivery_plan.new_plan')}
+                </Button>
+              }
+            />
           ) : (
             <Table
               columns={columns}
@@ -230,13 +318,14 @@ export function DeliveryPlansPage() {
               rowKey="id"
               loading={loading}
               pagination={{ pageSize: 10 }}
+              scroll={{ x: 1100 }}
             />
           )}
 
-          {overview && overview.plans.length > 0 && (
+          {hasPlans && (
             <div style={{ marginTop: token.marginLG }}>
               <Text type="secondary">{t('delivery_plan.completion')}</Text>
-              <Progress percent={overview.completion_pct} status="active" />
+              <Progress percent={overview!.completion_pct} status="active" />
             </div>
           )}
         </Space>

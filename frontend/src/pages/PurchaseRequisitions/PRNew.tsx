@@ -18,7 +18,7 @@ import {
 import dayjs from 'dayjs'
 import { useEffect, useState } from 'react'
 import { useTranslation } from 'react-i18next'
-import { useNavigate } from 'react-router-dom'
+import { useNavigate, useParams } from 'react-router-dom'
 
 import { api, type ClassificationItem, flattenCategoryTree, type Item, type PRItem, type Supplier } from '@/api'
 import { client, extractError } from '@/api/client'
@@ -61,6 +61,7 @@ export function PRNewPage() {
   const autosave = useAutosave('pr-new')
   const [autosaveDismissed, setAutosaveDismissed] = useState(false)
   const [refPrices, setRefPrices] = useState<Record<string, { latest_price: number | null; avg_price: number | null }>>({})
+  const copyId = useParams<{ copyId: string }>().copyId
 
   useEffect(() => {
     void api.suppliers().then(setSuppliers)
@@ -71,6 +72,43 @@ export function PRNewPage() {
     void api.getCategoryTree().then((tree) => setProcCategories(flattenCategoryTree(tree)))
     void client.get<Record<string, boolean>>('/ai/features-available').then((r) => setAiFeatures(r.data)).catch(() => {})
   }, [])
+
+  useEffect(() => {
+    if (!copyId) return
+    void (async () => {
+      try {
+        const pr = await api.getPR(copyId)
+        form.setFieldsValue({
+          title: pr.title,
+          business_reason: pr.business_reason || '',
+          currency: pr.currency,
+          required_date: pr.required_date ? dayjs(pr.required_date) : undefined,
+          company_id: pr.company_id || undefined,
+          cost_center_id: pr.cost_center_id || undefined,
+          expense_type_id: pr.expense_type_id || undefined,
+          procurement_category_id: pr.procurement_category_id || undefined,
+        })
+        setLines(
+          (pr.items || []).map((item, i) => ({
+            key: Date.now() + i,
+            line_no: i + 1,
+            item_id: item.item_id,
+            item_name: item.item_name,
+            specification: item.specification,
+            supplier_id: item.supplier_id,
+            qty: Number(item.qty),
+            uom: item.uom,
+            unit_price: Number(item.unit_price),
+          })),
+        )
+        void message.info(t('pr.copying_from', { title: pr.title }))
+        navigate('/purchase-requisitions/new', { replace: true })
+      } catch {
+        void message.error(t('error.unexpected'))
+        navigate('/purchase-requisitions/new', { replace: true })
+      }
+    })()
+  }, [copyId])
 
   useEffect(() => {
     const formValues = form.getFieldsValue()

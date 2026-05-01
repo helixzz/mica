@@ -36,6 +36,7 @@ import { DocumentTemplatesPanel } from './admin/DocumentTemplatesPanel'
 import { ApprovalRulesTab } from "./admin/ApprovalRulesTab"
 import { SystemParamsTab } from './admin/SystemParamsTab'
 import { FeishuSettingsTab } from './admin/FeishuSettingsTab'
+import { ImportTab } from './admin/ImportTab'
 
 type AIModelRow = {
   id: string
@@ -81,7 +82,7 @@ export function AdminPage() {
           { key: 'approval_rules', label: t('admin.approval_rules'), children: <ApprovalRulesTab /> },
           { key: 'classification', label: t('admin.classification'), children: <ClassificationTab /> },
           { key: 'document_templates', label: t('admin.document_templates'), children: <DocumentTemplatesPanel /> },
-          { key: 'import', label: '数据导入', children: <ImportTab /> },
+          { key: 'import', label: t('admin.tab.import'), children: <ImportTab /> },
           { key: 'models', label: t('admin.llm_models'), children: <AIModelsPanel /> },
           { key: 'routings', label: t('admin.ai_routing'), children: <RoutingsPanel /> },
           { key: 'users', label: t('admin.users'), children: <UsersPanel /> },
@@ -989,76 +990,6 @@ function DepartmentsTab() {
           </Form.Item>
         </Form>
       </Drawer>
-    </Space>
-  )
-}
-
-function ImportTab() {
-  const { t } = useTranslation()
-  const [result, setResult] = useState<{ created?: number; skipped?: number; errors?: string[] } | null>(null)
-  const [uploading, setUploading] = useState(false)
-
-  const doImport = async (endpoint: string, file: File) => {
-    setUploading(true)
-    setResult(null)
-    try {
-      const formData = new FormData()
-      formData.append('file', file)
-      const { data } = await api.adminUploadFile(endpoint, formData)
-      setResult(data)
-      void message.success(t('admin.import_complete', { created: data.created }) + (data.skipped ? `, ${t('admin.import_skipped', { skipped: data.skipped })}` : ''))
-    } catch (e: any) {
-      void message.error(e?.response?.data?.detail || t('admin.import_failed'))
-    } finally {
-      setUploading(false)
-    }
-  }
-
-  const importConfigs = [
-    {
-      key: 'suppliers',
-      title: t('admin.import_suppliers'),
-      desc: t('admin.import_suppliers_desc'),
-      endpoint: '/admin/import/suppliers',
-      templateKind: 'suppliers',
-    },
-    {
-      key: 'items',
-      title: t('admin.import_items_title'),
-      desc: t('admin.import_items_desc'),
-      endpoint: '/admin/import/items',
-      templateKind: 'items',
-    },
-    {
-      key: 'prices',
-      title: t('admin.import_prices_title'),
-      desc: t('admin.import_prices_desc'),
-      endpoint: '/admin/import/prices',
-      templateKind: 'prices',
-    },
-  ]
-
-  return (
-    <Space direction="vertical" size="middle" style={{ width: '100%' }}>
-      {importConfigs.map((cfg) => (
-        <Card key={cfg.key} size="small" title={cfg.title}>
-          <Typography.Text type="secondary" style={{ display: 'block', marginBottom: 12, fontSize: 12 }}>{cfg.desc}</Typography.Text>
-          <Space>
-            <Button href={`/api/v1/admin/import/template/${cfg.templateKind}`} target="_blank">下载模板</Button>
-            <Upload
-              accept=".xlsx,.xls"
-              beforeUpload={(file) => { void doImport(cfg.endpoint, file as unknown as File); return false }}
-              showUploadList={false}
-              maxCount={1}
-            >
-              <Button type="primary" icon={<PlusOutlined />} loading={uploading}>{t('admin.upload_data')}</Button>
-            </Upload>
-          </Space>
-        </Card>
-      ))}
-      {result && result.errors && result.errors.length > 0 && (
-        <Alert type="warning" message={t('admin.rows_with_issues', { count: result.errors.length })} description={result.errors.slice(0, 10).join('\n')} showIcon />
-      )}
     </Space>
   )
 }

@@ -1,4 +1,4 @@
-import { DatePicker, Form, Input, InputNumber, Modal, Radio, Select, message } from 'antd'
+import { Checkbox, DatePicker, Form, Input, InputNumber, Modal, Radio, Select, message } from 'antd'
 import dayjs from 'dayjs'
 import { useEffect, useState } from 'react'
 import { useTranslation } from 'react-i18next'
@@ -29,11 +29,13 @@ export function DeliveryPlanModal({
   const [pos, setPos] = useState<PurchaseOrder[]>([])
   const [contracts, setContracts] = useState<Contract[]>([])
   const [items, setItems] = useState<{ id: string; name: string; remaining: number }[]>([])
+  const [bulkMode, setBulkMode] = useState(false)
 
   useEffect(() => {
     if (open) {
       if (plan) {
         setType(plan.po_id ? 'po' : 'contract')
+        setBulkMode(false)
         form.setFieldsValue({
           type: plan.po_id ? 'po' : 'contract',
           po_id: plan.po_id,
@@ -48,6 +50,7 @@ export function DeliveryPlanModal({
         if (plan.contract_id) loadContractItems(plan.contract_id)
       } else {
         setType(poId ? 'po' : contractId ? 'contract' : 'po')
+        setBulkMode(false)
         form.setFieldsValue({
           type: poId ? 'po' : contractId ? 'contract' : 'po',
           po_id: poId,
@@ -61,6 +64,7 @@ export function DeliveryPlanModal({
     } else {
       form.resetFields()
       setItems([])
+      setBulkMode(false)
     }
   }, [open, plan, poId, contractId, form])
 
@@ -129,25 +133,68 @@ export function DeliveryPlanModal({
       const values = await form.validateFields()
       setSubmitting(true)
 
-      const payload = {
-        po_id: values.type === 'po' ? values.po_id : undefined,
-        contract_id: values.type === 'contract' ? values.contract_id : undefined,
-        item_id: values.item_id,
-        plan_name: values.plan_name,
-        planned_qty: values.planned_qty,
-        planned_date: values.planned_date.format('YYYY-MM-DD'),
-        notes: values.notes,
-      }
-
       if (plan) {
+        const payload = {
+          po_id: values.type === 'po' ? values.po_id : undefined,
+          contract_id: values.type === 'contract' ? values.contract_id : undefined,
+          item_id: values.item_id,
+          plan_name: values.plan_name,
+          planned_qty: values.planned_qty,
+          planned_date: values.planned_date.format('YYYY-MM-DD'),
+          notes: values.notes,
+        }
         await api.updateDeliveryPlan(plan.id, payload)
         message.success(t('common.saved'))
+        onSuccess()
+        onClose()
+      } else if (bulkMode && values.batch_count > 1) {
+        const batchCount = values.batch_count
+        const totalQty = values.planned_qty
+        const qtyPerBatch = Math.floor(totalQty / batchCount)
+        const remainder = totalQty - qtyPerBatch * batchCount
+
+        const dateRange = values.date_range as [dayjs.Dayjs, dayjs.Dayjs]
+        const startDate = dateRange[0]
+        const endDate = dateRange[1]
+        const intervalMs = (endDate.valueOf() - startDate.valueOf()) / (batchCount - 1 || 1)
+
+        const basePayload = {
+          po_id: values.type === 'po' ? values.po_id : undefined,
+          contract_id: values.type === 'contract' ? values.contract_id : undefined,
+          item_id: values.item_id,
+          notes: values.notes,
+        }
+
+        let created = 0
+        for (let i = 0; i < batchCount; i++) {
+          const batchQty = i === batchCount - 1 ? qtyPerBatch + remainder : qtyPerBatch
+          const batchDate = dayjs(startDate.valueOf() + intervalMs * i).format('YYYY-MM-DD')
+          await api.createDeliveryPlan({
+            ...basePayload,
+            plan_name: `${values.plan_name} #${i + 1}`,
+            planned_qty: batchQty,
+            planned_date: batchDate,
+          })
+          created++
+        }
+        message.success(t('delivery_plan.bulk_created', { count: created }))
+        onSuccess()
+        onClose()
       } else {
+        const payload = {
+          po_id: values.type === 'po' ? values.po_id : undefined,
+          contract_id: values.type === 'contract' ? values.contract_id : undefined,
+          item_id: values.item_id,
+          plan_name: values.plan_name,
+          planned_qty: values.planned_qty,
+          planned_date: values.planned_date.format('YYYY-MM-DD'),
+          notes: values.notes,
+        }
         await api.createDeliveryPlan(payload)
         message.success(t('common.created'))
+        onSuccess()
+        onClose()
       }
-      onSuccess()
-      onClose()
     } catch (err: any) {
       if (err.errorFields) return
       message.error(err.response?.data?.detail || err.message)
@@ -164,6 +211,7 @@ export function DeliveryPlanModal({
       onOk={handleSubmit}
       confirmLoading={submitting}
       destroyOnClose
+      width={520}
     >
       <Form form={form} layout="vertical">
         <Form.Item name="type" label={t('delivery_plan.type')}>
@@ -245,13 +293,42 @@ export function DeliveryPlanModal({
           <InputNumber min={1} style={{ width: '100%' }} />
         </Form.Item>
 
-        <Form.Item
-          name="planned_date"
-          label={t('delivery_plan.planned_date')}
-          rules={[{ required: true, message: t('common.required') }]}
-        >
-          <DatePicker style={{ width: '100%' }} />
-        </Form.Item>
+        {!plan && (
+          <Form.Item name="bulk_mode" valuePropName="checked">
+            <Checkbox onChange={(e) => setBulkMode(e.target.checked)}>
+              {t('delivery_plan.bulk_create')}
+            </Checkbox>
+          </Form.Item>
+        )}
+
+        {bulkMode && !plan ? (
+          <>
+            <Form.Item
+              name="batch_count"
+              label={t('delivery_plan.batch_count')}
+              rules={[{ required: true, message: t('common.required') }]}
+              initialValue={2}
+              extra={t('delivery_plan.bulk_create_hint')}
+            >
+              <InputNumber min={2} max={100} style={{ width: '100%' }} />
+            </Form.Item>
+            <Form.Item
+              name="date_range"
+              label={t('delivery_plan.planned_date')}
+              rules={[{ required: true, message: t('common.required') }]}
+            >
+              <DatePicker.RangePicker style={{ width: '100%' }} />
+            </Form.Item>
+          </>
+        ) : (
+          <Form.Item
+            name="planned_date"
+            label={t('delivery_plan.planned_date')}
+            rules={[{ required: true, message: t('common.required') }]}
+          >
+            <DatePicker style={{ width: '100%' }} />
+          </Form.Item>
+        )}
 
         <Form.Item name="notes" label={t('delivery_plan.notes')}>
           <Input.TextArea rows={3} />

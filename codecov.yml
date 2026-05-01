@@ -1,0 +1,30 @@
+# Codecov configuration for Mica
+# See: https://docs.codecov.com/docs/codecov-yaml
+
+coverage:
+  status:
+    project:
+      backend:
+        target: 70%
+        threshold: 0%
+        paths:
+          - backend/
+      frontend:
+        target: 60%
+        threshold: 0%
+        paths:
+          - frontend/
+    patch:
+      default:
+        target: 80%
+        threshold: 0%
+
+comment:
+  layout: "reach, diff, flags"
+  behavior: default
+  require_changes: false
+
+ignore:
+  - "backend/tests/"
+  - "frontend/src/test/"
+  - "e2e/"

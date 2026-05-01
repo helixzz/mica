@@ -1607,6 +1607,28 @@ export const api = {
   async adminUploadFile(endpoint: string, formData: FormData): Promise<{ data: any }> {
     return client.post(endpoint, formData, { headers: { 'Content-Type': 'multipart/form-data' } })
   },
+  async downloadTemplate(kind: 'suppliers' | 'items' | 'prices'): Promise<Blob> {
+    const response = await client.get(`/admin/import/template/${kind}`, { responseType: 'blob' })
+    return response.data as Blob
+  },
+  async importSuppliers(file: File): Promise<{ created: number; skipped: number; errors: string[] }> {
+    const formData = new FormData()
+    formData.append('file', file)
+    const { data } = await client.post<{ created: number; skipped: number; errors: string[] }>('/admin/import/suppliers', formData, { headers: { 'Content-Type': 'multipart/form-data' } })
+    return data
+  },
+  async importItems(file: File): Promise<{ created: number; skipped: number; errors: string[] }> {
+    const formData = new FormData()
+    formData.append('file', file)
+    const { data } = await client.post<{ created: number; skipped: number; errors: string[] }>('/admin/import/items', formData, { headers: { 'Content-Type': 'multipart/form-data' } })
+    return data
+  },
+  async importPrices(file: File): Promise<{ created: number; errors: string[] }> {
+    const formData = new FormData()
+    formData.append('file', file)
+    const { data } = await client.post<{ created: number; errors: string[] }>('/admin/import/prices', formData, { headers: { 'Content-Type': 'multipart/form-data' } })
+    return data
+  },
   async adminListApprovalRules(): Promise<any[]> {
     const { data } = await client.get('/approval-rules')
     return data

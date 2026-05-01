@@ -163,6 +163,7 @@ export function AppRoutes() {
           <Route path="/approvals" element={<ApprovalsPage />} />
           <Route path="/purchase-requisitions" element={<PRListPage />} />
           <Route path="/purchase-requisitions/new" element={<PRNewPage />} />
+          <Route path="/purchase-requisitions/new/:copyId" element={<PRNewPage />} />
           <Route path="/purchase-requisitions/:id/edit" element={<PREditPage />} />
           <Route path="/purchase-requisitions/:id" element={<PRDetailPage />} />
           <Route path="/purchase-orders" element={<POListPage />} />
