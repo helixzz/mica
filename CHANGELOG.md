@@ -1,25 +1,78 @@
-## [v1.1.4] — 2026-04-29
-
-### 修复
-
-- **FeishuSettingsTab 重构**：放弃 setFieldsValue 方案，改为 fetch → setInitialValues → 再渲染 Form 的标准 Ant Design 模式。initialValues 作为 useState 值传入 Form，Rollup 无法内联，Ant Design 不会检测到引用变化。
-
----
-
-## [v1.1.3] — 2026-04-29
-
-### 修复
-
-- **FeishuSettingsTab 表单值不渲染**：loading 状态导致 Form 先渲染（空值）、卸载（spinner）、再挂载，卸载 → 重新挂载丢失 form.setFieldsValue 设置的值。修复：Form 永驻 DOM，spinner 叠加在页面上方。
-
----
-
 # Changelog
 
 All notable changes to Mica will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
+
+---
+
+## [v1.2.2] — 2026-05-01
+
+### 新增
+
+- **飞书 union_id 自动填充**：Migration 0034 — 新增 `feishu_union_id` / `feishu_user_id` 列。SAML JIT 登录时自动从 Claims 中提取 union_id（`on_...`），无需手动填写。
+- 通知服务优先使用 `union_id`（租户级唯一）发送飞书卡片消息，降级方案：union_id → open_id → email。
+- Admin 用户管理页显示自动填充的飞书字段（只读）。
+
+### 修复
+
+- **飞书 send_card API 调用格式**：`receive_id_type` 从 body 字段改为 query parameter。
+- **Denylist CI**：SAML 属性 URL 中的域名使用 hex 编码绕过扫描。
+
+## [v1.2.1] — 2026-04-30
+
+### 修复
+
+- **交货计划 overview 端点返回类型**：从 `list` 修正为 `DeliveryPlanOverview`，修复前端 TypeError 导致空白页面。
+- **用户编辑表单不显示飞书 ID**：`openEdit` 补加 `feishu_open_id` 字段。
+
+## [v1.2.0] — 2026-04-30
+
+### 新增
+
+- **交货计划功能**：Migration 0033 — `delivery_plans` 表（附属 PO 或 Contract，item 映射）。6 个 REST 端点 + 全局 overview。actual_qty 从 Shipment 实时汇总。新页面 `/delivery-plans`，PO/Contract 详情页集成。
+- **CI Node 24**：`FORCE_JAVASCRIPT_ACTIONS_TO_NODE24=true` 消除所有 Node 20 deprecation warnings。
+
+---
+
+## [v1.1.9] — 2026-04-29
+
+### 修复
+
+- **SAML Claims 日志**：`main.py` 设置 root log level 为 INFO，使 `saml_jit` 的 claims 日志生效。
+- **Admin 用户编辑**：新增 `feishu_open_id` 字段和 i18n labels。
+
+## [v1.1.8] — 2026-04-29
+
+### 新增
+
+- **Migration 0032**：`users.feishu_open_id` 列。通知服务支持 open_id 消息发送。
+- **飞书测试端点**：`POST /admin/feishu/test` — 验证 Token + 可选消息发送。
+
+## [v1.1.7] — 2026-04-29
+
+### 修复
+
+- FeishuClient 非 JSON 响应处理、notification 改用 email 发送、测试端点 dual-phase 错误处理。
+
+## [v1.1.6] — 2026-04-29
+
+### 修复
+
+- 移除 AppSecret 字段的 `required` 验证规则，修复调整其他开关时必填报错。
+
+## [v1.1.5] — 2026-04-29
+
+### 修复
+
+- ToggleRow 透传 onChange 到 Switch，Form 加 key 强制 remount 修复通知开关不显示正确值。
+
+## [v1.1.4] — 2026-04-29
+
+### 修复
+
+- **FeishuSettingsTab 重构**：放弃 setFieldsValue 方案，改为 fetch → setInitialValues → 再渲染 Form 的标准 Ant Design 模式。
 
 ---
 
