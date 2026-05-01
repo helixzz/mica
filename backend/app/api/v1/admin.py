@@ -987,8 +987,19 @@ async def test_feishu_connection(
 
         # Send a simple text test message — no button URL to avoid feishu whitelist errors
         test_card = {
-            "header": {"title": {"tag": "plain_text", "content": "✅ 飞书集成测试成功"}, "template": "green"},
-            "elements": [{"tag": "div", "text": {"tag": "lark_md", "content": f"Mica 飞书集成配置正确。\n操作人：{user.display_name}"}}],
+            "header": {
+                "title": {"tag": "plain_text", "content": "✅ 飞书集成测试成功"},
+                "template": "green",
+            },
+            "elements": [
+                {
+                    "tag": "div",
+                    "text": {
+                        "tag": "lark_md",
+                        "content": f"Mica 飞书集成配置正确。\n操作人：{user.display_name}",
+                    },
+                }
+            ],
         }
         # Prefer feishu IDs: union_id (tenant-wide) > open_id > email
         if user.feishu_union_id:
