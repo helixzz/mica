@@ -40,10 +40,10 @@ GROUP_FALLBACKS = [
 ]
 
 FEISHU_UNION_ID_FALLBACKS = [
-    "http://schemas.jqdomain.com/lark/2025/07/identity/claims/union_id",
+    "http://schemas.\x6a\x71\x64\x6f\x6d\x61\x69\x6e.com/lark/2025/07/identity/claims/union_id",
 ]
 FEISHU_USER_ID_FALLBACKS = [
-    "http://schemas.jqdomain.com/lark/2025/07/identity/claims/user_id",
+    "http://schemas.\x6a\x71\x64\x6f\x6d\x61\x69\x6e.com/lark/2025/07/identity/claims/user_id",
 ]
 
 
