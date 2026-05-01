@@ -995,8 +995,10 @@ async def test_feishu_connection(
             line_count=1,
             pr_url="",
         )
-        # Prefer open_id if stored; fallback to email
-        if user.feishu_open_id:
+        # Prefer feishu IDs: union_id (tenant-wide) > open_id > email
+        if user.feishu_union_id:
+            await client.send_card("union_id", user.feishu_union_id, card)
+        elif user.feishu_open_id:
             await client.send_card("open_id", user.feishu_open_id, card)
         else:
             await client.send_card("email", user.email, card)

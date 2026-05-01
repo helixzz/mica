@@ -58,6 +58,8 @@ async def upsert_saml_user(
 
     display_name = _first_attribute(attributes, config.display_name_candidates()) or email
     groups = _all_groups(attributes, config.group_attribute_candidates())
+    feishu_union_id = _first_attribute(attributes, config.feishu_union_id_candidates())
+    feishu_user_id = _first_attribute(attributes, config.feishu_user_id_candidates())
 
     user = (
         await session.execute(select(User).where(User.sso_external_id == identity))
@@ -104,6 +106,10 @@ async def upsert_saml_user(
     user.preferred_locale = locale
     user.auth_provider = "saml"
     user.sso_external_id = identity
+    if feishu_union_id:
+        user.feishu_union_id = feishu_union_id
+    if feishu_user_id:
+        user.feishu_user_id = feishu_user_id
 
     target_role, target_department_id = await _resolve_role_and_department(
         session,

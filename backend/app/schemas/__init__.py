@@ -49,6 +49,8 @@ class UserOut(BaseModel):
     preferred_locale: str
     is_active: bool
     feishu_open_id: str | None = None
+    feishu_union_id: str | None = None
+    feishu_user_id: str | None = None
 
 
 class CompanyCreate(BaseModel):

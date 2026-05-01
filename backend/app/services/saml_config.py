@@ -39,6 +39,13 @@ GROUP_FALLBACKS = [
     "role",
 ]
 
+FEISHU_UNION_ID_FALLBACKS = [
+    "http://schemas.jqdomain.com/lark/2025/07/identity/claims/union_id",
+]
+FEISHU_USER_ID_FALLBACKS = [
+    "http://schemas.jqdomain.com/lark/2025/07/identity/claims/user_id",
+]
+
 
 @dataclass(slots=True)
 class SamlGroupMapping:
@@ -74,6 +81,12 @@ class SamlConfig:
 
     def group_attribute_candidates(self) -> list[str]:
         return _unique_candidates(self.groups_attribute, GROUP_FALLBACKS)
+
+    def feishu_union_id_candidates(self) -> list[str]:
+        return FEISHU_UNION_ID_FALLBACKS
+
+    def feishu_user_id_candidates(self) -> list[str]:
+        return FEISHU_USER_ID_FALLBACKS
 
     def to_onelogin_settings(self) -> dict[str, object]:
         allow_single_label_domains = _host_is_single_label(

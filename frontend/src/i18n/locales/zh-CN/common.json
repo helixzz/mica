@@ -813,7 +813,11 @@
     "department_ids_label": "关联部门（可多选，用于 Requester 角色的行级可见范围过滤）",
     "locale_label": "语言偏好",
     "feishu_open_id_label": "飞书用户 Open ID",
-    "feishu_open_id_help": "选填，填写后飞书消息通知将通过 Open ID 精准推送至该用户"
+    "feishu_open_id_help": "选填，填写后飞书消息通知将通过 Open ID 精准推送至该用户",
+    "feishu_union_id_label": "飞书 Union ID（自动）",
+    "feishu_union_id_help": "用户 SAML 登录时自动填充，租户级唯一，优先用于消息推送",
+    "feishu_user_id_label": "飞书 User ID（自动）",
+    "feishu_user_id_help": "用户 SAML 登录时自动填充"
   },
   "validation": {
     "select_company": "请选择公司主体",

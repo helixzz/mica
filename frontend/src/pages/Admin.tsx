@@ -478,6 +478,8 @@ function UsersPanel() {
       department_ids: user.department_ids || [],
       preferred_locale: user.preferred_locale,
       feishu_open_id: user.feishu_open_id || '',
+      feishu_union_id: user.feishu_union_id || '',
+      feishu_user_id: user.feishu_user_id || '',
     })
     setDrawerOpen(true)
   }
@@ -647,6 +649,12 @@ function UsersPanel() {
           </Form.Item>
           <Form.Item name="feishu_open_id" label={t('admin.feishu_open_id_label', 'Feishu Open ID')} help={t('admin.feishu_open_id_help', 'Optional feishu user ID for notifications')}>
             <Input placeholder="ou_..." />
+          </Form.Item>
+          <Form.Item name="feishu_union_id" label={t('admin.feishu_union_id_label', 'Feishu Union ID (auto)')} help={t('admin.feishu_union_id_help', 'Auto-populated from SAML SSO login')}>
+            <Input disabled />
+          </Form.Item>
+          <Form.Item name="feishu_user_id" label={t('admin.feishu_user_id_label', 'Feishu User ID (auto)')} help={t('admin.feishu_user_id_help', 'Auto-populated from SAML SSO login')}>
+            <Input disabled />
           </Form.Item>
         </Form>
       </Drawer>
