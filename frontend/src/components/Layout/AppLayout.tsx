@@ -257,22 +257,13 @@ export function AppLayout() {
       </Footer>
 
       <style>{`
-        @media (max-width: 768px) {
-          .header-search {
-            display: none !important;
-          }
-          .logo-text {
-            display: none;
-          }
-        }
         @media (max-width: 992px) {
-          .user-name {
-            display: none;
-          }
-          .header-search {
-            max-width: 240px !important;
-            margin: 0 8px !important;
-          }
+          .logo-text { display: none; }
+          .user-name { display: none; }
+          .header-search { max-width: 200px !important; margin: 0 8px !important; }
+        }
+        @media (max-width: 768px) {
+          .header-search { display: none !important; }
         }
         .user-dropdown:hover {
           background-color: ${token.colorFillAlter};
