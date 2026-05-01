@@ -985,23 +985,18 @@ async def test_feishu_connection(
                 "error": "admin user has no email",
             }
 
-        from app.services.feishu import messages as feishu_messages
-
-        card = feishu_messages.build_pr_submitted_card(
-            pr_title="Mica Feishu Integration Test",
-            applicant=user.display_name,
-            department="System Admin",
-            amount="—",
-            line_count=1,
-            pr_url="",
-        )
+        # Send a simple text test message — no button URL to avoid feishu whitelist errors
+        test_card = {
+            "header": {"title": {"tag": "plain_text", "content": "✅ 飞书集成测试成功"}, "template": "green"},
+            "elements": [{"tag": "div", "text": {"tag": "lark_md", "content": f"Mica 飞书集成配置正确。\n操作人：{user.display_name}"}}],
+        }
         # Prefer feishu IDs: union_id (tenant-wide) > open_id > email
         if user.feishu_union_id:
-            await client.send_card("union_id", user.feishu_union_id, card)
+            await client.send_card("union_id", user.feishu_union_id, test_card)
         elif user.feishu_open_id:
-            await client.send_card("open_id", user.feishu_open_id, card)
+            await client.send_card("open_id", user.feishu_open_id, test_card)
         else:
-            await client.send_card("email", user.email, card)
+            await client.send_card("email", user.email, test_card)
         return {"success": True, "token_ok": True, "message_sent": True, "error": None}
     except FeishuError as e:
         # Token was OK but message failed — likely user not found in feishu by email
