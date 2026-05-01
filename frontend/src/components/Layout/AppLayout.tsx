@@ -190,10 +190,8 @@ export function AppLayout() {
           style={{
             background: token.colorBgContainer,
             borderRight: `1px solid ${token.colorBorderSecondary}`,
-            display: 'block',
           }}
           className="desktop-sider"
-          breakpoint="lg"
           collapsedWidth="0"
           trigger={null}
         >
