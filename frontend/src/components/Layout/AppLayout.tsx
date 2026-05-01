@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import {
   ApartmentOutlined,
   AuditOutlined,
@@ -45,7 +45,15 @@ export function AppLayout() {
   const navigate = useNavigate();
   const { token } = theme.useToken();
   const { mode, setMode } = useTheme();
-  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const [collapsed, setCollapsed] = useState(false)
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
+  const [isMobile, setIsMobile] = useState(window.innerWidth <= 992)
+
+  useEffect(() => {
+    const handleResize = () => setIsMobile(window.innerWidth <= 992)
+    window.addEventListener('resize', handleResize)
+    return () => window.removeEventListener('resize', handleResize)
+  }, []);
   const isRequester = user?.role === 'requester';
 
   const onLogout = () => {
@@ -131,18 +139,18 @@ export function AppLayout() {
           boxShadow: token.boxShadowTertiary,
         }}
       >
-        <div className="header-logo" style={{ display: 'flex', alignItems: 'center', width: 220, flexShrink: 0 }}>
+        <div className="header-logo" style={{ display: 'flex', alignItems: 'center', width: isMobile ? 'auto' : 220, flexShrink: 0 }}>
+          {isMobile && (
+            <Button
+              type="text"
+              icon={<MenuOutlined />}
+              onClick={() => setMobileMenuOpen(true)}
+              style={{ marginRight: 8 }}
+              title={t('layout.menu_toggle')}
+            />
+          )}
           <Logo />
         </div>
-
-        <Button
-          type="text"
-          icon={<MenuOutlined />}
-          onClick={() => setMobileMenuOpen(true)}
-          style={{ display: 'none' }}
-          className="mobile-menu-toggle"
-          title={t('layout.menu_toggle')}
-        />
 
         <div style={{ flex: 1, display: 'flex', justifyContent: 'center', maxWidth: 480, margin: '0 12px', minWidth: 0 }} className="header-search">
           <SearchSlot />
@@ -185,6 +193,7 @@ export function AppLayout() {
 
       <Layout>
         {/* Desktop Sider */}
+        {!isMobile && (
         <Sider
           width={220}
           style={{
@@ -202,6 +211,7 @@ export function AppLayout() {
             items={menuItems}
           />
         </Sider>
+        )}
 
         {/* Mobile Drawer */}
         <Drawer
@@ -247,22 +257,6 @@ export function AppLayout() {
       </Footer>
 
       <style>{`
-        @media (max-width: 992px) {
-          .desktop-sider {
-            display: none !important;
-          }
-          .mobile-menu-toggle {
-            display: inline-flex !important;
-            margin-right: 8px;
-          }
-          .user-name {
-            display: none;
-          }
-          .header-search {
-            max-width: 240px !important;
-            margin: 0 8px !important;
-          }
-        }
         @media (max-width: 768px) {
           .header-search {
             display: none !important;
@@ -270,8 +264,14 @@ export function AppLayout() {
           .logo-text {
             display: none;
           }
-          .header-logo {
-            width: auto !important;
+        }
+        @media (max-width: 992px) {
+          .user-name {
+            display: none;
+          }
+          .header-search {
+            max-width: 240px !important;
+            margin: 0 8px !important;
           }
         }
         .user-dropdown:hover {
