@@ -9,7 +9,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 from starlette.exceptions import HTTPException as StarletteHTTPException
 
-from app.api import api_router
+from app.api import api_router, v2_router
 from app.config import get_settings
 from app.db import AsyncSessionLocal
 from app.i18n import detect_locale, t
@@ -142,3 +142,4 @@ async def root() -> dict:
 
 
 app.include_router(api_router, prefix=settings.api_prefix)
+app.include_router(v2_router, prefix=settings.api_prefix)
