@@ -60,14 +60,22 @@ async def list_items(
     if search:
         pattern = f"%{search}%"
         query = query.where(
-            or_(Item.name.ilike(pattern), Item.code.ilike(pattern), Item.specification.ilike(pattern))
+            or_(
+                Item.name.ilike(pattern),
+                Item.code.ilike(pattern),
+                Item.specification.ilike(pattern),
+            )
         )
 
     count_query = select(func.count()).select_from(query.subquery())
     total = (await db.execute(count_query)).scalar() or 0
 
     offset = (page - 1) * page_size
-    items = (await db.execute(query.order_by(Item.name).offset(offset).limit(page_size))).scalars().all()
+    items = (
+        (await db.execute(query.order_by(Item.name).offset(offset).limit(page_size)))
+        .scalars()
+        .all()
+    )
     return {
         "items": [ItemOut.model_validate(i) for i in items],
         "total": total,
