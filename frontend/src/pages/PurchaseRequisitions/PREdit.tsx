@@ -134,10 +134,6 @@ export function PREditPage() {
   const onSave = async () => {
     try {
       const values = await form.validateFields()
-      if (lines.length === 0) {
-        void message.error(t('pr.at_least_one_line'))
-        return
-      }
       setSubmitting(true)
       await client.patch(`/purchase-requisitions/${id}`, {
         title: values.title,

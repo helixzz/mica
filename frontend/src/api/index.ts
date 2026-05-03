@@ -852,7 +852,11 @@ export const api = {
     await client.delete(`/suppliers/${id}`)
   },
   async items(): Promise<Item[]> {
-    const { data } = await client.get<Item[]>('/items')
+    const { data } = await client.get<{ items: Item[] }>('/items', { params: { page_size: 500 } })
+    return data.items
+  },
+  async itemsPaginated(params?: { category_id?: string; search?: string; page?: number; page_size?: number; include_inactive?: boolean }): Promise<{ items: Item[]; total: number; page: number; page_size: number }> {
+    const { data } = await client.get('/items', { params })
     return data
   },
   async createItem(body: {

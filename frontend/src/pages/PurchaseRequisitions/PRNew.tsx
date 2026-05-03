@@ -187,10 +187,6 @@ export function PRNewPage() {
     try {
       const values = await form.validateFields()
       const validLines = lines.filter((l) => l.item_name.trim())
-      if (!saveOnly && validLines.length === 0) {
-        void message.error(t('pr.items_required'))
-        return
-      }
       setSubmitting(true)
       const payload = {
         title: values.title,
