@@ -3,7 +3,7 @@ import dayjs from 'dayjs'
 import { useEffect, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 
-import { api, Contract, DeliveryPlan, PurchaseOrder } from '@/api'
+import { api, Contract, DeliveryPlan, PurchaseOrderListItem } from '@/api'
 
 interface DeliveryPlanModalProps {
   open: boolean
@@ -26,7 +26,7 @@ export function DeliveryPlanModal({
   const [form] = Form.useForm()
   const [submitting, setSubmitting] = useState(false)
   const [type, setType] = useState<'po' | 'contract'>(poId ? 'po' : contractId ? 'contract' : 'po')
-  const [pos, setPos] = useState<PurchaseOrder[]>([])
+  const [pos, setPos] = useState<PurchaseOrderListItem[]>([])
   const [contracts, setContracts] = useState<Contract[]>([])
   const [items, setItems] = useState<{ id: string; name: string; remaining: number }[]>([])
   const [bulkMode, setBulkMode] = useState(false)
@@ -71,7 +71,7 @@ export function DeliveryPlanModal({
   const loadPOs = async () => {
     try {
       const data = await api.listPOs()
-      setPos(data as any)
+      setPos(data)
     } catch (err) {
       console.error(err)
     }

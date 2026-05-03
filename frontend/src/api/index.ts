@@ -1340,9 +1340,17 @@ export const api = {
     }
     return { blob: response.data as Blob, filename }
   },
-  async adminAuditLogs(params: { since_days?: number; event_type_prefix?: string } = {}): Promise<Record<string, unknown>[]> {
+  async adminAuditLogs(params: {
+    page?: number
+    page_size?: number
+    event_type?: string
+    actor_id?: string
+    resource_type?: string
+    date_from?: string
+    date_to?: string
+  } = {}): Promise<{ items: Record<string, unknown>[]; total: number; page: number; page_size: number }> {
     const { data } = await client.get('/admin/audit-logs', { params })
-    return data as Record<string, unknown>[]
+    return data as { items: Record<string, unknown>[]; total: number; page: number; page_size: number }
   },
   async adminAICallLogs(params: { since_days?: number; feature_code?: string } = {}): Promise<Record<string, unknown>[]> {
     const { data } = await client.get('/admin/ai-call-logs', { params })

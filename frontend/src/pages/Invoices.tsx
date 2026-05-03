@@ -1,11 +1,12 @@
-import { CheckCircleTwoTone, WarningTwoTone } from '@ant-design/icons'
-import { Space, Table, Tag, Typography } from 'antd'
+import { CheckCircleTwoTone, DownloadOutlined, WarningTwoTone } from '@ant-design/icons'
+import { Button, Space, Table, Tag, Typography } from 'antd'
 import type { ColumnsType } from 'antd/es/table'
 import { useEffect, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { Link } from 'react-router-dom'
 
 import { api, type InvoiceListRow } from '@/api'
+import { downloadCSV } from '@/utils/export'
 import { fmtAmount } from '@/utils/format'
 
 export function InvoicesPage() {
@@ -17,6 +18,18 @@ export function InvoicesPage() {
     setLoading(true)
     api.listInvoices().then(setRows).finally(() => setLoading(false))
   }, [])
+
+  const handleExport = () => {
+    const headers = [
+      t('field.internal_number'), t('field.invoice_number'), t('field.invoice_date'),
+      t('field.subtotal'), t('field.tax_amount'), t('field.total_amount'), t('field.status'),
+    ]
+    const data = rows.map(r => [
+      r.internal_number, r.invoice_number, r.invoice_date,
+      r.subtotal, r.tax_amount, r.total_amount, t(`status.${r.status}` as 'status.draft'),
+    ])
+    downloadCSV(`mica-invoices-${new Date().toISOString().slice(0, 10)}.csv`, headers, data)
+  }
 
   const columns: ColumnsType<InvoiceListRow> = [
     {
@@ -43,7 +56,10 @@ export function InvoicesPage() {
 
   return (
     <Space direction="vertical" size="large" style={{ width: '100%' }}>
-      <Typography.Title level={3}>{t('nav.invoices')}</Typography.Title>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+        <Typography.Title level={3} style={{ margin: 0 }}>{t('nav.invoices')}</Typography.Title>
+        <Button icon={<DownloadOutlined />} onClick={handleExport}>{t('button.export_excel')}</Button>
+      </div>
       <Table<InvoiceListRow> rowKey="id" dataSource={rows} columns={columns} loading={loading} pagination={{ pageSize: 20 }} />
     </Space>
   )

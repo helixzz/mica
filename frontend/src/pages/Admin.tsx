@@ -37,6 +37,7 @@ import { ApprovalRulesTab } from "./admin/ApprovalRulesTab"
 import { SystemParamsTab } from './admin/SystemParamsTab'
 import { FeishuSettingsTab } from './admin/FeishuSettingsTab'
 import { ImportTab } from './admin/ImportTab'
+import { AuditLogsTab } from './admin/AuditLogsTab'
 
 type AIModelRow = {
   id: string
@@ -87,7 +88,7 @@ export function AdminPage() {
           { key: 'routings', label: t('admin.ai_routing'), children: <RoutingsPanel /> },
           { key: 'users', label: t('admin.users'), children: <UsersPanel /> },
           { key: 'ai_logs', label: t('admin.ai_logs'), children: <AILogsPanel /> },
-          { key: 'audit', label: t('admin.audit'), children: <AuditPanel /> },
+          { key: 'audit-logs', label: t('admin.tab.audit_logs'), children: <AuditLogsTab /> },
           { key: 'recycle_bin', label: t('admin.recycle_bin'), children: <RecycleBinPanel /> },
         ]}
       />
@@ -723,33 +724,6 @@ function AILogsPanel() {
     </Space>
   )
 }
-
-function AuditPanel() {
-  const [rows, setRows] = useState<Record<string, unknown>[]>([])
-  const [loading, setLoading] = useState(false)
-
-  useEffect(() => {
-    setLoading(true)
-    api.adminAuditLogs({ since_days: 7 }).then(setRows).finally(() => setLoading(false))
-  }, [])
-
-  return (
-    <Table
-      rowKey="id"
-      dataSource={rows}
-      loading={loading}
-      pagination={{ pageSize: 30 }}
-      columns={[
-        { title: 'Time', dataIndex: 'occurred_at', render: (v: string) => new Date(v).toLocaleString() },
-        { title: 'Actor', dataIndex: 'actor_name' },
-        { title: 'Event', dataIndex: 'event_type' },
-        { title: 'Resource', render: (_, r) => `${r.resource_type ?? ''} ${r.resource_id ?? ''}` },
-        { title: 'Comment', dataIndex: 'comment', ellipsis: true },
-      ]}
-    />
-  )
-}
-
 
 function CompaniesTab() {
   const { t } = useTranslation()

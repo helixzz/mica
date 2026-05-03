@@ -238,7 +238,7 @@ export function SKUPage() {
             value={selectedItems}
             onChange={setSelectedItems}
             options={items
-              .filter((i) => !categoryFilter || (i as any).category_id === categoryFilter || !((i as any).category_id))
+              .filter((i) => !categoryFilter || i.category_id === categoryFilter || !i.category_id)
               .map((i) => ({ value: i.id, label: `${i.code} · ${i.name}` }))}
             showSearch
             optionFilterProp="label"

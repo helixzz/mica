@@ -14,6 +14,7 @@ import {
   ShoppingCartOutlined,
   WarningOutlined,
   AlertOutlined,
+  CarOutlined,
 } from '@ant-design/icons'
 
 import {
@@ -24,6 +25,7 @@ import {
   type PRListItem,
   type PurchaseOrderListItem,
   type SKUAnomaly,
+  type DeliveryPlanOverview,
 } from '@/api'
 import { useAuth } from '@/auth/useAuth'
 import { PageHeader, StatCard, Section, EmptyState } from '@/components/ui'
@@ -45,6 +47,7 @@ export function DashboardPage() {
   const [contracts, setContracts] = useState<ContractExpiring[]>([])
   const [anomalies, setAnomalies] = useState<SKUAnomaly[]>([])
   const [metrics, setMetrics] = useState<DashboardMetrics | null>(null)
+  const [deliveryOverview, setDeliveryOverview] = useState<DeliveryPlanOverview | null>(null)
   const [currentTime, setCurrentTime] = useState(new Date())
 
   useEffect(() => {
@@ -61,13 +64,15 @@ export function DashboardPage() {
       api.listExpiringContracts(30).catch(() => []),
       api.listSKUAnomalies('pending').catch(() => []),
       api.getDashboardMetrics('last_month').catch(() => null),
-    ]).then(([prsData, posData, pendingData, contractsData, anomaliesData, metricsData]) => {
+      api.getDeliveryPlansOverview().catch(() => null),
+    ]).then(([prsData, posData, pendingData, contractsData, anomaliesData, metricsData, deliveryData]) => {
       setPrs(prsData)
       setPos(posData)
       setPending(pendingData)
       setContracts(contractsData)
       setAnomalies(anomaliesData)
       setMetrics(metricsData)
+      setDeliveryOverview(deliveryData)
       setLoading(false)
     })
   }, [])
@@ -171,6 +176,53 @@ export function DashboardPage() {
             }
           />
         </Col>
+      </Row>
+
+      <Row gutter={[16, 16]}>
+        {pending.length > 0 && (
+          <Col xs={24} sm={12} lg={8}>
+            <StatCard
+              label={t('dashboard.pending_approvals')}
+              value={pending.length}
+              icon={<CheckCircleOutlined />}
+              loading={loading}
+              variant="accent"
+              trend={{
+                direction: 'flat',
+                delta: <Link to="/approvals">{t('dashboard.view_approvals')}</Link> as any,
+              }}
+            />
+          </Col>
+        )}
+        {contracts.length > 0 && (
+          <Col xs={24} sm={12} lg={8}>
+            <StatCard
+              label={t('dashboard.expiring_contracts')}
+              value={contracts.length}
+              icon={<AlertOutlined />}
+              loading={loading}
+              variant="accent"
+              trend={{
+                direction: 'flat',
+                delta: <Link to="/contracts">{t('dashboard.view_contracts')}</Link> as any,
+              }}
+            />
+          </Col>
+        )}
+        {deliveryOverview && deliveryOverview.total_planned > 0 && (
+          <Col xs={24} sm={12} lg={8}>
+            <StatCard
+              label={t('dashboard.delivery_progress')}
+              value={`${deliveryOverview.completion_pct}%`}
+              icon={<CarOutlined />}
+              loading={loading}
+              trend={{
+                direction: 'flat',
+                delta: <Link to="/delivery-plans">{t('dashboard.view_delivery')}</Link> as any,
+              }}
+            />
+          </Col>
+        )}
       </Row>
 
       {(isProcurementMgr || isFinanceAuditor || role === 'admin') && (

@@ -675,7 +675,8 @@
     "admin_console": "Admin Console",
     "tab": {
       "feishu": "Feishu",
-      "import": "Import"
+      "import": "Import",
+      "audit_logs": "Audit Logs"
     },
     "new_model": "New Model",
     "edit_model": "Edit Model {{name}}",
@@ -1170,7 +1171,7 @@
     "save_failed": "Failed to save settings"
   },
   "import": {
-    "title": "Bulk Import",
+    "title": "Batch Import",
     "download_template": "Download Template",
     "upload": "Upload",
     "import_suppliers": "Import Suppliers",
@@ -1180,5 +1181,18 @@
     "created": "Created",
     "skipped": "Skipped",
     "errors": "Errors"
+  },
+  "audit_log": {
+    "title": "Audit Logs",
+    "event_type": "Event Type",
+    "actor": "Actor",
+    "resource": "Resource",
+    "timestamp": "Timestamp",
+    "metadata": "Metadata",
+    "filter_event_type": "Event Type",
+    "filter_date": "Date Range",
+    "filter_resource_type": "Resource Type",
+    "comment": "Comment",
+    "resource_id": "Resource ID"
   }
 }

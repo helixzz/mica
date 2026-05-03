@@ -359,6 +359,10 @@
     "quick_actions": "快捷操作",
     "new_pr": "新建采购申请",
     "view_all_pos": "查看所有采购订单",
+    "view_approvals": "去审批",
+    "view_contracts": "查看合同",
+    "view_delivery": "查看交货计划",
+    "delivery_progress": "交货计划完成率",
     "admin_panel": "管理后台",
     "notifications": "通知",
     "new_rfq": "新建询价",
@@ -676,7 +680,8 @@
     "admin_console": "系统管理",
     "tab": {
       "feishu": "飞书",
-      "import": "导入"
+      "import": "导入",
+      "audit_logs": "审计日志"
     },
     "new_model": "新增模型",
     "edit_model": "编辑模型 {{name}}",
@@ -1181,5 +1186,18 @@
     "created": "已创建",
     "skipped": "已跳过",
     "errors": "错误"
+  },
+  "audit_log": {
+    "title": "审计日志",
+    "event_type": "事件类型",
+    "actor": "操作人",
+    "resource": "资源",
+    "timestamp": "时间",
+    "metadata": "元数据",
+    "filter_event_type": "事件类型",
+    "filter_date": "日期范围",
+    "filter_resource_type": "资源类型",
+    "comment": "备注",
+    "resource_id": "资源 ID"
   }
 }

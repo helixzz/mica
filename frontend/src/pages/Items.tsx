@@ -1,9 +1,10 @@
-import { DeleteOutlined, EditOutlined, PlusOutlined } from '@ant-design/icons'
+import { DeleteOutlined, DownloadOutlined, EditOutlined, PlusOutlined } from '@ant-design/icons'
 import { Button, Drawer, Form, Input, InputNumber, Modal, Select, Space, Switch, Table, Tag, Typography, message } from 'antd'
 import { useEffect, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 
 import { api, type ClassificationItem, flattenCategoryTree, type Item } from '@/api'
+import { downloadCSV } from '@/utils/export'
 
 export default function ItemsPage() {
   const { t } = useTranslation()
@@ -18,6 +19,19 @@ export default function ItemsPage() {
     void api.getCategoryTree().then((tree) => setCategories(flattenCategoryTree(tree)))
   }
   useEffect(load, [])
+
+  const handleExport = () => {
+    const headers = [
+      t('item.code'), t('field.item_name'), t('item.category_label'),
+      t('field.uom'), t('field.specification'), t('item.status_col'),
+    ]
+    const data = items.map(i => [
+      i.code, i.name, categoryMap[i.category_id || '']?.label_zh || t('item.uncategorized'),
+      i.uom, i.specification || '',
+      i.is_enabled !== false ? t('item.active') : t('item.inactive'),
+    ])
+    downloadCSV(`mica-items-${new Date().toISOString().slice(0, 10)}.csv`, headers, data)
+  }
 
   const categoryMap = Object.fromEntries(categories.map((c) => [c.id, c]))
 
@@ -62,7 +76,10 @@ export default function ItemsPage() {
     <Space direction="vertical" size="large" style={{ width: '100%' }}>
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
         <Typography.Title level={3} style={{ margin: 0 }}>{t('item.title')}</Typography.Title>
-        <Button type="primary" icon={<PlusOutlined />} onClick={() => { setEditingItem(null); form.resetFields(); setDrawerOpen(true) }}>{t('item.new')}</Button>
+        <Space>
+          <Button icon={<DownloadOutlined />} onClick={handleExport}>{t('button.export_excel')}</Button>
+          <Button type="primary" icon={<PlusOutlined />} onClick={() => { setEditingItem(null); form.resetFields(); setDrawerOpen(true) }}>{t('item.new')}</Button>
+        </Space>
       </div>
       <Typography.Text type="secondary">{items.length} {t('item.count')}</Typography.Text>
       <Table dataSource={items} rowKey="id" size="small" pagination={{ pageSize: 20, showSizeChanger: true, showTotal: (total) => t('item.total_count', { total }) }} columns={[

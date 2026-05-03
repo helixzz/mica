@@ -1,4 +1,4 @@
-import { DeleteOutlined, EditOutlined, SearchOutlined, StopOutlined } from '@ant-design/icons'
+import { DeleteOutlined, DownloadOutlined, EditOutlined, SearchOutlined, StopOutlined } from '@ant-design/icons'
 import {
   Button,
   Card,
@@ -20,6 +20,7 @@ import { api, type Contract, type ContractExpiring, type ContractSearchHit } fro
 import { extractError } from '@/api/client'
 import { useAuth } from '@/auth/useAuth'
 import { ContractFormModal } from '@/components/ContractFormModal'
+import { downloadCSV } from '@/utils/export'
 import { fmtAmount } from '@/utils/format'
 
 export function ContractsPage() {
@@ -54,6 +55,19 @@ export function ContractsPage() {
   useEffect(() => {
     void load()
   }, [load])
+
+  const handleExport = () => {
+    const headers = [
+      t('field.contract_number'), t('field.title'), t('field.po_number'),
+      t('field.status'), t('field.total_amount'), t('field.signed_date'), t('field.expiry_date'),
+    ]
+    const data = rows.map(r => [
+      r.contract_number, r.title, r.po_number || '',
+      t(`status.${r.status}` as 'status.active'), fmtAmount(r.total_amount, r.currency),
+      r.signed_date || '', r.expiry_date || '',
+    ])
+    downloadCSV(`mica-contracts-${new Date().toISOString().slice(0, 10)}.csv`, headers, data)
+  }
 
   const doSearch = async () => {
     if (!query.trim()) {
@@ -199,7 +213,10 @@ export function ContractsPage() {
 
   return (
     <Space direction="vertical" size="large" style={{ width: '100%' }}>
-      <Typography.Title level={3}>{t('nav.contracts')}</Typography.Title>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+        <Typography.Title level={3} style={{ margin: 0 }}>{t('nav.contracts')}</Typography.Title>
+        <Button icon={<DownloadOutlined />} onClick={handleExport}>{t('button.export_excel')}</Button>
+      </div>
 
       <Card>
         <Input.Search

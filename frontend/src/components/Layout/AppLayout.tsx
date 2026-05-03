@@ -53,7 +53,23 @@ export function AppLayout() {
     const handleResize = () => setIsMobile(window.innerWidth <= 992)
     window.addEventListener('resize', handleResize)
     return () => window.removeEventListener('resize', handleResize)
-  }, []);
+  }, [])
+
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'k' && (e.ctrlKey || e.metaKey)) {
+        e.preventDefault()
+        const searchInput = document.querySelector<HTMLInputElement>('.header-search input')
+        searchInput?.focus()
+      }
+      if (e.key === 'n' && (e.ctrlKey || e.metaKey)) {
+        e.preventDefault()
+        navigate('/purchase-requisitions/new')
+      }
+    }
+    window.addEventListener('keydown', handleKeyDown)
+    return () => window.removeEventListener('keydown', handleKeyDown)
+  }, [navigate]);
   const isRequester = user?.role === 'requester';
 
   const onLogout = () => {

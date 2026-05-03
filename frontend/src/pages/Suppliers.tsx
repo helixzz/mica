@@ -1,10 +1,11 @@
-import { DeleteOutlined, EditOutlined, PlusOutlined } from '@ant-design/icons'
+import { DeleteOutlined, DownloadOutlined, EditOutlined, PlusOutlined } from '@ant-design/icons'
 import { Button, Divider, Drawer, Form, Input, Modal, Space, Table, Tag, Typography, message } from 'antd'
 import { useEffect, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { Link } from 'react-router-dom'
 
 import { api, type Supplier } from '@/api'
+import { downloadCSV } from '@/utils/export'
 
 export default function SuppliersPage() {
   const { t } = useTranslation()
@@ -19,6 +20,20 @@ export default function SuppliersPage() {
     api.suppliers().then(setSuppliers).finally(() => setLoading(false))
   }
   useEffect(load, [])
+
+  const handleExport = () => {
+    const headers = [
+      t('supplier.code'), t('supplier.name'), t('supplier.tax_number'),
+      t('field.contact_name'), t('field.contact_phone'), t('field.contact_email'),
+      t('supplier.status'),
+    ]
+    const data = suppliers.map(s => [
+      s.code, s.name, s.tax_number || '',
+      s.contact_name || '', s.contact_phone || '', s.contact_email || '',
+      s.is_enabled !== false ? t('common.enabled') : t('common.disabled'),
+    ])
+    downloadCSV(`mica-suppliers-${new Date().toISOString().slice(0, 10)}.csv`, headers, data)
+  }
 
   const handleSave = async () => {
     try {
@@ -71,9 +86,12 @@ export default function SuppliersPage() {
     <Space direction="vertical" size="large" style={{ width: '100%' }}>
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
         <Typography.Title level={3} style={{ margin: 0 }}>{t('supplier.title')}</Typography.Title>
-        <Button type="primary" icon={<PlusOutlined />} onClick={() => { setEditingSupplier(null); form.resetFields(); setDrawerOpen(true) }}>
-          {t('supplier.new')}
-        </Button>
+        <Space>
+          <Button icon={<DownloadOutlined />} onClick={handleExport}>{t('button.export_excel')}</Button>
+          <Button type="primary" icon={<PlusOutlined />} onClick={() => { setEditingSupplier(null); form.resetFields(); setDrawerOpen(true) }}>
+            {t('supplier.new')}
+          </Button>
+        </Space>
       </div>
       <Typography.Text type="secondary">{suppliers.length} {t('supplier.count')}</Typography.Text>
       <Table

@@ -1,4 +1,4 @@
-import { PlusOutlined } from '@ant-design/icons'
+import { DownloadOutlined, PlusOutlined } from '@ant-design/icons'
 import { Button, Input, InputNumber, Modal, Select, Space, Table, Tag, Typography, message } from 'antd'
 import type { ColumnsType } from 'antd/es/table'
 import { useEffect, useState } from 'react'
@@ -6,6 +6,7 @@ import { useTranslation } from 'react-i18next'
 
 import { api, type PurchaseOrder, type PurchaseOrderListItem, type Shipment } from '@/api'
 import { ShipmentActions } from '@/components/ShipmentActions'
+import { downloadCSV } from '@/utils/export'
 import { fmtQty } from '@/utils/format'
 
 const STATUS_COLORS: Record<string, string> = {
@@ -37,6 +38,20 @@ export function ShipmentsPage() {
     api.listShipments().then(setRows).finally(() => setLoading(false))
   }
   useEffect(load, [])
+
+  const handleExport = () => {
+    const headers = [
+      t('field.shipment_number'), t('field.status'), t('field.carrier'),
+      t('field.tracking_number'), t('field.expected_date'), t('field.actual_date'),
+      t('shipment.items_count'), t('field.created_at'),
+    ]
+    const data = rows.map(r => [
+      r.shipment_number, t(`status.${r.status}` as 'status.pending'), r.carrier || '',
+      r.tracking_number || '', r.expected_date || '', r.actual_date || '',
+      String(r.items?.length || 0), new Date(r.created_at).toLocaleString(),
+    ])
+    downloadCSV(`mica-shipments-${new Date().toISOString().slice(0, 10)}.csv`, headers, data)
+  }
 
   const openCreate = async () => {
     setSelectedPO(null)
@@ -110,6 +125,7 @@ export function ShipmentsPage() {
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
         <Typography.Title level={3} style={{ margin: 0 }}>{t('nav.shipments')}</Typography.Title>
         <Space>
+          <Button icon={<DownloadOutlined />} onClick={handleExport}>{t('button.export_excel')}</Button>
           <Typography.Text type="secondary">{rows.length} {t('shipment.count')}</Typography.Text>
           <Button type="primary" icon={<PlusOutlined />} onClick={openCreate}>{t('shipment.new')}</Button>
         </Space>

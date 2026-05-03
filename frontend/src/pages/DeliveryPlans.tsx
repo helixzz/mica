@@ -4,7 +4,7 @@ import dayjs from 'dayjs'
 import { useEffect, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 
-import { api, Contract, DeliveryPlan, DeliveryPlanOverview, PurchaseOrder } from '@/api'
+import { api, Contract, DeliveryPlan, DeliveryPlanOverview, PurchaseOrderListItem } from '@/api'
 import { DeliveryPlanModal } from '@/components/DeliveryPlanModal'
 import { EmptyState } from '@/components/ui/EmptyState'
 import { PageHeader } from '@/components/ui/PageHeader'
@@ -17,7 +17,7 @@ export function DeliveryPlansPage() {
   const { token } = theme.useToken()
   const [loading, setLoading] = useState(false)
   const [overview, setOverview] = useState<DeliveryPlanOverview | null>(null)
-  const [pos, setPos] = useState<PurchaseOrder[]>([])
+  const [pos, setPos] = useState<PurchaseOrderListItem[]>([])
   const [contracts, setContracts] = useState<Contract[]>([])
   const [modalOpen, setModalOpen] = useState(false)
   const [editingPlan, setEditingPlan] = useState<DeliveryPlan | undefined>()
@@ -41,7 +41,7 @@ export function DeliveryPlansPage() {
         api.listPOs(),
         api.listContracts(),
       ])
-      setPos(poData as any)
+      setPos(poData)
       setContracts(contractData)
     } catch (err) {
       console.error(err)
@@ -290,7 +290,13 @@ export function DeliveryPlansPage() {
               <Select.Option value="complete">{t('status.complete')}</Select.Option>
             </Select>
             <DatePicker.RangePicker
-              onChange={(dates) => setFilters(f => ({ ...f, dateRange: dates as any }))}
+              onChange={(dates) => {
+                if (dates?.[0] && dates?.[1]) {
+                  setFilters(f => ({ ...f, dateRange: [dates[0]!, dates[1]!] }))
+                } else {
+                  setFilters(f => ({ ...f, dateRange: undefined }))
+                }
+              }}
             />
             <Input.Search
               placeholder={t('common.search')}

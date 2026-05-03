@@ -10,7 +10,7 @@ from decimal import Decimal
 from typing import Annotated, Any, Literal, cast
 from uuid import UUID
 
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, Query
 from fastapi.responses import Response
 from pydantic import BaseModel, ConfigDict, Field
 from sqlalchemy import func, select
@@ -734,41 +734,49 @@ async def update_user(
 async def list_audit_logs(
     user: CurrentUser,
     db: Annotated[AsyncSession, Depends(get_db)],
-    limit: int = 100,
-    event_type_prefix: str | None = None,
-    resource_type: str | None = None,
-    since_days: int | None = None,
+    page: int = Query(1, ge=1),
+    page_size: int = Query(20, ge=1, le=100),
+    event_type: str | None = Query(None),
+    actor_id: UUID | None = Query(None),
+    resource_type: str | None = Query(None),
+    date_from: datetime | None = Query(None),
+    date_to: datetime | None = Query(None),
 ):
-    resolved_since_days = (
-        since_days
-        if since_days is not None
-        else await system_params.get_int_or(db, "audit.default_lookback_days", 7)
-    )
-    since = datetime.now(UTC) - timedelta(days=resolved_since_days)
-    stmt = (
-        select(AuditLog)
-        .where(AuditLog.occurred_at >= since)
-        .order_by(AuditLog.occurred_at.desc())
-        .limit(min(limit, 500))
-    )
-    if event_type_prefix:
-        stmt = stmt.where(AuditLog.event_type.startswith(event_type_prefix))
+    query = select(AuditLog).order_by(AuditLog.occurred_at.desc())
+    if event_type:
+        query = query.where(AuditLog.event_type == event_type)
+    if actor_id:
+        query = query.where(AuditLog.actor_id == actor_id)
     if resource_type:
-        stmt = stmt.where(AuditLog.resource_type == resource_type)
-    rows = (await db.execute(stmt)).scalars().all()
-    return [
-        {
-            "id": str(r.id),
-            "occurred_at": r.occurred_at.isoformat(),
-            "actor_name": r.actor_name,
-            "event_type": r.event_type,
-            "resource_type": r.resource_type,
-            "resource_id": r.resource_id,
-            "comment": r.comment,
-            "metadata": r.metadata_json,
-        }
-        for r in rows
-    ]
+        query = query.where(AuditLog.resource_type == resource_type)
+    if date_from:
+        query = query.where(AuditLog.occurred_at >= date_from)
+    if date_to:
+        query = query.where(AuditLog.occurred_at <= date_to)
+
+    total = (await db.execute(select(func.count()).select_from(query.subquery()))).scalar() or 0
+    offset = (page - 1) * page_size
+    rows = (await db.execute(query.offset(offset).limit(page_size))).scalars().all()
+
+    return {
+        "items": [
+            {
+                "id": str(r.id),
+                "occurred_at": r.occurred_at.isoformat(),
+                "actor_id": str(r.actor_id) if r.actor_id else None,
+                "actor_name": r.actor_name,
+                "event_type": r.event_type,
+                "resource_type": r.resource_type,
+                "resource_id": r.resource_id,
+                "comment": r.comment,
+                "metadata": r.metadata_json,
+            }
+            for r in rows
+        ],
+        "total": total,
+        "page": page,
+        "page_size": page_size,
+    }
 
 
 @router.get("/ai-call-logs", tags=["admin"])
