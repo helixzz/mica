@@ -190,7 +190,7 @@ async def test_pr_supplier_quote_candidates_and_save(seeded_client):
     supplier_id = suppliers[0]["id"]
 
     r = await seeded_client.get("/api/v1/items", headers=auth)
-    items = r.json()
+    items = r.json()["items"]
     item_id = items[0]["id"] if items else None
     if not item_id:
         pytest.skip("No items to test quote saving")

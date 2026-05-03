@@ -15,7 +15,7 @@ async def test_walking_skeleton_end_to_end(seeded_client):
 
     # fetch masters
     suppliers = (await seeded_client.get("/api/v1/suppliers", headers=alice_headers)).json()
-    items = (await seeded_client.get("/api/v1/items", headers=alice_headers)).json()
+    items = (await seeded_client.get("/api/v1/items", headers=alice_headers)).json()["items"]
     assert suppliers and items
     supplier_id = suppliers[0]["id"]
     item = next(i for i in items if i["category"] == "laptop")
