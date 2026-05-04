@@ -1,6 +1,6 @@
 """seed approval SLA system parameters
 
-Revision ID: 0036
+Revision ID: 0037
 Revises: 0035
 Create Date: 2026-05-04
 """
@@ -12,8 +12,8 @@ import sqlalchemy as sa
 from alembic import op
 from sqlalchemy.dialects import postgresql
 
-revision = "0036"
-down_revision = "0035"
+revision = "0037"
+down_revision = "0036"
 branch_labels = None
 depends_on = None
 
