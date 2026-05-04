@@ -40,12 +40,6 @@ export default defineConfig({
     rollupOptions: {
       output: {
         manualChunks(id: string) {
-          if (id.includes('node_modules/@ant-design/icons')) {
-            return 'antd-icons'
-          }
-          if (id.includes('node_modules/@ant-design/charts')) {
-            return 'antd-charts'
-          }
           if (id.includes('node_modules/antd/') || id.includes('@ant-design/')) {
             return 'antd'
           }
