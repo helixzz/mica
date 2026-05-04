@@ -304,5 +304,7 @@
   "used_amount": "used_amount",
   "user_id": "user_id",
   "valid_until": "valid_until",
-  "warranty_expiry": "warranty_expiry"
+  "warranty_expiry": "warranty_expiry",
+  "budget.not_found": "预算信息未找到",
+  "budget.exceeded": "支出已超出预算"
 }

@@ -1,4 +1,4 @@
-import { Col, Row, Space, Tag, Typography, theme, Button, List, Avatar } from 'antd'
+import { Col, Row, Space, Tag, Typography, theme, Button, List, Avatar, Progress, Card } from 'antd'
 import { useEffect, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { Link, useNavigate } from 'react-router-dom'
@@ -19,7 +19,9 @@ import {
 
 import {
   api,
+  type AgingApproval,
   type ApprovalTask,
+  type BudgetSummary,
   type ContractExpiring,
   type DashboardMetrics,
   type PRListItem,
@@ -48,6 +50,8 @@ export function DashboardPage() {
   const [anomalies, setAnomalies] = useState<SKUAnomaly[]>([])
   const [metrics, setMetrics] = useState<DashboardMetrics | null>(null)
   const [deliveryOverview, setDeliveryOverview] = useState<DeliveryPlanOverview | null>(null)
+  const [budgetSummary, setBudgetSummary] = useState<BudgetSummary | null>(null)
+  const [agingApprovals, setAgingApprovals] = useState<AgingApproval[]>([])
   const [currentTime, setCurrentTime] = useState(new Date())
 
   useEffect(() => {
@@ -65,7 +69,9 @@ export function DashboardPage() {
       api.listSKUAnomalies('pending').catch(() => []),
       api.getDashboardMetrics('last_month').catch(() => null),
       api.getDeliveryPlansOverview().catch(() => null),
-    ]).then(([prsData, posData, pendingData, contractsData, anomaliesData, metricsData, deliveryData]) => {
+      api.getBudgetSummary().catch(() => null),
+      api.getAgingApprovals().catch(() => []),
+    ]).then(([prsData, posData, pendingData, contractsData, anomaliesData, metricsData, deliveryData, budgetData, agingData]) => {
       setPrs(prsData)
       setPos(posData)
       setPending(pendingData)
@@ -73,6 +79,8 @@ export function DashboardPage() {
       setAnomalies(anomaliesData)
       setMetrics(metricsData)
       setDeliveryOverview(deliveryData)
+      setBudgetSummary(budgetData)
+      setAgingApprovals(agingData)
       setLoading(false)
     })
   }, [])
@@ -233,6 +241,77 @@ export function DashboardPage() {
         <InvoiceTracker />
       )}
 
+      {(isProcurementMgr || isFinanceAuditor || role === 'admin') && budgetSummary && budgetSummary.items.length > 0 && (
+        <Section title={t('dashboard.budget_overview')}>
+          <Row gutter={[16, 16]}>
+            <Col xs={24} sm={8}>
+              <Card size="small">
+                <StatCard
+                  label={t('dashboard.total_budget')}
+                  value={`¥${budgetSummary.total_budget.toLocaleString()}`}
+                  loading={loading}
+                />
+              </Card>
+            </Col>
+            <Col xs={24} sm={8}>
+              <Card size="small">
+                <StatCard
+                  label={t('dashboard.total_spend')}
+                  value={`¥${budgetSummary.total_spend.toLocaleString()}`}
+                  loading={loading}
+                />
+              </Card>
+            </Col>
+            <Col xs={24} sm={8}>
+              <Card size="small">
+                <StatCard
+                  label={t('dashboard.total_utilization')}
+                  value={`${budgetSummary.total_utilization_pct}%`}
+                  loading={loading}
+                  variant={budgetSummary.total_utilization_pct > 90 ? 'accent' : 'default'}
+                />
+              </Card>
+            </Col>
+          </Row>
+          <div style={{ marginTop: 16 }}>
+            {budgetSummary.items.map((item) => (
+              <Card
+                key={item.cost_center_id}
+                size="small"
+                style={{ marginBottom: 8 }}
+                title={
+                  <Space>
+                    <Text strong>{item.code}</Text>
+                    <Text type="secondary">{item.label_zh}</Text>
+                  </Space>
+                }
+                extra={
+                  <Text type={item.utilization_pct > 90 ? 'danger' : 'secondary'}>
+                    {item.utilization_pct}%
+                  </Text>
+                }
+              >
+                <Space direction="vertical" style={{ width: '100%' }} size="small">
+                  <Row justify="space-between">
+                    <Col>
+                      <Text type="secondary">{t('dashboard.budget')}: ¥{item.annual_budget?.toLocaleString() ?? '-'}</Text>
+                    </Col>
+                    <Col>
+                      <Text type="secondary">{t('dashboard.actual_spend')}: ¥{item.actual_spend.toLocaleString()}</Text>
+                    </Col>
+                  </Row>
+                  <Progress
+                    percent={item.utilization_pct}
+                    status={item.utilization_pct > 90 ? 'exception' : item.utilization_pct > 70 ? 'active' : 'normal'}
+                    size="small"
+                  />
+                </Space>
+              </Card>
+            ))}
+          </div>
+        </Section>
+      )}
+
       <Row gutter={[16, 16]}>
         <Col xs={24} lg={12}>
           <Section
@@ -377,6 +456,72 @@ export function DashboardPage() {
           </Section>
         </Col>
       </Row>
+
+      {agingApprovals.length > 0 && (
+        <Row gutter={[16, 16]}>
+          <Col span={24}>
+            <Section
+              title={t('dashboard.aging_approvals')}
+              extra={<Link to="/approvals">{t('dashboard.view_all')}</Link>}
+            >
+              <List
+                itemLayout="horizontal"
+                dataSource={agingApprovals}
+                renderItem={(item) => {
+                  const slaColor = item.is_overdue
+                    ? token.colorError
+                    : item.is_approaching
+                      ? token.colorWarning
+                      : token.colorSuccess
+                  const slaBg = item.is_overdue
+                    ? token.colorErrorBg
+                    : item.is_approaching
+                      ? token.colorWarningBg
+                      : token.colorSuccessBg
+                  const slaLabel = item.is_overdue
+                    ? t('dashboard.overdue')
+                    : item.is_approaching
+                      ? t('dashboard.approaching_sla')
+                      : t('dashboard.within_sla')
+                  return (
+                    <List.Item
+                      actions={[
+                        <Link key="view" to={`/purchase-requisitions/${item.pr_id}`}>
+                          {t('dashboard.view_all')}
+                        </Link>,
+                      ]}
+                    >
+                      <List.Item.Meta
+                        avatar={
+                          <Avatar
+                            style={{ backgroundColor: slaBg, color: slaColor }}
+                            icon={<ClockCircleOutlined />}
+                          />
+                        }
+                        title={
+                          <Link to={`/purchase-requisitions/${item.pr_id}`}>
+                            {item.pr_number}: {item.title}
+                          </Link>
+                        }
+                        description={
+                          <Space>
+                            <Text type="secondary">
+                              {t('dashboard.hours_waiting', { hours: item.hours_since_submission })}
+                            </Text>
+                            <Tag color={item.is_overdue ? 'red' : item.is_approaching ? 'orange' : 'green'}>
+                              {slaLabel}
+                            </Tag>
+                          </Space>
+                        }
+                      />
+                    </List.Item>
+                  )
+                }}
+              />
+            </Section>
+          </Col>
+        </Row>
+      )}
 
       <Section title={t('dashboard.quick_actions')}>
         <Space wrap size="middle">

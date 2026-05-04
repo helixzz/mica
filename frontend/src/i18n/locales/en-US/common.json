@@ -376,7 +376,13 @@
     "my_prs_count": "My PRs",
     "pending_count": "Pending Approvals",
     "payment_mgmt": "Payment Management",
-    "submit_demand": "Submit Purchase Demand"
+    "submit_demand": "Submit Purchase Demand",
+    "aging_approvals": "Aging Approvals",
+    "hours_waiting": "Waiting {{hours}}h",
+    "overdue": "Overdue",
+    "approaching_sla": "Approaching SLA",
+    "within_sla": "Within SLA",
+    "no_aging_approvals": "No pending approvals"
   },
   "notification": {
     "title": "Notifications",
@@ -1220,5 +1226,14 @@
   "item.search_placeholder": "Search by code, name or specification",
   "item.count": "{total} items total",
   "item.one_result": "1 result",
-  "item.total_results": "{total} results total"
+  "item.total_results": "{total} results total",
+  "dashboard.budget_overview": "Budget Overview",
+  "dashboard.total_budget": "Total Budget",
+  "dashboard.total_spend": "Total Spend",
+  "dashboard.total_utilization": "Total Utilization",
+  "dashboard.budget": "Budget",
+  "dashboard.actual_spend": "Actual Spend",
+  "dashboard.annual_budget": "Annual Budget",
+  "dashboard.budget_start_date": "Budget Start Date",
+  "dashboard.budget_end_date": "Budget End Date"
 }

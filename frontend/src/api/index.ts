@@ -564,6 +564,15 @@ export interface DashboardMetrics {
   invoices_mismatched: number
 }
 
+export interface AgingApproval {
+  pr_id: string
+  pr_number: string
+  title: string
+  hours_since_submission: number
+  is_overdue: boolean
+  is_approaching: boolean
+}
+
 export interface PaymentScheduleItemInput {
   installment_no: number
   label: string
@@ -749,6 +758,23 @@ export interface DeliveryPlanUpdate {
   actual_date?: string
   status?: string
   notes?: string
+}
+
+export interface BudgetSummaryItem {
+  cost_center_id: string
+  code: string
+  label_zh: string
+  label_en: string
+  annual_budget: number | null
+  actual_spend: number
+  utilization_pct: number
+}
+
+export interface BudgetSummary {
+  items: BudgetSummaryItem[]
+  total_budget: number
+  total_spend: number
+  total_utilization_pct: number
 }
 
 export const api = {
@@ -1445,6 +1471,14 @@ export const api = {
     const { data } = await client.get<DashboardMetrics>('/dashboard/metrics', {
       params: { compare_to },
     })
+    return data
+  },
+  async getBudgetSummary(): Promise<BudgetSummary> {
+    const { data } = await client.get<BudgetSummary>('/dashboard/budget-summary')
+    return data
+  },
+  async getAgingApprovals(): Promise<AgingApproval[]> {
+    const { data } = await client.get<AgingApproval[]>('/dashboard/aging-approvals')
     return data
   },
   async getPaymentSchedule(contractId: string): Promise<PaymentScheduleSummary> {

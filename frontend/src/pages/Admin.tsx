@@ -284,6 +284,9 @@ function ClassificationTab() {
         label_en: item.label_en,
         sort_order: item.sort_order,
         is_enabled: !item.is_enabled,
+        annual_budget: item.annual_budget ?? undefined,
+        budget_start_date: item.budget_start_date ?? undefined,
+        budget_end_date: item.budget_end_date ?? undefined,
       }
       if (dimension === 'category') {
         await api.updateProcurementCategory(item.id, body)
@@ -307,6 +310,9 @@ function ClassificationTab() {
       label_zh: item.label_zh,
       label_en: item.label_en,
       sort_order: item.sort_order,
+      annual_budget: item.annual_budget ?? undefined,
+      budget_start_date: item.budget_start_date ?? undefined,
+      budget_end_date: item.budget_end_date ?? undefined,
     })
   }
 
@@ -427,6 +433,19 @@ function ClassificationTab() {
           <Form.Item name="sort_order" label={t('admin.sort_order')} initialValue={0}>
             <InputNumber style={{ width: '100%' }} />
           </Form.Item>
+          {(adding === 'cost_center' || editingItem?._dimension === 'cost_center') && (
+            <>
+              <Form.Item name="annual_budget" label={t('dashboard.annual_budget')}>
+                <InputNumber style={{ width: '100%' }} min={0} precision={2} placeholder="0.00" />
+              </Form.Item>
+              <Form.Item name="budget_start_date" label={t('dashboard.budget_start_date')}>
+                <Input placeholder="YYYY-MM-DD" />
+              </Form.Item>
+              <Form.Item name="budget_end_date" label={t('dashboard.budget_end_date')}>
+                <Input placeholder="YYYY-MM-DD" />
+              </Form.Item>
+            </>
+          )}
           {adding === 'category' && (
             <Form.Item name="parent_id" label={t('admin.parent_category')}>
               <Select

@@ -24,6 +24,9 @@ class CostCenterOut(BaseModel):
     is_enabled: bool
     is_deleted: bool
     budget_amount: float | None = None
+    annual_budget: float | None = None
+    budget_start_date: str | None = None
+    budget_end_date: str | None = None
 
 
 class CostCenterIn(BaseModel):
@@ -32,6 +35,9 @@ class CostCenterIn(BaseModel):
     label_en: str
     sort_order: int = 0
     is_enabled: bool | None = None
+    annual_budget: float | None = None
+    budget_start_date: str | None = None
+    budget_end_date: str | None = None
 
 
 class ProcurementCategoryOut(BaseModel):

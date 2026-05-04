@@ -381,7 +381,13 @@
     "my_prs_count": "我的采购申请",
     "pending_count": "待审批",
     "payment_mgmt": "付款管理",
-    "submit_demand": "提交采购需求"
+    "submit_demand": "提交采购需求",
+    "aging_approvals": "审批时效",
+    "hours_waiting": "等待 {{hours}} 小时",
+    "overdue": "已超时",
+    "approaching_sla": "即将超时",
+    "within_sla": "正常",
+    "no_aging_approvals": "暂无待审批申请"
   },
   "notification": {
     "title": "通知",
@@ -1225,5 +1231,14 @@
   "item.search_placeholder": "按编码、名称或规格搜索",
   "item.count": "共 {total} 个物料",
   "item.one_result": "1 个结果",
-  "item.total_results": "共 {total} 个结果"
+  "item.total_results": "共 {total} 个结果",
+  "dashboard.budget_overview": "预算概览",
+  "dashboard.total_budget": "总预算",
+  "dashboard.total_spend": "总支出",
+  "dashboard.total_utilization": "总使用率",
+  "dashboard.budget": "预算",
+  "dashboard.actual_spend": "实际支出",
+  "dashboard.annual_budget": "年度预算",
+  "dashboard.budget_start_date": "预算起始日期",
+  "dashboard.budget_end_date": "预算结束日期"
 }

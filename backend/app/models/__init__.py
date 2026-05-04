@@ -180,6 +180,9 @@ class CostCenter(Base, TimestampMixin):
     is_enabled: Mapped[bool] = mapped_column(default=True, nullable=False)
     is_deleted: Mapped[bool] = mapped_column(default=False, nullable=False)
     budget_amount: Mapped[Decimal | None] = mapped_column(Numeric(18, 4))
+    annual_budget: Mapped[Decimal | None] = mapped_column(Numeric(18, 2), nullable=True)
+    budget_start_date: Mapped[date | None] = mapped_column(Date, nullable=True)
+    budget_end_date: Mapped[date | None] = mapped_column(Date, nullable=True)
     manager_id: Mapped[UUID | None] = mapped_column(
         PGUUID(as_uuid=True),
         ForeignKey("users.id", ondelete="SET NULL", use_alter=True),
