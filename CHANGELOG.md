@@ -7,6 +7,35 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [v1.5.0] — 2026-05-04
+
+### 新增
+
+- 登录限流 · 骨架屏 · 404/500 错误页 · 面包屑导航 · 撤销操作
+- 邮箱通知 (SMTP) · WebSocket 实时推送 · 成本中心预算 · 审批 SLA 时效
+
+### 优化
+
+- Bundle 拆分：antd-icons 独立 chunk (67KB)，懒加载，dayjs locale 精简
+
+---
+
+## [v1.4.0] — 2026-05-03
+
+### 新增
+
+- CSV 导出 (5 列表页) · 审计日志查看器 · Dashboard 增强 · 键盘快捷键
+- 清除全部 `as any` · PO/Admin 重构 (合计 -68% 代码行)
+- Items 页分类筛选 + 模糊搜索 + 分页
+- PR 无物料提交（模糊需求→后续细化）
+- 全站 i18n 补全 (前端 16 + 后端 178 keys)
+
+### 修复
+
+- 移动端侧边栏消失 · 搜索框重叠 · 飞书配置保存
+
+---
+
 ## [v1.3.0] — 2026-05-01
 
 ### 新增
