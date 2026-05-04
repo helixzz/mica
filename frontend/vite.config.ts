@@ -3,7 +3,17 @@ import react from '@vitejs/plugin-react'
 import path from 'node:path'
 
 export default defineConfig({
-  plugins: [react()],
+  plugins: [
+    react(),
+    {
+      name: 'dayjs-locale',
+      transform(_code, id) {
+        if (id.includes('dayjs/locale') && !id.includes('dayjs/plugin')) {
+          return ''
+        }
+      },
+    },
+  ],
   define: {
     __APP_VERSION__: JSON.stringify(process.env.npm_package_version || '0.0.0'),
     __BUILD_DATE__: JSON.stringify(new Date().toISOString().slice(0, 10)),
@@ -30,6 +40,12 @@ export default defineConfig({
     rollupOptions: {
       output: {
         manualChunks(id: string) {
+          if (id.includes('node_modules/@ant-design/icons')) {
+            return 'antd-icons'
+          }
+          if (id.includes('node_modules/@ant-design/charts')) {
+            return 'antd-charts'
+          }
           if (id.includes('node_modules/antd/') || id.includes('@ant-design/')) {
             return 'antd'
           }

@@ -4,7 +4,8 @@
     "user_inactive": "Account is inactive",
     "not_authenticated": "Authentication required",
     "invalid_token": "Session expired, please log in again",
-    "insufficient_role": "Insufficient permissions"
+    "insufficient_role": "Insufficient permissions",
+    "rate_limited": "Too many login attempts, please try again later"
   },
   "saml": {
     "not_enabled": "SAML single sign-on is not enabled",
@@ -105,6 +106,9 @@
       "user_not_found": "Current admin account not found in Feishu",
       "no_open_id": "Feishu user missing open_id"
     }
+  },
+  "email": {
+    "not_configured": "Email service not configured"
   },
   "delivery_plan": {
     "not_found": "Delivery plan not found",

@@ -1145,6 +1145,7 @@ class SystemParameterCategory(StrEnum):
     AUDIT = "audit"
     PAYMENT = "payment"
     FEISHU = "feishu"
+    EMAIL = "email"
 
 
 class SystemParameter(Base, TimestampMixin):

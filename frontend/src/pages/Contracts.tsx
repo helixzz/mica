@@ -22,6 +22,7 @@ import { useAuth } from '@/auth/useAuth'
 import { ContractFormModal } from '@/components/ContractFormModal'
 import { downloadCSV } from '@/utils/export'
 import { fmtAmount } from '@/utils/format'
+import { showUndoToast } from '@/utils/undo'
 
 export function ContractsPage() {
   const { t } = useTranslation()
@@ -88,7 +89,10 @@ export function ContractsPage() {
       onOk: async () => {
         try {
           await api.deleteContract(contract.id)
-          void message.success(t('message.deleted'))
+          showUndoToast(t('undo.deleted', { item: t('nav.contracts') }), async () => {
+            await api.restoreFromRecycleBin('contract', contract.id)
+            void load()
+          }, 8000)
           void load()
         } catch (e) {
           void message.error(extractError(e).detail)

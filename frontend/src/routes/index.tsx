@@ -5,6 +5,9 @@ import { Navigate, Route, Routes, useLocation } from 'react-router-dom'
 import { AppLayout } from '@/components/Layout/AppLayout'
 import { useAuth } from '@/auth/useAuth'
 import { getToken } from '@/api/client'
+import { SkeletonPage } from '@/components/ui/SkeletonPage'
+import { NotFound } from '@/pages/NotFound'
+import { ErrorBoundary } from '@/components/ErrorBoundary'
 
 const AdminPage = lazy(() =>
   import('@/pages/Admin').then((m) => ({ default: m.AdminPage })),
@@ -89,15 +92,8 @@ const ItemsPage = lazy(() => import('@/pages/Items'))
 
 function PageFallback() {
   return (
-    <div
-      style={{
-        minHeight: '60vh',
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'center',
-      }}
-    >
-      <Spin size="large" />
+    <div style={{ padding: '24px' }}>
+      <SkeletonPage />
     </div>
   )
 }
@@ -147,48 +143,50 @@ function hideForRequester(children: React.ReactNode) {
 
 export function AppRoutes() {
   return (
-    <Suspense fallback={<PageFallback />}>
-      <Routes>
-        <Route path="/login" element={<LoginPage />} />
-        <Route path="/sso-callback" element={<SsoCallbackPage />} />
-        <Route
-          element={
-            <Protected>
-              <AppLayout />
-            </Protected>
-          }
-        >
-          <Route path="/" element={<Navigate to="/dashboard" replace />} />
-          <Route path="/dashboard" element={<DashboardPage />} />
-          <Route path="/approvals" element={<ApprovalsPage />} />
-          <Route path="/purchase-requisitions" element={<PRListPage />} />
-          <Route path="/purchase-requisitions/new" element={<PRNewPage />} />
-          <Route path="/purchase-requisitions/new/:copyId" element={<PRNewPage />} />
-          <Route path="/purchase-requisitions/:id/edit" element={<PREditPage />} />
-          <Route path="/purchase-requisitions/:id" element={<PRDetailPage />} />
-          <Route path="/purchase-orders" element={<POListPage />} />
-          <Route path="/purchase-orders/:id" element={<PODetailPage />} />
-          <Route path="/contracts" element={<ContractsPage />} />
-          <Route path="/contracts/:id" element={<ContractDetailPage />} />
-          <Route path="/shipments" element={<ProcurementGate><ShipmentsPage /></ProcurementGate>} />
-          <Route path="/delivery-plans" element={<ProcurementGate><DeliveryPlans /></ProcurementGate>} />
-          <Route path="/payments" element={<ProcurementGate><PaymentsPage /></ProcurementGate>} />
-          <Route path="/invoices" element={<ProcurementGate><InvoicesPage /></ProcurementGate>} />
-          <Route path="/invoices/:id" element={<ProcurementGate><InvoiceDetailPage /></ProcurementGate>} />
-          <Route path="/sku" element={<ProcurementGate><SKUPage /></ProcurementGate>} />
-          <Route path="/rfqs" element={<ProcurementGate><RFQListPage /></ProcurementGate>} />
-          <Route path="/rfqs/new" element={<ProcurementGate><RFQNewPage /></ProcurementGate>} />
-          <Route path="/rfqs/:id" element={<ProcurementGate><RFQDetailPage /></ProcurementGate>} />
-          <Route path="/suppliers" element={<ProcurementGate><SuppliersPage /></ProcurementGate>} />
-          <Route path="/suppliers/:id" element={<ProcurementGate><SupplierDetailPage /></ProcurementGate>} />
-          <Route path="/items" element={<ProcurementGate><ItemsPage /></ProcurementGate>} />
-          <Route path="/items/:id" element={<ProcurementGate><ItemDetailPage /></ProcurementGate>} />
-          <Route path="/admin" element={<AdminPage />} />
-          <Route path="/search" element={<SearchResults />} />
-          <Route path="/notifications" element={<NotificationCenter />} />
-        </Route>
-        <Route path="*" element={<Navigate to="/" replace />} />
-      </Routes>
-    </Suspense>
+    <ErrorBoundary>
+      <Suspense fallback={<PageFallback />}>
+        <Routes>
+          <Route path="/login" element={<LoginPage />} />
+          <Route path="/sso-callback" element={<SsoCallbackPage />} />
+          <Route
+            element={
+              <Protected>
+                <AppLayout />
+              </Protected>
+            }
+          >
+            <Route path="/" element={<Navigate to="/dashboard" replace />} />
+            <Route path="/dashboard" element={<DashboardPage />} />
+            <Route path="/approvals" element={<ApprovalsPage />} />
+            <Route path="/purchase-requisitions" element={<PRListPage />} />
+            <Route path="/purchase-requisitions/new" element={<PRNewPage />} />
+            <Route path="/purchase-requisitions/new/:copyId" element={<PRNewPage />} />
+            <Route path="/purchase-requisitions/:id/edit" element={<PREditPage />} />
+            <Route path="/purchase-requisitions/:id" element={<PRDetailPage />} />
+            <Route path="/purchase-orders" element={<POListPage />} />
+            <Route path="/purchase-orders/:id" element={<PODetailPage />} />
+            <Route path="/contracts" element={<ContractsPage />} />
+            <Route path="/contracts/:id" element={<ContractDetailPage />} />
+            <Route path="/shipments" element={<ProcurementGate><ShipmentsPage /></ProcurementGate>} />
+            <Route path="/delivery-plans" element={<ProcurementGate><DeliveryPlans /></ProcurementGate>} />
+            <Route path="/payments" element={<ProcurementGate><PaymentsPage /></ProcurementGate>} />
+            <Route path="/invoices" element={<ProcurementGate><InvoicesPage /></ProcurementGate>} />
+            <Route path="/invoices/:id" element={<ProcurementGate><InvoiceDetailPage /></ProcurementGate>} />
+            <Route path="/sku" element={<ProcurementGate><SKUPage /></ProcurementGate>} />
+            <Route path="/rfqs" element={<ProcurementGate><RFQListPage /></ProcurementGate>} />
+            <Route path="/rfqs/new" element={<ProcurementGate><RFQNewPage /></ProcurementGate>} />
+            <Route path="/rfqs/:id" element={<ProcurementGate><RFQDetailPage /></ProcurementGate>} />
+            <Route path="/suppliers" element={<ProcurementGate><SuppliersPage /></ProcurementGate>} />
+            <Route path="/suppliers/:id" element={<ProcurementGate><SupplierDetailPage /></ProcurementGate>} />
+            <Route path="/items" element={<ProcurementGate><ItemsPage /></ProcurementGate>} />
+            <Route path="/items/:id" element={<ProcurementGate><ItemDetailPage /></ProcurementGate>} />
+            <Route path="/admin" element={<AdminPage />} />
+            <Route path="/search" element={<SearchResults />} />
+            <Route path="/notifications" element={<NotificationCenter />} />
+            <Route path="*" element={<NotFound />} />
+          </Route>
+        </Routes>
+      </Suspense>
+    </ErrorBoundary>
   )
 }

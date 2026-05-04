@@ -159,6 +159,24 @@ async def create_notification(
     await session.flush()
 
     await _maybe_send_feishu_card(session, notification)
+    await _maybe_send_email(session, notification)
+
+    try:
+        from app.api.v1.websocket import notify_user
+
+        unread = await count_unread(session, user_id=user_id)
+        await notify_user(
+            str(user_id),
+            {
+                "type": "new_notification",
+                "notification_id": str(notification.id),
+                "category": notification.category.value,
+                "title": notification.title,
+                "unread_count": unread["total"],
+            },
+        )
+    except Exception:
+        pass
 
     return notification
 
@@ -214,6 +232,40 @@ async def _maybe_send_feishu_card(
     except Exception:
         logger.warning(
             "feishu: card send failed for notification %s",
+            notification.id,
+            exc_info=True,
+        )
+
+
+async def _maybe_send_email(
+    session: AsyncSession,
+    notification: Notification,
+) -> None:
+    """Send an email notification as fallback when feishu is not available."""
+    try:
+        from app.services.email_service import send_email
+        from app.services.system_params import system_params
+
+        enabled = await system_params.get(session, "email.enabled", False)
+        if not enabled:
+            return
+
+        user = await session.get(User, notification.user_id)
+        if not user or not user.email:
+            return
+
+        if user.feishu_open_id or user.feishu_union_id:
+            return
+
+        subject = f"[Mica] {notification.category.value}: {notification.title}"
+        body = f"<p>{notification.body or notification.title}</p>"
+        if notification.link_url:
+            body += f'<p><a href="{notification.link_url}">View in Mica</a></p>'
+
+        await send_email(session, user.email, subject, body)
+    except Exception:
+        logger.warning(
+            "email: send failed for notification %s",
             notification.id,
             exc_info=True,
         )

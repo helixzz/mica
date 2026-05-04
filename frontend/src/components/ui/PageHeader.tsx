@@ -1,5 +1,7 @@
 import React from 'react';
 import { theme, Typography, Space, Breadcrumb } from 'antd';
+import { Link, useLocation } from 'react-router-dom';
+import { useTranslation } from 'react-i18next';
 
 const { Title, Text } = Typography;
 
@@ -7,6 +9,7 @@ export interface PageHeaderProps {
   title: React.ReactNode;
   subtitle?: React.ReactNode;
   breadcrumbs?: Array<{ title: React.ReactNode; href?: string }>;
+  autoBreadcrumbs?: boolean;
   actions?: React.ReactNode;
 }
 
@@ -18,9 +21,27 @@ export const PageHeader: React.FC<PageHeaderProps> = ({
   title,
   subtitle,
   breadcrumbs,
+  autoBreadcrumbs,
   actions,
 }) => {
   const { token } = theme.useToken();
+  const location = useLocation();
+  const { t } = useTranslation();
+
+  const pathToBreadcrumb = (path: string) => {
+    const parts = path.split('/').filter(Boolean);
+    return [
+      { title: <Link to="/dashboard">{t('breadcrumb.home', 'Home')}</Link> },
+      ...parts.map((p, i) => {
+        const label = p.replace(/-/g, ' ');
+        return {
+          title: <Link to={'/' + parts.slice(0, i + 1).join('/')}>{label}</Link>,
+        };
+      }),
+    ];
+  };
+
+  const finalBreadcrumbs = autoBreadcrumbs ? pathToBreadcrumb(location.pathname) : breadcrumbs;
 
   return (
     <div
@@ -31,9 +52,9 @@ export const PageHeader: React.FC<PageHeaderProps> = ({
         marginBottom: token.marginLG,
       }}
     >
-      {breadcrumbs && breadcrumbs.length > 0 && (
+      {finalBreadcrumbs && finalBreadcrumbs.length > 0 && (
         <Breadcrumb
-          items={breadcrumbs}
+          items={finalBreadcrumbs}
           style={{ marginBottom: token.marginSM }}
         />
       )}

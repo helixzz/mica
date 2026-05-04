@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo } from 'react';
+import React, { useEffect, useMemo, useRef } from 'react';
 import { Badge, Button, Popover, List, Typography, Space, theme, Empty } from 'antd';
 import { 
   BellOutlined, 
@@ -15,6 +15,7 @@ import { useTranslation } from 'react-i18next';
 import dayjs from 'dayjs';
 import relativeTime from 'dayjs/plugin/relativeTime';
 import { useNotificationStore } from '../../stores/notification';
+import { useNotificationSocket } from '../../hooks/useNotificationSocket';
 import { NotificationOut } from '../../api/notifications';
 
 dayjs.extend(relativeTime);
@@ -50,19 +51,29 @@ export const NotificationBell: React.FC = () => {
   const navigate = useNavigate();
   const { token } = theme.useToken();
   const { unreadCount, recentItems, refresh, markRead, markAllRead } = useNotificationStore();
+  const { connected } = useNotificationSocket();
+  const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
   useEffect(() => {
     refresh();
-    const interval = setInterval(refresh, 60000);
-    
+
+    const pollMs = connected ? 120000 : 60000;
+
+    if (intervalRef.current) {
+      clearInterval(intervalRef.current);
+    }
+    intervalRef.current = setInterval(refresh, pollMs);
+
     const handleFocus = () => refresh();
     window.addEventListener('focus', handleFocus);
-    
+
     return () => {
-      clearInterval(interval);
+      if (intervalRef.current) {
+        clearInterval(intervalRef.current);
+      }
       window.removeEventListener('focus', handleFocus);
     };
-  }, [refresh]);
+  }, [refresh, connected]);
 
   const handleItemClick = async (item: NotificationOut) => {
     if (!item.read_at) {

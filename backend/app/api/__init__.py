@@ -27,6 +27,7 @@ from app.api.v1 import (
     search,
     sku,
     system_params_admin,
+    websocket,
 )
 
 api_router = APIRouter(prefix="/v1")
@@ -57,6 +58,7 @@ api_router.include_router(rfq.router)
 api_router.include_router(recycle_bin.router)
 api_router.include_router(document_templates.router)
 api_router.include_router(feishu_webhook.router)
+api_router.include_router(websocket.router)
 
 # v2 router — mirrors v1 for forward compatibility
 v2_router = APIRouter(prefix="/v2")

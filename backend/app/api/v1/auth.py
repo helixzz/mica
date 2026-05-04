@@ -14,6 +14,7 @@ from app.core.security import (
 )
 from app.db import get_db
 from app.i18n import detect_locale, t
+from app.middleware.rate_limit import auth_rate_limiter
 from app.models import Company, Department, User
 from app.schemas import (
     CompanyOut,
@@ -46,6 +47,8 @@ async def login(
     db: Annotated[AsyncSession, Depends(get_db)],
 ) -> TokenResponse:
     locale = detect_locale(request)
+    ip = request.client.host if request.client else "unknown"
+    auth_rate_limiter.check(ip)
     result = await db.execute(select(User).where(User.username == form_data.username))
     user = result.scalar_one_or_none()
     if (
@@ -63,6 +66,8 @@ async def login(
 
     user.last_login_at = datetime.now(UTC)
     await db.commit()
+
+    auth_rate_limiter.reset(ip)
 
     access_token_ttl_minutes = int(await _access_token_ttl_minutes(db))
     token = create_access_token(
@@ -83,6 +88,8 @@ async def login_json(
     db: Annotated[AsyncSession, Depends(get_db)],
 ) -> TokenResponse:
     locale = detect_locale(request)
+    ip = request.client.host if request.client else "unknown"
+    auth_rate_limiter.check(ip)
     result = await db.execute(select(User).where(User.username == payload.username))
     user = result.scalar_one_or_none()
     if (
@@ -96,6 +103,8 @@ async def login_json(
 
     user.last_login_at = datetime.now(UTC)
     await db.commit()
+
+    auth_rate_limiter.reset(ip)
 
     access_token_ttl_minutes = int(await _access_token_ttl_minutes(db))
     token = create_access_token(

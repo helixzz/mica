@@ -6,6 +6,7 @@ import { Link } from 'react-router-dom'
 
 import { api, type Supplier } from '@/api'
 import { downloadCSV } from '@/utils/export'
+import { showUndoToast } from '@/utils/undo'
 
 export default function SuppliersPage() {
   const { t } = useTranslation()
@@ -73,7 +74,10 @@ export default function SuppliersPage() {
       onOk: async () => {
         try {
           await api.deleteSupplier(supplier.id)
-          void message.success(t('supplier.deleted'))
+          showUndoToast(t('undo.deleted', { item: t('nav.suppliers') }), async () => {
+            await api.restoreFromRecycleBin('supplier', supplier.id)
+            load()
+          }, 8000)
           load()
         } catch (e: any) {
           void message.error(e?.response?.data?.detail || t('admin.operation_failed'))

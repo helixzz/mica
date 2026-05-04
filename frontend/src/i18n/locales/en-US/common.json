@@ -1,4 +1,11 @@
 {
+  "breadcrumb": {
+    "home": "Home"
+  },
+  "undo": {
+    "deleted": "{{item}} deleted",
+    "button": "Undo"
+  },
   "app": {
     "name": "Mica",
     "tagline": "",
@@ -255,6 +262,11 @@
   "error": {
     "login_failed": "Login failed. Check your username and password.",
     "network_error": "Network error. Please try again later.",
+    "not_found_title": "Page Not Found",
+    "not_found_desc": "The page you're looking for doesn't exist.",
+    "go_dashboard": "Go to Dashboard",
+    "unexpected": "Something went wrong",
+    "retry": "Retry",
     "permission_denied": "Permission denied",
     "unexpected": "Operation failed. Please try again.",
     "create_failed": "Create failed",

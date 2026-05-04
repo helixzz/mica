@@ -5,6 +5,7 @@ import { useTranslation } from 'react-i18next'
 
 import { api, type ClassificationItem, flattenCategoryTree, type Item } from '@/api'
 import { downloadCSV } from '@/utils/export'
+import { showUndoToast } from '@/utils/undo'
 
 export default function ItemsPage() {
   const { t } = useTranslation()
@@ -88,7 +89,10 @@ export default function ItemsPage() {
       onOk: async () => {
         try {
           await api.deleteItem(id)
-          void message.success(t('item.deleted'))
+          showUndoToast(t('undo.deleted', { item: t('nav.items') }), async () => {
+            await api.restoreFromRecycleBin('item', id)
+            void load()
+          }, 8000)
           void load()
         } catch (e: any) {
           void message.error(e?.response?.data?.detail || t('item.delete_failed'))

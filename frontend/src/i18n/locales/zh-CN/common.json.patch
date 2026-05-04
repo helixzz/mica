@@ -1,0 +1,14 @@
+--- /home/helixzz/mica/frontend/src/i18n/locales/zh-CN/common.json
++++ /home/helixzz/mica/frontend/src/i18n/locales/zh-CN/common.json
+@@ -255,6 +255,11 @@
+   "error": {
+     "login_failed": "登录失败，请检查用户名和密码",
+     "network_error": "网络连接错误，请稍后重试",
++    "not_found_title": "页面未找到",
++    "not_found_desc": "您访问的页面不存在",
++    "go_dashboard": "返回首页",
++    "unexpected": "出错了",
++    "retry": "重试",
+     "permission_denied": "权限不足",
+     "unexpected": "操作失败，请重试",
+     "create_failed": "创建失败",

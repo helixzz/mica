@@ -4,7 +4,8 @@
     "user_inactive": "账号已停用",
     "not_authenticated": "请先登录",
     "invalid_token": "登录已过期，请重新登录",
-    "insufficient_role": "权限不足"
+    "insufficient_role": "权限不足",
+    "rate_limited": "登录尝试过于频繁，请稍后再试"
   },
   "saml": {
     "not_enabled": "SAML 单点登录尚未启用",
@@ -107,6 +108,9 @@
       "no_open_id": "当前用户在飞书中没有 open_id"
     },
     "card_send_failed": "飞书卡片消息发送失败"
+  },
+  "email": {
+    "not_configured": "邮件服务未配置"
   },
   "delivery_plan": {
     "not_found": "交付计划不存在",
