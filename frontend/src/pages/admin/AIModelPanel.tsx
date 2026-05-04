@@ -74,13 +74,13 @@ export function AIModelPanel() {
         loading={loading}
         pagination={false}
         columns={[
-          { title: 'Name', dataIndex: 'name' },
-          { title: 'Provider', dataIndex: 'provider' },
-          { title: 'Model', dataIndex: 'model_string' },
-          { title: 'Modality', dataIndex: 'modality', render: (v) => <Tag>{v}</Tag> },
-          { title: 'API Base', dataIndex: 'api_base' },
-          { title: 'Key', dataIndex: 'api_key_masked' },
-          { title: 'Active', dataIndex: 'is_active', render: (v: boolean) => v ? <Tag color="success">ON</Tag> : <Tag>OFF</Tag> },
+          { title: t('admin.model_table.name'), dataIndex: 'name' },
+          { title: t('admin.model_table.provider'), dataIndex: 'provider' },
+          { title: t('admin.model_table.model'), dataIndex: 'model_string' },
+          { title: t('admin.model_table.modality'), dataIndex: 'modality', render: (v) => <Tag>{v}</Tag> },
+          { title: t('admin.model_table.api_base'), dataIndex: 'api_base' },
+          { title: t('admin.model_table.key'), dataIndex: 'api_key_masked' },
+          { title: t('admin.model_table.active'), dataIndex: 'is_active', render: (v: boolean) => v ? <Tag color="success">{t('common.on')}</Tag> : <Tag>{t('common.off')}</Tag> },
           {
             title: '',
             render: (_, r) => (

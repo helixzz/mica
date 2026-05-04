@@ -52,7 +52,7 @@ export function AIStreamButton({ feature, body, onChunk, onDone, disabled, avail
 
   if (!available) {
     return (
-      <Tooltip title="AI 功能需要管理员配置模型后方可使用">
+      <Tooltip title={!available ? t('message.ai_not_configured') : undefined}>
         <span>{btn}</span>
       </Tooltip>
     )

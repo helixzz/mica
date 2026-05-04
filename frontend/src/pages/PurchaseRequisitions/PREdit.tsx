@@ -217,7 +217,7 @@ export function PREditPage() {
       ),
     },
     {
-      title: isRequester ? <span>{t('field.unit_price')}<br /><Typography.Text type="secondary" style={{ fontSize: 10 }}>可选</Typography.Text></span> : t('field.unit_price'),
+      title: isRequester ? <span>{t('field.unit_price')}<br /><Typography.Text type="secondary" style={{ fontSize: 10 }}>{t('pr.unit_price_optional')}</Typography.Text></span> : t('field.unit_price'),
       width: 130,
       render: (_: unknown, r: LineForm) => (
         <InputNumber min={0} value={r.unit_price || undefined} onChange={(v) => updateLine(r.key, 'unit_price', Number(v ?? 0))} style={{ width: '100%' }} placeholder={isRequester ? t('pr.optional_label') : undefined} />
