@@ -1,0 +1,382 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <title>Mica — 企业内部采购管理系统</title>
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap');
+
+    *, *::before, *::after {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    body {
+      font-family: 'Inter', -apple-system, sans-serif;
+      background: #1A1512;
+      overflow: hidden;
+    }
+
+    /* Composition */
+    [data-composition-id="mica-intro"] {
+      width: 1920px;
+      height: 1080px;
+      position: relative;
+      background: #1A1512;
+      overflow: hidden;
+    }
+
+    /* --- Scene Base --- */
+    .scene {
+      position: absolute;
+      inset: 0;
+      width: 100%;
+      height: 100%;
+    }
+
+    /* ========== SCENE 1: Logo + Title ========== */
+    #scene1 {
+      z-index: 10;
+    }
+    #scene1 .bg-glow {
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      width: 800px;
+      height: 800px;
+      transform: translate(-50%, -50%);
+      background: radial-gradient(circle, rgba(139,94,60,0.25) 0%, rgba(139,94,60,0.05) 40%, transparent 70%);
+    }
+    #scene1 .bg-grid {
+      position: absolute;
+      inset: 0;
+      opacity: 0.04;
+      background-image:
+        linear-gradient(rgba(255,255,255,0.3) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(255,255,255,0.3) 1px, transparent 1px);
+      background-size: 80px 80px;
+    }
+    #scene1 .scene-content {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      width: 100%;
+      height: 100%;
+      padding: 80px;
+      gap: 32px;
+    }
+    #scene1 .logo {
+      width: 180px;
+      height: 180px;
+      border-radius: 50%;
+      object-fit: cover;
+      border: 4px solid rgba(139,94,60,0.4);
+    }
+    #scene1 .title-zh {
+      font-size: 96px;
+      font-weight: 800;
+      color: #FFFFFF;
+      letter-spacing: -0.02em;
+    }
+    #scene1 .title-zh .accent {
+      color: #C67A3D;
+    }
+    #scene1 .tagline {
+      font-size: 32px;
+      font-weight: 400;
+      color: #9E8E82;
+      letter-spacing: 0.04em;
+    }
+    #scene1 .label-row {
+      display: flex;
+      gap: 24px;
+      margin-top: 8px;
+    }
+    #scene1 .label {
+      font-size: 18px;
+      font-weight: 600;
+      color: #9E8E82;
+      padding: 8px 20px;
+      border: 1px solid rgba(158,142,130,0.3);
+      border-radius: 20px;
+    }
+
+    /* ========== SCENE 2: Workflow ========== */
+    #scene2 {
+      z-index: 5;
+    }
+    #scene2 .bg-tint {
+      position: absolute;
+      inset: 0;
+      background: linear-gradient(135deg, rgba(139,94,60,0.08) 0%, transparent 50%, rgba(139,94,60,0.06) 100%);
+    }
+    #scene2 .scene-content {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      width: 100%;
+      height: 100%;
+      padding: 80px 120px;
+      gap: 48px;
+    }
+    #scene2 .s2-title {
+      font-size: 52px;
+      font-weight: 700;
+      color: #FFFFFF;
+    }
+    #scene2 .s2-title .accent {
+      color: #C67A3D;
+    }
+    #scene2 .flow {
+      display: flex;
+      align-items: center;
+      gap: 20px;
+      flex-wrap: wrap;
+      justify-content: center;
+    }
+    #scene2 .flow-step {
+      font-size: 28px;
+      font-weight: 700;
+      color: #FFFFFF;
+      background: rgba(139,94,60,0.18);
+      padding: 20px 36px;
+      border-radius: 16px;
+      border: 1px solid rgba(139,94,60,0.3);
+      white-space: nowrap;
+    }
+    #scene2 .flow-arrow {
+      font-size: 32px;
+      color: #C67A3D;
+      font-weight: 300;
+    }
+
+    /* ========== SCENE 3: Features ========== */
+    #scene3 {
+      z-index: 5;
+    }
+    #scene3 .bg-radial {
+      position: absolute;
+      bottom: 0;
+      left: 50%;
+      transform: translateX(-50%);
+      width: 1200px;
+      height: 400px;
+      background: radial-gradient(ellipse at center, rgba(139,94,60,0.12) 0%, transparent 70%);
+    }
+    #scene3 .scene-content {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      width: 100%;
+      height: 100%;
+      padding: 80px 120px;
+      gap: 52px;
+    }
+    #scene3 .s3-title {
+      font-size: 52px;
+      font-weight: 700;
+      color: #FFFFFF;
+    }
+    #scene3 .card-row {
+      display: flex;
+      gap: 32px;
+    }
+    #scene3 .feature-card {
+      width: 340px;
+      padding: 40px 32px;
+      background: rgba(255,255,255,0.04);
+      border: 1px solid rgba(255,255,255,0.08);
+      border-radius: 16px;
+      display: flex;
+      flex-direction: column;
+      gap: 16px;
+    }
+    #scene3 .feature-icon {
+      font-size: 48px;
+    }
+    #scene3 .feature-name {
+      font-size: 28px;
+      font-weight: 700;
+      color: #FFFFFF;
+    }
+    #scene3 .feature-desc {
+      font-size: 20px;
+      color: #9E8E82;
+      line-height: 1.5;
+    }
+
+    /* ========== SCENE 4: CTA ========== */
+    #scene4 {
+      z-index: 5;
+    }
+    #scene4 .bg-full {
+      position: absolute;
+      inset: 0;
+      background: radial-gradient(circle at 50% 50%, rgba(139,94,60,0.18) 0%, rgba(26,21,18,0.95) 60%);
+    }
+    #scene4 .scene-content {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      width: 100%;
+      height: 100%;
+      padding: 80px;
+      gap: 36px;
+    }
+    #scene4 .s4-title {
+      font-size: 64px;
+      font-weight: 800;
+      color: #FFFFFF;
+      text-align: center;
+    }
+    #scene4 .s4-title .accent {
+      color: #C67A3D;
+    }
+    #scene4 .s4-sub {
+      font-size: 30px;
+      color: #9E8E82;
+      text-align: center;
+      max-width: 700px;
+      line-height: 1.6;
+    }
+    #scene4 .logo-sm {
+      width: 80px;
+      height: 80px;
+      border-radius: 50%;
+      object-fit: cover;
+      border: 2px solid rgba(139,94,60,0.4);
+      margin-top: 20px;
+    }
+    #scene4 .brand {
+      font-size: 28px;
+      font-weight: 600;
+      color: #C67A3D;
+    }
+  </style>
+</head>
+<body>
+<div data-composition-id="mica-intro" data-width="1920" data-height="1080" data-start="0" data-duration="30">
+
+  <!-- ===== SCENE 1: Brand Reveal (0-7s) ===== -->
+  <div id="scene1" class="scene">
+    <div class="bg-glow"></div>
+    <div class="bg-grid"></div>
+    <div class="scene-content">
+      <img id="s1-logo" class="logo" src="assets/logo.png" alt="Mica Logo">
+      <div id="s1-title" class="title-zh"><span class="accent">Mica</span> · 觅采</div>
+      <div id="s1-tagline" class="tagline">企业内部采购管理系统</div>
+      <div id="s1-labels" class="label-row">
+        <span class="label">效率优先</span>
+        <span class="label">全链路覆盖</span>
+        <span class="label">中英双语</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- ===== SCENE 2: Workflow (7-15s) ===== -->
+  <div id="scene2" class="scene">
+    <div class="bg-tint"></div>
+    <div class="scene-content">
+      <div id="s2-title" class="s2-title">从<span class="accent">需求</span>到<span class="accent">付款</span>，一站式闭环</div>
+      <div id="s2-flow" class="flow">
+        <span class="flow-step">PR 采购申请</span>
+        <span class="flow-arrow">→</span>
+        <span class="flow-step">审批</span>
+        <span class="flow-arrow">→</span>
+        <span class="flow-step">PO 订单</span>
+        <span class="flow-arrow">→</span>
+        <span class="flow-step">合同</span>
+        <span class="flow-arrow">→</span>
+        <span class="flow-step">交货</span>
+        <span class="flow-arrow">→</span>
+        <span class="flow-step">付款</span>
+        <span class="flow-arrow">→</span>
+        <span class="flow-step">发票</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- ===== SCENE 3: Features (15-23s) ===== -->
+  <div id="scene3" class="scene">
+    <div class="bg-radial"></div>
+    <div class="scene-content">
+      <div id="s3-title" class="s3-title">为<span style="color:#C67A3D">IT 采购</span>深度定制</div>
+      <div id="s3-cards" class="card-row">
+        <div class="feature-card">
+          <div class="feature-icon">🔵</div>
+          <div class="feature-name">飞书集成</div>
+          <div class="feature-desc">实时卡片通知，审批在飞书内完成</div>
+        </div>
+        <div class="feature-card">
+          <div class="feature-icon">📋</div>
+          <div class="feature-name">多级审批</div>
+          <div class="feature-desc">金额阈值自动路由，支持审批代理</div>
+        </div>
+        <div class="feature-card">
+          <div class="feature-icon">💾</div>
+          <div class="feature-name">自动保存</div>
+          <div class="feature-desc">表单草稿不丢失，随时恢复继续填写</div>
+        </div>
+        <div class="feature-card">
+          <div class="feature-icon">🤖</div>
+          <div class="feature-name">AI 辅助</div>
+          <div class="feature-desc">发票自动提取，SKU 智能推荐</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ===== SCENE 4: CTA (23-30s) ===== -->
+  <div id="scene4" class="scene">
+    <div class="bg-full"></div>
+    <div class="scene-content">
+      <div id="s4-title" class="s4-title"><span class="accent">Mica</span> · 让采购更高效</div>
+      <div id="s4-sub" class="s4-sub">面向 IT 部门 &lt; 100 人 · 月 &lt; 300 单<br>从提交需求到发票核销，全流程覆盖</div>
+      <img id="s4-logo" class="logo-sm" src="assets/logo.png" alt="Mica Logo">
+      <div id="s4-brand" class="brand">mica.jqdomain.com</div>
+    </div>
+  </div>
+
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/gsap@3.14.2/dist/gsap.min.js"></script>
+<script>
+window.__timelines = window.__timelines || {};
+
+const tl = gsap.timeline({ paused: true });
+const dur = 30;
+
+// ── SCENE 1: Brand Reveal (0-7s) ──
+tl.from("#s1-logo",  { scale: 0.6, opacity: 0, duration: 0.7, ease: "power3.out" }, 0.2);
+tl.from("#s1-title", { y: 50, opacity: 0, duration: 0.6, ease: "expo.out" }, 0.6);
+tl.from("#s1-tagline", { y: 30, opacity: 0, duration: 0.5, ease: "power2.out" }, 1.0);
+tl.from("#s1-labels .label", { y: 20, opacity: 0, duration: 0.4, stagger: 0.15, ease: "power2.out" }, 1.4);
+
+// ── SCENE 2: Workflow (7-15s) ──
+tl.from("#s2-title", { y: 40, opacity: 0, duration: 0.6, ease: "power3.out" }, 7.5);
+tl.from("#s2-flow .flow-step", { scale: 0.85, opacity: 0, duration: 0.35, stagger: 0.18, ease: "back.out(1.4)" }, 8.0);
+tl.from("#s2-flow .flow-arrow", { opacity: 0, duration: 0.25, stagger: 0.18, ease: "power2.out" }, 8.0);
+
+// ── SCENE 3: Features (15-23s) ──
+tl.from("#s3-title", { y: 40, opacity: 0, duration: 0.6, ease: "power3.out" }, 15.5);
+tl.from("#s3-cards .feature-card", { y: 50, opacity: 0, duration: 0.5, stagger: 0.2, ease: "expo.out" }, 16.0);
+
+// ── SCENE 4: CTA (23-30s) ──
+tl.from("#s4-title", { y: 50, opacity: 0, duration: 0.7, ease: "power3.out" }, 23.5);
+tl.from("#s4-sub",   { y: 30, opacity: 0, duration: 0.5, ease: "power2.out" }, 24.0);
+tl.from("#s4-logo",  { scale: 0.7, opacity: 0, duration: 0.5, ease: "back.out(1.3)" }, 24.5);
+tl.from("#s4-brand", { y: 15, opacity: 0, duration: 0.4, ease: "power2.out" }, 24.8);
+
+// Fade out at the very end
+tl.to("#scene4", { opacity: 0, duration: 0.6, ease: "power3.in" }, 29.4);
+tl.set("#scene4", { visibility: "hidden" }, 30);
+
+window.__timelines["mica-intro"] = tl;
+</script>
+</body>
+</html>
