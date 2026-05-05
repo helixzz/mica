@@ -52,7 +52,7 @@ async def test_pr_convert_single_supplier(seeded_client):
     auth = await _login_as(seeded_client, "alice")
 
     r = await seeded_client.get("/api/v1/suppliers", headers=auth)
-    suppliers = r.json()
+    suppliers = r.json()["items"]
     assert len(suppliers) > 0
     supplier_id = suppliers[0]["id"]
 

@@ -55,9 +55,7 @@ async def list_suppliers(
     total = (await db.execute(count_query)).scalar() or 0
 
     offset = (page - 1) * page_size
-    result = await db.execute(
-        query.order_by(Supplier.name).offset(offset).limit(page_size)
-    )
+    result = await db.execute(query.order_by(Supplier.name).offset(offset).limit(page_size))
     suppliers = result.scalars().all()
     return {
         "items": [SupplierOut.model_validate(s) for s in suppliers],
@@ -140,7 +138,7 @@ async def update_supplier(
 @router.patch("/suppliers/batch", tags=["master-data"])
 async def batch_update_suppliers(
     payload: SupplierBatchUpdate,
-    user: Annotated[CurrentUser, Depends(require_roles("admin", "procurement_mgr", "it_buyer"))],
+    _user: Annotated[CurrentUser, Depends(require_roles("admin", "procurement_mgr", "it_buyer"))],
     db: Annotated[AsyncSession, Depends(get_db)],
 ) -> dict:
     result = await db.execute(

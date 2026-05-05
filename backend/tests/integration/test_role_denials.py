@@ -65,7 +65,7 @@ async def test_requester_denied_on_approval_action(seeded_client):
 async def test_admin_can_create_payment(seeded_client):
     auth = await _login_as(seeded_client, "admin")
     r = await seeded_client.get("/api/v1/suppliers", headers=auth)
-    suppliers = r.json()
+    suppliers = r.json()["items"]
     assert len(suppliers) > 0
 
     r = await seeded_client.get("/api/v1/purchase-orders", headers=auth)

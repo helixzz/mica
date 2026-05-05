@@ -56,7 +56,7 @@ async def test_pr_with_free_text_item_no_sku(seeded_client):
 async def test_multi_supplier_pr_preview_and_convert(seeded_client):
     auth = await _login_as(seeded_client, "alice")
     r = await seeded_client.get("/api/v1/suppliers", headers=auth)
-    suppliers = r.json()
+    suppliers = r.json()["items"]
     assert len(suppliers) >= 2, "Need at least 2 suppliers in seed data"
     s1_id, s2_id = suppliers[0]["id"], suppliers[1]["id"]
 
@@ -98,7 +98,7 @@ async def test_multi_supplier_pr_preview_and_convert(seeded_client):
 async def test_bill_number_format_on_invoice_create(seeded_client):
     auth = await _login_as(seeded_client, "admin")
     r = await seeded_client.get("/api/v1/suppliers", headers=auth)
-    suppliers = r.json()
+    suppliers = r.json()["items"]
     supplier_id = suppliers[0]["id"]
 
     r = await seeded_client.get("/api/v1/purchase-orders", headers=auth)
@@ -186,7 +186,7 @@ async def test_shipment_create_with_contract_link(seeded_client):
 async def test_pr_supplier_quote_candidates_and_save(seeded_client):
     auth = await _login_as(seeded_client, "admin")
     r = await seeded_client.get("/api/v1/suppliers", headers=auth)
-    suppliers = r.json()
+    suppliers = r.json()["items"]
     supplier_id = suppliers[0]["id"]
 
     r = await seeded_client.get("/api/v1/items", headers=auth)
