@@ -18,6 +18,7 @@ from app.schemas import (
     ItemCreate,
     ItemOut,
     ItemUpdate,
+    SupplierBatchUpdate,
     SupplierCreate,
     SupplierOut,
     SupplierUpdate,
@@ -27,17 +28,43 @@ from app.services import master_data as master_data_svc
 router = APIRouter()
 
 
-@router.get("/suppliers", response_model=list[SupplierOut], tags=["master-data"])
+@router.get("/suppliers", tags=["master-data"])
 async def list_suppliers(
     _user: CurrentUser,
     db: Annotated[AsyncSession, Depends(get_db)],
-) -> list[SupplierOut]:
+    search: str | None = Query(None),
+    is_enabled: bool | None = Query(None),
+    page: int = Query(1, ge=1),
+    page_size: int = Query(50, ge=1, le=500),
+) -> dict:
+    from sqlalchemy import or_
+
+    query = select(Supplier).where(Supplier.is_deleted.is_(False))
+    if is_enabled is not None:
+        query = query.where(Supplier.is_enabled.is_(is_enabled))
+    if search:
+        pattern = f"%{search}%"
+        query = query.where(
+            or_(
+                Supplier.name.ilike(pattern),
+                Supplier.code.ilike(pattern),
+            )
+        )
+
+    count_query = select(func.count()).select_from(query.subquery())
+    total = (await db.execute(count_query)).scalar() or 0
+
+    offset = (page - 1) * page_size
     result = await db.execute(
-        select(Supplier)
-        .where(Supplier.is_deleted.is_(False), Supplier.is_enabled.is_(True))
-        .order_by(Supplier.name)
+        query.order_by(Supplier.name).offset(offset).limit(page_size)
     )
-    return [SupplierOut.model_validate(s) for s in result.scalars().all()]
+    suppliers = result.scalars().all()
+    return {
+        "items": [SupplierOut.model_validate(s) for s in suppliers],
+        "total": total,
+        "page": page,
+        "page_size": page_size,
+    }
 
 
 @router.get("/items", response_model=dict, tags=["master-data"])
@@ -108,6 +135,25 @@ async def update_supplier(
 ) -> SupplierOut:
     supplier = await master_data_svc.update_supplier(db, user, supplier_id, payload)
     return SupplierOut.model_validate(supplier)
+
+
+@router.patch("/suppliers/batch", tags=["master-data"])
+async def batch_update_suppliers(
+    payload: SupplierBatchUpdate,
+    user: Annotated[CurrentUser, Depends(require_roles("admin", "procurement_mgr", "it_buyer"))],
+    db: Annotated[AsyncSession, Depends(get_db)],
+) -> dict:
+    result = await db.execute(
+        select(Supplier).where(
+            Supplier.id.in_(payload.ids),
+            Supplier.is_deleted.is_(False),
+        )
+    )
+    suppliers = result.scalars().all()
+    for s in suppliers:
+        s.is_enabled = payload.is_enabled
+    await db.commit()
+    return {"updated": len(suppliers)}
 
 
 @router.delete(

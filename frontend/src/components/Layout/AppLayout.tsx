@@ -122,6 +122,7 @@ export function AppLayout() {
           width={32}
           height={32}
           alt="Mica"
+          loading="lazy"
           style={{ display: 'block', borderRadius: '50%' }}
         />
         <Text

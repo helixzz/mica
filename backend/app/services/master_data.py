@@ -254,6 +254,9 @@ async def update_supplier(
     if "notes" in payload.model_fields_set:
         _record_change(diff, "notes", supplier.notes, payload.notes)
         supplier.notes = payload.notes
+    if "is_enabled" in payload.model_fields_set and payload.is_enabled is not None:
+        _record_change(diff, "is_enabled", supplier.is_enabled, payload.is_enabled)
+        supplier.is_enabled = payload.is_enabled
     if diff:
         await db.flush()
         await _audit(

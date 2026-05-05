@@ -857,7 +857,17 @@ export const api = {
     await client.delete(`/departments/${id}`)
   },
   async suppliers(): Promise<Supplier[]> {
-    const { data } = await client.get<Supplier[]>('/suppliers')
+    const { data } = await client.get<{ items: Supplier[] }>('/suppliers', { params: { page_size: 500 } })
+    return data.items
+  },
+  async suppliersPaginated(params?: {
+    search?: string; is_enabled?: boolean; page?: number; page_size?: number;
+  }): Promise<{ items: Supplier[]; total: number; page: number; page_size: number }> {
+    const { data } = await client.get('/suppliers', { params })
+    return data
+  },
+  async batchUpdateSuppliers(body: { ids: string[]; is_enabled: boolean }): Promise<{ updated: number }> {
+    const { data } = await client.patch<{ updated: number }>('/suppliers/batch', body)
     return data
   },
   async createSupplier(body: {

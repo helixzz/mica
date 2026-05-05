@@ -90,7 +90,9 @@
     "record_payment": "Record Payment",
     "record_invoice": "Record Invoice",
     "close": "Close",
-    "copy": "Copy"
+    "copy": "Copy",
+    "enable_selected": "Enable Selected",
+    "disable_selected": "Disable Selected"
   },
   "field": {
     "username": "Username",
@@ -1100,7 +1102,8 @@
     "deleted": "Deleted",
     "operation_failed": "Operation failed",
     "save_failed": "Save failed",
-    "create_failed": "Create failed"
+    "create_failed": "Create failed",
+    "selected_count": "{{count}} selected"
   },
   "invoice": {
     "attachments": "Invoice Attachments",

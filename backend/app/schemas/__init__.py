@@ -166,6 +166,7 @@ class SupplierUpdate(BaseModel):
     payee_bank: str | None = Field(default=None, max_length=255)
     payee_bank_account: str | None = Field(default=None, max_length=64)
     notes: str | None = None
+    is_enabled: bool | None = None
 
     @field_validator("code")
     @classmethod
@@ -173,6 +174,11 @@ class SupplierUpdate(BaseModel):
         if value is None:
             return value
         return _normalize_master_data_code(value)
+
+
+class SupplierBatchUpdate(BaseModel):
+    ids: list[UUID]
+    is_enabled: bool
 
 
 class SupplierOut(BaseModel):
