@@ -7,7 +7,34 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
-## [v1.5.0] — 2026-05-04
+## [v1.5.3] — 2026-05-05
+
+### 新增
+- **供应商管理增强**：批量启用/禁用、名称/编码搜索、排序、服务端分页
+- **30 秒介绍视频**：HyperFrames 组合（5 场景，品牌 + 工作流 + 功能 + CTA）
+- **品牌设计系统**：`design.md` 定义（#8B5E3C 水獭棕、Inter 字体、动效规范）
+
+### 修复
+- i18n 模板变量语法修复（`{total}` → `{{total}}`）
+
+---
+
+## [v1.5.2] — 2026-05-04
+
+### 修复
+- i18next 插值语法：`item.count`、`item.total_results` 中 `{var}` → `{{var}}`
+
+---
+
+## [v1.5.1] — 2026-05-04
+
+### 修复
+- **Bundle 白屏修复**：回退 antd-icons 独立 chunk（图标依赖 ConfigProvider 上下文）
+- **WebSocket 降级**：连接失败静默回退 polling，不再重试
+- **Nginx WebSocket**：添加 `Upgrade` + `Connection` 头
+
+---
+
 
 ### 新增
 
