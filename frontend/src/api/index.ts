@@ -777,6 +777,29 @@ export interface BudgetSummary {
   total_utilization_pct: number
 }
 
+export interface SpendTrendPoint {
+  month: string
+  total: number
+}
+
+export interface DeptConsumptionItem {
+  dept: string
+  total: number
+  pct: number
+}
+
+export interface SupplierScoreItem {
+  supplier: string
+  total_shipments: number
+  avg_delivery_days: number
+}
+
+export interface AnalyticsData {
+  trend: SpendTrendPoint[]
+  departments: DeptConsumptionItem[]
+  suppliers: SupplierScoreItem[]
+}
+
 export const api = {
   async listDeliveryPlans(params?: { po_id?: string; contract_id?: string; status?: string }): Promise<DeliveryPlan[]> {
     const { data } = await client.get<DeliveryPlan[]>('/delivery-plans', { params })
@@ -1489,6 +1512,10 @@ export const api = {
   },
   async getAgingApprovals(): Promise<AgingApproval[]> {
     const { data } = await client.get<AgingApproval[]>('/dashboard/aging-approvals')
+    return data
+  },
+  async getAnalytics(): Promise<AnalyticsData> {
+    const { data } = await client.get<AnalyticsData>('/dashboard/analytics')
     return data
   },
   async getPaymentSchedule(contractId: string): Promise<PaymentScheduleSummary> {

@@ -1,4 +1,4 @@
-import { Col, Row, Space, Tag, Typography, theme, Button, List, Avatar, Progress, Card } from 'antd'
+import { Col, Row, Space, Tag, Typography, theme, Button, List, Avatar, Progress, Card, Tabs, Table } from 'antd'
 import { useEffect, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { Link, useNavigate } from 'react-router-dom'
@@ -20,6 +20,7 @@ import {
 import {
   api,
   type AgingApproval,
+  type AnalyticsData,
   type ApprovalTask,
   type BudgetSummary,
   type ContractExpiring,
@@ -52,6 +53,7 @@ export function DashboardPage() {
   const [deliveryOverview, setDeliveryOverview] = useState<DeliveryPlanOverview | null>(null)
   const [budgetSummary, setBudgetSummary] = useState<BudgetSummary | null>(null)
   const [agingApprovals, setAgingApprovals] = useState<AgingApproval[]>([])
+  const [analytics, setAnalytics] = useState<AnalyticsData | null>(null)
   const [currentTime, setCurrentTime] = useState(new Date())
 
   useEffect(() => {
@@ -70,8 +72,9 @@ export function DashboardPage() {
       api.getDashboardMetrics('last_month').catch(() => null),
       api.getDeliveryPlansOverview().catch(() => null),
       api.getBudgetSummary().catch(() => null),
-      api.getAgingApprovals().catch(() => []),
-    ]).then(([prsData, posData, pendingData, contractsData, anomaliesData, metricsData, deliveryData, budgetData, agingData]) => {
+        api.getAgingApprovals().catch(() => []),
+        api.getAnalytics().catch(() => null),
+      ]).then(([prsData, posData, pendingData, contractsData, anomaliesData, metricsData, deliveryData, budgetData, agingData, analyticsData]) => {
       setPrs(prsData)
       setPos(posData)
       setPending(pendingData)
@@ -80,8 +83,9 @@ export function DashboardPage() {
       setMetrics(metricsData)
       setDeliveryOverview(deliveryData)
       setBudgetSummary(budgetData)
-      setAgingApprovals(agingData)
-      setLoading(false)
+        setAgingApprovals(agingData)
+        setAnalytics(analyticsData)
+        setLoading(false)
     })
   }, [])
 
@@ -239,6 +243,120 @@ export function DashboardPage() {
 
       {(isProcurementMgr || isFinanceAuditor || role === 'admin') && (
         <InvoiceTracker />
+      )}
+
+      {(isProcurementMgr || isFinanceAuditor || role === 'admin') && analytics && (
+        <Section title={t('dashboard.analytics')}>
+          <Tabs
+            items={[
+              {
+                key: 'spend-trend',
+                label: t('dashboard.spend_trend'),
+                children: analytics.trend.length === 0 ? (
+                  <EmptyState illustration="welcome" title={t('dashboard.no_analytics_data')} />
+                ) : (
+                  <div>
+                    <div style={{ display: 'flex', alignItems: 'flex-end', gap: 8, height: 200, padding: '20px 0 32px', overflow: 'auto' }}>
+                      {analytics.trend.map((point) => {
+                        const maxTotal = Math.max(...analytics.trend.map((p) => p.total), 1)
+                        const heightPct = (point.total / maxTotal) * 100
+                        return (
+                          <div
+                            key={point.month}
+                            style={{
+                              flex: 1,
+                              minWidth: 40,
+                              display: 'flex',
+                              flexDirection: 'column',
+                              alignItems: 'center',
+                              height: '100%',
+                            }}
+                          >
+                            <Text type="secondary" style={{ fontSize: 11, marginBottom: 4 }}>
+                              ¥{(point.total / 10000).toFixed(1)}w
+                            </Text>
+                            <div
+                              style={{
+                                width: '80%',
+                                height: `${Math.max(heightPct, 2)}%`,
+                                backgroundColor: 'var(--color-primary)',
+                                borderRadius: '4px 4px 0 0',
+                                minWidth: 20,
+                                transition: 'height 0.3s',
+                              }}
+                            />
+                            <Text type="secondary" style={{ fontSize: 10, marginTop: 4, transform: 'rotate(-45deg)', transformOrigin: 'top left', whiteSpace: 'nowrap' }}>
+                              {point.month.slice(2)}
+                            </Text>
+                          </div>
+                        )
+                      })}
+                    </div>
+                  </div>
+                ),
+              },
+              {
+                key: 'dept-consumption',
+                label: t('dashboard.dept_consumption'),
+                children: (
+                  <Table
+                    dataSource={analytics.departments}
+                    rowKey="dept"
+                    pagination={false}
+                    size="small"
+                    columns={[
+                      { title: t('dashboard.department_col'), dataIndex: 'dept', key: 'dept' },
+                      {
+                        title: t('dashboard.total_spend_col'),
+                        dataIndex: 'total',
+                        key: 'total',
+                        render: (v: number) => `¥${v.toLocaleString()}`,
+                      },
+                      {
+                        title: t('dashboard.pct_of_total'),
+                        dataIndex: 'pct',
+                        key: 'pct',
+                        render: (v: number) => (
+                          <Progress percent={v} size="small" style={{ minWidth: 80 }} />
+                        ),
+                      },
+                    ]}
+                  />
+                ),
+              },
+              {
+                key: 'supplier-performance',
+                label: t('dashboard.supplier_performance'),
+                children: (
+                  <Table
+                    dataSource={analytics.suppliers}
+                    rowKey="supplier"
+                    pagination={false}
+                    size="small"
+                    columns={[
+                      { title: t('dashboard.supplier_col'), dataIndex: 'supplier', key: 'supplier' },
+                      {
+                        title: t('dashboard.total_shipments_col'),
+                        dataIndex: 'total_shipments',
+                        key: 'total_shipments',
+                      },
+                      {
+                        title: t('dashboard.avg_delivery_days_col'),
+                        dataIndex: 'avg_delivery_days',
+                        key: 'avg_delivery_days',
+                        render: (v: number) => (
+                          <Tag color={v <= 7 ? 'green' : v <= 14 ? 'orange' : 'red'}>
+                            {v} 天
+                          </Tag>
+                        ),
+                      },
+                    ]}
+                  />
+                ),
+              },
+            ]}
+          />
+        </Section>
       )}
 
       {(isProcurementMgr || isFinanceAuditor || role === 'admin') && budgetSummary && budgetSummary.items.length > 0 && (

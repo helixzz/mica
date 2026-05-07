@@ -388,7 +388,20 @@
     "overdue": "已超时",
     "approaching_sla": "即将超时",
     "within_sla": "正常",
-    "no_aging_approvals": "暂无待审批申请"
+    "no_aging_approvals": "暂无待审批申请",
+    "analytics": "数据分析",
+    "spend_trend": "月度支出趋势",
+    "dept_consumption": "部门消费排名",
+    "supplier_performance": "供应商交期表现",
+    "month_col": "月份",
+    "spend_amount": "支出金额",
+    "department_col": "部门",
+    "total_spend_col": "总支出",
+    "pct_of_total": "占比",
+    "supplier_col": "供应商",
+    "total_shipments_col": "总发货批次",
+    "avg_delivery_days_col": "平均交期（天）",
+    "no_analytics_data": "暂无分析数据"
   },
   "notification": {
     "title": "通知",

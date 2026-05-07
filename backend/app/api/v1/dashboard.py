@@ -16,13 +16,16 @@ from app.models import (
     ApprovalTask,
     Contract,
     CostCenter,
+    Department,
     Invoice,
     InvoiceStatus,
     PaymentRecord,
     PaymentStatus,
     PurchaseOrder,
     PurchaseRequisition,
+    Shipment,
     SKUPriceAnomaly,
+    Supplier,
 )
 from app.services.system_params import system_params
 
@@ -369,3 +372,117 @@ async def get_aging_approvals(
         )
 
     return results
+
+
+class SpendTrendPoint(BaseModel):
+    month: str
+    total: float
+
+
+class DeptConsumptionItem(BaseModel):
+    dept: str
+    total: float
+    pct: float
+
+
+class SupplierScoreItem(BaseModel):
+    supplier: str
+    total_shipments: int
+    avg_delivery_days: float
+
+
+class AnalyticsOut(BaseModel):
+    trend: list[SpendTrendPoint]
+    departments: list[DeptConsumptionItem]
+    suppliers: list[SupplierScoreItem]
+
+
+@router.get("/dashboard/analytics", response_model=AnalyticsOut)
+async def get_analytics(
+    _user: CurrentUser,
+    db: Annotated[AsyncSession, Depends(get_db)],
+) -> AnalyticsOut:
+    twelve_months_ago = datetime.now(UTC) - timedelta(days=365)
+    trend_rows = (
+        await db.execute(
+            select(
+                func.to_char(func.date_trunc("month", PurchaseOrder.created_at), "YYYY-MM").label(
+                    "month"
+                ),
+                func.coalesce(func.sum(PurchaseOrder.total_amount), 0).label("total"),
+            )
+            .where(PurchaseOrder.created_at >= twelve_months_ago)
+            .group_by("month")
+            .order_by("month")
+        )
+    ).all()
+    trend = [
+        SpendTrendPoint(month=row.month, total=round(float(row.total), 2)) for row in trend_rows
+    ]
+
+    dept_rows = (
+        await db.execute(
+            select(
+                Department.name_zh.label("dept"),
+                func.coalesce(func.sum(PurchaseOrder.total_amount), 0).label("total"),
+            )
+            .join(PurchaseRequisition, PurchaseOrder.pr_id == PurchaseRequisition.id)
+            .join(Department, PurchaseRequisition.department_id == Department.id)
+            .group_by(Department.id, Department.name_zh)
+            .order_by(func.sum(PurchaseOrder.total_amount).desc())
+            .limit(10)
+        )
+    ).all()
+    grand_total = sum(float(row.total) for row in dept_rows)
+    departments = [
+        DeptConsumptionItem(
+            dept=row.dept,
+            total=round(float(row.total), 2),
+            pct=round(float(row.total) / grand_total * 100, 1) if grand_total > 0 else 0.0,
+        )
+        for row in dept_rows
+    ]
+
+    supplier_rows = (
+        await db.execute(
+            select(
+                Supplier.name.label("supplier"),
+                func.count(Shipment.id).label("total_shipments"),
+                func.coalesce(
+                    func.round(
+                        func.avg(
+                            func.extract(
+                                "epoch", Shipment.actual_date - func.date(PurchaseOrder.created_at)
+                            )
+                            / 86400.0
+                        ),
+                        1,
+                    ),
+                    0,
+                ).label("avg_delivery_days"),
+            )
+            .join(PurchaseOrder, Shipment.po_id == PurchaseOrder.id)
+            .join(Supplier, PurchaseOrder.supplier_id == Supplier.id)
+            .where(Shipment.actual_date.isnot(None))
+            .group_by(Supplier.id, Supplier.name)
+            .order_by(
+                func.avg(
+                    func.extract(
+                        "epoch", Shipment.actual_date - func.date(PurchaseOrder.created_at)
+                    )
+                    / 86400.0
+                ).asc()
+            )
+            .limit(10)
+        )
+    ).all()
+    suppliers = [
+        SupplierScoreItem(
+            supplier=row.supplier,
+            total_shipments=row.total_shipments,
+            avg_delivery_days=float(row.avg_delivery_days),
+        )
+        for row in supplier_rows
+    ]
+
+    return AnalyticsOut(trend=trend, departments=departments, suppliers=suppliers)
