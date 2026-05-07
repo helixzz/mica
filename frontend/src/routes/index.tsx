@@ -181,6 +181,16 @@ export function AppRoutes() {
             <Route path="/items" element={<ProcurementGate><ItemsPage /></ProcurementGate>} />
             <Route path="/items/:id" element={<ProcurementGate><ItemDetailPage /></ProcurementGate>} />
             <Route path="/admin" element={<AdminPage />} />
+            <Route path="/admin/system-params" element={<AdminPage />} />
+            <Route path="/admin/feishu" element={<AdminPage />} />
+            <Route path="/admin/approval-rules" element={<AdminPage />} />
+            <Route path="/admin/users" element={<AdminPage />} />
+            <Route path="/admin/companies" element={<AdminPage />} />
+            <Route path="/admin/departments" element={<AdminPage />} />
+            <Route path="/admin/ai-models" element={<AdminPage />} />
+            <Route path="/admin/audit-logs" element={<AdminPage />} />
+            <Route path="/admin/import" element={<AdminPage />} />
+            <Route path="/admin/document-templates" element={<AdminPage />} />
             <Route path="/search" element={<SearchResults />} />
             <Route path="/notifications" element={<NotificationCenter />} />
             <Route path="*" element={<NotFound />} />
