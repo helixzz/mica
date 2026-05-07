@@ -7,8 +7,8 @@ test.describe('Admin Page Access', () => {
 
     await navigateTo(page, '/admin');
 
-    // Admin page should load with tabs
-    await expect(page.locator('.ant-tabs')).toBeVisible({ timeout: 10_000 });
+    // Admin page should load with navigation cards
+    await expect(page.locator('.ant-card')).toBeVisible({ timeout: 10_000 });
   });
 
   test('non-admin user (alice) sees permission denied on admin page', async ({ page }) => {
