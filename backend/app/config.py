@@ -23,7 +23,7 @@ class Settings(BaseSettings):
     # ── Application ──
     app_name: str = "Mica"
     app_env: Literal["development", "staging", "production"] = "development"
-    app_version: str = "1.6.2"
+    app_version: str = "1.6.3"
     debug: bool = False
 
     # ── API ──
@@ -49,7 +49,7 @@ class Settings(BaseSettings):
         default="CHANGE_ME_IN_PRODUCTION_minimum_32_chars_required_for_jwt_signing_skeleton"
     )
     jwt_algorithm: str = "HS256"
-    access_token_expire_minutes: int = 60 * 8  # 8 hours for dev convenience
+    access_token_expire_minutes: int = 60 * 2  # 2 hours
     refresh_token_expire_days: int = 7
 
     # ── i18n ──

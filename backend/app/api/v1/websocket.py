@@ -18,9 +18,13 @@ active_connections: dict[str, list[WebSocket]] = {}
 async def notifications_ws(websocket: WebSocket, token: str = ""):
     """WebSocket endpoint for real-time notification push.
 
-    Authenticates via JWT token query parameter.
-    Keeps connection alive and pushes notification events to the user.
+    Authenticates via Authorization header (preferred) or JWT token query parameter.
     """
+    # Prefer Authorization header
+    auth_header = websocket.headers.get("authorization", "")
+    if auth_header.startswith("Bearer "):
+        token = auth_header[7:]
+
     if not token:
         await websocket.close(code=4001, reason="missing_token")
         return

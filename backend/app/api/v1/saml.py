@@ -189,12 +189,21 @@ def _build_onelogin_request(request: Request, form_data=None) -> dict[str, objec
     }
 
 
+ALLOWED_REDIRECT_PATHS = {
+    "/dashboard", "/purchase-requisitions", "/purchase-orders", "/contracts",
+    "/shipments", "/delivery-plans", "/payments", "/invoices", "/sku", "/items",
+    "/rfqs", "/suppliers", "/approvals", "/search", "/notifications", "/admin",
+}
+
 def _validated_relay_state(value: object, locale: str) -> str:
     if not isinstance(value, str) or not value.strip():
         return "/dashboard"
     relay_state = value.strip()
     if not relay_state.startswith("/") or relay_state.startswith("//") or "://" in relay_state:
         raise HTTPException(400, t("saml.invalid_relay_state", locale))
+    base = relay_state.split("?")[0]
+    if base not in ALLOWED_REDIRECT_PATHS and not base.startswith("/purchase-requisitions/") and not base.startswith("/purchase-orders/") and not base.startswith("/contracts/") and not base.startswith("/admin/"):
+        return "/dashboard"
     return relay_state
 
 
