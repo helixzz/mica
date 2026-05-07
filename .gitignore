@@ -293,3 +293,4 @@ docs/.docusaurus/
 site/
 _site/
 .playwright-mcp/
+video/renders/
