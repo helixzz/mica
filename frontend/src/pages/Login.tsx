@@ -136,9 +136,11 @@ export function LoginPage() {
                   </Button>
                 </Form.Item>
               </Form>
-              <Typography.Text type="secondary" style={{ fontSize: 12, display: 'block', textAlign: 'center' }}>
-                Dev: alice / bob / carol / dave / admin · password: MicaDev2026!
-              </Typography.Text>
+              {__APP_VERSION__ !== '0.0.0' && (
+                <Typography.Text type="secondary" style={{ fontSize: 12, display: 'block', textAlign: 'center' }}>
+                  Demo accounts: alice / bob / carol / dave / admin
+                </Typography.Text>
+              )}
             </>
           )}
         </Space>

@@ -1255,5 +1255,17 @@
   "dashboard.actual_spend": "实际支出",
   "dashboard.annual_budget": "年度预算",
   "dashboard.budget_start_date": "预算起始日期",
-  "dashboard.budget_end_date": "预算结束日期"
+  "dashboard.budget_end_date": "预算结束日期",
+  "admin.system_params_desc": "系统配置参数管理",
+  "admin.feishu_desc": "飞书消息推送与审批集成",
+  "admin.approval_rules_desc": "多级审批规则配置",
+  "admin.users_desc": "用户账号与权限管理",
+  "admin.companies_desc": "公司主体信息管理",
+  "admin.departments_desc": "部门组织结构管理",
+  "admin.llm_models_desc": "AI 模型连接与配置",
+  "admin.ai_logs_desc": "LLM API 调用统计",
+  "admin.audit_logs_desc": "全操作审计日志查看",
+  "admin.import_desc": "Excel 批量导入数据",
+  "admin.document_templates_desc": "业务文档模板管理",
+  "admin.back_to_overview": "返回概览"
 }

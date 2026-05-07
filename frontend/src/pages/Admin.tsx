@@ -1,9 +1,10 @@
-import { ApartmentOutlined, AuditOutlined, BranchesOutlined, DatabaseOutlined, FileTextOutlined, ImportOutlined, RobotOutlined, SettingOutlined, TeamOutlined, ThunderboltOutlined } from '@ant-design/icons'
+import { ApartmentOutlined, AuditOutlined, BarChartOutlined, BranchesOutlined, CloudOutlined, DatabaseOutlined, DeleteOutlined, FileTextOutlined, ImportOutlined, RobotOutlined, SettingOutlined, TeamOutlined, ThunderboltOutlined } from '@ant-design/icons'
 import { Card, Col, Row, Typography, theme } from 'antd'
 import { useTranslation } from 'react-i18next'
 import { useNavigate, useLocation } from 'react-router-dom'
 import { useAuth } from '@/auth/useAuth'
 import { AIModelPanel } from './admin/AIModelPanel'
+import { AILogsPanel } from './admin/AILogsPanel'
 import { ApprovalRulesTab } from './admin/ApprovalRulesTab'
 import { AuditLogsTab } from './admin/AuditLogsTab'
 import { CompaniesPanel } from './admin/CompaniesPanel'
@@ -16,6 +17,8 @@ import { UsersPanel } from './admin/UsersPanel'
 
 const { Title, Text } = Typography
 
+const isAdmin = (u: any) => u?.role === 'admin'
+
 export function AdminPage() {
   const { t } = useTranslation()
   const { token } = theme.useToken()
@@ -23,7 +26,7 @@ export function AdminPage() {
   const location = useLocation()
   const { user } = useAuth()
 
-  if (user?.role !== 'admin') {
+  if (!isAdmin(user)) {
     return <Card><Title level={4}>{t('error.permission_denied')}</Title><Text type="secondary">{t('admin.admin_only')}</Text></Card>
   }
 
@@ -39,6 +42,7 @@ export function AdminPage() {
         case 'companies': return <CompaniesPanel />
         case 'departments': return <DepartmentsPanel />
         case 'ai-models': return <AIModelPanel />
+        case 'ai-logs': return <AILogsPanel />
         case 'audit-logs': return <AuditLogsTab />
         case 'import': return <ImportTab />
         case 'document-templates': return <DocumentTemplatesPanel />
@@ -53,17 +57,18 @@ export function AdminPage() {
     )
   }
 
-  const cards: { key: string; icon: JSX.Element; label: string; desc: string }[] = [
-    { key: '/admin/system-params', icon: <SettingOutlined />, label: t('admin.system_params.tab_label'), desc: t('admin.system_info') },
-    { key: '/admin/feishu', icon: <ThunderboltOutlined />, label: t('admin.tab.feishu'), desc: 'Feishu' },
-    { key: '/admin/approval-rules', icon: <BranchesOutlined />, label: t('admin.approval_rules'), desc: 'Approval Rules' },
-    { key: '/admin/users', icon: <TeamOutlined />, label: t('admin.users'), desc: 'Users' },
-    { key: '/admin/companies', icon: <ApartmentOutlined />, label: t('admin.companies'), desc: 'Companies' },
-    { key: '/admin/departments', icon: <DatabaseOutlined />, label: t('admin.departments'), desc: 'Departments' },
-    { key: '/admin/ai-models', icon: <RobotOutlined />, label: t('admin.llm_models'), desc: 'AI Models' },
-    { key: '/admin/audit-logs', icon: <AuditOutlined />, label: t('admin.tab.audit_logs'), desc: 'Audit Logs' },
-    { key: '/admin/import', icon: <ImportOutlined />, label: t('admin.tab.import'), desc: 'Import' },
-    { key: '/admin/document-templates', icon: <FileTextOutlined />, label: t('admin.document_templates'), desc: 'Templates' },
+  const cards = [
+    { key: '/admin/system-params', icon: <SettingOutlined />, label: t('admin.system_params.tab_label'), desc: t('admin.system_params_desc') },
+    { key: '/admin/feishu', icon: <ThunderboltOutlined />, label: t('admin.tab.feishu'), desc: t('admin.feishu_desc') },
+    { key: '/admin/approval-rules', icon: <BranchesOutlined />, label: t('admin.approval_rules'), desc: t('admin.approval_rules_desc') },
+    { key: '/admin/users', icon: <TeamOutlined />, label: t('admin.users'), desc: t('admin.users_desc') },
+    { key: '/admin/companies', icon: <ApartmentOutlined />, label: t('admin.companies'), desc: t('admin.companies_desc') },
+    { key: '/admin/departments', icon: <DatabaseOutlined />, label: t('admin.departments'), desc: t('admin.departments_desc') },
+    { key: '/admin/ai-models', icon: <RobotOutlined />, label: t('admin.llm_models'), desc: t('admin.llm_models_desc') },
+    { key: '/admin/ai-logs', icon: <BarChartOutlined />, label: t('admin.ai_logs'), desc: t('admin.ai_logs_desc') },
+    { key: '/admin/audit-logs', icon: <AuditOutlined />, label: t('admin.tab.audit_logs'), desc: t('admin.audit_logs_desc') },
+    { key: '/admin/import', icon: <ImportOutlined />, label: t('admin.tab.import'), desc: t('admin.import_desc') },
+    { key: '/admin/document-templates', icon: <FileTextOutlined />, label: t('admin.document_templates'), desc: t('admin.document_templates_desc') },
   ]
 
   return (

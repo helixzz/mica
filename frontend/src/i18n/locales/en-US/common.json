@@ -1250,5 +1250,17 @@
   "dashboard.actual_spend": "Actual Spend",
   "dashboard.annual_budget": "Annual Budget",
   "dashboard.budget_start_date": "Budget Start Date",
-  "dashboard.budget_end_date": "Budget End Date"
+  "dashboard.budget_end_date": "Budget End Date",
+  "admin.system_params_desc": "System parameter configuration",
+  "admin.feishu_desc": "Feishu notifications & approval",
+  "admin.approval_rules_desc": "Multi-level approval rules",
+  "admin.users_desc": "User account & role management",
+  "admin.companies_desc": "Company entity management",
+  "admin.departments_desc": "Department structure management",
+  "admin.llm_models_desc": "AI model connection & config",
+  "admin.ai_logs_desc": "LLM API call statistics",
+  "admin.audit_logs_desc": "Full operation audit logs",
+  "admin.import_desc": "Excel bulk data import",
+  "admin.document_templates_desc": "Document template management",
+  "admin.back_to_overview": "Back to overview"
 }

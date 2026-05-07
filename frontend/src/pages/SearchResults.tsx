@@ -6,6 +6,16 @@ import { searchAll, SearchResponse, SearchHit } from '@/api/search';
 
 const { Title, Text } = Typography;
 
+function highlightMarks(snippet: string): React.ReactNode {
+  const parts = snippet.split(/(<mark>.*?<\/mark>)/g)
+  return parts.map((part, i) => {
+    if (part.startsWith('<mark>') && part.endsWith('</mark>')) {
+      return <mark key={i}>{part.slice(6, -7)}</mark>
+    }
+    return part
+  })
+}
+
 const TYPE_COLORS: Record<string, string> = {
   pr: 'blue',
   po: 'cyan',
@@ -67,7 +77,7 @@ export const SearchResults: React.FC = () => {
           <div style={{ marginTop: '8px' }}>
             {hit.snippet && (
               <div style={{ marginBottom: '8px', color: '#595959' }}>
-                <span dangerouslySetInnerHTML={{ __html: hit.snippet }} />
+                <span>{highlightMarks(hit.snippet)}</span>
               </div>
             )}
             {hit.meta && Object.keys(hit.meta).length > 0 && (
