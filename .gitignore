@@ -294,3 +294,4 @@ site/
 _site/
 .playwright-mcp/
 video/renders/
+video/
