@@ -32,13 +32,12 @@ test.describe('Admin Page Access', () => {
     await expect(page.getByText(/permission denied|权限不足|admin only/i)).toBeVisible({ timeout: 10_000 });
   });
 
-  test('admin page has system parameters tab', async ({ page }) => {
+  test('admin page has system parameters section', async ({ page }) => {
     await loginAs(page, 'admin');
-    await navigateTo(page, '/admin');
+    await navigateTo(page, '/admin/system-params');
 
-    // The admin page should have tabs including system parameters
-    const tabs = page.locator('.ant-tabs-tab');
-    await expect(tabs.first()).toBeVisible({ timeout: 10_000 });
+    // System parameters section should be directly accessible via sub-route
+    await expect(page.getByText(/system parameter|系统参数|key/i)).toBeVisible({ timeout: 10_000 });
   });
 
   test('admin sidebar shows admin console link', async ({ page }) => {
