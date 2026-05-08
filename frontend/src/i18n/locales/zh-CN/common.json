@@ -1121,7 +1121,8 @@
     "operation_failed": "操作失败",
     "save_failed": "保存失败",
     "create_failed": "创建失败",
-    "selected_count": "已选择 {{count}} 项"
+    "selected_count": "已选择 {{count}} 项",
+    "preview": "预览"
   },
   "invoice": {
     "attachments": "发票附件",
@@ -1269,5 +1270,6 @@
   "admin.document_templates_desc": "业务文档模板管理",
   "admin.back_to_overview": "返回概览",
   "contract.extract_create": "AI 提取并创建",
-  "contract.extract_failed": "合同信息提取失败"
+  "contract.extract_failed": "合同信息提取失败",
+  "contract.scan_create": "扫描创建"
 }

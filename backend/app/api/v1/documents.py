@@ -68,11 +68,15 @@ async def download(
             while chunk := await f.read(chunk_size):
                 yield chunk
 
+    from urllib.parse import quote
+
+    safe_name = doc.original_filename.encode("ascii", "ignore").decode("ascii") or "download"
+    encoded_name = quote(doc.original_filename)
     return StreamingResponse(
         iterator(),
         media_type=doc.content_type,
         headers={
-            "Content-Disposition": f'inline; filename="{doc.original_filename}"',
+            "Content-Disposition": f"inline; filename=\"{safe_name}\"; filename*=UTF-8''{encoded_name}",
             "Content-Length": str(doc.file_size),
         },
     )

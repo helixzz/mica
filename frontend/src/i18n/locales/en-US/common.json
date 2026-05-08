@@ -1116,7 +1116,8 @@
     "operation_failed": "Operation failed",
     "save_failed": "Save failed",
     "create_failed": "Create failed",
-    "selected_count": "{{count}} selected"
+    "selected_count": "{{count}} selected",
+    "preview": "Preview"
   },
   "invoice": {
     "attachments": "Invoice Attachments",
@@ -1264,5 +1265,6 @@
   "admin.document_templates_desc": "Document template management",
   "admin.back_to_overview": "Back to overview",
   "contract.extract_create": "Extract & Create",
-  "contract.extract_failed": "Contract extraction failed"
+  "contract.extract_failed": "Contract extraction failed",
+  "contract.scan_create": "Scan to Create"
 }

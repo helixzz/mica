@@ -1,4 +1,4 @@
-import { DeleteOutlined, DownloadOutlined, EditOutlined, SearchOutlined, StopOutlined } from '@ant-design/icons'
+import { DeleteOutlined, DownloadOutlined, EditOutlined, RobotOutlined, ScanOutlined, SearchOutlined, StopOutlined, UploadOutlined } from '@ant-design/icons'
 import {
   Button,
   Card,
@@ -9,6 +9,7 @@ import {
   Table,
   Tag,
   Typography,
+  Upload,
   message,
 } from 'antd'
 import type { ColumnsType } from 'antd/es/table'
@@ -33,6 +34,8 @@ export function ContractsPage() {
   const [searchHits, setSearchHits] = useState<ContractSearchHit[]>([])
   const [loading, setLoading] = useState(false)
   const [editing, setEditing] = useState<Contract | null>(null)
+  const [scanCreateOpen, setScanCreateOpen] = useState(false)
+  const [extractedData, setExtractedData] = useState<Record<string, unknown> | null>(null)
 
   const canWrite = Boolean(
     user && ['admin', 'procurement_mgr', 'it_buyer'].includes(user.role),
@@ -220,6 +223,22 @@ export function ContractsPage() {
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
         <Typography.Title level={3} style={{ margin: 0 }}>{t('nav.contracts')}</Typography.Title>
         <Button icon={<DownloadOutlined />} onClick={handleExport}>{t('button.export_excel')}</Button>
+        <Upload
+          accept=".pdf,.jpg,.jpeg,.png"
+          showUploadList={false}
+          beforeUpload={async (file) => {
+            try {
+              const doc = await api.uploadDocument(file, 'contract')
+              const result = await api.extractContract(doc.id)
+              if (result.error) { void message.error(t('contract.extract_failed')); return false }
+              setExtractedData(result as unknown as Record<string, unknown>)
+              setScanCreateOpen(true)
+            } catch (e) { void message.error(extractError(e).detail) }
+            return false
+          }}
+        >
+          <Button icon={<ScanOutlined />}>{t('contract.scan_create')}</Button>
+        </Upload>
       </div>
 
       <Card>
@@ -306,6 +325,17 @@ export function ContractsPage() {
         onClose={() => setEditing(null)}
         onSaved={() => {
           setEditing(null)
+          void load()
+        }}
+      />
+      <ContractFormModal
+        open={scanCreateOpen}
+        mode="create"
+        initialValues={extractedData || undefined}
+        onClose={() => { setScanCreateOpen(false); setExtractedData(null) }}
+        onSaved={() => {
+          setScanCreateOpen(false)
+          setExtractedData(null)
           void load()
         }}
       />

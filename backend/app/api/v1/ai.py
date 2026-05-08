@@ -99,7 +99,7 @@ async def ai_contract_extract(
     if not doc:
         raise HTTPException(404, "document.not_found")
 
-    content = await doc_svc.read_document_content(doc)
+    content = await doc_svc.read_document_bytes(doc)
     result = await contract_extract_svc.extract_contract(
         db, user, content, doc.content_type, doc.original_filename
     )
