@@ -96,9 +96,7 @@ async def _dispatch(
                         {"type": "text", "text": prompt},
                         {
                             "type": "image_url",
-                            "image_url": {
-                                "url": f"data:{content_type};base64,{_b64(content)}"
-                            },
+                            "image_url": {"url": f"data:{content_type};base64,{_b64(content)}"},
                         },
                     ],
                 },
