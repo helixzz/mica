@@ -15,7 +15,7 @@ from typing import Any
 
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.models import AICallLog, User
+from app.models import AICallLog, AIModel, User
 
 logger = logging.getLogger("mica.contract_extract")
 
@@ -67,16 +67,30 @@ async def extract_contract(
 
 async def _dispatch(
     db: AsyncSession,
-    actor: User,
+    actor: User | None,
     content: bytes,
     content_type: str,
     filename: str,
 ) -> ContractExtract:
-    from app.core.litellm_helpers import resolve_litellm_model
+    from sqlalchemy import select
 
-    routing = await resolve_litellm_model(db, "contract_extract")
-    if routing is None:
+    from app.models import AIFeatureRouting
+
+    routing_row = (
+        await db.execute(
+            select(AIFeatureRouting).where(
+                AIFeatureRouting.feature_code == "contract_extract",
+                AIFeatureRouting.enabled.is_(True),
+            )
+        )
+    ).scalar_one_or_none()
+
+    if not routing_row or not routing_row.primary_model_id:
         return ContractExtract(error="No AI model configured for contract extraction")
+
+    model_row = await db.get(AIModel, routing_row.primary_model_id)
+    if not model_row or not model_row.is_active:
+        return ContractExtract(error="AI model not found or inactive")
 
     import litellm
 
@@ -84,7 +98,7 @@ async def _dispatch(
 
     try:
         response = await litellm.acompletion(
-            model=routing.model_string,
+            model=model_row.model_string,
             messages=[
                 {
                     "role": "system",
@@ -101,8 +115,8 @@ async def _dispatch(
                     ],
                 },
             ],
-            api_base=routing.api_base or None,
-            api_key=routing.api_key or None,
+            api_base=model_row.api_base or None,
+            api_key=model_row.api_key or None,
             temperature=0.1,
             max_tokens=1000,
         )
