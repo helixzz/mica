@@ -1,4 +1,5 @@
 from typing import Annotated
+from urllib.parse import quote
 from uuid import UUID
 
 from fastapi import APIRouter, Depends, File, Form, UploadFile
@@ -68,14 +69,13 @@ async def download(
             while chunk := await f.read(chunk_size):
                 yield chunk
 
-    from urllib.parse import quote
-
     safe_name = doc.original_filename.encode("ascii", "ignore").decode("ascii") or "download"
     encoded_name = quote(doc.original_filename)
     return StreamingResponse(
         iterator(),
         media_type=doc.content_type,
         headers={
+            "Content-Type": doc.content_type,
             "Content-Disposition": f"inline; filename=\"{safe_name}\"; filename*=UTF-8''{encoded_name}",
             "Content-Length": str(doc.file_size),
         },
