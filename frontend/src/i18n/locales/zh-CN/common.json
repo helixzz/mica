@@ -1267,5 +1267,7 @@
   "admin.audit_logs_desc": "全操作审计日志查看",
   "admin.import_desc": "Excel 批量导入数据",
   "admin.document_templates_desc": "业务文档模板管理",
-  "admin.back_to_overview": "返回概览"
+  "admin.back_to_overview": "返回概览",
+  "contract.extract_create": "AI 提取并创建",
+  "contract.extract_failed": "合同信息提取失败"
 }

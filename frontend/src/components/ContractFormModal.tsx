@@ -26,6 +26,7 @@ interface ContractFormModalProps {
   mode: Mode
   contract?: Contract | null
   poId?: string
+  initialValues?: Record<string, unknown>
   onClose: () => void
   onSaved: (contract: Contract) => void
 }
@@ -35,6 +36,7 @@ export function ContractFormModal({
   mode,
   contract,
   poId,
+  initialValues,
   onClose,
   onSaved,
 }: ContractFormModalProps) {
@@ -70,7 +72,18 @@ export function ContractFormModal({
       })
     } else {
       form.resetFields()
-      void fetchSuggestion()
+      if (initialValues && Object.keys(initialValues).length > 0) {
+        form.setFieldsValue({
+          contract_number: ((initialValues.contract_number as string) || undefined) ?? undefined,
+          title: ((initialValues.title as string) || undefined) ?? undefined,
+          total_amount: initialValues.total_amount ? Number(initialValues.total_amount) : undefined,
+          notes: ((initialValues.description as string) || undefined) ?? undefined,
+          change_reason: null,
+          change_summary: null,
+        })
+      } else {
+        void fetchSuggestion()
+      }
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [open, mode, contract, form])

@@ -1262,5 +1262,7 @@
   "admin.audit_logs_desc": "Full operation audit logs",
   "admin.import_desc": "Excel bulk data import",
   "admin.document_templates_desc": "Document template management",
-  "admin.back_to_overview": "Back to overview"
+  "admin.back_to_overview": "Back to overview",
+  "contract.extract_create": "Extract & Create",
+  "contract.extract_failed": "Contract extraction failed"
 }

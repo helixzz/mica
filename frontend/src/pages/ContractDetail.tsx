@@ -7,6 +7,7 @@ import {
   HistoryOutlined,
   InboxOutlined,
   PlusOutlined,
+  RobotOutlined,
   StopOutlined,
   UploadOutlined,
 } from '@ant-design/icons'
@@ -74,6 +75,9 @@ export function ContractDetailPage() {
     version: ContractVersion | null
   }>({ open: false, version: null })
   const [previewOpen, setPreviewOpen] = useState(false)
+  const [extractingId, setExtractingId] = useState<string | null>(null)
+  const [editFormOpen, setEditFormOpen] = useState(false)
+  const [extractedData, setExtractedData] = useState<Record<string, unknown> | null>(null)
   const [previewUrl, setPreviewUrl] = useState('')
   const [previewTitle, setPreviewTitle] = useState('')
 
@@ -85,6 +89,23 @@ export function ContractDetailPage() {
       setPreviewOpen(true)
     } catch (e) {
       void message.error(extractError(e).detail)
+    }
+  }
+
+  const handleExtractContract = async (documentId: string) => {
+    setExtractingId(documentId)
+    try {
+      const result = await api.extractContract(documentId)
+      if (result.error) {
+        void message.error(t('contract.extract_failed'))
+        return
+      }
+      setExtractedData(result as unknown as Record<string, unknown>)
+      setEditFormOpen(true)
+    } catch (e) {
+      void message.error(extractError(e).detail)
+    } finally {
+      setExtractingId(null)
     }
   }
 
@@ -362,6 +383,15 @@ export function ContractDetailPage() {
                           </Button>
                           <Button
                             size="small"
+                            icon={<RobotOutlined />}
+                            onClick={() => handleExtractContract(a.document_id)}
+                            loading={extractingId === a.document_id}
+                            block
+                          >
+                            {t('contract.extract_create')}
+                          </Button>
+                          <Button
+                            size="small"
                             icon={<DownloadOutlined />}
                             onClick={() => download(a.document_id, a.original_filename)}
                             block
@@ -584,6 +614,18 @@ export function ContractDetailPage() {
         onSaved={(saved) => {
           setContract(saved)
           setEditOpen(false)
+        }}
+      />
+      <ContractFormModal
+        open={editFormOpen}
+        mode="create"
+        initialValues={extractedData || undefined}
+        onClose={() => { setEditFormOpen(false); setExtractedData(null) }}
+        onSaved={(saved) => {
+          setContract(saved)
+          setEditFormOpen(false)
+          setExtractedData(null)
+          void load()
         }}
       />
 

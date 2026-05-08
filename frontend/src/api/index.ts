@@ -794,6 +794,17 @@ export interface SupplierScoreItem {
   avg_delivery_days: number
 }
 
+export interface ContractExtractResult {
+  contract_number: string | null
+  title: string | null
+  supplier_name: string | null
+  start_date: string | null
+  end_date: string | null
+  total_amount: string | null
+  description: string | null
+  error: string | null
+}
+
 export interface AnalyticsData {
   trend: SpendTrendPoint[]
   departments: DeptConsumptionItem[]
@@ -1264,6 +1275,10 @@ export const api = {
     const { data } = await client.post<DocumentOut>('/documents/upload', fd, {
       headers: { 'Content-Type': 'multipart/form-data' },
     })
+    return data
+  },
+  async extractContract(documentId: string): Promise<ContractExtractResult> {
+    const { data } = await client.post<ContractExtractResult>(`/ai/contract-extract?document_id=${documentId}`)
     return data
   },
   async getDocumentDownloadUrl(document_id: string): Promise<{ download_url: string; expires_in: number }> {

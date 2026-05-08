@@ -87,6 +87,34 @@ async def ai_invoice_extract(
     return InvoiceExtractOut(**extract_svc.to_dict(result))
 
 
+@router.post("/ai/contract-extract", tags=["ai"])
+async def ai_contract_extract(
+    document_id: UUID,
+    user: CurrentUser,
+    db: Annotated[AsyncSession, Depends(get_db)],
+):
+    from app.services import contract_extract as contract_extract_svc
+
+    doc = await doc_svc.get_document(db, document_id)
+    if not doc:
+        raise HTTPException(404, "document.not_found")
+
+    content = await doc_svc.read_document_content(doc)
+    result = await contract_extract_svc.extract_contract(
+        db, user, content, doc.content_type, doc.original_filename
+    )
+    return {
+        "contract_number": result.contract_number,
+        "title": result.title,
+        "supplier_name": result.supplier_name,
+        "start_date": result.start_date,
+        "end_date": result.end_date,
+        "total_amount": result.total_amount,
+        "description": result.description,
+        "error": result.error,
+    }
+
+
 @router.get("/ai/features-available", tags=["ai"])
 async def list_available_features(
     _user: CurrentUser,
