@@ -222,6 +222,7 @@ export function ContractsPage() {
     <Space direction="vertical" size="large" style={{ width: '100%' }}>
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
         <Typography.Title level={3} style={{ margin: 0 }}>{t('nav.contracts')}</Typography.Title>
+        <Space>
         <Button icon={<DownloadOutlined />} onClick={handleExport}>{t('button.export_excel')}</Button>
         <Upload
           accept=".pdf,.jpg,.jpeg,.png"
@@ -239,6 +240,7 @@ export function ContractsPage() {
         >
           <Button icon={<ScanOutlined />}>{t('contract.scan_create')}</Button>
         </Upload>
+        </Space>
       </div>
 
       <Card>

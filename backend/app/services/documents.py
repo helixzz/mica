@@ -129,6 +129,10 @@ def document_path(doc: Document) -> Path:
     return _uploads_dir() / doc.storage_key
 
 
+async def get_document(db: AsyncSession, document_id: UUID) -> Document | None:
+    return (await db.execute(select(Document).where(Document.id == document_id))).scalar_one_or_none()
+
+
 async def create_download_token(
     db: AsyncSession,
     document_id: UUID,
