@@ -114,23 +114,13 @@ async def _dispatch(
         except Exception:
             pass
 
-    messages = [
-        {"role": "system", "content": "You extract contract data. Return ONLY valid JSON, no explanation."},
-        {"role": "user", "content": prompt},
-    ]
-
     if text_content:
-        messages[1]["content"] = f"{prompt}\n\nExtracted document text:\n{text_content[:8000]}"
-    else:
-        messages[1]["content"] = [
-            {"type": "text", "text": prompt},
-            {"type": "image_url", "image_url": {"url": f"data:{content_type};base64,{_b64(content)}"}},
-        ]
+        prompt = f"{prompt}\n\nExtracted document text:\n{text_content[:8000]}"
 
     try:
         response = await litellm.acompletion(
             model=resolve_litellm_model(model_row.provider, model_row.model_string),
-            messages=messages,
+            messages=[{"role": "user", "content": prompt}],
             api_base=model_row.api_base or None,
             api_key=decrypt(model_row.api_key_encrypted) if model_row.api_key_encrypted else None,
             temperature=0.1,
