@@ -283,21 +283,21 @@ async def delete_supplier(db: AsyncSession, actor: User, supplier_id: UUID, *, h
         ):
             raise HTTPException(
                 status_code=409,
-                detail="supplier.has_purchase_orders; hard delete denied",
+                detail="supplier.has_po_items",
             )
         if await _exists(db, select(PRItem.id).where(PRItem.supplier_id == supplier.id)):
-            raise HTTPException(status_code=409, detail="supplier.has_pr_items; hard delete denied")
+            raise HTTPException(status_code=409, detail="supplier.has_pr_items")
         if await _exists(db, select(Contract.id).where(Contract.supplier_id == supplier.id)):
             raise HTTPException(
-                status_code=409, detail="supplier.has_contracts; hard delete denied"
+                status_code=409, detail="supplier.has_contracts"
             )
         if await _exists(db, select(Invoice.id).where(Invoice.supplier_id == supplier.id)):
-            raise HTTPException(status_code=409, detail="supplier.has_invoices; hard delete denied")
+            raise HTTPException(status_code=409, detail="supplier.has_invoices")
         if await _exists(
             db, select(SKUPriceRecord.id).where(SKUPriceRecord.supplier_id == supplier.id)
         ):
             raise HTTPException(
-                status_code=409, detail="supplier.has_price_records; hard delete denied"
+                status_code=409, detail="supplier.has_price_records"
             )
 
         await _audit(
@@ -423,22 +423,22 @@ async def delete_item(db: AsyncSession, actor: User, item_id: UUID, *, hard: boo
 
     if hard:
         if await _exists(db, select(POItem.id).where(POItem.item_id == item.id)):
-            raise HTTPException(status_code=409, detail="item.has_po_items; hard delete denied")
+            raise HTTPException(status_code=409, detail="item.has_po_items")
         if await _exists(db, select(PRItem.id).where(PRItem.item_id == item.id)):
-            raise HTTPException(status_code=409, detail="item.has_pr_items; hard delete denied")
+            raise HTTPException(status_code=409, detail="item.has_pr_items")
         if await _exists(db, select(SKUPriceRecord.id).where(SKUPriceRecord.item_id == item.id)):
             raise HTTPException(
-                status_code=409, detail="item.has_price_records; hard delete denied"
+                status_code=409, detail="item.has_price_records"
             )
         if await _exists(
             db, select(SKUPriceBenchmark.id).where(SKUPriceBenchmark.item_id == item.id)
         ):
             raise HTTPException(
-                status_code=409, detail="item.has_price_benchmarks; hard delete denied"
+                status_code=409, detail="item.has_price_benchmarks"
             )
         if await _exists(db, select(SKUPriceAnomaly.id).where(SKUPriceAnomaly.item_id == item.id)):
             raise HTTPException(
-                status_code=409, detail="item.has_price_anomalies; hard delete denied"
+                status_code=409, detail="item.has_price_anomalies"
             )
 
         await _audit(

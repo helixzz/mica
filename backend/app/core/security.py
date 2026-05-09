@@ -73,12 +73,12 @@ async def get_current_user(
     payload = decode_token(token)
     user_id = payload.get("sub")
     if not user_id:
-        raise HTTPException(status_code=401, detail="invalid_token_payload")
+        raise HTTPException(status_code=401, detail="auth.invalid_token_payload")
 
     result = await db.execute(select(User).where(User.id == UUID(user_id)))
     user = result.scalar_one_or_none()
     if user is None or not user.is_active:
-        raise HTTPException(status_code=401, detail="user_not_found_or_inactive")
+        raise HTTPException(status_code=401, detail="auth.user_not_found_or_inactive")
     return user
 
 
