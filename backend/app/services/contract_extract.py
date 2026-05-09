@@ -137,7 +137,7 @@ async def _dispatch(
         text = getattr(choice.message, "reasoning_content", None) or ""
     if not text:
         text = getattr(choice, "text", None) or ""
-logger.info("contract_extract: response (%d chars) finish=%s", len(text), choice.finish_reason)
+    logger.info("contract_extract: response (%d chars) finish=%s", len(text), choice.finish_reason)
     return _parse_response(text)
 
 
