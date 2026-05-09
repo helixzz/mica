@@ -124,8 +124,9 @@ async def _dispatch(
             api_base=model_row.api_base or None,
             api_key=decrypt(model_row.api_key_encrypted) if model_row.api_key_encrypted else None,
             temperature=0.1,
-            max_tokens=2000,
+            max_tokens=4000,
             timeout=120,
+            extra_body={"enable_thinking": False},
         )
     except Exception as e:
         return ContractExtract(error=f"AI call failed: {e}")
