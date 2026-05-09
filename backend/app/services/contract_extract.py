@@ -58,7 +58,27 @@ async def extract_contract(
                     latency_ms=elapsed,
                     status="success" if not result.error else "error",
                     error=result.error,
-                )
+)
+
+
+def _build_prompt(filename: str) -> str:
+    return f"""Extract these fields from this contract ({filename}):
+
+1. contract_number - contract reference number
+2. title - subject of the contract
+3. supplier_name - name of supplier/vendor
+4. start_date - YYYY-MM-DD
+5. end_date - YYYY-MM-DD
+6. total_amount - number only, no currency symbol
+7. description - 1-2 sentence summary
+
+Return ONLY valid JSON. Use null for missing fields.
+Example: {{"contract_number":"CT-001","title":"IT Equipment","supplier_name":"Dell","start_date":"2024-01-15","end_date":"2025-01-14","total_amount":"150000","description":"Supply of laptops"}}"""
+
+
+def _b64(data: bytes) -> str:
+    import base64
+    return base64.b64encode(data).decode("ascii")
             )
         except Exception:
             pass
