@@ -121,7 +121,13 @@ export function PREditPage() {
           }
           void client
             .get<Record<string, { latest_price: number | null; avg_price: number | null }>>(`/sku/reference-prices?item_ids=${value}`)
-            .then((r) => setRefPrices((prev) => ({ ...prev, ...r.data })))
+            .then((r) => {
+              const price = r.data[String(value)]?.latest_price
+              if (price != null) {
+                setLines((ls) => ls.map((l) => (l.key === key ? { ...l, unit_price: price } : l)))
+              }
+              setRefPrices((prev) => ({ ...prev, ...r.data }))
+            })
             .catch(() => {})
         }
         return updated

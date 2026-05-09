@@ -1461,6 +1461,10 @@ export const api = {
     const { data } = await client.get<SKUPriceRecord[]>('/sku/prices', { params: { item_id } })
     return data
   },
+  async getLatestPrice(item_id: string): Promise<{ price: number | null }> {
+    const { data } = await client.get<{ price: number | null }>(`/sku/reference-price/${item_id}`)
+    return data as { price: number | null }
+  },
   async getSKUBenchmark(item_id: string, window_days = 90): Promise<SKUBenchmark | null> {
     const { data } = await client.get<SKUBenchmark | null>(`/sku/benchmarks/${item_id}`, {
       params: { window_days },

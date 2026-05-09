@@ -196,3 +196,23 @@ async def get_reference_prices(
                 "avg_price": round(float(avg), 2) if avg else None,
             }
     return result
+
+
+@router.get("/sku/reference-price/{item_id}", tags=["sku"])
+async def get_reference_price(
+    item_id: UUID,
+    user: CurrentUser,
+    db: Annotated[AsyncSession, Depends(get_db)],
+):
+    from sqlalchemy import select
+
+    from app.models import SKUPriceRecord
+
+    latest_q = (
+        select(SKUPriceRecord.price)
+        .where(SKUPriceRecord.item_id == item_id)
+        .order_by(SKUPriceRecord.quotation_date.desc())
+        .limit(1)
+    )
+    latest = (await db.execute(latest_q)).scalar()
+    return {"price": float(latest) if latest is not None else None}

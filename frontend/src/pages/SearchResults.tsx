@@ -6,6 +6,8 @@ import { searchAll, SearchResponse, SearchHit } from '@/api/search';
 
 const { Title, Text } = Typography;
 
+const LAST_SEARCH_KEY = 'mica.last_search';
+
 function highlightMarks(snippet: string): React.ReactNode {
   const parts = snippet.split(/(<mark>.*?<\/mark>)/g)
   return parts.map((part, i) => {
@@ -26,6 +28,9 @@ const TYPE_COLORS: Record<string, string> = {
   item: 'gold',
 };
 
+/** Entity types shown as filter tabs. contract_doc is merged into the contract tab. */
+const TAB_TYPES = ['pr', 'po', 'contract', 'invoice', 'supplier', 'item'] as const;
+
 export const SearchResults: React.FC = () => {
   const { t } = useTranslation();
   const [searchParams] = useSearchParams();
@@ -39,10 +44,11 @@ export const SearchResults: React.FC = () => {
   useEffect(() => {
     if (query) {
       setLoading(true);
+      localStorage.setItem(LAST_SEARCH_KEY, query);
       searchAll(query, { limit: 50 })
         .then(res => {
           setResults(res);
-          if (activeTab !== 'all' && (!res.by_type[activeTab] || res.by_type[activeTab].length === 0)) {
+          if (activeTab !== 'all' && getTabCount(res, activeTab) === 0) {
             setActiveTab('all');
           }
         })
@@ -50,8 +56,32 @@ export const SearchResults: React.FC = () => {
         .finally(() => setLoading(false));
     } else {
       setResults(null);
+      const saved = localStorage.getItem(LAST_SEARCH_KEY);
+      if (saved) {
+        navigate(`/search?q=${encodeURIComponent(saved)}`, { replace: true });
+      }
     }
-  }, [query]);
+  }, [query, navigate]);
+
+  /** Merge contract + contract_doc hits for the combined "contract" filter tab. */
+  const getTypeHits = (type: string): SearchHit[] => {
+    if (!results) return [];
+    if (type === 'contract') {
+      return [
+        ...(results.by_type['contract'] || []),
+        ...(results.by_type['contract_doc'] || []),
+      ];
+    }
+    return results.by_type[type] || [];
+  };
+
+  /** Count hits for a filter tab (contract = contract + contract_doc). */
+  const getTabCount = (res: SearchResponse, type: string): number => {
+    if (type === 'contract') {
+      return (res.by_type['contract']?.length || 0) + (res.by_type['contract_doc']?.length || 0);
+    }
+    return res.by_type[type]?.length || 0;
+  };
 
   const handleTabChange = (key: string) => {
     setActiveTab(key);
@@ -103,8 +133,6 @@ export const SearchResults: React.FC = () => {
     );
   }
 
-  const allTypes = ['pr', 'po', 'contract', 'supplier', 'item', 'invoice', 'contract_doc'];
-  
   const tabItems = [
     {
       key: 'all',
@@ -118,8 +146,8 @@ export const SearchResults: React.FC = () => {
         />
       ),
     },
-    ...allTypes.map(type => {
-      const count = results?.by_type[type]?.length || 0;
+    ...TAB_TYPES.map(type => {
+      const count = results ? getTabCount(results, type) : 0;
       return {
         key: type,
         label: `${t(`search.types.${type}`, type.toUpperCase())} (${count})`,
@@ -127,7 +155,7 @@ export const SearchResults: React.FC = () => {
         children: (
           <List
             loading={loading}
-            dataSource={results?.by_type[type] || []}
+            dataSource={getTypeHits(type)}
             renderItem={renderHit}
           />
         ),
