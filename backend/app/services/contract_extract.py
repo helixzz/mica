@@ -124,19 +124,19 @@ async def _dispatch(
             api_base=model_row.api_base or None,
             api_key=decrypt(model_row.api_key_encrypted) if model_row.api_key_encrypted else None,
             temperature=0.1,
-            max_tokens=1000,
+            max_tokens=2000,
             timeout=120,
         )
     except Exception as e:
         return ContractExtract(error=f"AI call failed: {e}")
 
     choice = response.choices[0]
-    text = getattr(choice.message, "content", None) or ""
+    text = choice.message.content or ""
+    if not text:
+        text = getattr(choice.message, "reasoning_content", None) or ""
     if not text:
         text = getattr(choice, "text", None) or ""
-    if not text:
-        text = getattr(response, "text", None) or ""
-    logger.info("contract_extract: response (%d chars) %s", len(text), repr(text[:200]))
+    logger.info("contract_extract: response (%d chars) finish=%s", len(text), choice.finish_reason)
     return _parse_response(text)
 
 def _build_prompt(filename: str) -> str:
