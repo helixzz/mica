@@ -51,13 +51,22 @@
     "approval": {
       "new_task": "新审批任务: {title}",
       "approved": "审批已通过: {title}",
-      "rejected": "审批被驳回: {title}"
+      "rejected": "审批被驳回: {title}",
+      "returned": "审批被退回: {title}"
     },
     "contract": {
       "expiring": "合同即将到期: {name}"
     },
     "price": {
       "anomaly": "价格异常: {item}"
+    },
+    "sla": {
+      "escalated_submitter": "审批超时提醒: {title}",
+      "escalated_submitter_body": "您的采购申请「{title}」已提交超过 {hours} 小时未完成审批，系统已通知相关管理人员加速处理。",
+      "escalated_manager": "审批超时: {title}（已等待 {hours} 小时）",
+      "escalated_manager_body": "采购申请 {biz_number} 在审批环节「{stage}」停留已超过 SLA 时限，请关注并推动审批流程。",
+      "escalated_admin": "审批超时: {title}（已等待 {hours} 小时）",
+      "escalated_admin_body": "采购申请 {biz_number} 在审批环节「{stage}」停留已超过 SLA 时限，请关注并推动审批流程。"
     }
   },
   "contract.not_found": "合同不存在",

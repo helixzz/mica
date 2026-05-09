@@ -403,6 +403,13 @@
     "avg_delivery_days_col": "平均交期（天）",
     "no_analytics_data": "暂无分析数据"
   },
+  "welcome": {
+    "title": "Welcome to Mica / 欢迎使用觅采",
+    "role_label": "你的角色",
+    "create_pr": "新建采购申请",
+    "view_dashboard": "查看仪表盘",
+    "got_it": "知道了"
+  },
   "notification": {
     "title": "通知",
     "unread": "未读",

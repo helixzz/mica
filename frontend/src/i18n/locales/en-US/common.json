@@ -398,6 +398,13 @@
     "avg_delivery_days_col": "Avg Delivery (Days)",
     "no_analytics_data": "No analytics data available"
   },
+  "welcome": {
+    "title": "Welcome to Mica / 欢迎使用觅采",
+    "role_label": "Your role",
+    "create_pr": "Create PR",
+    "view_dashboard": "View Dashboard",
+    "got_it": "Got it"
+  },
   "notification": {
     "title": "Notifications",
     "unread": "Unread",

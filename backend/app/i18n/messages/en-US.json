@@ -51,13 +51,22 @@
     "approval": {
       "new_task": "New approval task: {title}",
       "approved": "Approved: {title}",
-      "rejected": "Rejected: {title}"
+      "rejected": "Rejected: {title}",
+      "returned": "Returned: {title}"
     },
     "contract": {
       "expiring": "Contract expiring soon: {name}"
     },
     "price": {
       "anomaly": "Price anomaly detected: {item}"
+    },
+    "sla": {
+      "escalated_submitter": "Approval overdue: {title}",
+      "escalated_submitter_body": "Your requisition \"{title}\" has been pending approval for over {hours} hours. Management has been notified to expedite the process.",
+      "escalated_manager": "Approval overdue: {title} (waiting {hours}h)",
+      "escalated_manager_body": "Requisition {biz_number} has exceeded SLA at stage \"{stage}\". Please review and drive the approval forward.",
+      "escalated_admin": "Approval overdue: {title} (waiting {hours}h)",
+      "escalated_admin_body": "Requisition {biz_number} has exceeded SLA at stage \"{stage}\". Please review and drive the approval forward."
     }
   },
   "contract.not_found": "Contract not found",

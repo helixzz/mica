@@ -875,6 +875,28 @@ async def run_price_anomaly_notifications(
     return await notification_svc.notify_new_price_anomalies(db)
 
 
+@router.post("/sla-check", tags=["admin"])
+async def run_sla_escalation(
+    user: CurrentUser,
+    db: Annotated[AsyncSession, Depends(get_db)],
+):
+    from app.services import sla_escalation as sla_svc
+
+    result = await sla_svc.check_overdue_approvals(db)
+    await db.commit()
+    return result
+
+
+@router.post("/daily-digest", tags=["admin"])
+async def run_daily_digest(
+    user: CurrentUser,
+    db: Annotated[AsyncSession, Depends(get_db)],
+):
+    from app.services.daily_digest import send_daily_digest
+
+    return await send_daily_digest(db)
+
+
 # === Feishu integration settings ===
 
 

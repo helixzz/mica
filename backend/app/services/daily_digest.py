@@ -7,8 +7,7 @@ Designed to be triggered by a cron job or manual admin endpoint.
 from __future__ import annotations
 
 import logging
-from datetime import UTC, datetime, timedelta
-from decimal import Decimal
+from datetime import UTC, date, datetime, timedelta
 
 from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -36,30 +35,19 @@ async def send_daily_digest(db: AsyncSession) -> dict:
     """
     today = datetime.now(UTC).date()
 
-    # 1. Pending approvals: count PRs with status SUBMITTED
     pending_approvals = await _count_pending_approvals(db)
 
-    # 2. Expiring contracts: reuse existing contracts service
-    expire_days = await system_params.get_int_or(
-        db, "contract.expiry_reminder_days", 30
-    )
-    expiring_contracts = await contract_svc.expiring_contracts(
-        db, within_days=expire_days
-    )
+    expire_days = await system_params.get_int_or(db, "contract.expiry_reminder_days", 30)
+    expiring_contracts = await contract_svc.expiring_contracts(db, within_days=expire_days)
     expiring_count = len(expiring_contracts)
 
-    # 3. SKU price anomalies in last 7 days with status "new"
-    anomaly_days = await system_params.get_int_or(
-        db, "sku.anomaly_lookback_days", 7
-    )
+    anomaly_days = await system_params.get_int_or(db, "sku.anomaly_lookback_days", 7)
     anomaly_since = today - timedelta(days=anomaly_days)
     sku_anomalies = await _count_recent_anomalies(db, since=anomaly_since)
 
-    # 4. Build expiry details for the email body
     expiry_rows_html = _build_expiry_rows(expiring_contracts)
     anomaly_detail_html = await _build_anomaly_detail(db, since=anomaly_since)
 
-    # 5. Build HTML email body
     body = _build_email_body(
         pending_approvals=pending_approvals,
         expiring_count=expiring_count,
@@ -71,10 +59,7 @@ async def send_daily_digest(db: AsyncSession) -> dict:
 
     subject = f"Mica Daily Digest — {today.isoformat()}"
 
-    # 6. Get users with admin or procurement management roles
     recipients = await _get_digest_recipients(db)
-
-    # 7. Send email to each recipient (fire-and-forget)
     sent_count = 0
     failed_recipients: list[str] = []
     for user in recipients:
@@ -87,9 +72,7 @@ async def send_daily_digest(db: AsyncSession) -> dict:
             else:
                 failed_recipients.append(user.email)
         except Exception:
-            logger.warning(
-                "Daily digest send failed for %s", user.email, exc_info=True
-            )
+            logger.warning("Daily digest send failed for %s", user.email, exc_info=True)
             failed_recipients.append(user.email)
 
     summary = {
@@ -114,12 +97,8 @@ async def _count_pending_approvals(db: AsyncSession) -> int:
     return int(result.scalar_one() or 0)
 
 
-async def _count_recent_anomalies(
-    db: AsyncSession, since: datetime | None = None
-) -> int:
-    stmt = select(func.count(SKUPriceAnomaly.id)).where(
-        SKUPriceAnomaly.status == "new"
-    )
+async def _count_recent_anomalies(db: AsyncSession, since: date | None = None) -> int:
+    stmt = select(func.count(SKUPriceAnomaly.id)).where(SKUPriceAnomaly.status == "new")
     if since is not None:
         since_dt = datetime.combine(since, datetime.min.time(), tzinfo=UTC)
         stmt = stmt.where(SKUPriceAnomaly.created_at >= since_dt)
@@ -146,9 +125,7 @@ def _build_expiry_rows(contracts: list[Contract]) -> str:
     rows = ""
     for c in contracts:
         expiry_str = c.expiry_date.isoformat() if c.expiry_date else "N/A"
-        amount = (
-            f"¥{float(c.total_amount):,.2f}" if c.total_amount else "—"
-        )
+        amount = f"¥{float(c.total_amount):,.2f}" if c.total_amount else "—"
         rows += (
             f"<tr>"
             f"<td>{c.contract_number}</td>"
@@ -166,9 +143,7 @@ def _build_expiry_rows(contracts: list[Contract]) -> str:
     )
 
 
-async def _build_anomaly_detail(
-    db: AsyncSession, since: datetime | None = None
-) -> str:
+async def _build_anomaly_detail(db: AsyncSession, since: date | None = None) -> str:
     from app.models import Item
 
     stmt = (
@@ -188,20 +163,12 @@ async def _build_anomaly_detail(
 
     html = ""
     for anomaly, item in rows:
-        observed = (
-            f"¥{float(anomaly.observed_price):,.2f}"
-            if anomaly.observed_price
-            else "—"
-        )
+        observed = f"¥{float(anomaly.observed_price):,.2f}" if anomaly.observed_price else "—"
         baseline = (
-            f"¥{float(anomaly.baseline_avg_price):,.2f}"
-            if anomaly.baseline_avg_price
-            else "—"
+            f"¥{float(anomaly.baseline_avg_price):,.2f}" if anomaly.baseline_avg_price else "—"
         )
         deviation = (
-            f"{float(anomaly.deviation_pct):+.2f}%"
-            if anomaly.deviation_pct is not None
-            else "—"
+            f"{float(anomaly.deviation_pct):+.2f}%" if anomaly.deviation_pct is not None else "—"
         )
         html += (
             f"<tr>"
@@ -228,7 +195,7 @@ def _build_email_body(
     expiry_rows_html: str,
     sku_anomalies: int,
     anomaly_detail_html: str,
-    today: any,
+    today: date,
 ) -> str:
     return f"""<!DOCTYPE html>
 <html lang="en">
