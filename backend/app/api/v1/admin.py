@@ -1029,3 +1029,13 @@ async def test_feishu_connection(
         return {"success": False, "token_ok": False, "message_sent": False, "error": str(e)}
     finally:
         await client.close()
+
+
+# === Performance monitoring ===
+
+
+@router.get("/perf-stats", tags=["admin"])
+async def perf_stats(user: CurrentUser) -> dict:
+    from app.middleware.perf_monitor import get_perf_stats
+
+    return get_perf_stats()

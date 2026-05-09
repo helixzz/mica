@@ -13,6 +13,7 @@ from app.api import api_router, v2_router
 from app.config import get_settings
 from app.db import AsyncSessionLocal
 from app.i18n import detect_locale, t
+from app.middleware.perf_monitor import PerfMonitorMiddleware
 from app.middleware.request_id import RequestIdMiddleware, install_log_filter
 from app.services.seed import seed_dev_data
 
@@ -42,6 +43,7 @@ app = FastAPI(
     redoc_url=f"{settings.api_prefix}/redoc",
 )
 
+app.add_middleware(PerfMonitorMiddleware)
 app.add_middleware(RequestIdMiddleware)
 
 app.add_middleware(

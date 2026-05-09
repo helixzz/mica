@@ -110,6 +110,7 @@ export function DashboardPage() {
   const [analytics, setAnalytics] = useState<AnalyticsData | null>(null)
   const [currentTime, setCurrentTime] = useState(new Date())
   const [customizeVisible, setCustomizeVisible] = useState(false)
+  const [showWelcome, setShowWelcome] = useState(() => !localStorage.getItem('mica.welcome_dismissed'))
 
   const defaultLayout = [
     { id: 'stats', visible: true },
@@ -811,6 +812,39 @@ export function DashboardPage() {
       default:
         return null
     }
+  }
+
+  if (showWelcome) {
+    return (
+      <Space direction="vertical" size="large" style={{ width: '100%', paddingTop: 60, paddingBottom: token.paddingXL }}>
+        <Card
+          style={{ maxWidth: 600, margin: '0 auto' }}
+          title={<Typography.Title level={3} style={{ margin: 0 }}>{t('welcome.title')}</Typography.Title>}
+        >
+          <Space direction="vertical" size="middle" style={{ width: '100%' }}>
+            <Text>
+              {t('welcome.role_label')}: <Tag color="blue">{t(`role.${role}`)}</Tag>
+            </Text>
+            <Space wrap>
+              <Button type="primary" onClick={() => navigate('/purchase-requisitions/new')}>
+                {t('welcome.create_pr')}
+              </Button>
+              <Button onClick={() => navigate('/dashboard')}>
+                {t('welcome.view_dashboard')}
+              </Button>
+              <Button
+                onClick={() => {
+                  setShowWelcome(false)
+                  localStorage.setItem('mica.welcome_dismissed', '1')
+                }}
+              >
+                {t('welcome.got_it')}
+              </Button>
+            </Space>
+          </Space>
+        </Card>
+      </Space>
+    )
   }
 
   return (
