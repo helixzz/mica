@@ -178,33 +178,74 @@ body {
   /* Hide app chrome */
   .ant-layout-header,
   .ant-layout-sider,
+  .ant-layout-footer,
   .mobile-menu-toggle,
   .user-dropdown,
+  .ant-breadcrumb,
   .ant-drawer,
   .ant-modal-mask,
+  .ant-modal,
+  .ant-popover,
+  .ant-tooltip,
+  .ant-message,
+  .ant-notification,
   .no-print,
   button,
   .ant-btn,
+  .ant-space,
+  .ant-dropdown,
   .ant-pagination,
-  .ant-tabs-nav {
+  .ant-tabs-nav,
+  .ant-input-search,
+  .ant-select,
+  .ant-upload,
+  [class*="actions"],
+  [class*="action"] {
     display: none !important;
   }
 
   .ant-layout-content {
     padding: 0 !important;
     margin: 0 !important;
-    max-width: 100% !important;
+    max-width: none !important;
   }
 
   /* Expand tabs to show all content when printing */
+  .ant-tabs-content-holder {
+    position: static !important;
+  }
   .ant-tabs-tabpane-hidden {
     display: block !important;
   }
   .ant-tabs-tabpane {
+    display: block !important;
+    opacity: 1 !important;
     break-before: page;
   }
   .ant-tabs-tabpane:first-child {
     break-before: auto;
+  }
+
+  /* Card and table print styling */
+  .ant-card {
+    box-shadow: none !important;
+    border: 1px solid #ddd !important;
+    break-inside: avoid;
+  }
+  .ant-table {
+    font-size: 10pt;
+  }
+  .ant-tag {
+    background: transparent !important;
+    border: 1px solid #999 !important;
+  }
+
+  /* Typography for print */
+  body {
+    font-size: 12pt;
+  }
+  h2, h3 {
+    break-after: avoid;
   }
 
   /* Table break behavior */
