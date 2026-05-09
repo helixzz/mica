@@ -818,6 +818,26 @@ export interface AnalyticsData {
   suppliers: SupplierScoreItem[]
 }
 
+export interface InvoiceMatchSummary {
+  po_number: string
+  total_amount: number
+  amount_invoiced: number
+  qty_ordered: number
+  qty_received: number
+  qty_invoiced: number
+  match_status: 'matched' | 'partial' | 'unmatched'
+}
+
+export interface PaymentCalendarItem {
+  id: string
+  po_number: string | null
+  contract_number: string | null
+  installment_no: number
+  amount: number
+  due_date: string
+  status: string
+}
+
 export const api = {
   async listDeliveryPlans(params?: { po_id?: string; contract_id?: string; status?: string }): Promise<DeliveryPlan[]> {
     const { data } = await client.get<DeliveryPlan[]>('/delivery-plans', { params })
@@ -1542,6 +1562,16 @@ export const api = {
   },
   async getAnalytics(): Promise<AnalyticsData> {
     const { data } = await client.get<AnalyticsData>('/dashboard/analytics')
+    return data
+  },
+  async getInvoiceMatchSummary(): Promise<InvoiceMatchSummary[]> {
+    const { data } = await client.get<InvoiceMatchSummary[]>('/dashboard/invoice-match')
+    return data
+  },
+  async getPaymentCalendar(months = 1): Promise<PaymentCalendarItem[]> {
+    const { data } = await client.get<PaymentCalendarItem[]>('/dashboard/payment-calendar', {
+      params: { months },
+    })
     return data
   },
   async getPaymentSchedule(contractId: string): Promise<PaymentScheduleSummary> {

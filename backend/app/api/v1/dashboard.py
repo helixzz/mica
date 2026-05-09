@@ -397,6 +397,125 @@ class AnalyticsOut(BaseModel):
     suppliers: list[SupplierScoreItem]
 
 
+class InvoiceMatchSummaryOut(BaseModel):
+    po_number: str
+    total_amount: float
+    amount_invoiced: float
+    qty_ordered: float
+    qty_received: float
+    qty_invoiced: float
+    match_status: str
+
+
+@router.get("/dashboard/invoice-match", response_model=list[InvoiceMatchSummaryOut])
+async def invoice_match_summary(
+    _user: CurrentUser,
+    db: Annotated[AsyncSession, Depends(get_db)],
+) -> list[InvoiceMatchSummaryOut]:
+    from app.models import POItem
+
+    stmt = (
+        select(
+            PurchaseOrder.po_number,
+            PurchaseOrder.total_amount,
+            PurchaseOrder.amount_invoiced,
+            func.coalesce(func.sum(POItem.qty), 0).label("qty_ordered"),
+            func.coalesce(func.sum(POItem.qty_received), 0).label("qty_received"),
+            func.coalesce(func.sum(POItem.qty_invoiced), 0).label("qty_invoiced"),
+        )
+        .join(POItem, PurchaseOrder.id == POItem.po_id)
+        .where(PurchaseOrder.status.in_(["confirmed", "partially_received", "fully_received"]))
+        .group_by(PurchaseOrder.id, PurchaseOrder.po_number, PurchaseOrder.total_amount, PurchaseOrder.amount_invoiced, PurchaseOrder.created_at)
+        .order_by(PurchaseOrder.created_at.desc())
+        .limit(10)
+    )
+    rows = (await db.execute(stmt)).all()
+
+    results: list[InvoiceMatchSummaryOut] = []
+    for row in rows:
+        qty_ordered = float(row.qty_ordered)
+        qty_received = float(row.qty_received)
+        qty_invoiced = float(row.qty_invoiced)
+
+        if qty_invoiced == 0:
+            match_status = "unmatched"
+        elif qty_invoiced >= qty_ordered:
+            match_status = "matched"
+        else:
+            match_status = "partial"
+
+        results.append(
+            InvoiceMatchSummaryOut(
+                po_number=row.po_number,
+                total_amount=float(row.total_amount),
+                amount_invoiced=float(row.amount_invoiced),
+                qty_ordered=qty_ordered,
+                qty_received=qty_received,
+                qty_invoiced=qty_invoiced,
+                match_status=match_status,
+            )
+        )
+    return results
+
+
+class PaymentCalendarItemOut(BaseModel):
+    id: str
+    po_number: str | None
+    contract_number: str | None
+    installment_no: int
+    amount: float
+    due_date: date
+    status: str
+
+
+@router.get("/dashboard/payment-calendar", response_model=list[PaymentCalendarItemOut])
+async def payment_calendar(
+    _user: CurrentUser,
+    db: Annotated[AsyncSession, Depends(get_db)],
+    months: int = 1,
+) -> list[PaymentCalendarItemOut]:
+    from app.models import Contract, PaymentSchedule, PurchaseOrder
+
+    today = date.today()
+    end_date = today + timedelta(days=30 * months)
+
+    stmt = (
+        select(
+            PaymentSchedule.id,
+            PurchaseOrder.po_number,
+            Contract.contract_number,
+            PaymentSchedule.installment_no,
+            PaymentSchedule.planned_amount,
+            PaymentSchedule.planned_date,
+            PaymentSchedule.status,
+        )
+        .outerjoin(PurchaseOrder, PaymentSchedule.po_id == PurchaseOrder.id)
+        .outerjoin(Contract, PaymentSchedule.contract_id == Contract.id)
+        .where(
+            PaymentSchedule.planned_date >= today,
+            PaymentSchedule.planned_date <= end_date,
+            PaymentSchedule.status != "paid"
+        )
+        .order_by(PaymentSchedule.planned_date)
+    )
+    rows = (await db.execute(stmt)).all()
+
+    results: list[PaymentCalendarItemOut] = []
+    for row in rows:
+        results.append(
+            PaymentCalendarItemOut(
+                id=str(row.id),
+                po_number=row.po_number,
+                contract_number=row.contract_number,
+                installment_no=row.installment_no,
+                amount=float(row.planned_amount),
+                due_date=row.planned_date,
+                status=row.status,
+            )
+        )
+    return results
+
+
 @router.get("/dashboard/analytics", response_model=AnalyticsOut)
 async def get_analytics(
     _user: CurrentUser,

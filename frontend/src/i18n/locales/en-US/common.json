@@ -396,7 +396,15 @@
     "supplier_col": "Supplier",
     "total_shipments_col": "Total Shipments",
     "avg_delivery_days_col": "Avg Delivery (Days)",
-    "no_analytics_data": "No analytics data available"
+    "no_analytics_data": "No analytics data available",
+    "invoice_match": "Invoice 3-Way Match",
+    "qty_ordered": "Ordered",
+    "qty_received": "Received",
+    "qty_invoiced": "Invoiced",
+    "match_status": "Match Status",
+    "payment_calendar": "Payment Calendar",
+    "due_date": "Due Date",
+    "amount": "Amount"
   },
   "welcome": {
     "title": "Welcome to Mica / 欢迎使用觅采",
@@ -1102,7 +1110,9 @@
     "view_version_detail": "View Version Details",
     "version_snapshot": "Version Snapshot",
     "version_detail_title": "Version v{{version}} Details",
-    "version_not_found": "Version not found"
+    "version_not_found": "Version not found",
+    "renew_btn": "Renew",
+    "renew_ok": "Contract renewed successfully"
   },
   "common": {
     "total_count": "{{count}} total",

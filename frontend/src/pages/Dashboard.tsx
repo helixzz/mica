@@ -47,6 +47,8 @@ import {
   type PurchaseOrderListItem,
   type SKUAnomaly,
   type DeliveryPlanOverview,
+  type InvoiceMatchSummary,
+  type PaymentCalendarItem,
 } from '@/api'
 import { useAuth } from '@/auth/useAuth'
 import { PageHeader, StatCard, Section, EmptyState } from '@/components/ui'
@@ -108,6 +110,8 @@ export function DashboardPage() {
   const [budgetSummary, setBudgetSummary] = useState<BudgetSummary | null>(null)
   const [agingApprovals, setAgingApprovals] = useState<AgingApproval[]>([])
   const [analytics, setAnalytics] = useState<AnalyticsData | null>(null)
+  const [invoiceMatch, setInvoiceMatch] = useState<InvoiceMatchSummary[]>([])
+  const [paymentCalendar, setPaymentCalendar] = useState<PaymentCalendarItem[]>([])
   const [currentTime, setCurrentTime] = useState(new Date())
   const [customizeVisible, setCustomizeVisible] = useState(false)
   const [showWelcome, setShowWelcome] = useState(() => !localStorage.getItem('mica.welcome_dismissed'))
@@ -118,6 +122,8 @@ export function DashboardPage() {
     { id: 'payment_tracker', visible: true },
     { id: 'invoice_tracker', visible: true },
     { id: 'analytics', visible: true },
+    { id: 'invoice_match', visible: true },
+    { id: 'payment_calendar', visible: true },
     { id: 'budget', visible: true },
     { id: 'aging', visible: true },
     { id: 'quick_actions', visible: true },
@@ -191,7 +197,9 @@ export function DashboardPage() {
       api.getBudgetSummary().catch(() => null),
         api.getAgingApprovals().catch(() => []),
         api.getAnalytics().catch(() => null),
-      ]).then(([prsData, posData, pendingData, contractsData, anomaliesData, metricsData, deliveryData, budgetData, agingData, analyticsData]) => {
+        api.getInvoiceMatchSummary().catch(() => []),
+        api.getPaymentCalendar().catch(() => []),
+      ]).then(([prsData, posData, pendingData, contractsData, anomaliesData, metricsData, deliveryData, budgetData, agingData, analyticsData, invoiceMatchData, paymentCalendarData]) => {
       setPrs(prsData)
       setPos(posData)
       setPending(pendingData)
@@ -202,6 +210,8 @@ export function DashboardPage() {
       setBudgetSummary(budgetData)
         setAgingApprovals(agingData)
         setAnalytics(analyticsData)
+        setInvoiceMatch(invoiceMatchData)
+        setPaymentCalendar(paymentCalendarData)
         setLoading(false)
     })
   }, [])
@@ -228,6 +238,8 @@ export function DashboardPage() {
     payment_tracker: t('dashboard.payment_tracker', 'Payment Tracker'),
     invoice_tracker: t('dashboard.invoice_tracker', 'Invoice Tracker'),
     analytics: t('dashboard.analytics'),
+    invoice_match: t('dashboard.invoice_match'),
+    payment_calendar: t('dashboard.payment_calendar'),
     budget: t('dashboard.budget_overview'),
     aging: t('dashboard.aging_approvals'),
     quick_actions: t('dashboard.quick_actions'),
@@ -616,6 +628,78 @@ export function DashboardPage() {
                   ),
                 },
               ]}
+            />
+          </Section>
+        ) : null
+      case 'invoice_match':
+        return (isProcurementMgr || isFinanceAuditor || role === 'admin') && invoiceMatch.length > 0 ? (
+          <Section title={t('dashboard.invoice_match')} key="invoice_match">
+            <Table
+              dataSource={invoiceMatch}
+              rowKey="po_number"
+              pagination={false}
+              size="small"
+              columns={[
+                { title: t('field.po_number'), dataIndex: 'po_number', key: 'po_number' },
+                { title: t('dashboard.qty_ordered'), dataIndex: 'qty_ordered', key: 'qty_ordered' },
+                { title: t('dashboard.qty_received'), dataIndex: 'qty_received', key: 'qty_received' },
+                { title: t('dashboard.qty_invoiced'), dataIndex: 'qty_invoiced', key: 'qty_invoiced' },
+                {
+                  title: t('dashboard.match_status'),
+                  dataIndex: 'match_status',
+                  key: 'match_status',
+                  render: (v: string) => (
+                    <Tag color={v === 'matched' ? 'green' : v === 'partial' ? 'orange' : 'red'}>
+                      {t(`status.${v}`)}
+                    </Tag>
+                  ),
+                },
+              ]}
+            />
+          </Section>
+        ) : null
+      case 'payment_calendar':
+        return (isProcurementMgr || isFinanceAuditor || role === 'admin') && paymentCalendar.length > 0 ? (
+          <Section title={t('dashboard.payment_calendar')} key="payment_calendar">
+            <List
+              itemLayout="horizontal"
+              dataSource={paymentCalendar}
+              renderItem={(item) => {
+                const dueDate = new Date(item.due_date)
+                const today = new Date()
+                const diffTime = dueDate.getTime() - today.getTime()
+                const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24))
+                
+                let color = 'default'
+                if (diffDays <= 0) color = 'red'
+                else if (diffDays <= 7) color = 'orange'
+
+                return (
+                  <List.Item>
+                    <List.Item.Meta
+                      avatar={
+                        <Avatar
+                          style={{ backgroundColor: color === 'red' ? token.colorErrorBg : color === 'orange' ? token.colorWarningBg : token.colorBgLayout, color: color === 'red' ? token.colorError : color === 'orange' ? token.colorWarning : token.colorText }}
+                          icon={<ClockCircleOutlined />}
+                        />
+                      }
+                      title={
+                        <Space>
+                          <Text strong>¥{item.amount.toLocaleString()}</Text>
+                          <Tag color={color}>{item.due_date}</Tag>
+                        </Space>
+                      }
+                      description={
+                        <Space>
+                          {item.po_number && <Text type="secondary">PO: {item.po_number}</Text>}
+                          {item.contract_number && <Text type="secondary">Contract: {item.contract_number}</Text>}
+                          <Text type="secondary">Installment: {item.installment_no}</Text>
+                        </Space>
+                      }
+                    />
+                  </List.Item>
+                )
+              }}
             />
           </Section>
         ) : null

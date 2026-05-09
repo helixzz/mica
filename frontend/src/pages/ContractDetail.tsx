@@ -7,6 +7,7 @@ import {
   HistoryOutlined,
   InboxOutlined,
   PlusOutlined,
+  RedoOutlined,
   RobotOutlined,
   StopOutlined,
   UploadOutlined,
@@ -63,6 +64,7 @@ export function ContractDetailPage() {
   const [deliveryPlans, setDeliveryPlans] = useState<any[]>([])
   const [editOpen, setEditOpen] = useState(false)
   const [deliveryPlanOpen, setDeliveryPlanOpen] = useState(false)
+  const [renewOpen, setRenewOpen] = useState(false)
   const [ocrViewer, setOcrViewer] = useState<{
     open: boolean
     loading: boolean
@@ -119,6 +121,18 @@ export function ContractDetailPage() {
   const canTransition = Boolean(
     user && ['admin', 'procurement_mgr'].includes(user.role),
   )
+
+  const isExpiredOrExpiring = (() => {
+    if (!contract) return false
+    if (contract.status === 'expired') return true
+    if (contract.status === 'active' && contract.expiry_date) {
+      const expiry = new Date(contract.expiry_date)
+      const thirtyDaysFromNow = new Date()
+      thirtyDaysFromNow.setDate(thirtyDaysFromNow.getDate() + 30)
+      return expiry <= thirtyDaysFromNow
+    }
+    return false
+  })()
 
   const load = useCallback(async () => {
     if (!id) return
@@ -570,6 +584,11 @@ export function ContractDetailPage() {
               {t('button.edit')}
             </Button>
           )}
+          {canWrite && isExpiredOrExpiring && (
+            <Button icon={<RedoOutlined />} onClick={() => setRenewOpen(true)}>
+              {t('contract.renew_btn')}
+            </Button>
+          )}
           {canTransition && contract.status === 'active' && (
             <Dropdown
               menu={{
@@ -626,6 +645,22 @@ export function ContractDetailPage() {
           setEditFormOpen(false)
           setExtractedData(null)
           void load()
+        }}
+      />
+      <ContractFormModal
+        open={renewOpen}
+        mode="create"
+        poId={contract.po_id}
+        initialValues={{
+          title: contract.title,
+          total_amount: contract.total_amount,
+          notes: contract.notes,
+          supplier_name: contract.supplier_name,
+        }}
+        onClose={() => setRenewOpen(false)}
+        onSaved={(saved) => {
+          setRenewOpen(false)
+          void message.success(t('contract.renew_ok'))
         }}
       />
 

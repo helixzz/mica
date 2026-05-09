@@ -337,6 +337,7 @@ class Supplier(Base, TimestampMixin):
     payee_bank: Mapped[str | None] = mapped_column(String(255))
     payee_bank_account: Mapped[str | None] = mapped_column(String(64))
     notes: Mapped[str | None] = mapped_column(Text)
+    access_token: Mapped[str | None] = mapped_column(String(64), unique=True)
     is_enabled: Mapped[bool] = mapped_column(default=True, nullable=False)
     is_deleted: Mapped[bool] = mapped_column(default=False, nullable=False)
 
@@ -1149,6 +1150,7 @@ class SystemParameterCategory(StrEnum):
     PAYMENT = "payment"
     FEISHU = "feishu"
     EMAIL = "email"
+    CURRENCY = "currency"
 
 
 class SystemParameter(Base, TimestampMixin):

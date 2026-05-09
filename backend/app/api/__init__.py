@@ -26,6 +26,7 @@ from app.api.v1 import (
     saml,
     search,
     sku,
+    supplier_portal,
     system_params_admin,
     websocket,
 )
@@ -59,6 +60,7 @@ api_router.include_router(recycle_bin.router)
 api_router.include_router(document_templates.router)
 api_router.include_router(feishu_webhook.router)
 api_router.include_router(websocket.router)
+api_router.include_router(supplier_portal.router)
 
 # v2 router — mirrors v1 for forward compatibility
 v2_router = APIRouter(prefix="/v2")
@@ -89,3 +91,4 @@ v2_router.include_router(rfq.router)
 v2_router.include_router(recycle_bin.router)
 v2_router.include_router(document_templates.router)
 v2_router.include_router(feishu_webhook.router)
+v2_router.include_router(supplier_portal.router)

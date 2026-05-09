@@ -23,7 +23,7 @@ class Settings(BaseSettings):
     # ── Application ──
     app_name: str = "Mica"
     app_env: Literal["development", "staging", "production"] = "development"
-    app_version: str = "1.7.8"
+    app_version: str = "1.8.0"
     debug: bool = False
 
     # ── API ──
@@ -62,6 +62,9 @@ class Settings(BaseSettings):
 
     media_root: str = "/app/media"
     download_token_ttl_seconds: int = 3600
+
+    # ── External URLs ──
+    app_base_url: str = "http://localhost:8900"
 
     @field_validator("secret_key")
     @classmethod

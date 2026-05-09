@@ -320,6 +320,8 @@
   "notification.sla.escalated_manager_body": "PR '{title}' has exceeded SLA of {hours} hours. Stage: {stage}",
   "notification.sla.escalated_admin": "Approval Alert - {title}",
   "notification.sla.escalated_admin_body": "PR '{title}' (#{biz_number}) has been overdue for {hours} hours. Stage: {stage}",
+  "notification.reminder.pending": "Approval Pending Reminder - {title}",
+  "notification.reminder.pending_body": "You have a pending approval for PR '{title}' (#{biz_number}) waiting for {hours} hours. Stage: {stage}",
   "auth.invalid_token_payload": "Invalid token payload",
   "auth.user_not_found_or_inactive": "User not found or inactive",
   "company.not_found": "Company not found",

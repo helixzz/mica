@@ -887,6 +887,18 @@ async def run_sla_escalation(
     return result
 
 
+@router.post("/approval-reminders", tags=["admin"])
+async def run_approval_reminders(
+    user: CurrentUser,
+    db: Annotated[AsyncSession, Depends(get_db)],
+):
+    from app.services import approval_reminder as reminder_svc
+
+    result = await reminder_svc.send_reminders(db)
+    await db.commit()
+    return result
+
+
 @router.post("/daily-digest", tags=["admin"])
 async def run_daily_digest(
     user: CurrentUser,

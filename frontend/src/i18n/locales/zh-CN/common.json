@@ -401,7 +401,15 @@
     "supplier_col": "供应商",
     "total_shipments_col": "总发货批次",
     "avg_delivery_days_col": "平均交期（天）",
-    "no_analytics_data": "暂无分析数据"
+    "no_analytics_data": "暂无分析数据",
+    "invoice_match": "发票三单匹配",
+    "qty_ordered": "订单数量",
+    "qty_received": "到货数量",
+    "qty_invoiced": "开票数量",
+    "match_status": "匹配状态",
+    "payment_calendar": "付款日历",
+    "due_date": "到期日",
+    "amount": "金额"
   },
   "welcome": {
     "title": "Welcome to Mica / 欢迎使用觅采",
@@ -1107,7 +1115,9 @@
     "view_version_detail": "查看版本详情",
     "version_snapshot": "版本快照",
     "version_detail_title": "版本 v{{version}} 详情",
-    "version_not_found": "版本不存在"
+    "version_not_found": "版本不存在",
+    "renew_btn": "续约",
+    "renew_ok": "合同续约成功"
   },
   "common": {
     "total_count": "共 {{count}} 条",

@@ -322,6 +322,8 @@
   "notification.sla.escalated_manager_body": "采购申请「{title}」已超过 SLA 时限 {hours} 小时，需关注。审批阶段：{stage}",
   "notification.sla.escalated_admin": "审批超时告警 - {title}",
   "notification.sla.escalated_admin_body": "采购申请「{title}」(# {biz_number}) 已超时 {hours} 小时，审批阶段：{stage}",
+  "notification.reminder.pending": "待审批提醒 - {title}",
+  "notification.reminder.pending_body": "您有采购申请「{title}」(# {biz_number}) 待审批，已等待 {hours} 小时。当前阶段：{stage}",
   "auth.invalid_token_payload": "无效的令牌载荷",
   "auth.user_not_found_or_inactive": "用户不存在或已停用",
   "company.not_found": "公司不存在",
