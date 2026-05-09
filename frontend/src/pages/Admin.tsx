@@ -12,6 +12,7 @@ import { DepartmentsPanel } from './admin/DepartmentsPanel'
 import { DocumentTemplatesPanel } from './admin/DocumentTemplatesPanel'
 import { FeishuSettingsTab } from './admin/FeishuSettingsTab'
 import { ImportTab } from './admin/ImportTab'
+import { RoutingsPanel } from './admin/RoutingsPanel'
 import { SystemParamsTab } from './admin/SystemParamsTab'
 import { UsersPanel } from './admin/UsersPanel'
 
@@ -43,6 +44,7 @@ export function AdminPage() {
         case 'departments': return <DepartmentsPanel />
         case 'ai-models': return <AIModelPanel />
         case 'ai-logs': return <AILogsPanel />
+        case 'ai-routing': return <RoutingsPanel />
         case 'audit-logs': return <AuditLogsTab />
         case 'import': return <ImportTab />
         case 'document-templates': return <DocumentTemplatesPanel />
@@ -65,6 +67,7 @@ export function AdminPage() {
     { key: '/admin/companies', icon: <ApartmentOutlined />, label: t('admin.companies'), desc: t('admin.companies_desc') },
     { key: '/admin/departments', icon: <DatabaseOutlined />, label: t('admin.departments'), desc: t('admin.departments_desc') },
     { key: '/admin/ai-models', icon: <RobotOutlined />, label: t('admin.llm_models'), desc: t('admin.llm_models_desc') },
+    { key: '/admin/ai-routing', icon: <BranchesOutlined />, label: t('admin.ai_routing'), desc: t('admin.ai_routing_desc') },
     { key: '/admin/ai-logs', icon: <BarChartOutlined />, label: t('admin.ai_logs'), desc: t('admin.ai_logs_desc') },
     { key: '/admin/audit-logs', icon: <AuditOutlined />, label: t('admin.tab.audit_logs'), desc: t('admin.audit_logs_desc') },
     { key: '/admin/import', icon: <ImportOutlined />, label: t('admin.tab.import'), desc: t('admin.import_desc') },

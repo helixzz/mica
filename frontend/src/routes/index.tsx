@@ -188,6 +188,7 @@ export function AppRoutes() {
             <Route path="/admin/companies" element={<AdminPage />} />
             <Route path="/admin/departments" element={<AdminPage />} />
             <Route path="/admin/ai-models" element={<AdminPage />} />
+            <Route path="/admin/ai-routing" element={<AdminPage />} />
             <Route path="/admin/ai-logs" element={<AdminPage />} />
             <Route path="/admin/audit-logs" element={<AdminPage />} />
             <Route path="/admin/import" element={<AdminPage />} />

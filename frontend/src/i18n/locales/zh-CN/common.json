@@ -1271,5 +1271,6 @@
   "admin.back_to_overview": "返回概览",
   "contract.extract_create": "AI 提取并创建",
   "contract.extract_failed": "合同信息提取失败",
-  "contract.scan_create": "扫描创建"
+  "contract.scan_create": "扫描创建",
+  "admin.ai_routing_desc": "AI 功能路由配置"
 }
