@@ -99,25 +99,38 @@ async def _dispatch(
 
     prompt = _build_prompt(filename)
 
+    # Extract text from PDF if available; otherwise use base64
+    text_content = ""
+    if content_type == "application/pdf" or filename.lower().endswith(".pdf"):
+        try:
+            import io
+
+            from pypdf import PdfReader
+            reader = PdfReader(io.BytesIO(content))
+            for i, page in enumerate(reader.pages[:5]):
+                page_text = page.extract_text() or ""
+                if page_text.strip():
+                    text_content += f"\n--- Page {i+1} ---\n{page_text}"
+        except Exception:
+            pass
+
+    messages = [
+        {"role": "system", "content": "You extract contract data. Return ONLY valid JSON, no explanation."},
+        {"role": "user", "content": prompt},
+    ]
+
+    if text_content:
+        messages[1]["content"] = f"{prompt}\n\nExtracted document text:\n{text_content[:8000]}"
+    else:
+        messages[1]["content"] = [
+            {"type": "text", "text": prompt},
+            {"type": "image_url", "image_url": {"url": f"data:{content_type};base64,{_b64(content)}"}},
+        ]
+
     try:
         response = await litellm.acompletion(
             model=resolve_litellm_model(model_row.provider, model_row.model_string),
-            messages=[
-                {
-                    "role": "system",
-                    "content": "You are a contract data extraction assistant. Extract key fields from contract documents precisely. Return ONLY valid JSON, no markdown, no explanation.",
-                },
-                {
-                    "role": "user",
-                    "content": [
-                        {"type": "text", "text": prompt},
-                        {
-                            "type": "image_url",
-                            "image_url": {"url": f"data:{content_type};base64,{_b64(content)}"},
-                        },
-                    ],
-                },
-            ],
+            messages=messages,
             api_base=model_row.api_base or None,
             api_key=decrypt(model_row.api_key_encrypted) if model_row.api_key_encrypted else None,
             temperature=0.1,
@@ -129,7 +142,6 @@ async def _dispatch(
 
     text = response.choices[0].message.content or ""
     return _parse_response(text)
-
 
 def _build_prompt(filename: str) -> str:
     return f"""Extract the following fields from this contract document ({filename}):
