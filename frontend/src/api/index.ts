@@ -800,6 +800,7 @@ export interface ContractExtractResult {
   supplier_name: string | null
   supplier_contact: string | null
   supplier_phone: string | null
+  supplier_id: string | null
   start_date: string | null
   end_date: string | null
   total_amount: string | null
@@ -807,6 +808,7 @@ export interface ContractExtractResult {
   delivery_terms: string | null
   items_text: string | null
   description: string | null
+  language: string | null
   error: string | null
 }
 

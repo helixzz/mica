@@ -101,7 +101,7 @@ async def ai_contract_extract(
 
     content = await doc_svc.read_document_bytes(doc)
     result = await contract_extract_svc.extract_contract(
-        db, user, content, doc.content_type, doc.original_filename
+        db, user, document_id, content, doc.content_type, doc.original_filename
     )
     return {
         "contract_number": result.contract_number,
@@ -109,6 +109,7 @@ async def ai_contract_extract(
         "supplier_name": result.supplier_name,
         "supplier_contact": result.supplier_contact,
         "supplier_phone": result.supplier_phone,
+        "supplier_id": result.supplier_id,
         "start_date": result.start_date,
         "end_date": result.end_date,
         "total_amount": result.total_amount,
@@ -116,6 +117,7 @@ async def ai_contract_extract(
         "delivery_terms": result.delivery_terms,
         "items_text": result.items_text,
         "description": result.description,
+        "language": result.language,
         "error": result.error,
     }
 
