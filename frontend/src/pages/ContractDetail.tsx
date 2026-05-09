@@ -4,7 +4,6 @@ import {
   DownloadOutlined,
   EditOutlined,
   EyeOutlined,
-  HistoryOutlined,
   InboxOutlined,
   PlusOutlined,
   RedoOutlined,
@@ -658,7 +657,7 @@ export function ContractDetailPage() {
           supplier_name: contract.supplier_name,
         }}
         onClose={() => setRenewOpen(false)}
-        onSaved={(saved) => {
+        onSaved={(_saved) => {
           setRenewOpen(false)
           void message.success(t('contract.renew_ok'))
         }}

@@ -1,6 +1,6 @@
 """add supplier access_token for read-only portal
 
-Revision ID: 0038
+Revision ID: 0039
 Revises: 0037
 Create Date: 2026-05-10
 """
@@ -8,8 +8,8 @@ Create Date: 2026-05-10
 import sqlalchemy as sa
 from alembic import op
 
-revision = "0038"
-down_revision = "0037"
+revision = "0039"
+down_revision = "0038"
 branch_labels = None
 depends_on = None
 

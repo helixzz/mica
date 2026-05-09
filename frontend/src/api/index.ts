@@ -516,6 +516,16 @@ export interface SKUInsights {
   supplier_comparison: SKUSupplierComparison[]
 }
 
+export interface SKUForecast {
+  trend: "up" | "down" | "flat"
+  change_pct: number
+  next_month_prediction: number | null
+  ma_7d: number | null
+  ma_30d: number | null
+  recent_avg: number
+  sample_size: number
+}
+
 export interface ContractAttachment {
   document_id: string
   role: string
@@ -1503,6 +1513,10 @@ export const api = {
     const { data } = await client.get<SKUInsights>(`/sku/insights/${itemId}`, {
       params: { window_days: windowDays },
     })
+    return data
+  },
+  async getSKUForecast(itemId: string): Promise<SKUForecast> {
+    const { data } = await client.get<SKUForecast>(`/sku/${itemId}/forecast`)
     return data
   },
   async acknowledgeAnomaly(id: string, notes?: string): Promise<SKUAnomaly> {

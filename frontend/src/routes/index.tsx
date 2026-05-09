@@ -89,6 +89,9 @@ const SuppliersPage = lazy(() => import('@/pages/Suppliers'))
 const SupplierDetailPage = lazy(() => import('@/pages/SupplierDetail'))
 const ItemDetailPage = lazy(() => import('@/pages/ItemDetail'))
 const ItemsPage = lazy(() => import('@/pages/Items'))
+const SupplierPortalPage = lazy(() =>
+  import('@/pages/SupplierPortal').then((m) => ({ default: m.default })),
+)
 
 function PageFallback() {
   return (
@@ -148,6 +151,7 @@ export function AppRoutes() {
         <Routes>
           <Route path="/login" element={<LoginPage />} />
           <Route path="/sso-callback" element={<SsoCallbackPage />} />
+          <Route path="/portal/:token" element={<SupplierPortalPage />} />
           <Route
             element={
               <Protected>

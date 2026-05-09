@@ -338,6 +338,7 @@
   "supplier.has_contracts": "Supplier has contracts, cannot delete",
   "supplier.has_invoices": "Supplier has invoices, cannot delete",
   "supplier.has_price_records": "Supplier has price records, cannot delete",
+  "supplier_portal.invalid_token": "Invalid or expired access link",
   "feishu.card_send_failed": "Feishu card message delivery failed",
   "feishu.not_enabled": "Feishu integration is not enabled"
 }

@@ -339,5 +339,6 @@
   "supplier.has_pr_items": "供应商已有采购申请，不可删除",
   "supplier.has_contracts": "供应商已有合同，不可删除",
   "supplier.has_invoices": "供应商已有发票，不可删除",
-  "supplier.has_price_records": "供应商已有价格记录，不可删除"
+  "supplier.has_price_records": "供应商已有价格记录，不可删除",
+  "supplier_portal.invalid_token": "无效或已过期的访问链接"
 }

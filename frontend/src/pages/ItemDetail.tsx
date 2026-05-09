@@ -1,23 +1,40 @@
-import { Button, Card, Descriptions, Space, Tag, Typography } from 'antd'
+import { Button, Card, Descriptions, Space, Statistic, Tag, Typography } from 'antd'
+import { ArrowDownOutlined, ArrowUpOutlined, MinusOutlined } from '@ant-design/icons'
 import { useEffect, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { useNavigate, useParams } from 'react-router-dom'
-import { api, type Item } from '@/api'
+import { api, type Item, type SKUForecast } from '@/api'
 
 export default function ItemDetailPage() {
   const { t } = useTranslation()
   const { id } = useParams<{ id: string }>()
   const navigate = useNavigate()
   const [item, setItem] = useState<Item | null>(null)
+  const [forecast, setForecast] = useState<SKUForecast | null>(null)
 
   useEffect(() => {
     if (!id) return
     void api.items().then((list) => {
       setItem(list.find((i) => i.id === id) || null)
     })
+    void api.getSKUForecast(id).then(setForecast)
   }, [id])
 
   if (!item) return <div>{t('message.loading')}</div>
+
+  const trendConfig = {
+    up: { color: '#cf1322', icon: <ArrowUpOutlined />, label: t('forecast.trend_up') },
+    down: { color: '#3f8600', icon: <ArrowDownOutlined />, label: t('forecast.trend_down') },
+    flat: { color: '#8c8c8c', icon: <MinusOutlined />, label: t('forecast.trend_flat') },
+  }
+
+  const currencyFormatter = (val: number | null) =>
+    val != null
+      ? new Intl.NumberFormat('zh-CN', {
+          style: 'currency',
+          currency: 'CNY',
+        }).format(val)
+      : '-'
 
   return (
     <Space direction="vertical" size="large" style={{ width: '100%' }}>
@@ -35,6 +52,60 @@ export default function ItemDetailPage() {
           <Descriptions.Item label={t('field.status')}><Tag color={item.is_enabled !== false ? 'success' : 'default'}>{item.is_enabled !== false ? t('item.active') : t('item.inactive')}</Tag></Descriptions.Item>
         </Descriptions>
       </Card>
+
+      {forecast && (
+        <Card title={t('forecast.title')} size="small">
+          {forecast.sample_size < 3 ? (
+            <Typography.Text type="secondary">
+              {t('forecast.insufficient_data')}
+            </Typography.Text>
+          ) : (
+            <Space size="large" wrap>
+              <Statistic
+                title={t('forecast.trend_up')}
+                value={trendConfig[forecast.trend].label}
+                prefix={
+                  <span style={{ color: trendConfig[forecast.trend].color }}>
+                    {trendConfig[forecast.trend].icon}
+                  </span>
+                }
+                valueStyle={{
+                  color: trendConfig[forecast.trend].color,
+                  fontSize: 16,
+                }}
+              />
+              <Statistic
+                title={t('forecast.next_month')}
+                value={currencyFormatter(forecast.next_month_prediction)}
+                valueStyle={{
+                  color:
+                    forecast.trend === 'up'
+                      ? '#cf1322'
+                      : forecast.trend === 'down'
+                        ? '#3f8600'
+                        : '#666',
+                }}
+              />
+              <Statistic
+                title={t('forecast.ma_7d')}
+                value={currencyFormatter(forecast.ma_7d)}
+              />
+              <Statistic
+                title={t('forecast.ma_30d')}
+                value={currencyFormatter(forecast.ma_30d)}
+              />
+              <Statistic
+                title={t('forecast.recent_avg')}
+                value={currencyFormatter(forecast.recent_avg)}
+              />
+              <Statistic
+                title={t('forecast.sample_size')}
+                value={forecast.sample_size}
+              />
+            </Space>
+          )}
+        </Card>
+      )}
     </Space>
   )
 }

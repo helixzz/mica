@@ -1301,5 +1301,32 @@
   "welcome.role_label": "你的角色",
   "welcome.create_pr": "新建采购申请",
   "welcome.view_dashboard": "查看仪表盘",
-  "welcome.got_it": "知道了"
+  "welcome.got_it": "知道了",
+  "supplier_portal": {
+    "title": "供应商门户",
+    "invalid_token": "无效或已过期的访问链接",
+    "purchase_orders": "采购订单",
+    "contracts": "合同",
+    "payments": "付款记录",
+    "shipments": "发货记录",
+    "no_data": "暂无数据",
+    "contract_title": "合同名称",
+    "signed_date": "签订日期",
+    "expiry_date": "到期日",
+    "qty_received": "已收数量",
+    "amount_paid": "已付金额",
+    "batch_no": "批次"
+  },
+  "forecast": {
+    "title": "价格预测",
+    "trend_up": "上涨趋势",
+    "trend_down": "下跌趋势",
+    "trend_flat": "平稳",
+    "insufficient_data": "数据不足",
+    "next_month": "下月预测",
+    "ma_7d": "7日均价",
+    "ma_30d": "30日均价",
+    "recent_avg": "近期均价",
+    "sample_size": "样本数"
+  }
 }

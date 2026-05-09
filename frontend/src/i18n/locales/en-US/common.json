@@ -1301,5 +1301,32 @@
   "welcome.role_label": "Your role",
   "welcome.create_pr": "Create PR",
   "welcome.view_dashboard": "View Dashboard",
-  "welcome.got_it": "Got it"
+  "welcome.got_it": "Got it",
+  "supplier_portal": {
+    "title": "Supplier Portal",
+    "invalid_token": "Invalid or expired access link",
+    "purchase_orders": "Purchase Orders",
+    "contracts": "Contracts",
+    "payments": "Payment Records",
+    "shipments": "Shipments",
+    "no_data": "No data available",
+    "contract_title": "Contract Title",
+    "signed_date": "Signed Date",
+    "expiry_date": "Expiry Date",
+    "qty_received": "Qty Received",
+    "amount_paid": "Amount Paid",
+    "batch_no": "Batch"
+  },
+  "forecast": {
+    "title": "Price Forecast",
+    "trend_up": "Upward Trend",
+    "trend_down": "Downward Trend",
+    "trend_flat": "Stable",
+    "insufficient_data": "Insufficient Data",
+    "next_month": "Next Month Forecast",
+    "ma_7d": "7-Day MA",
+    "ma_30d": "30-Day MA",
+    "recent_avg": "Recent Avg",
+    "sample_size": "Sample Size"
+  }
 }
