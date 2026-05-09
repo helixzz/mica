@@ -1286,5 +1286,10 @@
   "contract.extract_failed": "合同信息提取失败",
   "contract.scan_create": "扫描创建",
   "admin.ai_routing_desc": "AI 功能路由配置",
-  "contract.extracting": "正在提取合同信息…"
+  "contract.extracting": "正在提取合同信息…",
+  "welcome.title": "欢迎使用 Mica 觅采",
+  "welcome.role_label": "你的角色",
+  "welcome.create_pr": "新建采购申请",
+  "welcome.view_dashboard": "查看仪表盘",
+  "welcome.got_it": "知道了"
 }

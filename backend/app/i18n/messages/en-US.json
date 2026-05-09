@@ -313,5 +313,11 @@
   "valid_until": "valid_until",
   "warranty_expiry": "warranty_expiry",
   "budget.not_found": "Budget information not found",
-  "budget.exceeded": "Spending has exceeded budget"
+  "budget.exceeded": "Spending has exceeded budget",
+  "notification.sla.escalated_submitter": "Approval Overdue - {title}",
+  "notification.sla.escalated_submitter_body": "Your PR '{title}' has been pending approval for over {hours} hours. Current stage: {stage}",
+  "notification.sla.escalated_manager": "Approval Escalation - {title}",
+  "notification.sla.escalated_manager_body": "PR '{title}' has exceeded SLA of {hours} hours. Stage: {stage}",
+  "notification.sla.escalated_admin": "Approval Alert - {title}",
+  "notification.sla.escalated_admin_body": "PR '{title}' (#{biz_number}) has been overdue for {hours} hours. Stage: {stage}"
 }

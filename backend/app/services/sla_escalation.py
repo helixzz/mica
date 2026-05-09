@@ -58,9 +58,7 @@ async def check_overdue_approvals(db: AsyncSession) -> dict:
     total_notifications = 0
 
     for instance in instances:
-        pending_tasks = [
-            task for task in instance.tasks if task.status == TASK_STATUS_PENDING
-        ]
+        pending_tasks = [task for task in instance.tasks if task.status == TASK_STATUS_PENDING]
         if not pending_tasks:
             continue
 

@@ -1281,5 +1281,15 @@
   "contract.extract_failed": "Contract extraction failed",
   "contract.scan_create": "Scan to Create",
   "admin.ai_routing_desc": "AI feature routing config",
-  "contract.extracting": "Extracting contract data…"
+  "contract.extracting": "Extracting contract data…",
+  "dashboard.delivery_progress": "Delivery Progress",
+  "dashboard.tracker_contract_remaining": "Contract Remaining",
+  "dashboard.view_approvals": "View Approvals",
+  "dashboard.view_contracts": "View Contracts",
+  "dashboard.view_delivery": "View Delivery",
+  "welcome.title": "Welcome to Mica",
+  "welcome.role_label": "Your role",
+  "welcome.create_pr": "Create PR",
+  "welcome.view_dashboard": "View Dashboard",
+  "welcome.got_it": "Got it"
 }
