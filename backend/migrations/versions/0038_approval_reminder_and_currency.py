@@ -19,6 +19,16 @@ depends_on = None
 
 
 def upgrade() -> None:
+    # Drop old CHECK constraint and re-add with 'currency' category
+    op.execute("ALTER TABLE system_parameters DROP CONSTRAINT system_parameters_category_check")
+    op.execute(
+        """ALTER TABLE system_parameters ADD CONSTRAINT system_parameters_category_check
+        CHECK (category = ANY (ARRAY[
+            'approval','auth','sku','contract','upload','pagination',
+            'audit','payment','feishu','email','currency'
+        ]))"""
+    )
+
     system_parameters = sa.table(
         "system_parameters",
         sa.column("id", postgresql.UUID(as_uuid=True)),
@@ -128,4 +138,12 @@ def downgrade() -> None:
             "DELETE FROM system_parameters WHERE key IN "
             "('approval.reminder_hours', 'approval.reminder_enabled', 'currency.exchange_rates');"
         )
+    )
+    op.execute("ALTER TABLE system_parameters DROP CONSTRAINT system_parameters_category_check")
+    op.execute(
+        """ALTER TABLE system_parameters ADD CONSTRAINT system_parameters_category_check
+        CHECK (category = ANY (ARRAY[
+            'approval','auth','sku','contract','upload','pagination',
+            'audit','payment','feishu','email'
+        ]))"""
     )
