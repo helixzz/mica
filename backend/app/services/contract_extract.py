@@ -95,12 +95,13 @@ async def _dispatch(
     import litellm
 
     from app.core.crypto import decrypt
+    from app.core.litellm_helpers import resolve_litellm_model
 
     prompt = _build_prompt(filename)
 
     try:
         response = await litellm.acompletion(
-            model=model_row.model_string,
+            model=resolve_litellm_model(model_row.provider, model_row.model_string),
             messages=[
                 {
                     "role": "system",
