@@ -873,7 +873,8 @@
     "feishu_union_id_label": "飞书 Union ID（自动）",
     "feishu_union_id_help": "用户 SAML 登录时自动填充，租户级唯一，优先用于消息推送",
     "feishu_user_id_label": "飞书 User ID（自动）",
-    "feishu_user_id_help": "用户 SAML 登录时自动填充"
+    "feishu_user_id_help": "用户 SAML 登录时自动填充",
+    "ai_routing_desc": "AI 功能场景路由配置"
   },
   "validation": {
     "select_company": "请选择公司主体",

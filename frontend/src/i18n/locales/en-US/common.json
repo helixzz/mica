@@ -868,7 +868,8 @@
     "feishu_union_id_label": "Feishu Union ID (auto)",
     "feishu_union_id_help": "Auto-populated from SAML login. Tenant-level unique, preferred for message delivery.",
     "feishu_user_id_label": "Feishu User ID (auto)",
-    "feishu_user_id_help": "Auto-populated from SAML login."
+    "feishu_user_id_help": "Auto-populated from SAML login.",
+    "ai_routing_desc": "AI feature routing configuration"
   },
   "validation": {
     "select_company": "Please select company",
