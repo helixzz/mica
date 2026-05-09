@@ -10,6 +10,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.security import CurrentUser, require_roles
 from app.db import get_db
+from app.i18n import t
 from app.services import sku as sku_svc
 
 router = APIRouter()
@@ -248,7 +249,7 @@ async def sku_price_forecast(
     if len(rows) < 3:
         return {
             "trend": "flat",
-            "trend_label": "insufficient_data",
+            "trend_label": t("sku.forecast.insufficient_data", user.preferred_locale),
             "next_month_prediction": None,
             "ma_7d": None,
             "ma_30d": None,

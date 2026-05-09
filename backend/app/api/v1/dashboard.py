@@ -12,6 +12,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.security import CurrentUser
 from app.db import get_db
+from app.i18n import t
 from app.models import (
     ApprovalTask,
     Contract,
@@ -409,7 +410,7 @@ class InvoiceMatchSummaryOut(BaseModel):
 
 @router.get("/dashboard/invoice-match", response_model=list[InvoiceMatchSummaryOut])
 async def invoice_match_summary(
-    _user: CurrentUser,
+    user: CurrentUser,
     db: Annotated[AsyncSession, Depends(get_db)],
 ) -> list[InvoiceMatchSummaryOut]:
     from app.models import POItem
@@ -425,7 +426,13 @@ async def invoice_match_summary(
         )
         .join(POItem, PurchaseOrder.id == POItem.po_id)
         .where(PurchaseOrder.status.in_(["confirmed", "partially_received", "fully_received"]))
-        .group_by(PurchaseOrder.id, PurchaseOrder.po_number, PurchaseOrder.total_amount, PurchaseOrder.amount_invoiced, PurchaseOrder.created_at)
+        .group_by(
+            PurchaseOrder.id,
+            PurchaseOrder.po_number,
+            PurchaseOrder.total_amount,
+            PurchaseOrder.amount_invoiced,
+            PurchaseOrder.created_at,
+        )
         .order_by(PurchaseOrder.created_at.desc())
         .limit(10)
     )
@@ -438,11 +445,11 @@ async def invoice_match_summary(
         qty_invoiced = float(row.qty_invoiced)
 
         if qty_invoiced == 0:
-            match_status = "unmatched"
+            match_status = t("dashboard.invoice.unmatched", user.preferred_locale)
         elif qty_invoiced >= qty_ordered:
-            match_status = "matched"
+            match_status = t("dashboard.invoice.matched", user.preferred_locale)
         else:
-            match_status = "partial"
+            match_status = t("dashboard.invoice.partial", user.preferred_locale)
 
         results.append(
             InvoiceMatchSummaryOut(
@@ -494,7 +501,7 @@ async def payment_calendar(
         .where(
             PaymentSchedule.planned_date >= today,
             PaymentSchedule.planned_date <= end_date,
-            PaymentSchedule.status != "paid"
+            PaymentSchedule.status != "paid",
         )
         .order_by(PaymentSchedule.planned_date)
     )

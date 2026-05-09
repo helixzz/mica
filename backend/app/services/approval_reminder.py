@@ -11,6 +11,7 @@ from app.i18n import t
 from app.models import (
     ApprovalInstance,
     NotificationCategory,
+    User,
 )
 from app.services.notifications import create_notification
 from app.services.system_params import system_params
@@ -21,11 +22,11 @@ TASK_STATUS_PENDING = "pending"
 INSTANCE_STATUS_PENDING = "pending"
 
 
-def _locale(user):
+def _locale(user: User | None) -> str:
     return user.preferred_locale if user and user.preferred_locale else "zh-CN"
 
 
-async def send_reminders(db: AsyncSession) -> dict:
+async def send_reminders(db: AsyncSession) -> dict[str, int | str | bool]:
     enabled = await system_params.get(db, "approval.reminder_enabled", True)
     if not enabled:
         return {"scanned": 0, "reminded": 0, "notifications": 0, "reminder_disabled": True}

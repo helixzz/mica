@@ -340,5 +340,16 @@
   "supplier.has_price_records": "Supplier has price records, cannot delete",
   "supplier_portal.invalid_token": "Invalid or expired access link",
   "feishu.card_send_failed": "Feishu card message delivery failed",
-  "feishu.not_enabled": "Feishu integration is not enabled"
+  "feishu.not_enabled": "Feishu integration is not enabled",
+  "supplier_portal.token_revoked": "Access token revoked",
+  "sku.forecast.insufficient_data": "Insufficient data",
+  "dashboard.invoice.matched": "Matched",
+  "dashboard.invoice.partial": "Partially matched",
+  "dashboard.invoice.unmatched": "Unmatched",
+  "digest.feishu.pending_approvals": "Pending Approvals: {count} PRs",
+  "digest.feishu.expiring_contracts": "Expiring Contracts: {count}",
+  "digest.feishu.price_anomalies": "Price Anomalies: {count}",
+  "digest.feishu.view_dashboard": "View Dashboard",
+  "digest.feishu.view_approvals": "View Approvals",
+  "digest.feishu.title": "Mica Daily Digest"
 }

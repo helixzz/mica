@@ -340,5 +340,16 @@
   "supplier.has_contracts": "供应商已有合同，不可删除",
   "supplier.has_invoices": "供应商已有发票，不可删除",
   "supplier.has_price_records": "供应商已有价格记录，不可删除",
-  "supplier_portal.invalid_token": "无效或已过期的访问链接"
+  "supplier_portal.invalid_token": "无效或已过期的访问链接",
+  "supplier_portal.token_revoked": "访问令牌已撤销",
+  "sku.forecast.insufficient_data": "数据不足",
+  "dashboard.invoice.matched": "已匹配",
+  "dashboard.invoice.partial": "部分匹配",
+  "dashboard.invoice.unmatched": "未匹配",
+  "digest.feishu.pending_approvals": "待审批: {count} 个采购申请",
+  "digest.feishu.expiring_contracts": "即将到期合同: {count} 份",
+  "digest.feishu.price_anomalies": "价格异常: {count} 条",
+  "digest.feishu.view_dashboard": "查看仪表盘",
+  "digest.feishu.view_approvals": "查看审批",
+  "digest.feishu.title": "Mica 每日摘要"
 }

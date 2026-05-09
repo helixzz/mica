@@ -691,9 +691,9 @@ export function DashboardPage() {
                       }
                       description={
                         <Space>
-                          {item.po_number && <Text type="secondary">PO: {item.po_number}</Text>}
-                          {item.contract_number && <Text type="secondary">Contract: {item.contract_number}</Text>}
-                          <Text type="secondary">Installment: {item.installment_no}</Text>
+{item.po_number && <Text type="secondary">{t('dashboard.payment_po_label')}{item.po_number}</Text>}
+{item.contract_number && <Text type="secondary">{t('dashboard.payment_contract_label')}{item.contract_number}</Text>}
+<Text type="secondary">{t('dashboard.payment_installment_label')}{item.installment_no}</Text>
                         </Space>
                       }
                     />

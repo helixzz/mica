@@ -1,4 +1,4 @@
-from datetime import datetime
+from datetime import date, datetime
 from secrets import token_urlsafe
 from typing import Annotated
 from uuid import UUID
@@ -10,6 +10,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.security import CurrentUser, require_roles
 from app.db import get_db
+from app.i18n import t
 from app.models import (
     Contract,
     PaymentRecord,
@@ -39,9 +40,9 @@ class SupplierPortalContract(BaseModel):
     status: str
     currency: str
     total_amount: str
-    signed_date: datetime | None
-    effective_date: datetime | None
-    expiry_date: datetime | None
+    signed_date: date | None
+    effective_date: date | None
+    expiry_date: date | None
 
 
 class SupplierPortalPayment(BaseModel):
@@ -50,8 +51,8 @@ class SupplierPortalPayment(BaseModel):
     amount: str
     currency: str
     status: str
-    due_date: datetime | None
-    payment_date: datetime | None
+    due_date: date | None
+    payment_date: date | None
     payment_method: str
 
 
@@ -62,8 +63,8 @@ class SupplierPortalShipment(BaseModel):
     status: str
     carrier: str | None
     tracking_number: str | None
-    expected_date: datetime | None
-    actual_date: datetime | None
+    expected_date: date | None
+    actual_date: date | None
 
 
 class SupplierPortalOut(BaseModel):
@@ -194,9 +195,9 @@ async def supplier_portal(
 @router.post("/suppliers/{supplier_id}/generate-token", tags=["supplier-portal"])
 async def generate_supplier_token(
     supplier_id: UUID,
-    user: Annotated[CurrentUser, Depends(require_roles("admin", "procurement_mgr"))],
+    _user: Annotated[CurrentUser, Depends(require_roles("admin", "procurement_mgr"))],
     db: Annotated[AsyncSession, Depends(get_db)],
-) -> dict:
+) -> dict[str, str]:
     supplier = await db.get(Supplier, supplier_id)
     if supplier is None:
         raise HTTPException(status_code=404, detail="supplier.not_found")
@@ -213,7 +214,7 @@ async def revoke_supplier_token(
     supplier_id: UUID,
     user: Annotated[CurrentUser, Depends(require_roles("admin", "procurement_mgr"))],
     db: Annotated[AsyncSession, Depends(get_db)],
-) -> dict:
+) -> dict[str, str]:
     supplier = await db.get(Supplier, supplier_id)
     if supplier is None:
         raise HTTPException(status_code=404, detail="supplier.not_found")
@@ -221,4 +222,7 @@ async def revoke_supplier_token(
     supplier.access_token = None
     await db.commit()
 
-    return {"message": "Token revoked", "supplier_id": str(supplier.id)}
+    return {
+        "message": t("supplier_portal.token_revoked", user.preferred_locale),
+        "supplier_id": str(supplier.id),
+    }

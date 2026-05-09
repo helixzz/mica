@@ -13,6 +13,7 @@ from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.config import get_settings
+from app.i18n import t
 from app.models import (
     Contract,
     PRStatus,
@@ -248,17 +249,19 @@ async def _send_feishu_digest(
     if not user.feishu_union_id and not user.feishu_open_id:
         return
 
+    locale = user.preferred_locale or "zh-CN"
+
     body = (
-        f"**待审批**: {pending_approvals} 个采购申请\n"
-        f"**即将到期合同**: {expiring_count} 份\n"
-        f"**价格异常**: {sku_anomalies} 条\n\n"
-        f"[查看仪表盘](https://mica.jqdomain.com/dashboard) ｜ "
-        f"[查看审批](https://mica.jqdomain.com/approvals)"
+        f"{t('digest.feishu.pending_approvals', locale, count=pending_approvals)}\n"
+        f"{t('digest.feishu.expiring_contracts', locale, count=expiring_count)}\n"
+        f"{t('digest.feishu.price_anomalies', locale, count=sku_anomalies)}\n\n"
+        f"[{t('digest.feishu.view_dashboard', locale)}](https://mica.jqdomain.com/dashboard) ｜ "
+        f"[{t('digest.feishu.view_approvals', locale)}](https://mica.jqdomain.com/approvals)"
     )
 
     card = {
         "header": {
-            "title": {"tag": "plain_text", "content": "Mica Daily Digest"},
+            "title": {"tag": "plain_text", "content": t("digest.feishu.title", locale)},
             "template": "blue",
         },
         "elements": [{"tag": "markdown", "content": body}],
