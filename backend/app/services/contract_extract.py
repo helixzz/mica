@@ -94,6 +94,8 @@ async def _dispatch(
 
     import litellm
 
+    from app.core.crypto import decrypt
+
     prompt = _build_prompt(filename)
 
     try:
@@ -116,7 +118,7 @@ async def _dispatch(
                 },
             ],
             api_base=model_row.api_base or None,
-            api_key=model_row.api_key or None,
+            api_key=decrypt(model_row.api_key_encrypted) if model_row.api_key_encrypted else None,
             temperature=0.1,
             max_tokens=1000,
             timeout=120,
