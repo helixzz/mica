@@ -28,7 +28,6 @@ const TYPE_COLORS: Record<string, string> = {
   item: 'gold',
 };
 
-/** Entity types shown as filter tabs. contract_doc is merged into the contract tab. */
 const TAB_TYPES = ['pr', 'po', 'contract', 'invoice', 'supplier', 'item'] as const;
 
 export const SearchResults: React.FC = () => {
@@ -63,7 +62,6 @@ export const SearchResults: React.FC = () => {
     }
   }, [query, navigate]);
 
-  /** Merge contract + contract_doc hits for the combined "contract" filter tab. */
   const getTypeHits = (type: string): SearchHit[] => {
     if (!results) return [];
     if (type === 'contract') {
@@ -75,7 +73,6 @@ export const SearchResults: React.FC = () => {
     return results.by_type[type] || [];
   };
 
-  /** Count hits for a filter tab (contract = contract + contract_doc). */
   const getTabCount = (res: SearchResponse, type: string): number => {
     if (type === 'contract') {
       return (res.by_type['contract']?.length || 0) + (res.by_type['contract_doc']?.length || 0);

@@ -826,7 +826,7 @@ export function DashboardPage() {
             </Text>
           </Space>
         }
-        extra={
+        actions={
           <Button icon={<SettingOutlined />} onClick={() => setCustomizeVisible(true)}>
             {t('dashboard.customize', 'Customize')}
           </Button>
