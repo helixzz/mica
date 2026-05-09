@@ -137,40 +137,24 @@ async def _dispatch(
         text = getattr(choice.message, "reasoning_content", None) or ""
     if not text:
         text = getattr(choice, "text", None) or ""
-    logger.info("contract_extract: response (%d chars) finish=%s", len(text), choice.finish_reason)
+logger.info("contract_extract: response (%d chars) finish=%s", len(text), choice.finish_reason)
     return _parse_response(text)
-
-def _build_prompt(filename: str) -> str:
-    return f"""Extract the following fields from this contract document ({filename}):
-
-1. contract_number — any reference number or contract ID visible on the document
-2. title — the title or subject of the contract
-3. supplier_name — the name of the supplier/vendor/contractor (the party providing goods/services)
-4. start_date — contract start date in YYYY-MM-DD format
-5. end_date — contract end/expiry date in YYYY-MM-DD format
-6. total_amount — the total contract value (just the number, no currency symbol)
-7. description — a brief 1-2 sentence summary of what the contract covers
-
-Return ONLY a valid JSON object with these keys. Use null for fields you cannot find.
-Example: {{"contract_number":"CT-2024-001","title":"IT Equipment Supply","supplier_name":"Dell Technologies","start_date":"2024-01-15","end_date":"2025-01-14","total_amount":"150000","description":"Supply of 50 laptop computers and related peripherals for the IT department"}}"""
-
-
-def _b64(data: bytes) -> str:
-    import base64
-
-    return base64.b64encode(data).decode("ascii")
 
 
 def _parse_response(text: str) -> ContractExtract:
     try:
-        text = text.strip()
-        if text.startswith("```"):
-            text = text.split("\n", 1)[1]
-            if text.endswith("```"):
-                text = text[:-3]
-        data: dict[str, Any] = json.loads(text)
+        # Strip markdown code blocks
+        t = text.strip()
+        if t.startswith("```"):
+            lines = t.split("\n")
+            if lines[0].startswith("```"):
+                lines = lines[1:]  # skip opening ```
+            if lines and lines[-1].strip() == "```":
+                lines = lines[:-1]  # skip closing ```
+            t = "\n".join(lines)
+        data: dict[str, Any] = json.loads(t)
     except (json.JSONDecodeError, ValueError) as e:
-        return ContractExtract(error=f"Failed to parse AI response: {e}")
+        return ContractExtract(error=f"Failed to parse: {e} (got: {text[:200]})")
 
     return ContractExtract(
         contract_number=data.get("contract_number") or None,
