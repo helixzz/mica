@@ -119,6 +119,7 @@ async def _dispatch(
             api_key=model_row.api_key or None,
             temperature=0.1,
             max_tokens=1000,
+            timeout=120,
         )
     except Exception as e:
         return ContractExtract(error=f"AI call failed: {e}")

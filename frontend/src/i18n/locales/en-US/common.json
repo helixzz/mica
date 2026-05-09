@@ -1268,5 +1268,6 @@
   "contract.extract_create": "Extract & Create",
   "contract.extract_failed": "Contract extraction failed",
   "contract.scan_create": "Scan to Create",
-  "admin.ai_routing_desc": "AI feature routing config"
+  "admin.ai_routing_desc": "AI feature routing config",
+  "contract.extracting": "Extracting contract data…"
 }

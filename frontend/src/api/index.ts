@@ -1278,7 +1278,7 @@ export const api = {
     return data
   },
   async extractContract(documentId: string): Promise<ContractExtractResult> {
-    const { data } = await client.post<ContractExtractResult>(`/ai/contract-extract?document_id=${documentId}`)
+    const { data } = await client.post<ContractExtractResult>(`/ai/contract-extract?document_id=${documentId}`, null, { timeout: 180000 })
     return data
   },
   async getDocumentDownloadUrl(document_id: string): Promise<{ download_url: string; expires_in: number }> {

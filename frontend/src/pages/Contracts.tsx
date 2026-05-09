@@ -228,13 +228,18 @@ export function ContractsPage() {
           accept=".pdf,.jpg,.jpeg,.png"
           showUploadList={false}
           beforeUpload={async (file) => {
+            const hideLoading = message.loading(t('contract.extracting'), 0)
             try {
               const doc = await api.uploadDocument(file, 'contract')
               const result = await api.extractContract(doc.id)
-              if (result.error) { void message.error(t('contract.extract_failed')); return false }
+              hideLoading()
+              if (result.error) { void message.error(result.error); return false }
               setExtractedData(result as unknown as Record<string, unknown>)
               setScanCreateOpen(true)
-            } catch (e) { void message.error(extractError(e).detail) }
+            } catch (e) {
+              hideLoading()
+              void message.error(extractError(e).detail)
+            }
             return false
           }}
         >
