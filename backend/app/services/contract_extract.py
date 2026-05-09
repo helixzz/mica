@@ -130,9 +130,13 @@ async def _dispatch(
     except Exception as e:
         return ContractExtract(error=f"AI call failed: {e}")
 
-    msg = response.choices[0].message
-    text = msg.content or getattr(msg, "reasoning_content", None) or ""
-    logger.info("contract_extract: raw response (%d chars)", len(text))
+    choice = response.choices[0]
+    text = getattr(choice.message, "content", None) or ""
+    if not text:
+        text = getattr(choice, "text", None) or ""
+    if not text:
+        text = getattr(response, "text", None) or ""
+    logger.info("contract_extract: response (%d chars) %s", len(text), repr(text[:200]))
     return _parse_response(text)
 
 def _build_prompt(filename: str) -> str:
