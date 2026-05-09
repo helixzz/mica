@@ -24,9 +24,14 @@ class ContractExtract:
     contract_number: str | None = None
     title: str | None = None
     supplier_name: str | None = None
+    supplier_contact: str | None = None
+    supplier_phone: str | None = None
     start_date: str | None = None
     end_date: str | None = None
     total_amount: str | None = None
+    payment_terms: str | None = None
+    delivery_terms: str | None = None
+    items_text: str | None = None
     description: str | None = None
     error: str | None = None
 
@@ -34,16 +39,21 @@ class ContractExtract:
 def _build_prompt(filename: str) -> str:
     return f"""Extract these fields from this contract ({filename}):
 
-1. contract_number - contract reference number
-2. title - subject of the contract
-3. supplier_name - name of supplier/vendor
-4. start_date - YYYY-MM-DD
-5. end_date - YYYY-MM-DD
-6. total_amount - number only, no currency symbol
-7. description - 1-2 sentence summary
+1. contract_number - contract reference number or ID
+2. title - subject/title of the contract
+3. supplier_name - name of the supplier/vendor/contractor
+4. supplier_contact - contact person name for the supplier
+5. supplier_phone - contact phone number
+6. start_date - contract start date (YYYY-MM-DD)
+7. end_date - contract end/expiry date (YYYY-MM-DD)
+8. total_amount - total contract value (number only, no currency symbol)
+9. payment_terms - payment conditions (e.g. "NET 30", "50% advance")
+10. delivery_terms - delivery/shipping conditions
+11. items_text - list of purchased items with name, specification, quantity, unit price. Format as bullet list.
+12. description - 1-2 sentence summary
 
 Return ONLY valid JSON. Use null for missing fields.
-Example: {{"contract_number":"CT-001","title":"IT Equipment","supplier_name":"Dell","start_date":"2024-01-15","end_date":"2025-01-14","total_amount":"150000","description":"Supply of laptops"}}"""
+Example: {{"contract_number":"CT-001","title":"Server Purchase","supplier_name":"Dell","supplier_contact":"Zhang San","supplier_phone":"13800138000","start_date":"2024-01-15","end_date":"2025-01-14","total_amount":"150000","payment_terms":"NET 30","delivery_terms":"FOB Shanghai","items_text":"- Dell R740 Server x 10 @ 12000/unit\\n- 32GB DDR4 RAM x 20 @ 800/unit","description":"Purchase of 10 servers and memory modules"}}"""
 
 
 def _b64(data: bytes) -> str:
@@ -68,9 +78,14 @@ def _parse_response(text: str) -> ContractExtract:
         contract_number=data.get("contract_number") or None,
         title=data.get("title") or None,
         supplier_name=data.get("supplier_name") or None,
+        supplier_contact=data.get("supplier_contact") or None,
+        supplier_phone=data.get("supplier_phone") or None,
         start_date=data.get("start_date") or None,
         end_date=data.get("end_date") or None,
         total_amount=str(data.get("total_amount")) if data.get("total_amount") else None,
+        payment_terms=data.get("payment_terms") or None,
+        delivery_terms=data.get("delivery_terms") or None,
+        items_text=data.get("items_text") or None,
         description=data.get("description") or None,
     )
 

@@ -798,9 +798,14 @@ export interface ContractExtractResult {
   contract_number: string | null
   title: string | null
   supplier_name: string | null
+  supplier_contact: string | null
+  supplier_phone: string | null
   start_date: string | null
   end_date: string | null
   total_amount: string | null
+  payment_terms: string | null
+  delivery_terms: string | null
+  items_text: string | null
   description: string | null
   error: string | null
 }

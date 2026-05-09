@@ -31,6 +31,24 @@ interface ContractFormModalProps {
   onSaved: (contract: Contract) => void
 }
 
+function _buildNotes(iv: Record<string, unknown>): string {
+  const parts: string[] = []
+  const desc = iv.description as string | undefined
+  const supplier = iv.supplier_name as string | undefined
+  const contact = iv.supplier_contact as string | undefined
+  const phone = iv.supplier_phone as string | undefined
+  const payment = iv.payment_terms as string | undefined
+  const delivery = iv.delivery_terms as string | undefined
+  const items = iv.items_text as string | undefined
+
+  if (desc) parts.push(desc)
+  if (supplier && contact) parts.push(`联系人：${contact}${phone ? ` / ${phone}` : ''}`)
+  if (payment) parts.push(`付款条件：${payment}`)
+  if (delivery) parts.push(`交付条件：${delivery}`)
+  if (items) parts.push(`采购明细：\n${items}`)
+  return parts.join('\n\n') || ''
+}
+
 export function ContractFormModal({
   open,
   mode,
@@ -77,7 +95,7 @@ export function ContractFormModal({
           contract_number: ((initialValues.contract_number as string) || undefined) ?? undefined,
           title: ((initialValues.title as string) || undefined) ?? undefined,
           total_amount: initialValues.total_amount ? Number(initialValues.total_amount) : undefined,
-          notes: ((initialValues.description as string) || undefined) ?? undefined,
+          notes: _buildNotes(initialValues),
           change_reason: null,
           change_summary: null,
         })
