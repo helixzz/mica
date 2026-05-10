@@ -199,7 +199,8 @@
     "expired": "已过期",
     "planned": "计划中",
     "partial": "部分完成",
-    "complete": "已完成"
+    "complete": "已完成",
+    "unmatched": "未匹配"
   },
   "role": {
     "admin": "管理员",
@@ -409,7 +410,10 @@
     "match_status": "匹配状态",
     "payment_calendar": "付款日历",
     "due_date": "到期日",
-    "amount": "金额"
+    "amount": "金额",
+    "payment_po_label": "PO: ",
+    "payment_contract_label": "合同: ",
+    "payment_installment_label": "分期: "
   },
   "welcome": {
     "title": "Welcome to Mica / 欢迎使用觅采",

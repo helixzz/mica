@@ -199,7 +199,8 @@
     "expired": "Expired",
     "planned": "Planned",
     "partial": "Partial",
-    "complete": "Complete"
+    "complete": "Complete",
+    "unmatched": "Unmatched"
   },
   "role": {
     "admin": "Administrator",
@@ -404,7 +405,10 @@
     "match_status": "Match Status",
     "payment_calendar": "Payment Calendar",
     "due_date": "Due Date",
-    "amount": "Amount"
+    "amount": "Amount",
+    "payment_po_label": "PO: ",
+    "payment_contract_label": "Contract: ",
+    "payment_installment_label": "Installment: "
   },
   "welcome": {
     "title": "Welcome to Mica / 欢迎使用觅采",
