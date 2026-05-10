@@ -27,7 +27,11 @@ def _locale(user: User | None) -> str:
 
 
 async def send_reminders(db: AsyncSession) -> dict[str, int | str | bool]:
-    enabled = await system_params.get(db, "approval.reminder_enabled", True)
+    raw = await system_params.get(db, "approval.reminder_enabled", True)
+    if isinstance(raw, bool):
+        enabled = raw
+    else:
+        enabled = str(raw).lower() in ("true", "1", "yes")
     if not enabled:
         return {"scanned": 0, "reminded": 0, "notifications": 0, "reminder_disabled": True}
 

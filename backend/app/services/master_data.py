@@ -286,7 +286,7 @@ async def delete_supplier(db: AsyncSession, actor: User, supplier_id: UUID, *, h
                 detail="supplier.has_po_items",
             )
         if await _exists(db, select(PRItem.id).where(PRItem.supplier_id == supplier.id)):
-            raise HTTPException(status_code=409, detail="supplier.has_pr_items")
+            raise HTTPException(status_code=409, detail="supplier.has_pr_items; hard delete denied")
         if await _exists(db, select(Contract.id).where(Contract.supplier_id == supplier.id)):
             raise HTTPException(status_code=409, detail="supplier.has_contracts")
         if await _exists(db, select(Invoice.id).where(Invoice.supplier_id == supplier.id)):
@@ -428,7 +428,7 @@ async def delete_item(db: AsyncSession, actor: User, item_id: UUID, *, hard: boo
         if await _exists(db, select(POItem.id).where(POItem.item_id == item.id)):
             raise HTTPException(status_code=409, detail="item.has_po_items")
         if await _exists(db, select(PRItem.id).where(PRItem.item_id == item.id)):
-            raise HTTPException(status_code=409, detail="item.has_pr_items")
+            raise HTTPException(status_code=409, detail="item.has_pr_items; hard delete denied")
         if await _exists(db, select(SKUPriceRecord.id).where(SKUPriceRecord.item_id == item.id)):
             raise HTTPException(status_code=409, detail="item.has_price_records")
         if await _exists(

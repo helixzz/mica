@@ -1,5 +1,5 @@
 import { Col, Row, Space, Tag, Typography, theme, Button, List, Avatar, Progress, Card, Tabs, Table, Drawer, Switch } from 'antd'
-import { useEffect, useState } from 'react'
+import { memo, useEffect, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { Link, useNavigate } from 'react-router-dom'
 import {
@@ -94,7 +94,7 @@ function SortableItem({ id, title, visible, onToggle }: SortableItemProps) {
 }
 
 export function DashboardPage() {
-  const { t } = useTranslation()
+  const { t, i18n } = useTranslation()
   const { user } = useAuth()
   const { token } = theme.useToken()
   const navigate = useNavigate()
@@ -664,6 +664,7 @@ export function DashboardPage() {
             <List
               itemLayout="horizontal"
               dataSource={paymentCalendar}
+              rowKey="id"
               renderItem={(item) => {
                 const dueDate = new Date(item.due_date)
                 const today = new Date()
@@ -685,8 +686,8 @@ export function DashboardPage() {
                       }
                       title={
                         <Space>
-                          <Text strong>¥{item.amount.toLocaleString()}</Text>
-                          <Tag color={color}>{item.due_date}</Tag>
+<Text strong>¥{item.amount.toLocaleString(i18n.language)}</Text>
+<Tag color={color}>{new Date(item.due_date).toLocaleDateString(i18n.language)}</Tag>
                         </Space>
                       }
                       description={

@@ -22,6 +22,7 @@ from app.models import (
     InvoiceStatus,
     PaymentRecord,
     PaymentStatus,
+    POStatus,
     PurchaseOrder,
     PurchaseRequisition,
     Shipment,
@@ -425,7 +426,15 @@ async def invoice_match_summary(
             func.coalesce(func.sum(POItem.qty_invoiced), 0).label("qty_invoiced"),
         )
         .join(POItem, PurchaseOrder.id == POItem.po_id)
-        .where(PurchaseOrder.status.in_(["confirmed", "partially_received", "fully_received"]))
+        .where(
+            PurchaseOrder.status.in_(
+                [
+                    POStatus.CONFIRMED.value,
+                    POStatus.PARTIALLY_RECEIVED.value,
+                    POStatus.FULLY_RECEIVED.value,
+                ]
+            )
+        )
         .group_by(
             PurchaseOrder.id,
             PurchaseOrder.po_number,

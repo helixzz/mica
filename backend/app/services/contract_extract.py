@@ -111,12 +111,19 @@ async def extract_contract(
         if result.supplier_name and not result.error:
             try:
                 from app.models import Supplier
-                matched = (await db.execute(
-                    select(Supplier).where(
-                        Supplier.name.ilike(f"%{result.supplier_name[:20]}%"),
-                        Supplier.is_deleted.is_(False),
+
+                matched = (
+                    (
+                        await db.execute(
+                            select(Supplier).where(
+                                Supplier.name.ilike(f"%{result.supplier_name[:20]}%"),
+                                Supplier.is_deleted.is_(False),
+                            )
+                        )
                     )
-                )).scalars().all()
+                    .scalars()
+                    .all()
+                )
                 if matched:
                     result.supplier_id = str(matched[0].id)
             except Exception:
@@ -173,13 +180,16 @@ async def _dispatch(
 
     prompt = _build_prompt(filename)
 
-# Try stored OCR text first, then pypdf extraction
+    # Try stored OCR text first, then pypdf extraction
     text_content = ""
     try:
         from app.models import ContractDocument
-        link = (await db.execute(
-            select(ContractDocument).where(ContractDocument.document_id == document_id)
-        )).scalar_one_or_none()
+
+        link = (
+            await db.execute(
+                select(ContractDocument).where(ContractDocument.document_id == document_id)
+            )
+        ).scalar_one_or_none()
         if link and link.ocr_text:
             text_content = link.ocr_text[:8000]
     except Exception:
@@ -191,11 +201,12 @@ async def _dispatch(
                 import io
 
                 from pypdf import PdfReader
+
                 reader = PdfReader(io.BytesIO(content))
                 for i, page in enumerate(reader.pages[:5]):
                     page_text = page.extract_text() or ""
                     if page_text.strip():
-                        text_content += f"\n--- Page {i+1} ---\n{page_text}"
+                        text_content += f"\n--- Page {i + 1} ---\n{page_text}"
                 text_content = text_content[:8000]
             except Exception:
                 pass

@@ -792,3 +792,28 @@ async def test_delete_department_soft_delete_deactivates_and_audits(seeded_db_se
         "old": {"is_deleted": False},
         "new": {"is_deleted": True},
     }
+
+
+async def test_get_item_by_id_returns_item(seeded_db_session):
+    actor = await _user(seeded_db_session, "alice")
+    company = await _company(seeded_db_session)
+    created = await svc.create_item(
+        seeded_db_session,
+        actor,
+        ItemCreate(
+            code=f"ITEM-GET-{_suffix()}",
+            company_id=company.id,
+            name_zh="测试获取物料",
+            name_en="Test Get Item",
+            uom="pcs",
+        ),
+    )
+    result = await svc.get_item(seeded_db_session, created.id)
+    assert result is not None
+    assert result.id == created.id
+    assert result.code == created.code
+
+
+async def test_get_item_not_found_returns_none(seeded_db_session):
+    result = await svc.get_item(seeded_db_session, uuid4())
+    assert result is None
