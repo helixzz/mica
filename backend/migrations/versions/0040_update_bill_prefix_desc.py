@@ -18,8 +18,8 @@ def upgrade() -> None:
     op.execute(
         sa.text(
             "UPDATE system_parameters "
-            "SET description_zh = '账单编号自动生成前缀。留空则按 INV{YYYYMMDD}{序号} 生成（如 INV20260510001）。自定义前缀时不追加日期，直接 {前缀}{序号}。', "
-            "    description_en = 'Auto-generated bill number prefix. Leave blank for INV{YYYYMMDD}{seq} (e.g. INV20260510001). Custom prefix omits date: {prefix}{seq}.' "
+            "SET description_zh = '账单编号自动生成前缀（格式：{前缀}{YYYYMMDD}{001}）。留空默认 INV，如 INV20260510001。设为 ''B-'' 则生成 B-20260510001。', "
+            "    description_en = 'Auto-generated bill number prefix (format: {prefix}{YYYYMMDD}{001}). Defaults to INV, e.g. INV20260510001. Custom prefix B- yields B-20260510001.' "
             "WHERE key = 'bill.number_prefix'"
         )
     )

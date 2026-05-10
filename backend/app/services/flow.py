@@ -1121,21 +1121,23 @@ async def create_invoice(
     if isinstance(raw_prefix, str) and raw_prefix.strip():
         prefix = raw_prefix.strip()
     else:
-        prefix = f"INV{now.year:04d}{now.month:02d}{now.day:02d}"
+        prefix = "INV"
+    date_str = f"{now.year:04d}{now.month:02d}{now.day:02d}"
+    full_prefix = f"{prefix}{date_str}"
     max_suffix = (
         await db.execute(
             select(func.max(Invoice.internal_number)).where(
-                Invoice.internal_number.like(f"{prefix}%")
+                Invoice.internal_number.like(f"{full_prefix}%")
             )
         )
     ).scalar_one_or_none()
     next_seq = 1
-    if max_suffix and len(max_suffix) == len(prefix) + 3:
+    if max_suffix and len(max_suffix) == len(full_prefix) + 3:
         try:
             next_seq = int(max_suffix[-3:]) + 1
         except ValueError:
             next_seq = 1
-    internal_number = f"{prefix}{next_seq:03d}"
+    internal_number = f"{full_prefix}{next_seq:03d}"
 
     po_item_ids = {line.get("po_item_id") for line in lines_in if line.get("po_item_id")}
     po_items_map: dict[str, POItem] = {}
