@@ -962,6 +962,10 @@ export const api = {
     const { data } = await client.get<{ items: Item[] }>('/items', { params: { page_size: 500 } })
     return data.items
   },
+  async getItem(id: string): Promise<Item> {
+    const { data } = await client.get<Item>(`/items/${id}`)
+    return data
+  },
   async itemsPaginated(params?: { category_id?: string; search?: string; page?: number; page_size?: number; include_inactive?: boolean }): Promise<{ items: Item[]; total: number; page: number; page_size: number }> {
     const { data } = await client.get('/items', { params })
     return data

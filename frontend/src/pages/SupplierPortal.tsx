@@ -83,22 +83,23 @@ const statusColors: Record<string, string> = {
   rejected: 'red',
 }
 
-function formatDate(d: string | null) {
+function formatDate(d: string | null, locale: string) {
   if (!d) return '-'
-  return new Date(d).toLocaleDateString()
+  return new Date(d).toLocaleDateString(locale)
 }
 
-function formatAmount(amount: string, currency: string) {
+function formatAmount(amount: string, currency: string, locale: string) {
   const n = parseFloat(amount)
   if (isNaN(n)) return '-'
-  return new Intl.NumberFormat('zh-CN', {
+  const intlLocale = locale.startsWith('zh') ? 'zh-CN' : 'en-US'
+  return new Intl.NumberFormat(intlLocale, {
     style: 'currency',
     currency: currency || 'CNY',
   }).format(n)
 }
 
 export default function SupplierPortalPage() {
-  const { t } = useTranslation()
+  const { t, i18n } = useTranslation()
   const { token } = useParams<{ token: string }>()
   const [data, setData] = useState<PortalData | null>(null)
   const [loading, setLoading] = useState(true)
@@ -165,15 +166,17 @@ export default function SupplierPortalPage() {
       title: t('field.status'),
       dataIndex: 'status',
       key: 'status',
-      render: (s: string) => (
-        <Tag color={statusColors[s] || 'default'}>{s}</Tag>
-      ),
+      render: (s: string) => {
+        const key = `status.${s}`
+        const translated = t(key)
+        return <Tag color={statusColors[s] || 'default'}>{translated !== key ? translated : s}</Tag>
+      },
     },
     {
       title: t('field.amount'),
       dataIndex: 'total_amount',
       key: 'total_amount',
-      render: (_: string, r: PortalPO) => formatAmount(r.total_amount, r.currency),
+      render: (_: string, r: PortalPO) => formatAmount(r.total_amount, r.currency, i18n.language),
     },
     {
       title: t('supplier_portal.qty_received'),
@@ -184,13 +187,13 @@ export default function SupplierPortalPage() {
       title: t('supplier_portal.amount_paid'),
       dataIndex: 'amount_paid',
       key: 'amount_paid',
-      render: (_: string, r: PortalPO) => formatAmount(r.amount_paid, r.currency),
+      render: (_: string, r: PortalPO) => formatAmount(r.amount_paid, r.currency, i18n.language),
     },
     {
       title: t('field.created_at'),
       dataIndex: 'created_at',
       key: 'created_at',
-      render: (d: string) => formatDate(d),
+      render: (d: string) => formatDate(d, i18n.language),
     },
   ]
 
@@ -209,28 +212,30 @@ export default function SupplierPortalPage() {
       title: t('field.status'),
       dataIndex: 'status',
       key: 'status',
-      render: (s: string) => (
-        <Tag color={statusColors[s] || 'default'}>{s}</Tag>
-      ),
+      render: (s: string) => {
+        const key = `status.${s}`
+        const translated = t(key)
+        return <Tag color={statusColors[s] || 'default'}>{translated !== key ? translated : s}</Tag>
+      },
     },
     {
       title: t('field.amount'),
       dataIndex: 'total_amount',
       key: 'total_amount',
       render: (_: string, r: PortalContract) =>
-        formatAmount(r.total_amount, r.currency),
+        formatAmount(r.total_amount, r.currency, i18n.language),
     },
     {
       title: t('supplier_portal.signed_date'),
       dataIndex: 'signed_date',
       key: 'signed_date',
-      render: (d: string | null) => formatDate(d),
+      render: (d: string | null) => formatDate(d, i18n.language),
     },
     {
       title: t('supplier_portal.expiry_date'),
       dataIndex: 'expiry_date',
       key: 'expiry_date',
-      render: (d: string | null) => formatDate(d),
+      render: (d: string | null) => formatDate(d, i18n.language),
     },
   ]
 
@@ -244,28 +249,30 @@ export default function SupplierPortalPage() {
       title: t('field.status'),
       dataIndex: 'status',
       key: 'status',
-      render: (s: string) => (
-        <Tag color={statusColors[s] || 'default'}>{s}</Tag>
-      ),
+      render: (s: string) => {
+        const key = `status.${s}`
+        const translated = t(key)
+        return <Tag color={statusColors[s] || 'default'}>{translated !== key ? translated : s}</Tag>
+      },
     },
     {
       title: t('field.amount'),
       dataIndex: 'amount',
       key: 'amount',
       render: (_: string, r: PortalPayment) =>
-        formatAmount(r.amount, r.currency),
+        formatAmount(r.amount, r.currency, i18n.language),
     },
     {
       title: t('field.due_date'),
       dataIndex: 'due_date',
       key: 'due_date',
-      render: (d: string | null) => formatDate(d),
+      render: (d: string | null) => formatDate(d, i18n.language),
     },
     {
       title: t('field.payment_date'),
       dataIndex: 'payment_date',
       key: 'payment_date',
-      render: (d: string | null) => formatDate(d),
+      render: (d: string | null) => formatDate(d, i18n.language),
     },
     {
       title: t('field.payment_method'),
@@ -289,9 +296,11 @@ export default function SupplierPortalPage() {
       title: t('field.status'),
       dataIndex: 'status',
       key: 'status',
-      render: (s: string) => (
-        <Tag color={statusColors[s] || 'default'}>{s}</Tag>
-      ),
+      render: (s: string) => {
+        const key = `status.${s}`
+        const translated = t(key)
+        return <Tag color={statusColors[s] || 'default'}>{translated !== key ? translated : s}</Tag>
+      },
     },
     {
       title: t('field.carrier'),
@@ -309,13 +318,13 @@ export default function SupplierPortalPage() {
       title: t('field.expected_date'),
       dataIndex: 'expected_date',
       key: 'expected_date',
-      render: (d: string | null) => formatDate(d),
+      render: (d: string | null) => formatDate(d, i18n.language),
     },
     {
       title: t('field.actual_date'),
       dataIndex: 'actual_date',
       key: 'actual_date',
-      render: (d: string | null) => formatDate(d),
+      render: (d: string | null) => formatDate(d, i18n.language),
     },
   ]
 

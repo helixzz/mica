@@ -5,15 +5,17 @@ import { useTranslation } from 'react-i18next'
 import { api } from '@/api'
 import { extractError } from '@/api/client'
 
-const TOKEN_PRESETS = [
-  { value: 256, label: '256 — Short' },
-  { value: 512, label: '512 — Brief' },
-  { value: 1024, label: '1024 — Normal (recommended)' },
-  { value: 2048, label: '2048 — Medium' },
-  { value: 4096, label: '4096 — Long' },
-  { value: 8192, label: '8192 — Extended' },
-  { value: 16384, label: '16384 — Full' },
-]
+const TOKEN_PRESET_VALUES = [256, 512, 1024, 2048, 4096, 8192, 16384]
+
+const TOKEN_PRESET_LABELS: Record<number, string> = {
+  256: 'admin.token_preset_short',
+  512: 'admin.token_preset_brief',
+  1024: 'admin.token_preset_normal',
+  2048: 'admin.token_preset_medium',
+  4096: 'admin.token_preset_long',
+  8192: 'admin.token_preset_extended',
+  16384: 'admin.token_preset_full',
+}
 
 export function RoutingsPanel() {
   const { t } = useTranslation()
@@ -21,6 +23,11 @@ export function RoutingsPanel() {
   const [models, setModels] = useState<AIModelRow[]>([])
   const [loading, setLoading] = useState(false)
   const [pendingToggle, setPendingToggle] = useState<string | null>(null)
+
+  const tokenOptions = TOKEN_PRESET_VALUES.map((v) => ({
+    value: v,
+    label: t(TOKEN_PRESET_LABELS[v]),
+  }))
 
   const load = () => {
     setLoading(true)
@@ -76,16 +83,22 @@ export function RoutingsPanel() {
           title: t('admin.primary_model'), dataIndex: 'primary_model_id',
           render: (v: string | null, r) => (
             <Select style={{ width: 240 }} value={v || undefined}
-              onChange={(val) => changePrimary(r.feature_code as string, val, r)}
+              onChange={async (val) => {
+              try {
+                await changePrimary(r.feature_code as string, val ?? null, r)
+              } catch (e) {
+                void message.error(extractError(e).detail)
+              }
+            }}
               allowClear
               options={models.map((m) => ({ value: m.id, label: `${m.name} (${m.modality})` }))}
               placeholder={t('admin.not_configured')}
             />
           ),
         },
-        { title: 'Temperature', dataIndex: 'temperature' },
+        { title: t('admin.temperature_col'), dataIndex: 'temperature' },
         {
-          title: 'Max Tokens', dataIndex: 'max_tokens',
+          title: t('admin.max_tokens_col'), dataIndex: 'max_tokens',
           render: (v: number | null, r) => (
             <Select
               style={{ width: 220 }}
@@ -107,7 +120,7 @@ export function RoutingsPanel() {
                   void message.error(extractError(e).detail)
                 }
               }}
-              options={TOKEN_PRESETS}
+              options={tokenOptions}
             />
           ),
         },

@@ -619,7 +619,7 @@ export function DashboardPage() {
                           key: 'avg_delivery_days',
                           render: (v: number) => (
                             <Tag color={v <= 7 ? 'green' : v <= 14 ? 'orange' : 'red'}>
-                              {v} 天
+                              {t('dashboard.days_unit', { days: v })}
                             </Tag>
                           ),
                         },

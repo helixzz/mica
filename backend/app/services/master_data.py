@@ -288,17 +288,13 @@ async def delete_supplier(db: AsyncSession, actor: User, supplier_id: UUID, *, h
         if await _exists(db, select(PRItem.id).where(PRItem.supplier_id == supplier.id)):
             raise HTTPException(status_code=409, detail="supplier.has_pr_items")
         if await _exists(db, select(Contract.id).where(Contract.supplier_id == supplier.id)):
-            raise HTTPException(
-                status_code=409, detail="supplier.has_contracts"
-            )
+            raise HTTPException(status_code=409, detail="supplier.has_contracts")
         if await _exists(db, select(Invoice.id).where(Invoice.supplier_id == supplier.id)):
             raise HTTPException(status_code=409, detail="supplier.has_invoices")
         if await _exists(
             db, select(SKUPriceRecord.id).where(SKUPriceRecord.supplier_id == supplier.id)
         ):
-            raise HTTPException(
-                status_code=409, detail="supplier.has_price_records"
-            )
+            raise HTTPException(status_code=409, detail="supplier.has_price_records")
 
         await _audit(
             db,
@@ -324,6 +320,13 @@ async def delete_supplier(db: AsyncSession, actor: User, supplier_id: UUID, *, h
             metadata={"old": {"is_deleted": False}, "new": {"is_deleted": True}},
         )
         await db.commit()
+
+
+async def get_item(db: AsyncSession, item_id: UUID) -> Item:
+    item = await db.get(Item, item_id)
+    if not item or item.is_deleted:
+        raise HTTPException(status_code=404, detail="Item not found")
+    return item
 
 
 async def create_item(db: AsyncSession, actor: User, payload: ItemCreate) -> Item:
@@ -427,19 +430,13 @@ async def delete_item(db: AsyncSession, actor: User, item_id: UUID, *, hard: boo
         if await _exists(db, select(PRItem.id).where(PRItem.item_id == item.id)):
             raise HTTPException(status_code=409, detail="item.has_pr_items")
         if await _exists(db, select(SKUPriceRecord.id).where(SKUPriceRecord.item_id == item.id)):
-            raise HTTPException(
-                status_code=409, detail="item.has_price_records"
-            )
+            raise HTTPException(status_code=409, detail="item.has_price_records")
         if await _exists(
             db, select(SKUPriceBenchmark.id).where(SKUPriceBenchmark.item_id == item.id)
         ):
-            raise HTTPException(
-                status_code=409, detail="item.has_price_benchmarks"
-            )
+            raise HTTPException(status_code=409, detail="item.has_price_benchmarks")
         if await _exists(db, select(SKUPriceAnomaly.id).where(SKUPriceAnomaly.item_id == item.id)):
-            raise HTTPException(
-                status_code=409, detail="item.has_price_anomalies"
-            )
+            raise HTTPException(status_code=409, detail="item.has_price_anomalies")
 
         await _audit(
             db,

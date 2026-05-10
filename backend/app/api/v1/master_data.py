@@ -167,6 +167,16 @@ async def delete_supplier(
     return Response(status_code=status.HTTP_204_NO_CONTENT)
 
 
+@router.get("/items/{item_id}", response_model=ItemOut, tags=["master-data"])
+async def get_item(
+    item_id: UUID,
+    _user: CurrentUser,
+    db: Annotated[AsyncSession, Depends(get_db)],
+) -> ItemOut:
+    item = await master_data_svc.get_item(db, item_id)
+    return ItemOut.model_validate(item)
+
+
 @router.post(
     "/items",
     response_model=ItemOut,

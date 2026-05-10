@@ -33,6 +33,7 @@ async def send_daily_digest(db: AsyncSession) -> dict:
     """Compile and send daily digest email to admin and procurement managers.
 
     Returns a summary dict with counts and per-recipient send status.
+    Email body is built per-recipient to honour each user's preferred locale.
     Email failures are logged and swallowed — this is fire-and-forget.
     """
     today = datetime.now(UTC).date()
@@ -47,19 +48,8 @@ async def send_daily_digest(db: AsyncSession) -> dict:
     anomaly_since = today - timedelta(days=anomaly_days)
     sku_anomalies = await _count_recent_anomalies(db, since=anomaly_since)
 
-    expiry_rows_html = _build_expiry_rows(expiring_contracts)
-    anomaly_detail_html = await _build_anomaly_detail(db, since=anomaly_since)
-
-    body = _build_email_body(
-        pending_approvals=pending_approvals,
-        expiring_count=expiring_count,
-        expiry_rows_html=expiry_rows_html,
-        sku_anomalies=sku_anomalies,
-        anomaly_detail_html=anomaly_detail_html,
-        today=today,
-    )
-
-    subject = f"Mica Daily Digest — {today.isoformat()}"
+    # Pre-fetch anomaly rows once for reuse across recipients
+    anomaly_rows = await _fetch_anomaly_rows(db, since=anomaly_since)
 
     recipients = await _get_digest_recipients(db)
     sent_count = 0
@@ -67,6 +57,22 @@ async def send_daily_digest(db: AsyncSession) -> dict:
     for user in recipients:
         if not user.email:
             continue
+        locale = user.preferred_locale or "zh-CN"
+        subject = t("digest.email_title", locale, date=today.isoformat())
+
+        expiry_rows_html = _build_expiry_rows(expiring_contracts, locale)
+        anomaly_detail_html = _build_anomaly_detail_html(anomaly_rows, locale)
+
+        body = _build_email_body(
+            pending_approvals=pending_approvals,
+            expiring_count=expiring_count,
+            expiry_rows_html=expiry_rows_html,
+            sku_anomalies=sku_anomalies,
+            anomaly_detail_html=anomaly_detail_html,
+            today=today,
+            locale=locale,
+        )
+
         try:
             ok = await send_email(db, user.email, subject, body)
             if ok:
@@ -126,9 +132,14 @@ async def _get_digest_recipients(db: AsyncSession) -> list[User]:
     return list(result.scalars().all())
 
 
-def _build_expiry_rows(contracts: list[Contract]) -> str:
+def _build_expiry_rows(contracts: list[Contract], locale: str) -> str:
     if not contracts:
-        return "<p><em>No contracts expiring in the configured window.</em></p>"
+        return f"<p><em>{t('digest.no_expiring_contracts', locale)}</em></p>"
+
+    th_num = t("digest.table_header_contract_number", locale)
+    th_title = t("digest.table_header_title", locale)
+    th_expiry = t("digest.table_header_expiry", locale)
+    th_amount = t("digest.table_header_amount", locale)
 
     rows = ""
     for c in contracts:
@@ -146,12 +157,12 @@ def _build_expiry_rows(contracts: list[Contract]) -> str:
         f'<table border="1" cellpadding="6" cellspacing="0" '
         f'style="border-collapse:collapse;width:100%">'
         f"<thead><tr>"
-        f"<th>Contract #</th><th>Title</th><th>Expiry</th><th>Amount</th>"
+        f"<th>{th_num}</th><th>{th_title}</th><th>{th_expiry}</th><th>{th_amount}</th>"
         f"</tr></thead><tbody>{rows}</tbody></table>"
     )
 
 
-async def _build_anomaly_detail(db: AsyncSession, since: date | None = None) -> str:
+async def _fetch_anomaly_rows(db: AsyncSession, since: date | None = None) -> list:
     from app.models import Item
 
     stmt = (
@@ -165,9 +176,18 @@ async def _build_anomaly_detail(db: AsyncSession, since: date | None = None) -> 
         since_dt = datetime.combine(since, datetime.min.time(), tzinfo=UTC)
         stmt = stmt.where(SKUPriceAnomaly.created_at >= since_dt)
 
-    rows = (await db.execute(stmt)).all()
+    return list((await db.execute(stmt)).all())
+
+
+def _build_anomaly_detail_html(rows: list, locale: str) -> str:
     if not rows:
-        return "<p><em>No recent price anomalies found.</em></p>"
+        return f"<p><em>{t('digest.no_recent_anomalies', locale)}</em></p>"
+
+    th_item = t("digest.table_header_item", locale)
+    th_observed = t("digest.table_header_observed", locale)
+    th_baseline = t("digest.table_header_baseline", locale)
+    th_deviation = t("digest.table_header_deviation", locale)
+    th_severity = t("digest.table_header_severity", locale)
 
     html = ""
     for anomaly, item in rows:
@@ -191,7 +211,8 @@ async def _build_anomaly_detail(db: AsyncSession, since: date | None = None) -> 
         f'<table border="1" cellpadding="6" cellspacing="0" '
         f'style="border-collapse:collapse;width:100%">'
         f"<thead><tr>"
-        f"<th>Item</th><th>Observed</th><th>Baseline</th><th>Deviation</th><th>Severity</th>"
+        f"<th>{th_item}</th><th>{th_observed}</th><th>{th_baseline}</th>"
+        f"<th>{th_deviation}</th><th>{th_severity}</th>"
         f"</tr></thead><tbody>{html}</tbody></table>"
     )
 
@@ -204,30 +225,40 @@ def _build_email_body(
     sku_anomalies: int,
     anomaly_detail_html: str,
     today: date,
+    locale: str,
 ) -> str:
     base_url = get_settings().app_base_url.rstrip("/")
+    email_title = t("digest.email_title", locale)
+    pending_label = t("digest.email_title_pending_approvals", locale, count=pending_approvals)
+    pending_text = t("digest.pending_approvals_text", locale, count=pending_approvals)
+    view_approvals = t("digest.view_pending_approvals_link", locale)
+    expiring_label = t("digest.email_title_expiring_contracts", locale, count=expiring_count)
+    view_contracts = t("digest.view_all_contracts_link", locale)
+    anomalies_label = t("digest.price_anomalies_header", locale, count=sku_anomalies)
+    footer = t("digest.email_footer", locale)
+    manage_settings = t("digest.manage_settings_link", locale)
     return f"""<!DOCTYPE html>
 <html lang="en">
 <head><meta charset="UTF-8"></head>
 <body style="font-family:Inter,sans-serif;color:#333;max-width:700px;margin:0 auto">
-<h2 style="color:#8B5E3C">🦦 Mica Daily Digest</h2>
+<h2 style="color:#8B5E3C">{email_title}</h2>
 <p style="color:#666">{today.isoformat()}</p>
 
-<h3 style="color:#8B5E3C">📋 Pending Approvals: {pending_approvals}</h3>
-<p>{pending_approvals} purchase request(s) are awaiting approval.
-<a href="{base_url}/approvals" style="color:#8B5E3C">View pending approvals →</a></p>
+<h3 style="color:#8B5E3C">{pending_label}</h3>
+<p>{pending_text}
+<a href="{base_url}/approvals" style="color:#8B5E3C">{view_approvals} →</a></p>
 
-<h3 style="color:#8B5E3C">📄 Expiring Contracts: {expiring_count}</h3>
+<h3 style="color:#8B5E3C">{expiring_label}</h3>
 {expiry_rows_html}
-<p style="margin-top:8px"><a href="{base_url}/contracts" style="color:#8B5E3C">View all contracts →</a></p>
+<p style="margin-top:8px"><a href="{base_url}/contracts" style="color:#8B5E3C">{view_contracts} →</a></p>
 
-<h3 style="color:#8B5E3C">⚠️ Price Anomalies (last 7 days): {sku_anomalies}</h3>
+<h3 style="color:#8B5E3C">{anomalies_label}</h3>
 {anomaly_detail_html}
 
 <hr style="border:1px solid #eee;margin:24px 0">
 <p style="font-size:12px;color:#999">
-This digest was automatically generated by Mica (觅采).
-<a href="{base_url}/admin" style="color:#8B5E3C">Manage notification settings</a>.
+{footer}
+<a href="{base_url}/admin" style="color:#8B5E3C">{manage_settings}</a>.
 </p>
 </body>
 </html>"""
@@ -250,13 +281,14 @@ async def _send_feishu_digest(
         return
 
     locale = user.preferred_locale or "zh-CN"
+    base_url = get_settings().app_base_url.rstrip("/")
 
     body = (
         f"{t('digest.feishu.pending_approvals', locale, count=pending_approvals)}\n"
         f"{t('digest.feishu.expiring_contracts', locale, count=expiring_count)}\n"
         f"{t('digest.feishu.price_anomalies', locale, count=sku_anomalies)}\n\n"
-        f"[{t('digest.feishu.view_dashboard', locale)}](https://mica.jqdomain.com/dashboard) ｜ "
-        f"[{t('digest.feishu.view_approvals', locale)}](https://mica.jqdomain.com/approvals)"
+        f"[{t('digest.feishu.view_dashboard', locale)}]({base_url}/dashboard) ｜ "
+        f"[{t('digest.feishu.view_approvals', locale)}]({base_url}/approvals)"
     )
 
     card = {
@@ -274,4 +306,4 @@ async def _send_feishu_digest(
         elif user.feishu_open_id:
             await client.send_card("open_id", user.feishu_open_id, card)
     except Exception:
-        pass
+        logger.warning("Failed to send Feishu digest to user %s", user.id, exc_info=True)

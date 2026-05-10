@@ -11,14 +11,27 @@ export default function ItemDetailPage() {
   const navigate = useNavigate()
   const [item, setItem] = useState<Item | null>(null)
   const [forecast, setForecast] = useState<SKUForecast | null>(null)
+  const [error, setError] = useState<string | null>(null)
 
   useEffect(() => {
     if (!id) return
-    void api.items().then((list) => {
-      setItem(list.find((i) => i.id === id) || null)
-    })
-    void api.getSKUForecast(id).then(setForecast)
-  }, [id])
+    api.getItem(id)
+      .then(setItem)
+      .catch(() => setError(t('error.unexpected')))
+    api.getSKUForecast(id)
+      .then(setForecast)
+      .catch(() => {})
+  }, [id, t])
+
+  if (error) return (
+    <div style={{ textAlign: 'center', padding: 48 }}>
+      <Typography.Text type="danger">{error}</Typography.Text>
+      <br />
+      <Button onClick={() => { setError(null); window.location.reload() }}>
+        {t('error.retry')}
+      </Button>
+    </div>
+  )
 
   if (!item) return <div>{t('message.loading')}</div>
 
