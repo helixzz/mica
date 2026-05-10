@@ -174,28 +174,58 @@ async def get_reference_prices(
     if not ids:
         return {}
 
-    result = {}
+    uid_map: dict[str, UUID] = {}
     for item_id in ids:
         try:
-            uid = UUID(item_id)
+            uid_map[item_id] = UUID(item_id)
         except ValueError:
             continue
 
-        latest_q = (
-            select(SKUPriceRecord.price)
-            .where(SKUPriceRecord.item_id == uid)
-            .order_by(SKUPriceRecord.quotation_date.desc())
-            .limit(1)
+    if not uid_map:
+        return {}
+
+    valid_uids = list(uid_map.values())
+
+    # Single query: latest price per item_id via row_number() window function
+    rn_subq = (
+        select(
+            SKUPriceRecord.item_id,
+            SKUPriceRecord.price,
+            func.row_number()
+            .over(
+                partition_by=SKUPriceRecord.item_id,
+                order_by=SKUPriceRecord.quotation_date.desc(),
+            )
+            .label("rn"),
         )
-        latest = (await db.execute(latest_q)).scalar()
+        .where(SKUPriceRecord.item_id.in_(valid_uids))
+        .subquery()
+    )
+    latest_q = select(rn_subq.c.item_id, rn_subq.c.price).where(rn_subq.c.rn == 1)
+    latest_rows = (await db.execute(latest_q)).all()
 
-        avg_q = select(func.avg(SKUPriceRecord.price)).where(SKUPriceRecord.item_id == uid)
-        avg = (await db.execute(avg_q)).scalar()
+    # Single query: average price per item_id
+    avg_q = (
+        select(
+            SKUPriceRecord.item_id,
+            func.avg(SKUPriceRecord.price).label("avg_price"),
+        )
+        .where(SKUPriceRecord.item_id.in_(valid_uids))
+        .group_by(SKUPriceRecord.item_id)
+    )
+    avg_rows = (await db.execute(avg_q)).all()
 
+    latest_map: dict[UUID, float] = {row.item_id: float(row.price) for row in latest_rows}
+    avg_map: dict[UUID, float] = {row.item_id: round(float(row.avg_price), 2) for row in avg_rows}
+
+    result = {}
+    for item_id, uid in uid_map.items():
+        latest = latest_map.get(uid)
+        avg = avg_map.get(uid)
         if latest is not None or avg is not None:
             result[item_id] = {
-                "latest_price": float(latest) if latest else None,
-                "avg_price": round(float(avg), 2) if avg else None,
+                "latest_price": latest,
+                "avg_price": avg,
             }
     return result
 

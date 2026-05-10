@@ -108,8 +108,7 @@ export function ContractFormModal({
         void fetchSuggestion()
       }
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [open, mode, contract, form])
+    }, [open, mode, contract, form, initialValues])
 
   const handleOk = async () => {
     const values = await form.validateFields()

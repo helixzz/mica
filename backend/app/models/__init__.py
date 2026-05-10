@@ -338,6 +338,9 @@ class Supplier(Base, TimestampMixin):
     payee_bank_account: Mapped[str | None] = mapped_column(String(64))
     notes: Mapped[str | None] = mapped_column(Text)
     access_token: Mapped[str | None] = mapped_column(String(64), unique=True)
+    token_expires_at: Mapped[datetime | None] = mapped_column(
+        DateTime(timezone=True), nullable=True
+    )
     is_enabled: Mapped[bool] = mapped_column(default=True, nullable=False)
     is_deleted: Mapped[bool] = mapped_column(default=False, nullable=False)
 

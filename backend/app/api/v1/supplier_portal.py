@@ -1,11 +1,13 @@
-from datetime import date, datetime
+from collections import defaultdict
+from datetime import UTC, date, datetime, timedelta
 from secrets import token_urlsafe
+from time import time
 from typing import Annotated
 from uuid import UUID
 
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, Request
 from pydantic import BaseModel, ConfigDict
-from sqlalchemy import select
+from sqlalchemy import or_, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.security import CurrentUser, require_roles
@@ -20,6 +22,17 @@ from app.models import (
 )
 
 router = APIRouter()
+
+_attempts: dict[str, list[float]] = defaultdict(list)
+
+
+async def _rate_limit_portal(request: Request) -> None:
+    ip = request.client.host if request.client else "unknown"
+    window = time() - 60
+    _attempts[ip] = [t for t in _attempts[ip] if t > window]
+    if len(_attempts[ip]) > 30:
+        raise HTTPException(429, "rate_limit_exceeded")
+    _attempts[ip].append(time())
 
 
 class SupplierPortalPO(BaseModel):
@@ -85,6 +98,7 @@ class SupplierPortalOut(BaseModel):
 async def supplier_portal(
     token: str,
     db: Annotated[AsyncSession, Depends(get_db)],
+    _rate: None = Depends(_rate_limit_portal),
 ) -> SupplierPortalOut:
     supplier = (
         await db.execute(
@@ -92,6 +106,10 @@ async def supplier_portal(
                 Supplier.access_token == token,
                 Supplier.is_enabled.is_(True),
                 Supplier.is_deleted.is_(False),
+                or_(
+                    Supplier.token_expires_at is None,
+                    Supplier.token_expires_at > datetime.now(UTC),
+                ),
             )
         )
     ).scalar_one_or_none()
@@ -203,6 +221,7 @@ async def generate_supplier_token(
         raise HTTPException(status_code=404, detail="supplier.not_found")
 
     supplier.access_token = token_urlsafe(32)
+    supplier.token_expires_at = datetime.now(UTC) + timedelta(days=90)
     await db.commit()
     await db.refresh(supplier)
 
@@ -220,6 +239,7 @@ async def revoke_supplier_token(
         raise HTTPException(status_code=404, detail="supplier.not_found")
 
     supplier.access_token = None
+    supplier.token_expires_at = None
     await db.commit()
 
     return {

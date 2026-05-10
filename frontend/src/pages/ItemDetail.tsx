@@ -1,4 +1,4 @@
-import { Button, Card, Descriptions, Space, Statistic, Tag, Typography } from 'antd'
+import { Button, Card, Descriptions, Space, Spin, Statistic, Tag, Typography } from 'antd'
 import { ArrowDownOutlined, ArrowUpOutlined, MinusOutlined } from '@ant-design/icons'
 import { useEffect, useState } from 'react'
 import { useTranslation } from 'react-i18next'
@@ -11,6 +11,7 @@ export default function ItemDetailPage() {
   const navigate = useNavigate()
   const [item, setItem] = useState<Item | null>(null)
   const [forecast, setForecast] = useState<SKUForecast | null>(null)
+  const [forecastLoading, setForecastLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
 
   useEffect(() => {
@@ -21,6 +22,7 @@ export default function ItemDetailPage() {
     api.getSKUForecast(id)
       .then(setForecast)
       .catch(() => {})
+      .finally(() => setForecastLoading(false))
   }, [id, t])
 
   if (error) return (
@@ -33,7 +35,11 @@ export default function ItemDetailPage() {
     </div>
   )
 
-  if (!item) return <div>{t('message.loading')}</div>
+  if (!item) return (
+    <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', minHeight: 200 }}>
+      <Spin size="large" />
+    </div>
+  )
 
   const trendConfig = {
     up: { color: '#cf1322', icon: <ArrowUpOutlined />, label: t('forecast.trend_up') },
@@ -66,7 +72,11 @@ export default function ItemDetailPage() {
         </Descriptions>
       </Card>
 
-      {forecast && (
+      {forecastLoading ? (
+        <Card title={t('forecast.title')} size="small">
+          <Spin />
+        </Card>
+      ) : forecast ? (
         <Card title={t('forecast.title')} size="small">
           {forecast.sample_size < 3 ? (
             <Typography.Text type="secondary">
@@ -118,7 +128,7 @@ export default function ItemDetailPage() {
             </Space>
           )}
         </Card>
-      )}
+      ) : null}
     </Space>
   )
 }

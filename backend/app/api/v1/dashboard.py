@@ -7,8 +7,9 @@ from typing import Annotated, Literal
 
 from fastapi import APIRouter, Depends, Query
 from pydantic import BaseModel
-from sqlalchemy import func, select
+from sqlalchemy import func, or_, select
 from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy.orm import aliased
 
 from app.core.security import CurrentUser
 from app.db import get_db
@@ -28,6 +29,7 @@ from app.models import (
     Shipment,
     SKUPriceAnomaly,
     Supplier,
+    UserRole,
 )
 from app.services.system_params import system_params
 
@@ -114,6 +116,10 @@ def _make_trend(current: float, previous: float) -> TrendOut:
     return TrendOut(
         current=float(current), previous=float(previous), direction=direction, delta_pct=pct
     )
+
+
+def _restricted_roles() -> tuple[str, ...]:
+    return (UserRole.REQUESTER.value, UserRole.DEPT_MANAGER.value)
 
 
 async def _count_in_window(db: AsyncSession, model, start: datetime, end: datetime) -> int:
@@ -426,6 +432,7 @@ async def invoice_match_summary(
             func.coalesce(func.sum(POItem.qty_invoiced), 0).label("qty_invoiced"),
         )
         .join(POItem, PurchaseOrder.id == POItem.po_id)
+        .join(PurchaseRequisition, PurchaseOrder.pr_id == PurchaseRequisition.id)
         .where(
             PurchaseOrder.status.in_(
                 [
@@ -445,6 +452,8 @@ async def invoice_match_summary(
         .order_by(PurchaseOrder.created_at.desc())
         .limit(10)
     )
+    if user.role in _restricted_roles() and user.department_id is not None:
+        stmt = stmt.where(PurchaseRequisition.department_id == user.department_id)
     rows = (await db.execute(stmt)).all()
 
     results: list[InvoiceMatchSummaryOut] = []
@@ -514,6 +523,21 @@ async def payment_calendar(
         )
         .order_by(PaymentSchedule.planned_date)
     )
+    if _user.role in _restricted_roles() and _user.department_id is not None:
+        pr_po = aliased(PurchaseRequisition)
+        po_via_contract = aliased(PurchaseOrder)
+        pr_contract = aliased(PurchaseRequisition)
+        stmt = (
+            stmt.outerjoin(pr_po, PurchaseOrder.pr_id == pr_po.id)
+            .outerjoin(po_via_contract, Contract.po_id == po_via_contract.id)
+            .outerjoin(pr_contract, po_via_contract.pr_id == pr_contract.id)
+            .where(
+                or_(
+                    pr_po.department_id == _user.department_id,
+                    pr_contract.department_id == _user.department_id,
+                )
+            )
+        )
     rows = (await db.execute(stmt)).all()
 
     results: list[PaymentCalendarItemOut] = []
@@ -538,32 +562,37 @@ async def get_analytics(
     db: Annotated[AsyncSession, Depends(get_db)],
 ) -> AnalyticsOut:
     twelve_months_ago = datetime.now(UTC) - timedelta(days=365)
-    trend_rows = (
-        await db.execute(
-            select(
-                func.to_char(func.date_trunc("month", PurchaseOrder.created_at), "YYYY-MM").label(
-                    "month"
-                ),
-                func.coalesce(func.sum(PurchaseOrder.total_amount), 0).label("total"),
-            )
-            .where(PurchaseOrder.created_at >= twelve_months_ago)
-            .group_by("month")
-            .order_by("month")
+
+    trend_stmt = (
+        select(
+            func.to_char(func.date_trunc("month", PurchaseOrder.created_at), "YYYY-MM").label(
+                "month"
+            ),
+            func.coalesce(func.sum(PurchaseOrder.total_amount), 0).label("total"),
         )
-    ).all()
+        .join(PurchaseRequisition, PurchaseOrder.pr_id == PurchaseRequisition.id)
+        .where(PurchaseOrder.created_at >= twelve_months_ago)
+    )
+    if _user.role in _restricted_roles() and _user.department_id is not None:
+        trend_stmt = trend_stmt.where(PurchaseRequisition.department_id == _user.department_id)
+    trend_rows = (await db.execute(trend_stmt.group_by("month").order_by("month"))).all()
     trend = [
         SpendTrendPoint(month=row.month, total=round(float(row.total), 2)) for row in trend_rows
     ]
 
+    dept_stmt = (
+        select(
+            Department.name_zh.label("dept"),
+            func.coalesce(func.sum(PurchaseOrder.total_amount), 0).label("total"),
+        )
+        .join(PurchaseRequisition, PurchaseOrder.pr_id == PurchaseRequisition.id)
+        .join(Department, PurchaseRequisition.department_id == Department.id)
+    )
+    if _user.role in _restricted_roles() and _user.department_id is not None:
+        dept_stmt = dept_stmt.where(PurchaseRequisition.department_id == _user.department_id)
     dept_rows = (
         await db.execute(
-            select(
-                Department.name_zh.label("dept"),
-                func.coalesce(func.sum(PurchaseOrder.total_amount), 0).label("total"),
-            )
-            .join(PurchaseRequisition, PurchaseOrder.pr_id == PurchaseRequisition.id)
-            .join(Department, PurchaseRequisition.department_id == Department.id)
-            .group_by(Department.id, Department.name_zh)
+            dept_stmt.group_by(Department.id, Department.name_zh)
             .order_by(func.sum(PurchaseOrder.total_amount).desc())
             .limit(10)
         )
@@ -578,28 +607,35 @@ async def get_analytics(
         for row in dept_rows
     ]
 
+    supplier_stmt = (
+        select(
+            Supplier.name.label("supplier"),
+            func.count(Shipment.id).label("total_shipments"),
+            func.coalesce(
+                func.round(
+                    func.avg(
+                        func.extract(
+                            "epoch", Shipment.actual_date - func.date(PurchaseOrder.created_at)
+                        )
+                        / 86400.0
+                    ),
+                    1,
+                ),
+                0,
+            ).label("avg_delivery_days"),
+        )
+        .join(PurchaseOrder, Shipment.po_id == PurchaseOrder.id)
+        .join(Supplier, PurchaseOrder.supplier_id == Supplier.id)
+        .join(PurchaseRequisition, PurchaseOrder.pr_id == PurchaseRequisition.id)
+        .where(Shipment.actual_date.isnot(None))
+    )
+    if _user.role in _restricted_roles() and _user.department_id is not None:
+        supplier_stmt = supplier_stmt.where(
+            PurchaseRequisition.department_id == _user.department_id
+        )
     supplier_rows = (
         await db.execute(
-            select(
-                Supplier.name.label("supplier"),
-                func.count(Shipment.id).label("total_shipments"),
-                func.coalesce(
-                    func.round(
-                        func.avg(
-                            func.extract(
-                                "epoch", Shipment.actual_date - func.date(PurchaseOrder.created_at)
-                            )
-                            / 86400.0
-                        ),
-                        1,
-                    ),
-                    0,
-                ).label("avg_delivery_days"),
-            )
-            .join(PurchaseOrder, Shipment.po_id == PurchaseOrder.id)
-            .join(Supplier, PurchaseOrder.supplier_id == Supplier.id)
-            .where(Shipment.actual_date.isnot(None))
-            .group_by(Supplier.id, Supplier.name)
+            supplier_stmt.group_by(Supplier.id, Supplier.name)
             .order_by(
                 func.avg(
                     func.extract(
