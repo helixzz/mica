@@ -49,7 +49,7 @@ class Settings(BaseSettings):
         default="CHANGE_ME_IN_PRODUCTION_minimum_32_chars_required_for_jwt_signing_skeleton"
     )
     jwt_algorithm: str = "HS256"
-    access_token_expire_minutes: int = 60 * 2  # 2 hours
+    access_token_expire_minutes: int = 60 * 72  # 72 hours
     refresh_token_expire_days: int = 7
 
     # ── i18n ──
