@@ -1,61 +1,59 @@
-import React, { useState } from 'react';
-import { Card, Typography, Space, theme, Skeleton } from 'antd';
-import { ArrowUpOutlined, ArrowDownOutlined, MinusOutlined } from '@ant-design/icons';
+import React, { useState } from 'react'
+import { Card, Typography, Space, theme, Skeleton, Divider } from 'antd'
+import { ArrowUpOutlined, ArrowDownOutlined, MinusOutlined } from '@ant-design/icons'
 
-const { Text, Title } = Typography;
+const { Text, Title } = Typography
 
 export interface StatCardProps {
-  label: React.ReactNode;
-  value: React.ReactNode;
+  label: React.ReactNode
+  value: React.ReactNode
   trend?: {
-    direction: 'up' | 'down' | 'flat';
-    delta: React.ReactNode;
-  };
-  icon?: React.ReactNode;
-  loading?: boolean;
-  variant?: 'default' | 'accent';
+    direction: 'up' | 'down' | 'flat'
+    delta: React.ReactNode
+  }
+  icon?: React.ReactNode
+  footer?: React.ReactNode
+  loading?: boolean
+  variant?: 'default' | 'accent'
 }
 
-/**
- * StatCard component for displaying key metrics with optional trend indicators.
- * Includes hover lift effect and supports default/accent variants.
- */
 export const StatCard: React.FC<StatCardProps> = ({
   label,
   value,
   trend,
   icon,
+  footer,
   loading = false,
   variant = 'default',
 }) => {
-  const { token } = theme.useToken();
-  const [isHovered, setIsHovered] = useState(false);
+  const { token } = theme.useToken()
+  const [isHovered, setIsHovered] = useState(false)
 
-  const isAccent = variant === 'accent';
+  const isAccent = variant === 'accent'
 
   const getTrendColor = () => {
-    if (!trend) return token.colorTextSecondary;
+    if (!trend) return token.colorTextSecondary
     switch (trend.direction) {
       case 'up':
-        return token.colorSuccess;
+        return token.colorSuccess
       case 'down':
-        return token.colorError;
+        return token.colorError
       case 'flat':
-        return token.colorTextSecondary;
+        return token.colorTextSecondary
     }
-  };
+  }
 
   const getTrendIcon = () => {
-    if (!trend) return null;
+    if (!trend) return null
     switch (trend.direction) {
       case 'up':
-        return <ArrowUpOutlined />;
+        return <ArrowUpOutlined />
       case 'down':
-        return <ArrowDownOutlined />;
+        return <ArrowDownOutlined />
       case 'flat':
-        return <MinusOutlined />;
+        return <MinusOutlined />
     }
-  };
+  }
 
   return (
     <Card
@@ -74,15 +72,13 @@ export const StatCard: React.FC<StatCardProps> = ({
       styles={{ body: { flex: 1, display: 'flex', flexDirection: 'column' } }}
     >
       <Skeleton loading={loading} active paragraph={{ rows: 1 }} title={{ width: '50%' }}>
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+        <div style={{ flex: 1, display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
           <Space direction="vertical" size={token.marginXS}>
             <Text
               style={{
                 color: isAccent ? token.colorPrimaryText : token.colorTextSecondary,
                 fontSize: token.fontSizeSM,
                 fontWeight: 500,
-                textTransform: 'uppercase',
-                letterSpacing: '0.02em',
               }}
             >
               {label}
@@ -119,14 +115,20 @@ export const StatCard: React.FC<StatCardProps> = ({
                 width: 48,
                 height: 48,
                 borderRadius: token.borderRadiusLG,
-                backgroundColor: isAccent ? token.colorBgContainer : token.colorFillAlter,
+                backgroundColor: isAccent ? 'rgba(255,255,255,0.6)' : token.colorFillAlter,
               }}
-            >
-              {icon}
-            </div>
+            />
           )}
         </div>
+        {footer && (
+          <>
+            <Divider style={{ margin: `${token.marginSM}px 0 0` }} />
+            <div style={{ fontSize: token.fontSizeSM, color: token.colorPrimary, textAlign: 'right' }}>
+              {footer}
+            </div>
+          </>
+        )}
       </Skeleton>
     </Card>
-  );
-};
+  )
+}

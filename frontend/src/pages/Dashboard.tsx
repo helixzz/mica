@@ -333,10 +333,7 @@ export function DashboardPage() {
                   icon={<CheckCircleOutlined />}
                   loading={loading}
                   variant="accent"
-                  trend={{
-                    direction: 'flat',
-                    delta: <Link to="/approvals">{t('dashboard.view_approvals')}</Link> as any,
-                  }}
+                  footer={<Link to="/approvals">{t('dashboard.view_approvals')}</Link>}
                 />
               </Col>
             )}
@@ -348,10 +345,7 @@ export function DashboardPage() {
                   icon={<AlertOutlined />}
                   loading={loading}
                   variant="accent"
-                  trend={{
-                    direction: 'flat',
-                    delta: <Link to="/contracts">{t('dashboard.view_contracts')}</Link> as any,
-                  }}
+                  footer={<Link to="/contracts">{t('dashboard.view_contracts')}</Link>}
                 />
               </Col>
             )}
@@ -363,10 +357,7 @@ export function DashboardPage() {
                   icon={<CarOutlined />}
                   loading={loading}
                   variant="accent"
-                  trend={{
-                    direction: 'flat',
-                    delta: <Link to="/delivery-plans">{t('dashboard.view_delivery')}</Link> as any,
-                  }}
+                  footer={<Link to="/delivery-plans">{t('dashboard.view_delivery')}</Link>}
                 />
               </Col>
             )}
