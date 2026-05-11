@@ -70,6 +70,43 @@ async def create_plan(
     ],
 ):
     plan = await svc.create_delivery_plan(db, payload, user.id)
+    try:
+        from sqlalchemy import select
+
+        from app.models import NotificationCategory, PurchaseOrder, User, UserRole
+        from app.services.notifications import create_notification
+
+        po = await db.get(PurchaseOrder, payload.po_id)
+        if po and po.submitter_id:
+            recipients = {po.submitter_id}
+            admin_rows = (
+                (
+                    await db.execute(
+                        select(User.id).where(
+                            User.role.in_([UserRole.ADMIN.value, UserRole.PROCUREMENT_MGR.value]),
+                            User.is_active.is_(True),
+                        )
+                    )
+                )
+                .scalars()
+                .all()
+            )
+            recipients.update(admin_rows)
+            for uid in recipients:
+                await create_notification(
+                    db,
+                    user_id=uid,
+                    category=NotificationCategory.SYSTEM,
+                    title=f"Delivery plan created: {plan.plan_name}",
+                    body=f"PO {po.po_number}: {plan.planned_qty} units of {plan.plan_name} planned for {plan.planned_date}",
+                    link_url=f"/purchase-orders/{payload.po_id}",
+                    biz_type="delivery_plan",
+                    biz_id=plan.id,
+                )
+            await db.commit()
+    except Exception:
+        pass
+
     return await svc._plan_to_out(db, plan)
 
 
