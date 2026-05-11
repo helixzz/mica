@@ -71,7 +71,8 @@ services:
       APP_ENV: ${APP_ENV:-development}
     command: ["python", "-m", "app.scheduler_main"]
     healthcheck:
-      test: ["CMD-SHELL", "pgrep -f scheduler_main || exit 1"]
+      disable: false
+      test: ["CMD-SHELL", "ps -p 1 | grep -q python || exit 1"]
       interval: 30s
       timeout: 5s
       retries: 3
