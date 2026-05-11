@@ -357,7 +357,7 @@ export function DashboardPage() {
             )}
             {deliveryOverview && deliveryOverview.total_planned > 0 && (
               <Col xs={24} sm={12} lg={8}>
-                <StatCard
+<StatCard
                   label={t('dashboard.delivery_progress')}
                   value={`${Math.round(deliveryOverview.completion_pct)}%`}
                   icon={<CarOutlined />}
