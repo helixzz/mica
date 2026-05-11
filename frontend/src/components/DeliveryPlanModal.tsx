@@ -217,7 +217,7 @@ export function DeliveryPlanModal({
     >
       <Form form={form} layout="vertical">
         <Form.Item name="type" label={t('delivery_plan.type')}>
-          <Radio.Group onChange={handleTypeChange} disabled={!!poId || !!contractId || !!plan}>
+          <Radio.Group onChange={handleTypeChange} disabled={!!poId || !!contractId}>
             <Radio value="po">{t('nav.purchase_orders')}</Radio>
             <Radio value="contract">{t('nav.contracts')}</Radio>
           </Radio.Group>
@@ -233,7 +233,7 @@ export function DeliveryPlanModal({
               showSearch
               optionFilterProp="children"
               onChange={handlePOChange}
-              disabled={!!poId || !!plan}
+              disabled={!!poId}
             >
               {pos.map((p) => (
                 <Select.Option key={p.id} value={p.id}>
@@ -254,7 +254,7 @@ export function DeliveryPlanModal({
               showSearch
               optionFilterProp="children"
               onChange={handleContractChange}
-              disabled={!!contractId || !!plan}
+              disabled={!!contractId}
             >
               {contracts.map((c) => (
                 <Select.Option key={c.id} value={c.id}>
@@ -270,7 +270,7 @@ export function DeliveryPlanModal({
           label={t('nav.items')}
           rules={[{ required: true, message: t('common.required') }]}
         >
-          <Select showSearch optionFilterProp="children" disabled={!!plan}>
+          <Select showSearch optionFilterProp="children">
             {items.map((i) => (
               <Select.Option key={i.id} value={i.id}>
                 {i.name} (Remaining: {i.remaining})

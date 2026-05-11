@@ -555,6 +555,8 @@
     "confirm_delete": "确认删除该交货批次？",
     "deleted": "交货批次已删除",
     "updated": "交货批次已更新",
+    "fulfills_delivery_plan": "履行交货计划（可选）",
+    "planned_date": "计划交货日",
     "attachments": "附件 — {{number}}",
     "attachments_short": "附件",
     "no_attachments": "暂无附件",

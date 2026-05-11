@@ -1,10 +1,11 @@
 import { DownloadOutlined, PlusOutlined } from '@ant-design/icons'
-import { Button, Input, InputNumber, Modal, Select, Space, Table, Tag, Typography, message } from 'antd'
+import { Button, DatePicker, Input, InputNumber, Modal, Select, Space, Table, Tag, Typography, message } from 'antd'
 import type { ColumnsType } from 'antd/es/table'
+import dayjs from 'dayjs'
 import { useEffect, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 
-import { api, type PurchaseOrder, type PurchaseOrderListItem, type Shipment } from '@/api'
+import { api, type DeliveryPlan, type PurchaseOrder, type PurchaseOrderListItem, type Shipment } from '@/api'
 import { ShipmentActions } from '@/components/ShipmentActions'
 import { downloadCSV } from '@/utils/export'
 import { fmtQty } from '@/utils/format'
@@ -30,7 +31,10 @@ export function ShipmentsPage() {
   const [createLines, setCreateLines] = useState<{ po_item_id: string; qty_shipped: number }[]>([])
   const [createCarrier, setCreateCarrier] = useState('')
   const [createTracking, setCreateTracking] = useState('')
+  const [createPlannedDate, setCreatePlannedDate] = useState<dayjs.Dayjs | null>(null)
   const [createActualDate, setCreateActualDate] = useState('')
+  const [deliveryPlans, setDeliveryPlans] = useState<DeliveryPlan[]>([])
+  const [selectedDeliveryPlanId, setSelectedDeliveryPlanId] = useState<string | undefined>(undefined)
   const [createBusy, setCreateBusy] = useState(false)
 
   const load = () => {
@@ -58,7 +62,10 @@ export function ShipmentsPage() {
     setCreateLines([])
     setCreateCarrier('')
     setCreateTracking('')
+    setCreatePlannedDate(null)
     setCreateActualDate(new Date().toISOString().slice(0, 10))
+    setDeliveryPlans([])
+    setSelectedDeliveryPlanId(undefined)
     try {
       const pos = await api.listPOs()
       setPoList(pos)
@@ -74,9 +81,30 @@ export function ShipmentsPage() {
         po_item_id: i.id,
         qty_shipped: Math.max(0, Number(i.qty) - Number(i.qty_received || 0)),
       })))
+      const summary = await api.getPODeliveryPlan(poId)
+      setDeliveryPlans(summary.po_plans || [])
+      setSelectedDeliveryPlanId(undefined)
     } catch {
       setSelectedPO(null)
       setCreateLines([])
+      setDeliveryPlans([])
+    }
+  }
+
+  const onSelectDeliveryPlan = (planId: string) => {
+    setSelectedDeliveryPlanId(planId)
+    const plan = deliveryPlans.find(dp => dp.id === planId)
+    if (plan) {
+      setCreatePlannedDate(dayjs(plan.planned_date))
+      if (selectedPO) {
+        setCreateLines(createLines.map(line => {
+          const poItem = selectedPO.items.find(i => i.id === line.po_item_id)
+          if (poItem && poItem.item_id === plan.item_id) {
+            return { ...line, qty_shipped: plan.planned_qty }
+          }
+          return line
+        }))
+      }
     }
   }
 
@@ -89,6 +117,7 @@ export function ShipmentsPage() {
         items: createLines.filter(l => l.qty_shipped > 0),
         carrier: createCarrier || null,
         tracking_number: createTracking || null,
+        expected_date: createPlannedDate ? createPlannedDate.format('YYYY-MM-DD') : null,
         actual_date: createActualDate || null,
       })
       void message.success(t('message.shipment_recorded'))
@@ -153,18 +182,53 @@ export function ShipmentsPage() {
             placeholder={t('shipment.select_po')}
             style={{ width: '100%' }}
             showSearch
-            optionFilterProp="label"
+            optionFilterProp="children"
             value={selectedPO?.id}
             onChange={onSelectPO}
-            options={poList.map(po => ({ value: po.id, label: `${po.po_number} — ¥${Number(po.total_amount).toFixed(2)}` }))}
-          />
+          >
+            {poList.map(po => (
+              <Select.Option key={po.id} value={po.id}>
+                <span style={{ fontWeight: 600 }}>{po.po_number}</span>
+                <span style={{ color: '#888', marginLeft: 8 }}>
+                  {po.supplier_name || '-'}
+                </span>
+                <span style={{ color: '#1677ff', marginLeft: 8 }}>
+                  ¥{Number(po.total_amount).toLocaleString('zh-CN', { minimumFractionDigits: 2 })}
+                </span>
+                <span style={{ color: '#999', marginLeft: 8, fontSize: 12 }}>
+                  {dayjs(po.created_at).format('YYYY-MM-DD')}
+                </span>
+              </Select.Option>
+            ))}
+          </Select>
           {selectedPO && (
             <>
-              <Space>
-                <Input placeholder={t('field.carrier')} value={createCarrier} onChange={e => setCreateCarrier(e.target.value)} style={{ width: 200 }} />
-                <Input placeholder={t('field.tracking_number')} value={createTracking} onChange={e => setCreateTracking(e.target.value)} style={{ width: 200 }} />
+              <Space wrap>
+                <Input placeholder={t('field.carrier')} value={createCarrier} onChange={e => setCreateCarrier(e.target.value)} style={{ width: 160 }} />
+                <Input placeholder={t('field.tracking_number')} value={createTracking} onChange={e => setCreateTracking(e.target.value)} style={{ width: 160 }} />
+                <DatePicker
+                  placeholder={t('shipment.planned_date')}
+                  value={createPlannedDate}
+                  onChange={(v) => setCreatePlannedDate(v)}
+                  style={{ width: 160 }}
+                />
                 <Input type="date" value={createActualDate} onChange={e => setCreateActualDate(e.target.value)} style={{ width: 160 }} />
               </Space>
+              {deliveryPlans.length > 0 && (
+                <Select
+                  placeholder={t('shipment.fulfills_delivery_plan')}
+                  style={{ width: '100%' }}
+                  allowClear
+                  value={selectedDeliveryPlanId}
+                  onChange={onSelectDeliveryPlan}
+                >
+                  {deliveryPlans.map(dp => (
+                    <Select.Option key={dp.id} value={dp.id}>
+                      {dp.plan_name} — {t('delivery_plan.planned_qty')}: {dp.planned_qty} — {dayjs(dp.planned_date).format('YYYY-MM-DD')}
+                    </Select.Option>
+                  ))}
+                </Select>
+              )}
               <Typography.Text type="secondary">{t('po.shipment_help')}</Typography.Text>
               <Table
                 rowKey="id"

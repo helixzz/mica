@@ -550,6 +550,8 @@
     "confirm_delete": "Delete this shipment?",
     "deleted": "Shipment deleted",
     "updated": "Shipment updated",
+    "fulfills_delivery_plan": "Fulfills Delivery Plan (optional)",
+    "planned_date": "Planned Delivery Date",
     "attachments": "Attachments — {{number}}",
     "attachments_short": "Attachments",
     "no_attachments": "No attachments yet",

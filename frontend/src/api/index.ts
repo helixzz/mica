@@ -761,6 +761,9 @@ export interface DeliveryPlanCreate {
 }
 
 export interface DeliveryPlanUpdate {
+  po_id?: string
+  contract_id?: string
+  item_id?: string
   plan_name?: string
   planned_qty?: number
   planned_date?: string
