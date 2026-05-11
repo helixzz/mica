@@ -102,6 +102,7 @@ async def create_delivery_plan(
     )
     db.add(plan)
     await db.flush()
+    await db.commit()
     await db.refresh(plan)
     return plan
 
@@ -118,6 +119,7 @@ async def update_delivery_plan(
         setattr(plan, key, value)
 
     await db.flush()
+    await db.commit()
     await db.refresh(plan)
     return plan
 
@@ -128,6 +130,7 @@ async def delete_delivery_plan(db: AsyncSession, plan_id: UUID) -> None:
         raise HTTPException(404, "delivery_plan.not_found")
     await db.delete(plan)
     await db.flush()
+    await db.commit()
 
 
 async def get_delivery_plan(db: AsyncSession, plan_id: UUID) -> DeliveryPlan | None:
