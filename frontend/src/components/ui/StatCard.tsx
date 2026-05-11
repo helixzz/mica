@@ -9,7 +9,7 @@ export interface StatCardProps {
   value: React.ReactNode;
   trend?: {
     direction: 'up' | 'down' | 'flat';
-    delta: string;
+    delta: React.ReactNode;
   };
   icon?: React.ReactNode;
   loading?: boolean;
@@ -98,7 +98,11 @@ export const StatCard: React.FC<StatCardProps> = ({
             {trend && (
               <Space size={token.marginXXS} style={{ color: getTrendColor(), fontSize: token.fontSizeSM }}>
                 {getTrendIcon()}
-                <Text style={{ color: 'inherit', fontWeight: 500 }}>{trend.delta}</Text>
+                {typeof trend.delta === 'string' ? (
+                  <Text style={{ color: 'inherit', fontWeight: 500 }}>{trend.delta}</Text>
+                ) : (
+                  trend.delta
+                )}
               </Space>
             )}
           </Space>

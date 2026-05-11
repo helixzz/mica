@@ -79,8 +79,8 @@ async def create_plan(
 
         if await notification_enabled(db, "delivery_plan_created"):
             po = await db.get(PurchaseOrder, payload.po_id)
-            if po and po.submitter_id:
-                recipients = {po.submitter_id}
+            if po and po.created_by_id:
+                recipients = {po.created_by_id}
                 admin_rows = (
                     (
                         await db.execute(
