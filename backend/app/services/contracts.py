@@ -14,6 +14,7 @@ from fastapi import HTTPException
 from sqlalchemy import Text, desc, func, literal_column, or_, select
 from sqlalchemy.dialects import postgresql
 from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy.orm import selectinload
 
 from app.models import AuditLog, Contract, ContractDocument, ContractVersion, Document, User
 from app.services import documents as doc_svc
@@ -208,6 +209,7 @@ async def expiring_contracts(db: AsyncSession, within_days: int | None = None) -
         (
             await db.execute(
                 select(Contract)
+                .options(selectinload(Contract.supplier))
                 .where(
                     Contract.status == "active",
                     Contract.expiry_date.isnot(None),
