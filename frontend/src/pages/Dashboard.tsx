@@ -359,9 +359,10 @@ export function DashboardPage() {
               <Col xs={24} sm={12} lg={8}>
                 <StatCard
                   label={t('dashboard.delivery_progress')}
-                  value={`${deliveryOverview.completion_pct}%`}
+                  value={`${Math.round(deliveryOverview.completion_pct)}%`}
                   icon={<CarOutlined />}
                   loading={loading}
+                  variant="accent"
                   trend={{
                     direction: 'flat',
                     delta: <Link to="/delivery-plans">{t('dashboard.view_delivery')}</Link> as any,
