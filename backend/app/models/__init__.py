@@ -1154,6 +1154,7 @@ class SystemParameterCategory(StrEnum):
     FEISHU = "feishu"
     EMAIL = "email"
     CURRENCY = "currency"
+    NOTIFICATION = "notification"
 
 
 class SystemParameter(Base, TimestampMixin):

@@ -307,3 +307,10 @@ class SystemParamsService:
 
 
 system_params = SystemParamsService()
+
+
+async def notification_enabled(db: AsyncSession, key: str) -> bool:
+    raw = await system_params.get(db, f"notification.{key}_enabled", True)
+    if isinstance(raw, bool):
+        return raw
+    return str(raw).lower() in ("true", "1")

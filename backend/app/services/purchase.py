@@ -130,6 +130,47 @@ async def create_pr(db: AsyncSession, actor: User, payload: PRCreateIn) -> Purch
     )
     await db.commit()
     await db.refresh(pr)
+
+    try:
+        from app.models import NotificationCategory, User, UserRole
+        from app.services.notifications import create_notification
+        from app.services.system_params import notification_enabled
+
+        if await notification_enabled(db, "pr_created"):
+            recipients: set[str] = {str(actor.id)}
+            if pr.department_id:
+                dept_managers = (
+                    (
+                        await db.execute(
+                            select(User.id).where(
+                                User.department_id == pr.department_id,
+                                User.role == UserRole.DEPT_MANAGER.value,
+                                User.is_active.is_(True),
+                            )
+                        )
+                    )
+                    .scalars()
+                    .all()
+                )
+                recipients.update(str(uid) for uid in dept_managers)
+
+            from uuid import UUID as _UUID
+
+            for uid_str in recipients:
+                await create_notification(
+                    db,
+                    user_id=_UUID(uid_str),
+                    category=NotificationCategory.SYSTEM,
+                    title=f"PR {pr.pr_number} created",
+                    body=f"PR '{pr.title}' has been created, total ¥{pr.total_amount}",
+                    link_url=f"/purchase-requisitions/{pr.id}",
+                    biz_type="pr",
+                    biz_id=pr.id,
+                )
+            await db.commit()
+    except Exception:
+        pass
+
     result = await _load_pr(db, pr.id)
     if result is None:
         raise HTTPException(404, "pr.not_found")
@@ -433,50 +474,52 @@ async def convert_pr_to_po(db: AsyncSession, actor: User, pr_id: UUID) -> list[P
     try:
         from app.models import NotificationCategory
         from app.services.notifications import create_notification
+        from app.services.system_params import notification_enabled
 
-        supplier_ids = {po.supplier_id for po in refreshed}
-        supplier_rows = (
-            (await db.execute(select(Supplier).where(Supplier.id.in_(supplier_ids))))
-            .scalars()
-            .all()
-        )
-        supplier_names = {s.id: s.name for s in supplier_rows}
+        if await notification_enabled(db, "po_created"):
+            supplier_ids = {po.supplier_id for po in refreshed}
+            supplier_rows = (
+                (await db.execute(select(Supplier).where(Supplier.id.in_(supplier_ids))))
+                .scalars()
+                .all()
+            )
+            supplier_names = {s.id: s.name for s in supplier_rows}
 
-        recipients = {actor.id}
-        admin_rows = (
-            (
-                await db.execute(
-                    select(User.id).where(
-                        User.role.in_(
-                            [
-                                UserRole.ADMIN.value,
-                                UserRole.PROCUREMENT_MGR.value,
-                                UserRole.FINANCE_AUDITOR.value,
-                            ]
-                        ),
-                        User.is_active.is_(True),
+            recipients = {actor.id}
+            admin_rows = (
+                (
+                    await db.execute(
+                        select(User.id).where(
+                            User.role.in_(
+                                [
+                                    UserRole.ADMIN.value,
+                                    UserRole.PROCUREMENT_MGR.value,
+                                    UserRole.FINANCE_AUDITOR.value,
+                                ]
+                            ),
+                            User.is_active.is_(True),
+                        )
                     )
                 )
+                .scalars()
+                .all()
             )
-            .scalars()
-            .all()
-        )
-        recipients.update(admin_rows)
+            recipients.update(admin_rows)
 
-        for po in refreshed:
-            supplier_name = supplier_names.get(po.supplier_id, "Unknown")
-            for uid in recipients:
-                await create_notification(
-                    db,
-                    user_id=uid,
-                    category=NotificationCategory.PO_CREATED,
-                    title=f"PO {po.po_number} created",
-                    body=f"PO {po.po_number} created from PR {pr.pr_number} for {supplier_name}, total ¥{po.total_amount}",
-                    link_url=f"/purchase-orders/{po.id}",
-                    biz_type="po",
-                    biz_id=po.id,
-                )
-        await db.commit()
+            for po in refreshed:
+                supplier_name = supplier_names.get(po.supplier_id, "Unknown")
+                for uid in recipients:
+                    await create_notification(
+                        db,
+                        user_id=uid,
+                        category=NotificationCategory.PO_CREATED,
+                        title=f"PO {po.po_number} created",
+                        body=f"PO {po.po_number} created from PR {pr.pr_number} for {supplier_name}, total ¥{po.total_amount}",
+                        link_url=f"/purchase-orders/{po.id}",
+                        biz_type="po",
+                        biz_id=po.id,
+                    )
+            await db.commit()
     except Exception:
         pass
 

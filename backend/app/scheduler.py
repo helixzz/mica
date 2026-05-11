@@ -61,6 +61,7 @@ def build_scheduler(session_factory: async_sessionmaker[AsyncSession]) -> AsyncI
         from app.models import NotificationCategory, User, UserRole
         from app.services import contracts as contract_svc
         from app.services.notifications import create_notification
+        from app.services.system_params import notification_enabled
 
         async with session_factory() as db:
             try:
@@ -69,6 +70,13 @@ def build_scheduler(session_factory: async_sessionmaker[AsyncSession]) -> AsyncI
                 expiring = await contract_svc.expiring_contracts(db, within_days=30)
                 if not expiring:
                     logger.info("contract_expiry_check: no expiring contracts")
+                    return
+
+                if not await notification_enabled(db, "contract_expiring"):
+                    logger.info(
+                        "contract_expiry_check: notification disabled, skipping %d contracts",
+                        len(expiring),
+                    )
                     return
 
                 admins = (

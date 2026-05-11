@@ -1,53 +1,61 @@
 {
   "auth": {
-    "invalid_credentials": "Invalid username or password",
-    "user_inactive": "Account is inactive",
+    "invalid_credentials": "auth invalid credentials",
+    "user_inactive": "auth user inactive",
     "not_authenticated": "Authentication required",
     "invalid_token": "Session expired, please log in again",
     "insufficient_role": "Insufficient permissions",
-    "rate_limited": "Too many login attempts, please try again later"
+    "rate_limited": "Too many login attempts, please try again later",
+    "invalid_token_payload": "Invalid token payload",
+    "user_not_found_or_inactive": "User not found or inactive"
   },
   "saml": {
-    "not_enabled": "SAML single sign-on is not enabled",
-    "misconfigured": "SAML configuration is incomplete or invalid",
-    "invalid_response": "Invalid SAML response",
-    "authentication_failed": "SAML authentication failed",
-    "missing_email": "SAML response is missing the email attribute",
-    "jit_disabled": "No matching user was found and JIT provisioning is disabled",
-    "invalid_relay_state": "Invalid SAML relay state",
-    "metadata_invalid": "Generated SAML metadata is invalid",
-    "default_company_required": "A default company must be configured before enabling SAML JIT provisioning",
-    "default_department_not_found": "Configured SAML default department was not found",
-    "default_role_invalid": "Configured SAML default role is invalid",
-    "company_code_not_found": "The specified company code does not exist or is disabled",
-    "department_code_not_found": "The specified department code does not exist or is disabled",
-    "group_mapping_invalid": "Configured SAML group mapping is invalid",
-    "missing_external_id": "SAML response is missing the external identity"
+    "not_enabled": "saml not enabled",
+    "misconfigured": "saml misconfigured",
+    "invalid_response": "saml invalid response",
+    "authentication_failed": "saml authentication failed",
+    "missing_email": "saml missing email",
+    "jit_disabled": "saml jit disabled",
+    "invalid_relay_state": "saml invalid relay state",
+    "metadata_invalid": "saml metadata invalid",
+    "default_company_required": "saml default company required",
+    "default_department_not_found": "saml default department not found",
+    "default_role_invalid": "saml default role invalid",
+    "company_code_not_found": "saml company code not found",
+    "department_code_not_found": "saml department code not found",
+    "group_mapping_invalid": "saml group mapping invalid",
+    "missing_external_id": "saml missing external id"
   },
   "common": {
     "not_found": "Resource not found",
-    "validation_error": "Validation failed",
+    "validation_error": "common validation error",
     "internal_error": "Internal server error",
     "conflict": "Resource conflict"
   },
   "pr": {
-    "not_found": "Purchase requisition not found",
-    "cannot_edit_submitted": "Submitted requisition cannot be edited",
-    "cannot_submit_non_draft": "Only draft status can be submitted",
-    "cannot_decide_non_submitted": "Only submitted status can be reviewed",
+    "not_found": "Pr not found",
+    "cannot_edit_submitted": "pr cannot edit submitted",
+    "cannot_submit_non_draft": "pr cannot submit non draft",
+    "cannot_decide_non_submitted": "pr cannot decide non submitted",
     "already_converted": "This requisition has already been converted to a PO",
-    "no_items": "Please add at least one line item",
-    "must_be_approved_to_convert": "Only approved requisitions can be converted to a PO"
+    "no_items": "pr no items",
+    "must_be_approved_to_convert": "pr must be approved to convert",
+    "approval_not_found": "pr approval not found",
+    "items_missing_supplier": "pr items missing supplier"
   },
   "po": {
-    "not_found": "Purchase order not found"
+    "not_found": "Po not found"
   },
   "approval": {
-    "task_not_found": "Approval task not found"
+    "task_not_found": "approval task not found",
+    "delegation_invalid_window": "Delegation configuration error",
+    "delegation_not_found": "Delegation configuration error",
+    "rule_invalid_stage": "Approval rule configuration error",
+    "rule_not_found": "Approval rule configuration error"
   },
   "notification": {
     "not_found": "Notification not found",
-    "ids_or_all_required": "Provide notification ids or all=true",
+    "ids_or_all_required": "notification ids or all required",
     "approval": {
       "new_task": "New approval task: {title}",
       "approved": "Approved: {title}",
@@ -61,66 +69,36 @@
       "anomaly": "Price anomaly detected: {item}"
     },
     "sla": {
-      "escalated_submitter": "Approval overdue: {title}",
-      "escalated_submitter_body": "Your requisition \"{title}\" has been pending approval for over {hours} hours. Management has been notified to expedite the process.",
-      "escalated_manager": "Approval overdue: {title} (waiting {hours}h)",
-      "escalated_manager_body": "Requisition {biz_number} has exceeded SLA at stage \"{stage}\". Please review and drive the approval forward.",
-      "escalated_admin": "Approval overdue: {title} (waiting {hours}h)",
-      "escalated_admin_body": "Requisition {biz_number} has exceeded SLA at stage \"{stage}\". Please review and drive the approval forward."
+      "escalated_submitter": "Approval Overdue - {title}",
+      "escalated_submitter_body": "Your PR '{title}' has been pending approval for over {hours} hours. Current stage: {stage}",
+      "escalated_manager": "Approval Escalation - {title}",
+      "escalated_manager_body": "PR '{title}' has exceeded SLA of {hours} hours. Stage: {stage}",
+      "escalated_admin": "Approval Alert - {title}",
+      "escalated_admin_body": "PR '{title}' (#{biz_number}) has been overdue for {hours} hours. Stage: {stage}"
+    },
+    "reminder": {
+      "pending": "Approval Pending Reminder - {title}",
+      "pending_body": "You have a pending approval for PR '{title}' (#{biz_number}) waiting for {hours} hours. Stage: {stage}"
     }
   },
-  "contract.not_found": "Contract not found",
-  "contract.not_editable_in_status": "Contract cannot be edited in its current status",
-  "contract.invalid_status_transition": "Invalid contract status transition",
-  "contract.cannot_delete_with_paid_schedule": "Contract has paid payment records and cannot be deleted",
-  "contract.number_required": "Contract number must not be empty",
-  "contract.number_duplicate": "Contract number is already in use",
-  "template.not_found": "Template not found",
-  "template.disabled": "Template is disabled",
-  "template.no_file": "Template file not yet uploaded",
-  "template.only_docx_supported": "Only .docx and .xlsx templates are supported",
-  "template.file_missing_on_disk": "Template file is missing on server, please re-upload",
-  "template.supplier_missing": "Supplier information missing, cannot generate document",
-  "template.contract_required_for_generation": "Document generation requires a contract, but this PO has none",
-  "po_contract_link.not_found": "No link exists between this PO and contract",
-  "po_contract_link.cannot_unlink_primary": "Cannot unlink the primary PO from this contract",
-  "po_contract_link.cannot_remove_last": "Cannot unlink: this is the contract's last PO association",
-  "po_contract_link.has_payments": "Cannot unlink: this PO already has payment records referencing this contract",
-  "po_contract_link.supplier_mismatch": "Cannot link PO and contract with different suppliers",
-  "po_contract_link.company_mismatch": "Cannot link PO and contract from different companies",
-  "po_contract_link.currency_mismatch": "Cannot link PO and contract with different currencies",
-  "payment.not_found": "Payment record not found",
-  "payment.contract_required": "Payment must be associated with a contract",
-  "payment.contract_po_mismatch": "Selected contract does not belong to this purchase order",
-  "payment.schedule_parent_mismatch": "Schedule item does not belong to the selected contract/PO",
-  "payment.schedule_requires_primary_po": "Contract schedule payments must be recorded against the contract's primary PO",
-  "payment.cannot_delete_confirmed": "Confirmed payments cannot be deleted — reverse first",
-  "attachment.not_found": "Attachment not found",
-  "schedule_item.not_found": "Payment schedule item not found",
-  "schedule_item.cannot_delete_paid": "Cannot delete a paid schedule item",
-  "schedule_item.already_paid": "This installment has already been paid",
-  "invoice.not_found": "Invoice not found",
-  "user.not_found": "User not found",
-  "user.username_exists": "Username is already taken",
-  "user.cannot_delete_self": "You cannot delete your own account",
-  "user.cannot_delete_last_admin": "Cannot delete the last active admin",
-  "user.has_references": "This user is referenced by existing records (PR/PO/approvals/audit logs) and cannot be hard-deleted. Disable the account instead.",
   "feishu": {
     "not_configured": "Feishu App ID or App Secret is not configured",
     "token_failed": "Failed to obtain Feishu access token",
     "api_error": "Feishu API call failed",
-    "invalid_body": "Invalid Feishu webhook request body",
-    "invalid_signature": "Feishu webhook signature verification failed",
+    "invalid_body": "feishu invalid body",
+    "invalid_signature": "feishu invalid signature",
     "test": {
       "user_not_found": "Current admin account not found in Feishu",
       "no_open_id": "Feishu user missing open_id"
-    }
+    },
+    "card_send_failed": "Feishu card message delivery failed",
+    "not_enabled": "Feishu integration is not enabled"
   },
   "email": {
     "not_configured": "Email service not configured"
   },
   "delivery_plan": {
-    "not_found": "Delivery plan not found",
+    "not_found": "Delivery Plan not found",
     "created": "Delivery plan created",
     "updated": "Delivery plan updated",
     "deleted": "Delivery plan deleted",
@@ -134,44 +112,31 @@
     "po_not_found": "Associated purchase order not found",
     "contract_not_found": "Associated contract not found"
   },
-  ".": " ",
   "_score": "_score",
   "actions": "actions",
   "admin_only": "admin_only",
-  "ai_model.name_exists": "Ai Model name already exists",
-  "ai_model.not_found": "Ai Model not found",
   "amount": "amount",
-  "anomaly.not_found": "Anomaly not found",
-  "approval.delegation_invalid_window": "Delegation configuration error",
-  "approval.delegation_not_found": "Delegation configuration error",
-  "approval.rule_invalid_stage": "Approval rule configuration error",
-  "approval.rule_not_found": "Approval rule configuration error",
-  "approval.task_not_found": "approval task not found",
   "approval_code": "approval_code",
   "approver_role": "approver_role",
-  "auth.invalid_credentials": "auth invalid credentials",
-  "auth.user_inactive": "auth user inactive",
   "buyer_name": "buyer_name",
   "buyer_tax_id": "buyer_tax_id",
-  "category": "category",
-  "category.not_found": "Category not found",
+  "category": {
+    "not_found": "Category not found"
+  },
   "challenge": "challenge",
   "change_reason": "change_reason",
   "change_summary": "change_summary",
   "code": "code",
   "comment": "comment",
-  "common.validation_error": "common validation error",
   "company_id": "company_id",
   "confidence": "confidence",
   "contact_email": "contact_email",
   "contact_name": "contact_name",
   "contact_phone": "contact_phone",
   "content_hash": "content_hash",
-  "contract.version_not_found": "contract version not found",
   "contract_id": "contract_id",
   "contract_number": "contract_number",
   "contract_url": "contract_url",
-  "cost_center.not_found": "Cost Center not found",
   "currency": "currency",
   "data": "data",
   "date": "date",
@@ -180,20 +145,19 @@
   "decider": "decider",
   "delegation": "delegation",
   "delivery_days": "delivery_days",
-  "delivery_plan.not_found": "Delivery Plan not found",
-  "department": "department",
+  "department": {
+    "not_found": "Department not found",
+    "parent_cycle": "Department parent relationship has a cycle",
+    "parent_not_found": "Parent department not found",
+    "parent_company_mismatch": "Parent department belongs to a different company"
+  },
   "department_code": "department_code",
-  "document.not_found": "Document not found",
-  "download.invalid_token": "download invalid token",
   "effect": "effect",
   "email_users": "email_users",
   "embedding": "embedding",
   "event": "event",
   "expire": "expire",
   "expiry_date": "expiry_date",
-  "feishu.invalid_body": "feishu invalid body",
-  "feishu.invalid_signature": "feishu invalid signature",
-  "file.too_large": "File too large",
   "group": "group",
   "host": "host",
   "idp": "idp",
@@ -201,13 +165,10 @@
   "instance_id": "instance_id",
   "insufficient_role": "insufficient_role",
   "invalid_action": "invalid_action",
-  "invoice.attachment_document_not_found": "Attachment document not found",
-  "invoice.attachments_required": "Attachments required",
   "invoice_code": "invoice_code",
   "invoice_date": "invoice_date",
   "invoice_number": "invoice_number",
   "iso": "iso",
-  "item.not_found": "Item not found",
   "item_code": "item_code",
   "item_id": "item_id",
   "items": "items",
@@ -215,7 +176,6 @@
   "line_count": "line_count",
   "line_type": "line_type",
   "lines": "lines",
-  "lookup_value.not_found": "Lookup Value not found",
   "manufacturer": "manufacturer",
   "model_number": "model_number",
   "msg": "msg",
@@ -224,70 +184,29 @@
   "no_approver_found": "no_approver_found",
   "no_pending_task_for_you": "no_pending_task_for_you",
   "notes": "notes",
-  "notification.ids_or_all_required": "notification ids or all required",
-  "notification.not_found": "Notification not found",
   "order": "order",
-  "parent_category.not_found": "Parent Category not found",
   "parent_id": "parent_id",
   "payment_id": "payment_id",
-  "payment_schedule.parent_required": "payment schedule parent required",
   "payment_url": "payment_url",
   "planned_date": "planned_date",
-  "po.not_found": "Po not found",
   "po_id": "po_id",
   "po_item_id": "po_item_id",
   "po_number": "po_number",
   "po_url": "po_url",
-  "pr.approval_not_found": "pr approval not found",
-  "pr.cannot_decide_non_submitted": "pr cannot decide non submitted",
-  "pr.cannot_edit_submitted": "pr cannot edit submitted",
-  "pr.cannot_submit_non_draft": "pr cannot submit non draft",
-  "pr.items_missing_supplier": "pr items missing supplier",
-  "pr.must_be_approved_to_convert": "pr must be approved to convert",
-  "pr.no_items": "pr no items",
-  "pr.not_found": "Pr not found",
   "pr_description_polish": "pr_description_polish",
   "pr_id": "pr_id",
   "pr_title": "pr_title",
   "pr_url": "pr_url",
   "price": "price",
   "qty_received": "qty_received",
-  "recycle_bin.entity_not_found": "Recycle bin operation failed",
-  "recycle_bin.not_deleted": "Recycle bin operation failed",
-  "recycle_bin.unknown_entity_type": "Recycle bin operation failed",
   "resource": "resource",
   "result": "result",
   "results": "results",
-  "rfq.already_sent": "RFQ already sent",
-  "rfq.cannot_award": "Cannot award",
-  "rfq.no_items": "RFQ has no items",
-  "rfq.no_suppliers": "RFQ has no suppliers",
-  "rfq.not_accepting_quotes": "Not accepting quotes",
-  "rfq.not_found": "Rfq not found",
   "role": "role",
   "roles": "roles",
   "rules": "rules",
-  "saml.authentication_failed": "saml authentication failed",
-  "saml.company_code_not_found": "saml company code not found",
-  "saml.default_company_required": "saml default company required",
-  "saml.default_department_not_found": "saml default department not found",
-  "saml.default_role_invalid": "saml default role invalid",
-  "saml.department_code_not_found": "saml department code not found",
-  "saml.group_mapping_invalid": "saml group mapping invalid",
-  "saml.invalid_relay_state": "saml invalid relay state",
-  "saml.invalid_response": "saml invalid response",
-  "saml.jit_disabled": "saml jit disabled",
-  "saml.metadata_invalid": "saml metadata invalid",
-  "saml.misconfigured": "saml misconfigured",
-  "saml.missing_email": "saml missing email",
-  "saml.missing_external_id": "saml missing external id",
-  "saml.not_enabled": "saml not enabled",
-  "schedule_item.orphan": "Payment schedule item error",
   "seller_name": "seller_name",
   "seller_tax_id": "seller_tax_id",
-  "shipment.invalid_po_item": "Invalid PO line item",
-  "shipment.not_found": "Shipment not found",
-  "shipment_document.not_found": "Shipment Document not found",
   "signing": "signing",
   "sku_suggest": "sku_suggest",
   "specification": "specification",
@@ -295,8 +214,13 @@
   "status": "status",
   "sub": "sub",
   "subtotal": "subtotal",
-  "supplier": "supplier",
-  "supplier.not_found": "Supplier not found",
+  "supplier": {
+    "not_found": "Supplier not found",
+    "has_pr_items": "Supplier has purchase requisitions, cannot delete",
+    "has_contracts": "Supplier has contracts, cannot delete",
+    "has_invoices": "Supplier has invoices, cannot delete",
+    "has_price_records": "Supplier has price records, cannot delete"
+  },
   "supplier_code": "supplier_code",
   "supplier_ids": "supplier_ids",
   "supplier_name": "supplier_name",
@@ -312,64 +236,172 @@
   "user_id": "user_id",
   "valid_until": "valid_until",
   "warranty_expiry": "warranty_expiry",
-  "budget.not_found": "Budget information not found",
-  "budget.exceeded": "Spending has exceeded budget",
-  "notification.sla.escalated_submitter": "Approval Overdue - {title}",
-  "notification.sla.escalated_submitter_body": "Your PR '{title}' has been pending approval for over {hours} hours. Current stage: {stage}",
-  "notification.sla.escalated_manager": "Approval Escalation - {title}",
-  "notification.sla.escalated_manager_body": "PR '{title}' has exceeded SLA of {hours} hours. Stage: {stage}",
-  "notification.sla.escalated_admin": "Approval Alert - {title}",
-  "notification.sla.escalated_admin_body": "PR '{title}' (#{biz_number}) has been overdue for {hours} hours. Stage: {stage}",
-  "notification.reminder.pending": "Approval Pending Reminder - {title}",
-  "notification.reminder.pending_body": "You have a pending approval for PR '{title}' (#{biz_number}) waiting for {hours} hours. Stage: {stage}",
-  "auth.invalid_token_payload": "Invalid token payload",
-  "auth.user_not_found_or_inactive": "User not found or inactive",
-  "company.not_found": "Company not found",
-  "department.not_found": "Department not found",
-  "department.parent_cycle": "Department parent relationship has a cycle",
-  "department.parent_not_found": "Parent department not found",
-  "department.parent_company_mismatch": "Parent department belongs to a different company",
-  "item.has_po_items": "Item has purchase order line items, cannot delete",
-  "item.has_pr_items": "Item has purchase requisition line items, cannot delete",
-  "item.has_price_records": "Item has price records, cannot delete",
-  "item.has_price_benchmarks": "Item has price benchmarks, cannot delete",
-  "item.has_price_anomalies": "Item has price anomaly records, cannot delete",
-  "supplier.has_pr_items": "Supplier has purchase requisitions, cannot delete",
-  "supplier.has_contracts": "Supplier has contracts, cannot delete",
-  "supplier.has_invoices": "Supplier has invoices, cannot delete",
-  "supplier.has_price_records": "Supplier has price records, cannot delete",
-  "supplier_portal.invalid_token": "Invalid or expired access link",
-  "feishu.card_send_failed": "Feishu card message delivery failed",
-  "feishu.not_enabled": "Feishu integration is not enabled",
-  "supplier_portal.token_revoked": "Access token revoked",
-  "sku.forecast.insufficient_data": "Insufficient data",
-  "dashboard.invoice.matched": "Matched",
-  "dashboard.invoice.partial": "Partially matched",
-  "dashboard.invoice.unmatched": "Unmatched",
-  "digest.feishu.pending_approvals": "Pending Approvals: {count} PRs",
-  "digest.feishu.expiring_contracts": "Expiring Contracts: {count}",
-  "digest.feishu.price_anomalies": "Price Anomalies: {count}",
-  "digest.feishu.view_dashboard": "View Dashboard",
-  "digest.feishu.view_approvals": "View Approvals",
-  "digest.feishu.title": "Mica Daily Digest",
-  "digest.no_expiring_contracts": "No contracts expiring in the configured window.",
-  "digest.no_recent_anomalies": "No recent price anomalies found.",
-  "digest.table_header_contract_number": "Contract #",
-  "digest.table_header_title": "Title",
-  "digest.table_header_expiry": "Expiry",
-  "digest.table_header_amount": "Amount",
-  "digest.table_header_item": "Item",
-  "digest.table_header_observed": "Observed",
-  "digest.table_header_baseline": "Baseline",
-  "digest.table_header_deviation": "Deviation",
-  "digest.table_header_severity": "Severity",
-  "digest.email_title": "🦦 Mica Daily Digest — {date}",
-  "digest.email_title_pending_approvals": "📋 Pending Approvals: {count}",
-  "digest.email_title_expiring_contracts": "📄 Expiring Contracts: {count}",
-  "digest.price_anomalies_header": "⚠️ Price Anomalies (last 7 days): {count}",
-  "digest.pending_approvals_text": "{count} purchase request(s) are awaiting approval.",
-  "digest.view_pending_approvals_link": "View pending approvals",
-  "digest.view_all_contracts_link": "View all contracts",
-  "digest.email_footer": "This digest was automatically generated by Mica (觅采).",
-  "digest.manage_settings_link": "Manage notification settings"
+  "digest": {
+    "feishu": {
+      "pending_approvals": "Pending Approvals: {count} PRs",
+      "expiring_contracts": "Expiring Contracts: {count}",
+      "price_anomalies": "Price Anomalies: {count}",
+      "view_dashboard": "View Dashboard",
+      "view_approvals": "View Approvals",
+      "title": "Mica Daily Digest"
+    },
+    "no_expiring_contracts": "No contracts expiring in the configured window.",
+    "no_recent_anomalies": "No recent price anomalies found.",
+    "table_header_contract_number": "Contract #",
+    "table_header_title": "Title",
+    "table_header_expiry": "Expiry",
+    "table_header_amount": "Amount",
+    "table_header_item": "Item",
+    "table_header_observed": "Observed",
+    "table_header_baseline": "Baseline",
+    "table_header_deviation": "Deviation",
+    "table_header_severity": "Severity",
+    "email_title": "🦦 Mica Daily Digest — {date}",
+    "email_title_pending_approvals": "📋 Pending Approvals: {count}",
+    "email_title_expiring_contracts": "📄 Expiring Contracts: {count}",
+    "price_anomalies_header": "⚠️ Price Anomalies (last 7 days): {count}",
+    "pending_approvals_text": "{count} purchase request(s) are awaiting approval.",
+    "view_pending_approvals_link": "View pending approvals",
+    "view_all_contracts_link": "View all contracts",
+    "email_footer": "This digest was automatically generated by Mica (觅采).",
+    "manage_settings_link": "Manage notification settings"
+  },
+  "contract": {
+    "not_found": "Contract not found",
+    "not_editable_in_status": "Contract cannot be edited in its current status",
+    "invalid_status_transition": "Invalid contract status transition",
+    "cannot_delete_with_paid_schedule": "Contract has paid payment records and cannot be deleted",
+    "number_required": "Contract number must not be empty",
+    "number_duplicate": "Contract number is already in use",
+    "version_not_found": "contract version not found"
+  },
+  "template": {
+    "not_found": "Template not found",
+    "disabled": "Template is disabled",
+    "no_file": "Template file not yet uploaded",
+    "only_docx_supported": "Only .docx and .xlsx templates are supported",
+    "file_missing_on_disk": "Template file is missing on server, please re-upload",
+    "supplier_missing": "Supplier information missing, cannot generate document",
+    "contract_required_for_generation": "Document generation requires a contract, but this PO has none"
+  },
+  "po_contract_link": {
+    "not_found": "No link exists between this PO and contract",
+    "cannot_unlink_primary": "Cannot unlink the primary PO from this contract",
+    "cannot_remove_last": "Cannot unlink: this is the contract's last PO association",
+    "has_payments": "Cannot unlink: this PO already has payment records referencing this contract",
+    "supplier_mismatch": "Cannot link PO and contract with different suppliers",
+    "company_mismatch": "Cannot link PO and contract from different companies",
+    "currency_mismatch": "Cannot link PO and contract with different currencies"
+  },
+  "payment": {
+    "not_found": "Payment record not found",
+    "contract_required": "Payment must be associated with a contract",
+    "contract_po_mismatch": "Selected contract does not belong to this purchase order",
+    "schedule_parent_mismatch": "Schedule item does not belong to the selected contract/PO",
+    "schedule_requires_primary_po": "Contract schedule payments must be recorded against the contract's primary PO",
+    "cannot_delete_confirmed": "Confirmed payments cannot be deleted — reverse first"
+  },
+  "attachment": {
+    "not_found": "Attachment not found"
+  },
+  "schedule_item": {
+    "not_found": "Payment schedule item not found",
+    "cannot_delete_paid": "Cannot delete a paid schedule item",
+    "already_paid": "This installment has already been paid",
+    "orphan": "Payment schedule item error"
+  },
+  "invoice": {
+    "not_found": "Invoice not found",
+    "attachment_document_not_found": "Attachment document not found",
+    "attachments_required": "Attachments required"
+  },
+  "user": {
+    "not_found": "User not found",
+    "username_exists": "Username is already taken",
+    "cannot_delete_self": "You cannot delete your own account",
+    "cannot_delete_last_admin": "Cannot delete the last active admin",
+    "has_references": "This user is referenced by existing records (PR/PO/approvals/audit logs) and cannot be hard-deleted. Disable the account instead."
+  },
+  "": {
+    "": " "
+  },
+  "ai_model": {
+    "name_exists": "Ai Model name already exists",
+    "not_found": "Ai Model not found"
+  },
+  "anomaly": {
+    "not_found": "Anomaly not found"
+  },
+  "cost_center": {
+    "not_found": "Cost Center not found"
+  },
+  "document": {
+    "not_found": "Document not found"
+  },
+  "download": {
+    "invalid_token": "download invalid token"
+  },
+  "file": {
+    "too_large": "File too large"
+  },
+  "item": {
+    "not_found": "Item not found",
+    "has_po_items": "Item has purchase order line items, cannot delete",
+    "has_pr_items": "Item has purchase requisition line items, cannot delete",
+    "has_price_records": "Item has price records, cannot delete",
+    "has_price_benchmarks": "Item has price benchmarks, cannot delete",
+    "has_price_anomalies": "Item has price anomaly records, cannot delete"
+  },
+  "lookup_value": {
+    "not_found": "Lookup Value not found"
+  },
+  "parent_category": {
+    "not_found": "Parent Category not found"
+  },
+  "payment_schedule": {
+    "parent_required": "payment schedule parent required"
+  },
+  "recycle_bin": {
+    "entity_not_found": "Recycle bin operation failed",
+    "not_deleted": "Recycle bin operation failed",
+    "unknown_entity_type": "Recycle bin operation failed"
+  },
+  "rfq": {
+    "already_sent": "RFQ already sent",
+    "cannot_award": "Cannot award",
+    "no_items": "RFQ has no items",
+    "no_suppliers": "RFQ has no suppliers",
+    "not_accepting_quotes": "Not accepting quotes",
+    "not_found": "Rfq not found"
+  },
+  "shipment": {
+    "invalid_po_item": "Invalid PO line item",
+    "not_found": "Shipment not found"
+  },
+  "shipment_document": {
+    "not_found": "Shipment Document not found"
+  },
+  "budget": {
+    "not_found": "Budget information not found",
+    "exceeded": "Spending has exceeded budget"
+  },
+  "company": {
+    "not_found": "Company not found"
+  },
+  "supplier_portal": {
+    "invalid_token": "Invalid or expired access link",
+    "token_revoked": "Access token revoked"
+  },
+  "sku": {
+    "forecast": {
+      "insufficient_data": "Insufficient data"
+    }
+  },
+  "dashboard": {
+    "invoice": {
+      "matched": "Matched",
+      "partial": "Partially matched",
+      "unmatched": "Unmatched"
+    }
+  }
 }

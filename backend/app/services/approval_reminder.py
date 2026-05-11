@@ -14,7 +14,7 @@ from app.models import (
     User,
 )
 from app.services.notifications import create_notification
-from app.services.system_params import system_params
+from app.services.system_params import notification_enabled, system_params
 
 logger = logging.getLogger(__name__)
 
@@ -59,6 +59,8 @@ async def send_reminders(db: AsyncSession) -> dict[str, int | str | bool]:
 
         for task in pending_tasks:
             try:
+                if not await notification_enabled(db, "approval_reminder"):
+                    continue
                 notification = await create_notification(
                     db,
                     user_id=task.assignee_id,

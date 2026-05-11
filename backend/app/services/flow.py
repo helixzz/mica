@@ -156,33 +156,35 @@ async def create_contract(
     try:
         from app.models import NotificationCategory, UserRole
         from app.services.notifications import create_notification
+        from app.services.system_params import notification_enabled
 
-        recipients = {actor.id}
-        admin_rows = (
-            (
-                await db.execute(
-                    select(User.id).where(
-                        User.role.in_([UserRole.ADMIN.value, UserRole.PROCUREMENT_MGR.value]),
-                        User.is_active.is_(True),
+        if await notification_enabled(db, "contract_created"):
+            recipients = {actor.id}
+            admin_rows = (
+                (
+                    await db.execute(
+                        select(User.id).where(
+                            User.role.in_([UserRole.ADMIN.value, UserRole.PROCUREMENT_MGR.value]),
+                            User.is_active.is_(True),
+                        )
                     )
                 )
+                .scalars()
+                .all()
             )
-            .scalars()
-            .all()
-        )
-        recipients.update(admin_rows)
-        for uid in recipients:
-            await create_notification(
-                db,
-                user_id=uid,
-                category=NotificationCategory.SYSTEM,
-                title=f"Contract {contract.contract_number} created",
-                body=f"Contract '{contract.title}' for PO {po.po_number}, total ¥{contract.total_amount}",
-                link_url=f"/contracts/{contract.id}",
-                biz_type="contract",
-                biz_id=contract.id,
-            )
-        await db.commit()
+            recipients.update(admin_rows)
+            for uid in recipients:
+                await create_notification(
+                    db,
+                    user_id=uid,
+                    category=NotificationCategory.SYSTEM,
+                    title=f"Contract {contract.contract_number} created",
+                    body=f"Contract '{contract.title}' for PO {po.po_number}, total ¥{contract.total_amount}",
+                    link_url=f"/contracts/{contract.id}",
+                    biz_type="contract",
+                    biz_id=contract.id,
+                )
+            await db.commit()
     except Exception:
         pass
 
@@ -494,6 +496,51 @@ async def transition_contract_status(
         meta={"from": current, "to": new_status, "reason": reason},
     )
     await db.commit()
+
+    if new_status in ("terminated", "superseded"):
+        try:
+            from app.models import NotificationCategory, PurchaseOrder, User, UserRole
+            from app.services.notifications import create_notification
+            from app.services.system_params import notification_enabled
+
+            if await notification_enabled(db, "contract_status_changed"):
+                recipients: set[str] = set()
+                po = await db.get(PurchaseOrder, contract.po_id)
+                if po and po.created_by_id:
+                    recipients.add(str(po.created_by_id))
+                admin_rows = (
+                    (
+                        await db.execute(
+                            select(User.id).where(
+                                User.role.in_(
+                                    [UserRole.ADMIN.value, UserRole.PROCUREMENT_MGR.value]
+                                ),
+                                User.is_active.is_(True),
+                            )
+                        )
+                    )
+                    .scalars()
+                    .all()
+                )
+                recipients.update(str(uid) for uid in admin_rows)
+                from uuid import UUID as _UUID
+
+                for uid_str in recipients:
+                    await create_notification(
+                        db,
+                        user_id=_UUID(uid_str),
+                        category=NotificationCategory.SYSTEM,
+                        title=f"Contract {contract.contract_number} {new_status}",
+                        body=f"Contract '{contract.title}' has been {new_status}"
+                        + (f": {reason}" if reason else ""),
+                        link_url=f"/contracts/{contract.id}",
+                        biz_type="contract",
+                        biz_id=contract.id,
+                    )
+                await db.commit()
+        except Exception:
+            pass
+
     await db.refresh(contract)
     return contract
 
@@ -615,36 +662,40 @@ async def create_shipment(
     try:
         from app.models import NotificationCategory, UserRole
         from app.services.notifications import create_notification
+        from app.services.system_params import notification_enabled
 
-        status_label = (
-            "fully received" if po.status == POStatus.FULLY_RECEIVED.value else "partially received"
-        )
-        recipients = {actor.id, po.created_by_id}
-        admin_rows = (
-            (
-                await db.execute(
-                    select(User.id).where(
-                        User.role.in_([UserRole.ADMIN.value, UserRole.PROCUREMENT_MGR.value]),
-                        User.is_active.is_(True),
+        if await notification_enabled(db, "shipment_received"):
+            status_label = (
+                "fully received"
+                if po.status == POStatus.FULLY_RECEIVED.value
+                else "partially received"
+            )
+            recipients = {actor.id, po.created_by_id}
+            admin_rows = (
+                (
+                    await db.execute(
+                        select(User.id).where(
+                            User.role.in_([UserRole.ADMIN.value, UserRole.PROCUREMENT_MGR.value]),
+                            User.is_active.is_(True),
+                        )
                     )
                 )
+                .scalars()
+                .all()
             )
-            .scalars()
-            .all()
-        )
-        recipients.update(admin_rows)
-        for uid in recipients:
-            await create_notification(
-                db,
-                user_id=uid,
-                category=NotificationCategory.PO_CREATED,
-                title=f"PO {po.po_number} {status_label}",
-                body=f"PO {po.po_number} is now {status_label} ({po.qty_received}/{total_qty} received)",
-                link_url=f"/purchase-orders/{po.id}",
-                biz_type="po",
-                biz_id=po.id,
-            )
-        await db.commit()
+            recipients.update(admin_rows)
+            for uid in recipients:
+                await create_notification(
+                    db,
+                    user_id=uid,
+                    category=NotificationCategory.PO_CREATED,
+                    title=f"PO {po.po_number} {status_label}",
+                    body=f"PO {po.po_number} is now {status_label} ({po.qty_received}/{total_qty} received)",
+                    link_url=f"/purchase-orders/{po.id}",
+                    biz_type="po",
+                    biz_id=po.id,
+                )
+            await db.commit()
     except Exception:
         pass
 
@@ -931,33 +982,35 @@ async def create_payment(
     try:
         from app.models import NotificationCategory, UserRole
         from app.services.notifications import create_notification
+        from app.services.system_params import notification_enabled
 
-        recipients = {actor.id}
-        admin_rows = (
-            (
-                await db.execute(
-                    select(User.id).where(
-                        User.role.in_([UserRole.ADMIN.value, UserRole.FINANCE_AUDITOR.value]),
-                        User.is_active.is_(True),
+        if await notification_enabled(db, "payment_created"):
+            recipients = {actor.id}
+            admin_rows = (
+                (
+                    await db.execute(
+                        select(User.id).where(
+                            User.role.in_([UserRole.ADMIN.value, UserRole.FINANCE_AUDITOR.value]),
+                            User.is_active.is_(True),
+                        )
                     )
                 )
+                .scalars()
+                .all()
             )
-            .scalars()
-            .all()
-        )
-        recipients.update(admin_rows)
-        for uid in recipients:
-            await create_notification(
-                db,
-                user_id=uid,
-                category=NotificationCategory.PAYMENT_PENDING,
-                title=f"Payment {record.payment_number} created",
-                body=f"Payment {record.payment_number}: ¥{record.amount} {record.currency} due {record.due_date}",
-                link_url=f"/purchase-orders/{record.po_id}",
-                biz_type="payment",
-                biz_id=record.id,
-            )
-        await db.commit()
+            recipients.update(admin_rows)
+            for uid in recipients:
+                await create_notification(
+                    db,
+                    user_id=uid,
+                    category=NotificationCategory.PAYMENT_PENDING,
+                    title=f"Payment {record.payment_number} created",
+                    body=f"Payment {record.payment_number}: ¥{record.amount} {record.currency} due {record.due_date}",
+                    link_url=f"/purchase-orders/{record.po_id}",
+                    biz_type="payment",
+                    biz_id=record.id,
+                )
+            await db.commit()
     except Exception:
         pass
 
@@ -1399,33 +1452,69 @@ async def create_invoice(
     try:
         from app.models import NotificationCategory, UserRole
         from app.services.notifications import create_notification
+        from app.services.system_params import notification_enabled
 
-        recipients = {actor.id}
-        admin_rows = (
-            (
-                await db.execute(
-                    select(User.id).where(
-                        User.role.in_([UserRole.ADMIN.value, UserRole.FINANCE_AUDITOR.value]),
-                        User.is_active.is_(True),
+        if await notification_enabled(db, "invoice_created"):
+            recipients = {actor.id}
+            admin_rows = (
+                (
+                    await db.execute(
+                        select(User.id).where(
+                            User.role.in_([UserRole.ADMIN.value, UserRole.FINANCE_AUDITOR.value]),
+                            User.is_active.is_(True),
+                        )
                     )
                 )
+                .scalars()
+                .all()
             )
-            .scalars()
-            .all()
-        )
-        recipients.update(admin_rows)
-        for uid in recipients:
-            await create_notification(
-                db,
-                user_id=uid,
-                category=NotificationCategory.SYSTEM,
-                title=f"Invoice {invoice.internal_number} created",
-                body=f"Invoice {invoice.internal_number}: total ¥{invoice.total_amount} {invoice.currency}",
-                link_url="/invoices",
-                biz_type="invoice",
-                biz_id=invoice.id,
+            recipients.update(admin_rows)
+            for uid in recipients:
+                await create_notification(
+                    db,
+                    user_id=uid,
+                    category=NotificationCategory.SYSTEM,
+                    title=f"Invoice {invoice.internal_number} created",
+                    body=f"Invoice {invoice.internal_number}: total ¥{invoice.total_amount} {invoice.currency}",
+                    link_url="/invoices",
+                    biz_type="invoice",
+                    biz_id=invoice.id,
+                )
+            await db.commit()
+    except Exception:
+        pass
+
+    try:
+        from app.models import NotificationCategory, UserRole
+        from app.services.notifications import create_notification
+        from app.services.system_params import notification_enabled
+
+        if await notification_enabled(db, "invoice_matched"):
+            match_label = "matched" if is_matched else "mismatched"
+            admin_rows = (
+                (
+                    await db.execute(
+                        select(User.id).where(
+                            User.role.in_([UserRole.ADMIN.value, UserRole.FINANCE_AUDITOR.value]),
+                            User.is_active.is_(True),
+                        )
+                    )
+                )
+                .scalars()
+                .all()
             )
-        await db.commit()
+            for uid in admin_rows:
+                await create_notification(
+                    db,
+                    user_id=uid,
+                    category=NotificationCategory.SYSTEM,
+                    title=f"Invoice {invoice.internal_number} {match_label}",
+                    body=f"Invoice {invoice.internal_number}: 3-way match result is {match_label} (status: {initial_status})",
+                    link_url="/invoices",
+                    biz_type="invoice_match",
+                    biz_id=invoice.id,
+                )
+            await db.commit()
     except Exception:
         pass
 

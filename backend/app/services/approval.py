@@ -23,7 +23,7 @@ from app.models import (
     UserRole,
 )
 from app.services.notifications import create_notification
-from app.services.system_params import system_params
+from app.services.system_params import notification_enabled, system_params
 
 logger = logging.getLogger(__name__)
 
@@ -209,6 +209,8 @@ async def _send_assignment_notification(
     task: ApprovalTask,
 ) -> None:
     try:
+        if not await notification_enabled(db, "approval"):
+            return
         _ = await create_notification(
             db,
             user_id=task.assignee_id,
@@ -426,35 +428,36 @@ async def act_on_task(
     await db.flush()
     if instance.status in {"approved", "rejected", "returned"}:
         try:
-            _ = await create_notification(
-                db,
-                user_id=instance.submitter_id,
-                category=NotificationCategory.APPROVAL,
-                title=lambda submitter: t(
-                    "notification.approval.approved"
-                    if instance.status == "approved"
-                    else "notification.approval.rejected"
-                    if instance.status == "rejected"
-                    else "notification.approval.returned",
-                    submitter.preferred_locale
-                    if submitter and submitter.preferred_locale
-                    else "zh-CN",
-                    title=instance.title,
-                ),
-                body=comment,
-                link_url=f"/purchase-requisitions/{instance.biz_id}",
-                biz_type=instance.biz_type,
-                biz_id=instance.biz_id,
-                meta={
-                    "approval_instance_id": str(instance.id),
-                    "action": action,
-                    "result": instance.status,
-                    "biz_number": instance.biz_number,
-                    "amount": str(instance.amount) if instance.amount is not None else None,
-                    "current_stage": instance.current_stage,
-                    "total_stages": instance.total_stages,
-                },
-            )
+            if await notification_enabled(db, "approval"):
+                _ = await create_notification(
+                    db,
+                    user_id=instance.submitter_id,
+                    category=NotificationCategory.APPROVAL,
+                    title=lambda submitter: t(
+                        "notification.approval.approved"
+                        if instance.status == "approved"
+                        else "notification.approval.rejected"
+                        if instance.status == "rejected"
+                        else "notification.approval.returned",
+                        submitter.preferred_locale
+                        if submitter and submitter.preferred_locale
+                        else "zh-CN",
+                        title=instance.title,
+                    ),
+                    body=comment,
+                    link_url=f"/purchase-requisitions/{instance.biz_id}",
+                    biz_type=instance.biz_type,
+                    biz_id=instance.biz_id,
+                    meta={
+                        "approval_instance_id": str(instance.id),
+                        "action": action,
+                        "result": instance.status,
+                        "biz_number": instance.biz_number,
+                        "amount": str(instance.amount) if instance.amount is not None else None,
+                        "current_stage": instance.current_stage,
+                        "total_stages": instance.total_stages,
+                    },
+                )
         except Exception:
             logger.warning("failed to create approval decision notification", exc_info=True)
     return instance

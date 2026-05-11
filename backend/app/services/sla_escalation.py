@@ -18,7 +18,7 @@ from app.models import (
     UserRole,
 )
 from app.services.notifications import bulk_notify_role, create_notification
-from app.services.system_params import system_params
+from app.services.system_params import notification_enabled, system_params
 
 logger = logging.getLogger(__name__)
 
@@ -63,6 +63,10 @@ async def check_overdue_approvals(db: AsyncSession) -> dict:
             continue
 
         stage_names = sorted({task.stage_name for task in pending_tasks})
+
+        if not await notification_enabled(db, "sla_escalation"):
+            escalated_instances += 1
+            continue
 
         try:
             notification = await create_notification(

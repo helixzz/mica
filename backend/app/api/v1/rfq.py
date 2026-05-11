@@ -128,6 +128,42 @@ async def create_rfq(
 ):
     rfq = await svc.create_rfq(db, user, body.model_dump())
     await db.commit()
+
+    try:
+        from app.models import NotificationCategory, User, UserRole
+        from app.services.notifications import create_notification
+        from app.services.system_params import notification_enabled
+
+        if await notification_enabled(db, "rfq_created"):
+            from sqlalchemy import select
+
+            admin_rows = (
+                (
+                    await db.execute(
+                        select(User.id).where(
+                            User.role.in_([UserRole.ADMIN.value, UserRole.PROCUREMENT_MGR.value]),
+                            User.is_active.is_(True),
+                        )
+                    )
+                )
+                .scalars()
+                .all()
+            )
+            for uid in admin_rows:
+                await create_notification(
+                    db,
+                    user_id=uid,
+                    category=NotificationCategory.SYSTEM,
+                    title=f"RFQ {rfq.rfq_number} created",
+                    body=f"RFQ '{rfq.title}' has been created with {len(body.items)} items and {len(body.supplier_ids)} suppliers",
+                    link_url=f"/rfqs/{rfq.id}",
+                    biz_type="rfq",
+                    biz_id=rfq.id,
+                )
+            await db.commit()
+    except Exception:
+        pass
+
     return rfq
 
 
@@ -173,6 +209,102 @@ async def award_quotes(
 ):
     rfq = await svc.award_quote(db, rfq_id, [str(qid) for qid in body.quote_ids])
     await db.commit()
+
+    try:
+        from app.models import (
+            NotificationCategory,
+            PurchaseRequisition,
+            Supplier,
+            User,
+            UserRole,
+        )
+        from app.services.notifications import create_notification
+        from app.services.system_params import notification_enabled
+
+        if await notification_enabled(db, "rfq_awarded"):
+            from sqlalchemy import select
+
+            recipients: set[str] = set()  # type: ignore[var-annotated]
+
+            winning_supplier_ids = {q.supplier_id for q in rfq.quotes if q.is_selected}
+
+            if winning_supplier_ids:
+                supplier_rows = (
+                    (
+                        await db.execute(
+                            select(Supplier).where(Supplier.id.in_(winning_supplier_ids))
+                        )
+                    )
+                    .scalars()
+                    .all()
+                )
+                supplier_emails = [s.contact_email for s in supplier_rows if s.contact_email]
+                if supplier_emails:
+                    linked_users = (
+                        (
+                            await db.execute(
+                                select(User).where(
+                                    User.email.in_(supplier_emails),
+                                    User.is_active.is_(True),
+                                )
+                            )
+                        )
+                        .scalars()
+                        .all()
+                    )
+                    recipients.update(str(u.id) for u in linked_users)
+
+            if rfq.pr_id:
+                pr = await db.get(PurchaseRequisition, rfq.pr_id)
+                if pr and pr.requester_id:
+                    recipients.add(str(pr.requester_id))
+
+            admin_rows = (
+                (
+                    await db.execute(
+                        select(User.id).where(
+                            User.role.in_([UserRole.ADMIN.value, UserRole.PROCUREMENT_MGR.value]),
+                            User.is_active.is_(True),
+                        )
+                    )
+                )
+                .scalars()
+                .all()
+            )
+            recipients.update(str(uid) for uid in admin_rows)
+
+            awarded_supplier_names = (
+                ", ".join(
+                    s.name
+                    for s in (
+                        await db.execute(
+                            select(Supplier).where(Supplier.id.in_(winning_supplier_ids))
+                        )
+                    )
+                    .scalars()
+                    .all()
+                )
+                if winning_supplier_ids
+                else "N/A"
+            )
+
+            from uuid import UUID as _UUID
+
+            for uid_str in recipients:
+                await create_notification(
+                    db,
+                    user_id=_UUID(uid_str),
+                    category=NotificationCategory.SYSTEM,
+                    title=f"RFQ {rfq.rfq_number} awarded",
+                    body=f"RFQ '{rfq.title}' has been awarded to: {awarded_supplier_names}",
+                    link_url=f"/rfqs/{rfq.id}",
+                    biz_type="rfq",
+                    biz_id=rfq.id,
+                )
+            await db.commit()
+    except Exception:
+        pass
+
     return rfq
 
 

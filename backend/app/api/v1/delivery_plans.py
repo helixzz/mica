@@ -75,35 +75,39 @@ async def create_plan(
 
         from app.models import NotificationCategory, PurchaseOrder, User, UserRole
         from app.services.notifications import create_notification
+        from app.services.system_params import notification_enabled
 
-        po = await db.get(PurchaseOrder, payload.po_id)
-        if po and po.submitter_id:
-            recipients = {po.submitter_id}
-            admin_rows = (
-                (
-                    await db.execute(
-                        select(User.id).where(
-                            User.role.in_([UserRole.ADMIN.value, UserRole.PROCUREMENT_MGR.value]),
-                            User.is_active.is_(True),
+        if await notification_enabled(db, "delivery_plan_created"):
+            po = await db.get(PurchaseOrder, payload.po_id)
+            if po and po.submitter_id:
+                recipients = {po.submitter_id}
+                admin_rows = (
+                    (
+                        await db.execute(
+                            select(User.id).where(
+                                User.role.in_(
+                                    [UserRole.ADMIN.value, UserRole.PROCUREMENT_MGR.value]
+                                ),
+                                User.is_active.is_(True),
+                            )
                         )
                     )
+                    .scalars()
+                    .all()
                 )
-                .scalars()
-                .all()
-            )
-            recipients.update(admin_rows)
-            for uid in recipients:
-                await create_notification(
-                    db,
-                    user_id=uid,
-                    category=NotificationCategory.SYSTEM,
-                    title=f"Delivery plan created: {plan.plan_name}",
-                    body=f"PO {po.po_number}: {plan.planned_qty} units of {plan.plan_name} planned for {plan.planned_date}",
-                    link_url=f"/purchase-orders/{payload.po_id}",
-                    biz_type="delivery_plan",
-                    biz_id=plan.id,
-                )
-            await db.commit()
+                recipients.update(admin_rows)
+                for uid in recipients:
+                    await create_notification(
+                        db,
+                        user_id=uid,
+                        category=NotificationCategory.SYSTEM,
+                        title=f"Delivery plan created: {plan.plan_name}",
+                        body=f"PO {po.po_number}: {plan.planned_qty} units of {plan.plan_name} planned for {plan.planned_date}",
+                        link_url=f"/purchase-orders/{payload.po_id}",
+                        biz_type="delivery_plan",
+                        biz_id=plan.id,
+                    )
+                await db.commit()
     except Exception:
         pass
 
