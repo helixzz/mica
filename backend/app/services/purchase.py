@@ -429,6 +429,57 @@ async def convert_pr_to_po(db: AsyncSession, actor: User, pr_id: UUID) -> list[P
             raise HTTPException(404, "po.not_found")
         refreshed.append(loaded)
     refreshed.sort(key=lambda p: p.po_number)
+
+    try:
+        from app.models import NotificationCategory
+        from app.services.notifications import create_notification
+
+        supplier_ids = {po.supplier_id for po in refreshed}
+        supplier_rows = (
+            (await db.execute(select(Supplier).where(Supplier.id.in_(supplier_ids))))
+            .scalars()
+            .all()
+        )
+        supplier_names = {s.id: s.name for s in supplier_rows}
+
+        recipients = {actor.id}
+        admin_rows = (
+            (
+                await db.execute(
+                    select(User.id).where(
+                        User.role.in_(
+                            [
+                                UserRole.ADMIN.value,
+                                UserRole.PROCUREMENT_MGR.value,
+                                UserRole.FINANCE_AUDITOR.value,
+                            ]
+                        ),
+                        User.is_active.is_(True),
+                    )
+                )
+            )
+            .scalars()
+            .all()
+        )
+        recipients.update(admin_rows)
+
+        for po in refreshed:
+            supplier_name = supplier_names.get(po.supplier_id, "Unknown")
+            for uid in recipients:
+                await create_notification(
+                    db,
+                    user_id=uid,
+                    category=NotificationCategory.PO_CREATED,
+                    title=f"PO {po.po_number} created",
+                    body=f"PO {po.po_number} created from PR {pr.pr_number} for {supplier_name}, total ¥{po.total_amount}",
+                    link_url=f"/purchase-orders/{po.id}",
+                    biz_type="po",
+                    biz_id=po.id,
+                )
+        await db.commit()
+    except Exception:
+        pass
+
     return refreshed
 
 

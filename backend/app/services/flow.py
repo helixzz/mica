@@ -152,6 +152,40 @@ async def create_contract(
         meta={"contract_number": number, "po_id": str(po.id)},
     )
     await db.commit()
+
+    try:
+        from app.models import NotificationCategory, UserRole
+        from app.services.notifications import create_notification
+
+        recipients = {actor.id}
+        admin_rows = (
+            (
+                await db.execute(
+                    select(User.id).where(
+                        User.role.in_([UserRole.ADMIN.value, UserRole.PROCUREMENT_MGR.value]),
+                        User.is_active.is_(True),
+                    )
+                )
+            )
+            .scalars()
+            .all()
+        )
+        recipients.update(admin_rows)
+        for uid in recipients:
+            await create_notification(
+                db,
+                user_id=uid,
+                category=NotificationCategory.SYSTEM,
+                title=f"Contract {contract.contract_number} created",
+                body=f"Contract '{contract.title}' for PO {po.po_number}, total ¥{contract.total_amount}",
+                link_url=f"/contracts/{contract.id}",
+                biz_type="contract",
+                biz_id=contract.id,
+            )
+        await db.commit()
+    except Exception:
+        pass
+
     await db.refresh(contract)
     return contract
 
@@ -577,6 +611,43 @@ async def create_shipment(
         meta={"po_id": str(po_id), "batch_no": batch_no},
     )
     await db.commit()
+
+    try:
+        from app.models import NotificationCategory, UserRole
+        from app.services.notifications import create_notification
+
+        status_label = (
+            "fully received" if po.status == POStatus.FULLY_RECEIVED.value else "partially received"
+        )
+        recipients = {actor.id, po.created_by_id}
+        admin_rows = (
+            (
+                await db.execute(
+                    select(User.id).where(
+                        User.role.in_([UserRole.ADMIN.value, UserRole.PROCUREMENT_MGR.value]),
+                        User.is_active.is_(True),
+                    )
+                )
+            )
+            .scalars()
+            .all()
+        )
+        recipients.update(admin_rows)
+        for uid in recipients:
+            await create_notification(
+                db,
+                user_id=uid,
+                category=NotificationCategory.PO_CREATED,
+                title=f"PO {po.po_number} {status_label}",
+                body=f"PO {po.po_number} is now {status_label} ({po.qty_received}/{total_qty} received)",
+                link_url=f"/purchase-orders/{po.id}",
+                biz_type="po",
+                biz_id=po.id,
+            )
+        await db.commit()
+    except Exception:
+        pass
+
     result = await db.execute(
         select(Shipment).where(Shipment.id == shipment.id).options(selectinload(Shipment.items))
     )
@@ -856,6 +927,40 @@ async def create_payment(
         },
     )
     await db.commit()
+
+    try:
+        from app.models import NotificationCategory, UserRole
+        from app.services.notifications import create_notification
+
+        recipients = {actor.id}
+        admin_rows = (
+            (
+                await db.execute(
+                    select(User.id).where(
+                        User.role.in_([UserRole.ADMIN.value, UserRole.FINANCE_AUDITOR.value]),
+                        User.is_active.is_(True),
+                    )
+                )
+            )
+            .scalars()
+            .all()
+        )
+        recipients.update(admin_rows)
+        for uid in recipients:
+            await create_notification(
+                db,
+                user_id=uid,
+                category=NotificationCategory.PAYMENT_PENDING,
+                title=f"Payment {record.payment_number} created",
+                body=f"Payment {record.payment_number}: ¥{record.amount} {record.currency} due {record.due_date}",
+                link_url=f"/purchase-orders/{record.po_id}",
+                biz_type="payment",
+                biz_id=record.id,
+            )
+        await db.commit()
+    except Exception:
+        pass
+
     await db.refresh(record)
     return record
 
@@ -1290,6 +1395,39 @@ async def create_invoice(
         },
     )
     await db.commit()
+
+    try:
+        from app.models import NotificationCategory, UserRole
+        from app.services.notifications import create_notification
+
+        recipients = {actor.id}
+        admin_rows = (
+            (
+                await db.execute(
+                    select(User.id).where(
+                        User.role.in_([UserRole.ADMIN.value, UserRole.FINANCE_AUDITOR.value]),
+                        User.is_active.is_(True),
+                    )
+                )
+            )
+            .scalars()
+            .all()
+        )
+        recipients.update(admin_rows)
+        for uid in recipients:
+            await create_notification(
+                db,
+                user_id=uid,
+                category=NotificationCategory.SYSTEM,
+                title=f"Invoice {invoice.internal_number} created",
+                body=f"Invoice {invoice.internal_number}: total ¥{invoice.total_amount} {invoice.currency}",
+                link_url="/invoices",
+                biz_type="invoice",
+                biz_id=invoice.id,
+            )
+        await db.commit()
+    except Exception:
+        pass
 
     loaded = (
         await db.execute(
