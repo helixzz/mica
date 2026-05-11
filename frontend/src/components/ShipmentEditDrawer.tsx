@@ -1,9 +1,9 @@
 import { Button, DatePicker, Drawer, Form, Input, Select, Space, message } from 'antd'
 import dayjs from 'dayjs'
-import { useEffect } from 'react'
+import { useEffect, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 
-import { api, type Shipment } from '@/api'
+import { api, type DeliveryPlan, type Shipment } from '@/api'
 
 interface Props {
   shipment: Shipment | null
@@ -15,6 +15,8 @@ interface Props {
 export function ShipmentEditDrawer({ shipment, open, onClose, onSaved }: Props) {
   const { t } = useTranslation()
   const [form] = Form.useForm()
+  const [deliveryPlans, setDeliveryPlans] = useState<DeliveryPlan[]>([])
+  const [loadingPlans, setLoadingPlans] = useState(false)
 
   useEffect(() => {
     if (open && shipment) {
@@ -27,8 +29,23 @@ export function ShipmentEditDrawer({ shipment, open, onClose, onSaved }: Props) 
         actual_date: shipment.actual_date ? dayjs(shipment.actual_date) : null,
         notes: shipment.notes,
       })
+      setDeliveryPlans([])
+      if (shipment.po_id) {
+        setLoadingPlans(true)
+        api.getPODeliveryPlan(shipment.po_id)
+          .then((summary) => setDeliveryPlans(summary.po_plans || []))
+          .catch(() => {})
+          .finally(() => setLoadingPlans(false))
+      }
     }
   }, [open, shipment, form])
+
+  const handleDeliveryPlanSelect = (planId: string) => {
+    const plan = deliveryPlans.find((dp) => dp.id === planId)
+    if (plan) {
+      form.setFieldsValue({ expected_date: dayjs(plan.planned_date) })
+    }
+  }
 
   const handleSave = async () => {
     if (!shipment) return
@@ -83,6 +100,22 @@ export function ShipmentEditDrawer({ shipment, open, onClose, onSaved }: Props) 
         <Form.Item name="tracking_number" label={t('field.tracking_number')}>
           <Input />
         </Form.Item>
+        {deliveryPlans.length > 0 && (
+          <Form.Item label={t('shipment.fulfills_delivery_plan')}>
+            <Select
+              placeholder={t('shipment.fulfills_delivery_plan')}
+              loading={loadingPlans}
+              allowClear
+              onChange={handleDeliveryPlanSelect}
+            >
+              {deliveryPlans.map((dp) => (
+                <Select.Option key={dp.id} value={dp.id}>
+                  {dp.plan_name} — {dp.planned_qty} — {dayjs(dp.planned_date).format('YYYY-MM-DD')}
+                </Select.Option>
+              ))}
+            </Select>
+          </Form.Item>
+        )}
         <Form.Item name="expected_date" label={t('shipment.planned_date')}>
           <DatePicker style={{ width: '100%' }} />
         </Form.Item>

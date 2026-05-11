@@ -63,13 +63,15 @@ export const StatCard: React.FC<StatCardProps> = ({
       onMouseEnter={() => setIsHovered(true)}
       onMouseLeave={() => setIsHovered(false)}
       style={{
-        minHeight: '100%',
+        display: 'flex',
+        flexDirection: 'column',
+        height: '100%',
         backgroundColor: isAccent ? token.colorPrimaryBg : token.colorBgContainer,
         transition: `all ${token.motionDurationMid} ${token.motionEaseInOut}`,
         transform: isHovered ? 'translateY(-2px)' : 'none',
         boxShadow: isHovered ? token.boxShadowSecondary : token.boxShadowTertiary,
       }}
-      bodyStyle={{ padding: token.paddingLG }}
+      styles={{ body: { flex: 1, display: 'flex', flexDirection: 'column' } }}
     >
       <Skeleton loading={loading} active paragraph={{ rows: 1 }} title={{ width: '50%' }}>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
