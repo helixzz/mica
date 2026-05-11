@@ -90,11 +90,13 @@ export function DeliveryPlanModal({
     try {
       const po = await api.getPO(id)
       setItems(
-        po.items.map((i) => ({
-          id: i.id,
-          name: i.item_name,
-          remaining: Number(i.qty) - Number(i.qty_received),
-        }))
+        po.items
+          .filter((i) => i.item_id)
+          .map((i) => ({
+            id: i.item_id!,
+            name: i.item_name,
+            remaining: Number(i.qty) - Number(i.qty_received),
+          }))
       )
     } catch (err) {
       console.error(err)

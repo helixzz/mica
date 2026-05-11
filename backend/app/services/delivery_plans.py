@@ -84,6 +84,12 @@ async def _plan_to_out(db: AsyncSession, plan: DeliveryPlan) -> DeliveryPlanOut:
 async def create_delivery_plan(
     db: AsyncSession, data: DeliveryPlanCreate, user_id: UUID
 ) -> DeliveryPlan:
+    item = await db.get(Item, data.item_id)
+    if item is None:
+        raise HTTPException(400, "item.not_found")
+    if not item.is_enabled:
+        raise HTTPException(400, "item.inactive")
+
     plan = DeliveryPlan(
         po_id=data.po_id,
         contract_id=data.contract_id,
