@@ -63,7 +63,7 @@ export const StatCard: React.FC<StatCardProps> = ({
       onMouseEnter={() => setIsHovered(true)}
       onMouseLeave={() => setIsHovered(false)}
       style={{
-        height: '100%',
+        minHeight: '100%',
         backgroundColor: isAccent ? token.colorPrimaryBg : token.colorBgContainer,
         transition: `all ${token.motionDurationMid} ${token.motionEaseInOut}`,
         transform: isHovered ? 'translateY(-2px)' : 'none',

@@ -1,4 +1,5 @@
-import { Button, Drawer, Form, Input, Select, Space, message } from 'antd'
+import { Button, DatePicker, Drawer, Form, Input, Select, Space, message } from 'antd'
+import dayjs from 'dayjs'
 import { useEffect } from 'react'
 import { useTranslation } from 'react-i18next'
 
@@ -22,8 +23,8 @@ export function ShipmentEditDrawer({ shipment, open, onClose, onSaved }: Props) 
         status: shipment.status,
         carrier: shipment.carrier,
         tracking_number: shipment.tracking_number,
-        expected_date: shipment.expected_date,
-        actual_date: shipment.actual_date,
+        expected_date: shipment.expected_date ? dayjs(shipment.expected_date) : null,
+        actual_date: shipment.actual_date ? dayjs(shipment.actual_date) : null,
         notes: shipment.notes,
       })
     }
@@ -33,7 +34,11 @@ export function ShipmentEditDrawer({ shipment, open, onClose, onSaved }: Props) 
     if (!shipment) return
     try {
       const values = form.getFieldsValue()
-      await api.updateShipment(shipment.id, values)
+      await api.updateShipment(shipment.id, {
+        ...values,
+        expected_date: values.expected_date ? values.expected_date.format('YYYY-MM-DD') : null,
+        actual_date: values.actual_date ? values.actual_date.format('YYYY-MM-DD') : null,
+      })
       void message.success(t('shipment.updated'))
       onSaved()
       onClose()
@@ -78,11 +83,11 @@ export function ShipmentEditDrawer({ shipment, open, onClose, onSaved }: Props) 
         <Form.Item name="tracking_number" label={t('field.tracking_number')}>
           <Input />
         </Form.Item>
-        <Form.Item name="expected_date" label={t('field.expected_date')}>
-          <Input type="date" />
+        <Form.Item name="expected_date" label={t('shipment.planned_date')}>
+          <DatePicker style={{ width: '100%' }} />
         </Form.Item>
         <Form.Item name="actual_date" label={t('field.actual_date')}>
-          <Input type="date" />
+          <DatePicker style={{ width: '100%' }} />
         </Form.Item>
         <Form.Item name="notes" label={t('shipment.notes')}>
           <Input.TextArea rows={3} />
