@@ -1,6 +1,6 @@
 import { useNavigate } from 'react-router-dom'
 
-import { type Contract, type PaymentRecord, type PurchaseOrder } from '@/api'
+import { type Contract, type DeliveryPlan, type PaymentRecord, type PurchaseOrder } from '@/api'
 import { ContractFormModal } from '@/components/ContractFormModal'
 import { DeliveryPlanModal } from '@/components/DeliveryPlanModal'
 import { InvoiceModal } from '@/components/PO/InvoiceModal'
@@ -18,6 +18,7 @@ interface POModalsProps {
   linkContractOpen: boolean
   deliveryPlanOpen: boolean
   editingPayment: PaymentRecord | null
+  editingPlan: DeliveryPlan | undefined
   busy: boolean
   contracts: Contract[]
   setShipmentOpen: (open: boolean) => void
@@ -27,6 +28,7 @@ interface POModalsProps {
   setLinkContractOpen: (open: boolean) => void
   setDeliveryPlanOpen: (open: boolean) => void
   setEditingPayment: (payment: PaymentRecord | null) => void
+  setEditingPlan: (plan: DeliveryPlan | undefined) => void
   setBusy: (busy: boolean) => void
   loadAll: () => void
 }
@@ -40,6 +42,7 @@ export function POModals({
   linkContractOpen,
   deliveryPlanOpen,
   editingPayment,
+  editingPlan,
   busy,
   contracts,
   setShipmentOpen,
@@ -49,6 +52,7 @@ export function POModals({
   setLinkContractOpen,
   setDeliveryPlanOpen,
   setEditingPayment,
+  setEditingPlan,
   setBusy,
   loadAll,
 }: POModalsProps) {
@@ -111,13 +115,15 @@ export function POModals({
         }}
       />
       <DeliveryPlanModal
-        open={deliveryPlanOpen}
-        onClose={() => setDeliveryPlanOpen(false)}
+        open={deliveryPlanOpen || editingPlan !== undefined}
+        onClose={() => { setDeliveryPlanOpen(false); setEditingPlan(undefined) }}
         onSuccess={() => {
           setDeliveryPlanOpen(false)
+          setEditingPlan(undefined)
           void loadAll()
         }}
-        poId={po.id}
+        poId={editingPlan ? undefined : po.id}
+        plan={editingPlan}
       />
     </>
   )

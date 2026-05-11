@@ -40,6 +40,7 @@ export function PODetailPage() {
   const [linkContractOpen, setLinkContractOpen] = useState(false)
   const [deliveryPlanOpen, setDeliveryPlanOpen] = useState(false)
   const [editingPayment, setEditingPayment] = useState<PaymentRecord | null>(null)
+  const [editingPlan, setEditingPlan] = useState<any | undefined>(undefined)
   const [busy, setBusy] = useState(false)
 
   const canCreateContract = Boolean(
@@ -93,6 +94,16 @@ export function PODetailPage() {
     })
   }
 
+  const handleDeleteDeliveryPlan = async (planId: string) => {
+    try {
+      await api.deleteDeliveryPlan(planId)
+      void message.success(t('message.deleted'))
+      void loadAll()
+    } catch (e) {
+      void message.error(extractError(e).detail)
+    }
+  }
+
   if (!po) return <div>{t('message.loading')}</div>
 
   return (
@@ -122,6 +133,8 @@ export function PODetailPage() {
         setLinkContractOpen={setLinkContractOpen}
         setDeliveryPlanOpen={setDeliveryPlanOpen}
         setEditingPayment={setEditingPayment}
+        setEditingPlan={setEditingPlan}
+        handleDeleteDeliveryPlan={handleDeleteDeliveryPlan}
         handleUnlinkContract={handleUnlinkContract}
       />
       <POModals
@@ -133,6 +146,7 @@ export function PODetailPage() {
         linkContractOpen={linkContractOpen}
         deliveryPlanOpen={deliveryPlanOpen}
         editingPayment={editingPayment}
+        editingPlan={editingPlan}
         busy={busy}
         contracts={contracts}
         setShipmentOpen={setShipmentOpen}
@@ -142,6 +156,7 @@ export function PODetailPage() {
         setLinkContractOpen={setLinkContractOpen}
         setDeliveryPlanOpen={setDeliveryPlanOpen}
         setEditingPayment={setEditingPayment}
+        setEditingPlan={setEditingPlan}
         setBusy={setBusy}
         loadAll={loadAll}
       />

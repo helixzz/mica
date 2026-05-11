@@ -1,14 +1,16 @@
-import { PlusOutlined } from '@ant-design/icons'
-import { Button, Card, Table, Tag } from 'antd'
+import { DeleteOutlined, EditOutlined, PlusOutlined } from '@ant-design/icons'
+import { Button, Card, Popconfirm, Space, Table, Tag, Tooltip } from 'antd'
 import dayjs from 'dayjs'
 import { useTranslation } from 'react-i18next'
 
 interface DeliveryPlanTabProps {
   deliveryPlans: any[]
   onNewPlan: () => void
+  onEdit: (plan: any) => void
+  onDelete: (id: string) => void
 }
 
-export function DeliveryPlanTab({ deliveryPlans, onNewPlan }: DeliveryPlanTabProps) {
+export function DeliveryPlanTab({ deliveryPlans, onNewPlan, onEdit, onDelete }: DeliveryPlanTabProps) {
   const { t } = useTranslation()
 
   return (
@@ -29,6 +31,28 @@ export function DeliveryPlanTab({ deliveryPlans, onNewPlan }: DeliveryPlanTabPro
           { title: t('delivery_plan.planned_qty'), dataIndex: 'planned_qty', align: 'right' },
           { title: t('delivery_plan.actual_qty'), dataIndex: 'actual_qty', align: 'right' },
           { title: t('delivery_plan.status'), dataIndex: 'status', render: (s: string) => <Tag>{t(`status.${s}`)}</Tag> },
+          {
+            title: t('delivery_plan.actions'),
+            key: 'actions',
+            width: 120,
+            render: (_: any, record: any) => (
+              <Space size="small">
+                <Tooltip title={t('delivery_plan.edit')}>
+                  <Button type="text" size="small" icon={<EditOutlined />} onClick={() => onEdit(record)} />
+                </Tooltip>
+                <Popconfirm
+                  title={t('delivery_plan.delete_confirm')}
+                  onConfirm={() => onDelete(record.id)}
+                  okText={t('button.confirm')}
+                  cancelText={t('button.cancel')}
+                >
+                  <Tooltip title={t('delivery_plan.delete')}>
+                    <Button type="text" size="small" danger icon={<DeleteOutlined />} />
+                  </Tooltip>
+                </Popconfirm>
+              </Space>
+            ),
+          },
         ]}
       />
     </Card>

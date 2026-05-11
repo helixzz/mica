@@ -27,6 +27,8 @@ interface POTabsProps {
   setLinkContractOpen: (open: boolean) => void
   setDeliveryPlanOpen: (open: boolean) => void
   setEditingPayment: (payment: PaymentRecord | null) => void
+  setEditingPlan: (plan: any) => void
+  handleDeleteDeliveryPlan: (id: string) => void
   handleUnlinkContract: (contract: Contract) => void
 }
 
@@ -47,6 +49,8 @@ export function POTabs({
   setLinkContractOpen,
   setDeliveryPlanOpen,
   setEditingPayment,
+  setEditingPlan,
+  handleDeleteDeliveryPlan,
   handleUnlinkContract,
 }: POTabsProps) {
   const { t } = useTranslation()
@@ -66,6 +70,8 @@ export function POTabs({
             <DeliveryPlanTab
               deliveryPlans={deliveryPlans}
               onNewPlan={() => setDeliveryPlanOpen(true)}
+              onEdit={(plan) => setEditingPlan(plan)}
+              onDelete={handleDeleteDeliveryPlan}
             />
           ),
         },
