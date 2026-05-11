@@ -189,6 +189,36 @@ async def get_po(
     return POOut.model_validate(po)
 
 
+@router.get("/purchase-orders/{po_id}/delivery-plans", tags=["purchase"])
+async def get_po_delivery_plans(
+    po_id: UUID,
+    user: CurrentUser,
+    db: Annotated[AsyncSession, Depends(get_db)],
+    _role: Annotated[
+        None,
+        Depends(require_roles("admin", "it_buyer", "procurement_mgr", "finance_auditor")),
+    ],
+):
+    """Return delivery plans for a specific PO."""
+    from app.services import delivery_plans as dp_svc
+
+    plans = await dp_svc.list_delivery_plans(db, po_id=po_id)
+    plan_outs = [await dp_svc._plan_to_out(db, plan) for plan in plans]
+    total_planned = sum(p.planned_qty for p in plans)
+    total_actual = sum(p.actual_qty for p in plans)
+    completion_pct = round(total_actual / total_planned * 100, 1) if total_planned > 0 else 0
+    return {
+        "po_plans": plan_outs,
+        "contract_plans": [],
+        "all_plans": plan_outs,
+        "summary": {
+            "total_planned": total_planned,
+            "total_actual": total_actual,
+            "completion_pct": completion_pct,
+        },
+    }
+
+
 @router.get("/purchase-orders/{po_id}/export/pdf", tags=["purchase"])
 async def export_po_pdf(
     po_id: UUID,
