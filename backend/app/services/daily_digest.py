@@ -87,7 +87,7 @@ async def send_daily_digest(db: AsyncSession) -> dict:
         try:
             await _send_feishu_digest(db, user, pending_approvals, expiring_count, sku_anomalies)
         except Exception:
-            logger.debug("Feishu digest skipped for %s", user.email)
+            logger.warning("Feishu digest skipped for user %s", user.email, exc_info=True)
 
     summary = {
         "pending_approvals": pending_approvals,

@@ -13,7 +13,6 @@ from sqlalchemy.orm import aliased
 
 from app.core.security import CurrentUser
 from app.db import get_db
-from app.i18n import t
 from app.models import (
     ApprovalTask,
     Contract,
@@ -463,11 +462,11 @@ async def invoice_match_summary(
         qty_invoiced = float(row.qty_invoiced)
 
         if qty_invoiced == 0:
-            match_status = t("dashboard.invoice.unmatched", user.preferred_locale)
+            match_status = "unmatched"
         elif qty_invoiced >= qty_ordered:
-            match_status = t("dashboard.invoice.matched", user.preferred_locale)
+            match_status = "matched"
         else:
-            match_status = t("dashboard.invoice.partial", user.preferred_locale)
+            match_status = "partial"
 
         results.append(
             InvoiceMatchSummaryOut(

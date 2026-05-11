@@ -158,6 +158,7 @@ async def _dispatch(
     content_type: str,
     filename: str,
 ) -> ContractExtract:
+    start_ms = time.monotonic()
     from app.models import AIFeatureRouting
 
     routing_row = (
@@ -226,6 +227,18 @@ async def _dispatch(
             extra_body={"enable_thinking": False},
         )
     except Exception as e:
+        db.add(
+            AICallLog(
+                feature_code="contract_extract",
+                model_name=model_row.name if model_row else None,
+                provider=model_row.provider if model_row else None,
+                prompt_tokens=len(prompt) // 4,
+                latency_ms=int((time.monotonic() - start_ms) * 1000),
+                status="error",
+                error=str(e),
+            )
+        )
+        await db.commit()
         return ContractExtract(error=f"AI call failed: {e}")
 
     choice = response.choices[0]
@@ -233,4 +246,18 @@ async def _dispatch(
     if not text:
         text = getattr(choice.message, "reasoning_content", None) or ""
     logger.info("contract_extract: response (%d chars) finish=%s", len(text), choice.finish_reason)
+
+    db.add(
+        AICallLog(
+            feature_code="contract_extract",
+            model_name=model_row.name,
+            provider=model_row.provider,
+            prompt_tokens=len(prompt) // 4,
+            completion_tokens=len(text) // 4,
+            latency_ms=int((time.monotonic() - start_ms) * 1000),
+            status="success",
+        )
+    )
+    await db.commit()
+
     return _parse_response(text)

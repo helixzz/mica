@@ -901,7 +901,7 @@ async def run_approval_reminders(
 
 @router.post("/daily-digest", tags=["admin"])
 async def run_daily_digest(
-    user: CurrentUser,
+    user: Annotated[CurrentUser, Depends(require_roles("admin"))],
     db: Annotated[AsyncSession, Depends(get_db)],
 ):
     from app.services.daily_digest import send_daily_digest
