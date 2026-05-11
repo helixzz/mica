@@ -328,6 +328,15 @@ def _build_feishu_card(
             contract_url=meta.get("contract_url", ""),
         )
 
+    if notification.category == NotificationCategory.SYSTEM:
+        from app.services.feishu.messages import _make_generic_card
+
+        return _make_generic_card(
+            title=notification.title,
+            body=notification.body or "",
+            link_url=notification.link_url or "",
+        )
+
     return None
 
 

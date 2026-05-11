@@ -45,13 +45,13 @@ def build_pr_submitted_card(
 ) -> dict[str, Any]:
     return {
         "config": {"wide_screen_mode": True},
-        "header": _card_header("📋 新的采购申请已提交", "blue"),
+        "header": _card_header("📋 新采购申请已提交"),
         "elements": [
-            _markdown_element(f"**申请标题：**{pr_title}"),
+            _markdown_element(f"**标题：**{pr_title}"),
             _markdown_element(f"**申请人：**{applicant}"),
-            _markdown_element(f"**申请部门：**{department}"),
+            _markdown_element(f"**部门：**{department}"),
             _markdown_element(f"**金额：**{amount}"),
-            _markdown_element(f"**明细行数：**{line_count} 行"),
+            _markdown_element(f"**物料行数：**{line_count}"),
             _hr_element(),
             _action_element([_button("查看详情", pr_url)]),
             _note_element("Mica 采购管理系统"),
@@ -66,16 +66,16 @@ def build_approval_decided_card(
     comment: str,
     pr_url: str,
 ) -> dict[str, Any]:
-    result_label = "✅ 已通过" if result == "approved" else "❌ 已驳回"
-    color = "green" if result == "approved" else "red"
+    result_label = (
+        "已通过" if result == "approved" else "已拒绝" if result == "rejected" else "已退回"
+    )
     return {
         "config": {"wide_screen_mode": True},
-        "header": _card_header(f"审批决定: {result_label}", color),
+        "header": _card_header(f"🔔 审批{result_label}"),
         "elements": [
-            _markdown_element(f"**采购申请：**{pr_title}"),
+            _markdown_element(f"**标题：**{pr_title}"),
             _markdown_element(f"**审批人：**{decider}"),
-            _markdown_element(f"**决定：**{result_label}"),
-            *([_markdown_element(f"**备注：**{comment}")] if comment else []),
+            comment and _markdown_element(f"**意见：**{comment}"),
             _hr_element(),
             _action_element([_button("查看详情", pr_url)]),
             _note_element("Mica 采购管理系统"),
@@ -92,12 +92,12 @@ def build_po_created_card(
 ) -> dict[str, Any]:
     return {
         "config": {"wide_screen_mode": True},
-        "header": _card_header("📦 采购订单已创建", "turquoise"),
+        "header": _card_header("📦 采购订单已创建"),
         "elements": [
-            _markdown_element(f"**订单编号：**{po_number}"),
+            _markdown_element(f"**订单号：**{po_number}"),
             _markdown_element(f"**供应商：**{supplier}"),
             _markdown_element(f"**金额：**{amount}"),
-            _markdown_element(f"**关联申请：**{pr_title}"),
+            _markdown_element(f"**关联需求：**{pr_title}"),
             _hr_element(),
             _action_element([_button("查看订单", po_url)]),
             _note_element("Mica 采购管理系统"),
@@ -114,10 +114,10 @@ def build_payment_pending_card(
 ) -> dict[str, Any]:
     return {
         "config": {"wide_screen_mode": True},
-        "header": _card_header("💰 付款待审核", "orange"),
+        "header": _card_header("💰 待处理付款"),
         "elements": [
             _markdown_element(f"**付款编号：**{payment_id}"),
-            _markdown_element(f"**关联订单：**{po_number}"),
+            _markdown_element(f"**订单号：**{po_number}"),
             _markdown_element(f"**供应商：**{supplier}"),
             _markdown_element(f"**金额：**{amount}"),
             _hr_element(),
@@ -151,4 +151,16 @@ def build_contract_expiring_card(
             _action_element([_button("查看合同", contract_url)]),
             _note_element("Mica 采购管理系统"),
         ],
+    }
+
+
+def _make_generic_card(title: str, body: str, link_url: str = "") -> dict[str, Any]:
+    elements: list[dict[str, Any]] = [_markdown_element(body)]
+    if link_url:
+        elements.append(_action_element([_button("查看详情", link_url)]))
+    elements.append(_note_element("Mica 采购管理系统"))
+    return {
+        "config": {"wide_screen_mode": True},
+        "header": _card_header(title),
+        "elements": elements,
     }
