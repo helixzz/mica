@@ -324,186 +324,190 @@ export function DashboardPage() {
         )
       case 'alerts':
         return (
-          <Row gutter={[16, 16]} key="alerts">
-            {pending.length > 0 && (
-              <Col xs={24} sm={12} lg={8}>
-                <StatCard
-                  label={t('dashboard.pending_approvals')}
-                  value={pending.length}
-                  icon={<CheckCircleOutlined />}
-                  loading={loading}
-                  variant="accent"
-                  footer={<Link to="/approvals">{t('dashboard.view_approvals')}</Link>}
-                />
-              </Col>
-            )}
-            {contracts.length > 0 && (
-              <Col xs={24} sm={12} lg={8}>
-                <StatCard
-                  label={t('dashboard.expiring_contracts')}
-                  value={contracts.length}
-                  icon={<AlertOutlined />}
-                  loading={loading}
-                  variant="accent"
-                  footer={<Link to="/contracts">{t('dashboard.view_contracts')}</Link>}
-                />
-              </Col>
-            )}
-            {deliveryOverview && deliveryOverview.total_planned > 0 && (
-              <Col xs={24} sm={12} lg={8}>
-<StatCard
-                  label={t('dashboard.delivery_progress')}
-                  value={`${Math.round(deliveryOverview.completion_pct)}%`}
-                  icon={<CarOutlined />}
-                  loading={loading}
-                  variant="accent"
-                  footer={<Link to="/delivery-plans">{t('dashboard.view_delivery')}</Link>}
-                />
-              </Col>
-            )}
-            <Col xs={24} lg={12}>
-              <Section
-                title={t('dashboard.pending_approvals')}
-                extra={<Link to="/approvals">{t('dashboard.view_all')}</Link>}
-              >
-                {loading ? (
-                  <div style={{ padding: token.paddingXL, textAlign: 'center' }}>{t('message.loading')}</div>
-                ) : pending.length > 0 ? (
-                  <List
-                    itemLayout="horizontal"
-                    dataSource={pending.slice(0, 8)}
-                    renderItem={(item) => (
-                      <List.Item
-                        actions={[
-                          <Link key="view" to={`/purchase-requisitions/${item.biz_id}`}>
-                            {t('button.approve')}
-                          </Link>,
-                        ]}
-                      >
-                        <List.Item.Meta
-                          avatar={
-                            <Avatar
-                              style={{ backgroundColor: token.colorWarningBg, color: token.colorWarning }}
-                              icon={<CheckCircleOutlined />}
-                            />
-                          }
-                          title={<Link to={`/purchase-requisitions/${item.biz_id}`}>{item.biz_number || item.instance_id.slice(0, 8)}: {item.biz_title || item.stage_name}</Link>}
-                          description={
-                            <Space>
-                              <Tag color="orange">{item.stage_name}</Tag>
-                              {item.submitter_name && <Text type="secondary">{item.submitter_name}</Text>}
-                              <Text type="secondary">{new Date(item.assigned_at).toLocaleString()}</Text>
-                            </Space>
-                          }
-                        />
-                      </List.Item>
-                    )}
+          <Space direction="vertical" size="middle" style={{ width: '100%' }} key="alerts">
+            <Row gutter={[16, 16]}>
+              {pending.length > 0 && (
+                <Col xs={24} sm={12} lg={8}>
+                  <StatCard
+                    label={t('dashboard.pending_approvals')}
+                    value={pending.length}
+                    icon={<CheckCircleOutlined />}
+                    loading={loading}
+                    variant="accent"
+                    footer={<Link to="/approvals">{t('dashboard.view_approvals')}</Link>}
                   />
-                ) : (
-                  <EmptyState illustration="welcome" title={t('dashboard.no_pending_approvals')} />
-                )}
-              </Section>
-            </Col>
-            <Col xs={24} lg={12}>
-              <Section title={t('dashboard.alerts')}>
-                {loading ? (
-                  <div style={{ padding: token.paddingXL, textAlign: 'center' }}>{t('message.loading')}</div>
-                ) : contracts.length === 0 && anomalies.length === 0 && (metrics?.invoices_pending_match ?? 0) + (metrics?.invoices_mismatched ?? 0) === 0 ? (
-                  <EmptyState illustration="welcome" title={t('dashboard.no_alerts')} />
-                ) : (
-                  <Space direction="vertical" size="middle" style={{ width: '100%' }}>
-                    {contracts.length > 0 && (
-                      <List
-                        header={<Text strong>{t('dashboard.expiring_contracts')}</Text>}
-                        itemLayout="horizontal"
-                        dataSource={contracts.slice(0, 3)}
-                        renderItem={(item) => (
-                          <List.Item>
-                            <List.Item.Meta
-                              avatar={
-                                <Avatar
-                                  style={{ backgroundColor: token.colorErrorBg, color: token.colorError }}
-                                  icon={<AlertOutlined />}
-                                />
-                              }
-                              title={item.title}
-                              description={
-                                <Space>
-                                  <Text>{item.contract_number}</Text>
-                                  <Text type="danger">{item.expiry_date}</Text>
-                                </Space>
-                              }
-                            />
-                          </List.Item>
-                        )}
-                      />
-                    )}
-                    {anomalies.length > 0 && (
-                      <List
-                        header={<Text strong>{t('dashboard.price_anomalies')}</Text>}
-                        itemLayout="horizontal"
-                        dataSource={anomalies.slice(0, 3)}
-                        renderItem={(item) => (
-                          <List.Item>
-                            <List.Item.Meta
-                              avatar={
-                                <Avatar
-                                  style={{ backgroundColor: token.colorErrorBg, color: token.colorError }}
-                                  icon={<WarningOutlined />}
-                                />
-                              }
-                              title={t('dashboard.anomaly_item', { id: item.item_id })}
-                              description={
-                                <Space>
-                                  <Text type="danger">{item.deviation_pct}%</Text>
-                                  <Text type="secondary">{item.observed_price}</Text>
-                                </Space>
-                              }
-                            />
-                          </List.Item>
-                        )}
-                      />
-                    )}
-                    {((metrics?.invoices_pending_match ?? 0) + (metrics?.invoices_mismatched ?? 0)) > 0 && (
-                      <List
-                        header={<Text strong>{t('dashboard.pending_invoices')}</Text>}
-                        itemLayout="horizontal"
-                        dataSource={[
-                          ...(metrics?.invoices_pending_match
-                            ? [{ key: 'match', count: metrics.invoices_pending_match, kind: 'pending_match' as const }]
-                            : []),
-                          ...(metrics?.invoices_mismatched
-                            ? [{ key: 'mismatch', count: metrics.invoices_mismatched, kind: 'mismatched' as const }]
-                            : []),
-                        ]}
-                        renderItem={(item) => (
-                          <List.Item
-                            actions={[<Link key="v" to="/invoices">{t('dashboard.view_all')}</Link>]}
-                          >
-                            <List.Item.Meta
-                              avatar={
-                                <Avatar
-                                  style={{
-                                    backgroundColor: item.kind === 'mismatched' ? token.colorErrorBg : token.colorWarningBg,
-                                    color: item.kind === 'mismatched' ? token.colorError : token.colorWarning,
-                                  }}
-                                  icon={<FileTextOutlined />}
-                                />
-                              }
-                              title={t('dashboard.invoice_alert_count', {
-                                count: item.count,
-                                status: t(`status.${item.kind}` as 'status.pending_match'),
-                              })}
-                            />
-                          </List.Item>
-                        )}
-                      />
-                    )}
-                  </Space>
-                )}
-              </Section>
-            </Col>
-          </Row>
+                </Col>
+              )}
+              {contracts.length > 0 && (
+                <Col xs={24} sm={12} lg={8}>
+                  <StatCard
+                    label={t('dashboard.expiring_contracts')}
+                    value={contracts.length}
+                    icon={<AlertOutlined />}
+                    loading={loading}
+                    variant="accent"
+                    footer={<Link to="/contracts">{t('dashboard.view_contracts')}</Link>}
+                  />
+                </Col>
+              )}
+              {deliveryOverview && deliveryOverview.total_planned > 0 && (
+                <Col xs={24} sm={12} lg={8}>
+                  <StatCard
+                    label={t('dashboard.delivery_progress')}
+                    value={`${Math.round(deliveryOverview.completion_pct)}%`}
+                    icon={<CarOutlined />}
+                    loading={loading}
+                    variant="accent"
+                    footer={<Link to="/delivery-plans">{t('dashboard.view_delivery')}</Link>}
+                  />
+                </Col>
+              )}
+            </Row>
+            <Row gutter={[16, 16]}>
+              <Col xs={24} lg={12}>
+                <Section
+                  title={t('dashboard.pending_approvals')}
+                  extra={<Link to="/approvals">{t('dashboard.view_all')}</Link>}
+                >
+                  {loading ? (
+                    <div style={{ padding: token.paddingXL, textAlign: 'center' }}>{t('message.loading')}</div>
+                  ) : pending.length > 0 ? (
+                    <List
+                      itemLayout="horizontal"
+                      dataSource={pending.slice(0, 8)}
+                      renderItem={(item) => (
+                        <List.Item
+                          actions={[
+                            <Link key="view" to={`/purchase-requisitions/${item.biz_id}`}>
+                              {t('button.approve')}
+                            </Link>,
+                          ]}
+                        >
+                          <List.Item.Meta
+                            avatar={
+                              <Avatar
+                                style={{ backgroundColor: token.colorWarningBg, color: token.colorWarning }}
+                                icon={<CheckCircleOutlined />}
+                              />
+                            }
+                            title={<Link to={`/purchase-requisitions/${item.biz_id}`}>{item.biz_number || item.instance_id.slice(0, 8)}: {item.biz_title || item.stage_name}</Link>}
+                            description={
+                              <Space>
+                                <Tag color="orange">{item.stage_name}</Tag>
+                                {item.submitter_name && <Text type="secondary">{item.submitter_name}</Text>}
+                                <Text type="secondary">{new Date(item.assigned_at).toLocaleString()}</Text>
+                              </Space>
+                            }
+                          />
+                        </List.Item>
+                      )}
+                    />
+                  ) : (
+                    <EmptyState illustration="welcome" title={t('dashboard.no_pending_approvals')} />
+                  )}
+                </Section>
+              </Col>
+              <Col xs={24} lg={12}>
+                <Section title={t('dashboard.alerts')}>
+                  {loading ? (
+                    <div style={{ padding: token.paddingXL, textAlign: 'center' }}>{t('message.loading')}</div>
+                  ) : contracts.length === 0 && anomalies.length === 0 && (metrics?.invoices_pending_match ?? 0) + (metrics?.invoices_mismatched ?? 0) === 0 ? (
+                    <EmptyState illustration="welcome" title={t('dashboard.no_alerts')} />
+                  ) : (
+                    <Space direction="vertical" size="middle" style={{ width: '100%' }}>
+                      {contracts.length > 0 && (
+                        <List
+                          header={<Text strong>{t('dashboard.expiring_contracts')}</Text>}
+                          itemLayout="horizontal"
+                          dataSource={contracts.slice(0, 3)}
+                          renderItem={(item) => (
+                            <List.Item>
+                              <List.Item.Meta
+                                avatar={
+                                  <Avatar
+                                    style={{ backgroundColor: token.colorErrorBg, color: token.colorError }}
+                                    icon={<AlertOutlined />}
+                                  />
+                                }
+                                title={item.title}
+                                description={
+                                  <Space>
+                                    <Text>{item.contract_number}</Text>
+                                    <Text type="danger">{item.expiry_date}</Text>
+                                  </Space>
+                                }
+                              />
+                            </List.Item>
+                          )}
+                        />
+                      )}
+                      {anomalies.length > 0 && (
+                        <List
+                          header={<Text strong>{t('dashboard.price_anomalies')}</Text>}
+                          itemLayout="horizontal"
+                          dataSource={anomalies.slice(0, 3)}
+                          renderItem={(item) => (
+                            <List.Item>
+                              <List.Item.Meta
+                                avatar={
+                                  <Avatar
+                                    style={{ backgroundColor: token.colorErrorBg, color: token.colorError }}
+                                    icon={<WarningOutlined />}
+                                  />
+                                }
+                                title={t('dashboard.anomaly_item', { id: item.item_id })}
+                                description={
+                                  <Space>
+                                    <Text type="danger">{item.deviation_pct}%</Text>
+                                    <Text type="secondary">{item.observed_price}</Text>
+                                  </Space>
+                                }
+                              />
+                            </List.Item>
+                          )}
+                        />
+                      )}
+                      {((metrics?.invoices_pending_match ?? 0) + (metrics?.invoices_mismatched ?? 0)) > 0 && (
+                        <List
+                          header={<Text strong>{t('dashboard.pending_invoices')}</Text>}
+                          itemLayout="horizontal"
+                          dataSource={[
+                            ...(metrics?.invoices_pending_match
+                              ? [{ key: 'match', count: metrics.invoices_pending_match, kind: 'pending_match' as const }]
+                              : []),
+                            ...(metrics?.invoices_mismatched
+                              ? [{ key: 'mismatch', count: metrics.invoices_mismatched, kind: 'mismatched' as const }]
+                              : []),
+                          ]}
+                          renderItem={(item) => (
+                            <List.Item
+                              actions={[<Link key="v" to="/invoices">{t('dashboard.view_all')}</Link>]}
+                            >
+                              <List.Item.Meta
+                                avatar={
+                                  <Avatar
+                                    style={{
+                                      backgroundColor: item.kind === 'mismatched' ? token.colorErrorBg : token.colorWarningBg,
+                                      color: item.kind === 'mismatched' ? token.colorError : token.colorWarning,
+                                    }}
+                                    icon={<FileTextOutlined />}
+                                  />
+                                }
+                                title={t('dashboard.invoice_alert_count', {
+                                  count: item.count,
+                                  status: t(`status.${item.kind}` as 'status.pending_match'),
+                                })}
+                              />
+                            </List.Item>
+                          )}
+                        />
+                      )}
+                    </Space>
+                  )}
+                </Section>
+              </Col>
+            </Row>
+          </Space>
         )
       case 'payment_tracker':
         return (isProcurementMgr || isFinanceAuditor || role === 'admin') ? <PaymentTracker key="payment_tracker" /> : null
