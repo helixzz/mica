@@ -115,9 +115,9 @@ async def create_plan(
                         body=(
                             f"**Plan**: {plan.plan_name}\n"
                             f"**PO**: {po.po_number}\n"
-                            f"{'**Contract**: ' + contract.contract_number + chr(10) if payload.contract_id and contract else ''}"
-                            f"**Planned Qty**: {plan.planned_qty}\n"
-                            f"**Planned Date**: {plan.planned_date}\n"
+                            + (f"**Contract**: {contract.contract_number}\n" if contract else "")
+                            + f"**Item**: {plan.item_name or '—'}\n"
+                            f"**Qty**: {plan.planned_qty} | **Date**: {plan.planned_date}\n"
                             f"**Created by**: {user.display_name}"
                         ),
                         link_url=f"/purchase-orders/{payload.po_id}",
@@ -190,8 +190,28 @@ async def update_plan(
                     if k == "item_id":
                         continue
                     old_val = getattr(plan, k, None)
-                    changes.append(f"- **{k}**: {old_val} → {v}")
-                changes_str = "\n".join(changes)
+                    if old_val == v:
+                        continue
+                    if old_val is None and v is None:
+                        continue
+                    label = k
+                    if k == "plan_name":
+                        label = "计划名称"
+                    elif k == "planned_qty":
+                        label = "计划数量"
+                    elif k == "planned_date":
+                        label = "计划日期"
+                    elif k == "notes":
+                        label = "备注"
+                    elif k == "status":
+                        label = "状态"
+                    elif k == "contract_id":
+                        label = "关联合同"
+                    elif k == "po_id":
+                        label = "关联PO"
+                    changes.append(f"- **{label}**: {old_val} → {v}")
+                changes_str = "\n".join(changes) if changes else "—"
+                item_name = getattr(plan.item, "name", "") if plan.item else ""
                 for uid in recipients:
                     await create_notification(
                         db,
@@ -200,9 +220,10 @@ async def update_plan(
                         title=f"Delivery plan updated: {plan.plan_name}",
                         body=(
                             f"**Plan**: {plan.plan_name} | **PO**: {po.po_number if po else '—'}\n"
+                            f"**Item**: {item_name or '—'}\n"
                             f"**Qty**: {plan.planned_qty} | **Date**: {plan.planned_date}\n"
-                            f"**Changes**:\n{changes_str}\n"
-                            f"**Updated by**: {user.display_name}"
+                            + (f"**Changes**:\n{changes_str}\n" if changes else "")
+                            + f"**Updated by**: {user.display_name}"
                         ),
                         link_url=f"/purchase-orders/{po.id}",
                         biz_type="delivery_plan",
