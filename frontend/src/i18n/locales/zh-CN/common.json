@@ -1,4 +1,7 @@
 {
+  "common": {
+    "search": "搜索"
+  },
   "breadcrumb": {
     "home": "首页"
   },
@@ -163,7 +166,8 @@
     "contact_phone": "电话",
     "contact_email": "邮箱",
     "actions": "操作",
-    "source_type": "来源"
+    "source_type": "来源",
+    "pr_title": "采购申请标题"
   },
   "column_settings": {
     "title": "列显示设置",

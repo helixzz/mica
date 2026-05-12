@@ -1,4 +1,9 @@
 {
+  "import": {
+    "column_contact_name": "Contact Name",
+    "column_phone": "Phone",
+    "column_email": "Email"
+  },
   "auth": {
     "invalid_credentials": "auth invalid credentials",
     "user_inactive": "auth user inactive",
@@ -79,6 +84,47 @@
     "reminder": {
       "pending": "Approval Pending Reminder - {title}",
       "pending_body": "You have a pending approval for PR '{title}' (#{biz_number}) waiting for {hours} hours. Stage: {stage}"
+    },
+    "label": {
+      "plan": "Plan",
+      "po": "PO",
+      "pr": "PR",
+      "contract": "Contract",
+      "item": "Item",
+      "qty": "Qty",
+      "date": "Date",
+      "created_by": "Created by",
+      "updated_by": "Updated by",
+      "changes": "Changes",
+      "status": "Status",
+      "title": "Title",
+      "amount": "Amount",
+      "effective": "Effective",
+      "expires": "Expires",
+      "changed_fields": "Changed fields",
+      "reason": "Reason",
+      "carrier": "Carrier",
+      "tracking": "Tracking",
+      "shipment": "Shipment",
+      "batch": "Batch",
+      "payment": "Payment",
+      "installment": "Installment",
+      "currency": "Currency",
+      "due_date": "Due date",
+      "method": "Method",
+      "invoice": "Invoice",
+      "vendor_number": "Vendor #",
+      "supplier": "Supplier",
+      "total": "Total",
+      "subtotal": "Subtotal",
+      "tax": "Tax",
+      "three_way_match": "3-Way Match",
+      "rfq": "RFQ",
+      "items": "Items",
+      "suppliers": "Suppliers",
+      "deadline": "Deadline",
+      "awarded_to": "Awarded to",
+      "source_pr": "Source PR"
     }
   },
   "feishu": {

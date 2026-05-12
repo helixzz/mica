@@ -58,3 +58,18 @@ def t(key: str, locale: str | None = None, **kwargs) -> str:
         except KeyError:
             return value
     return value if isinstance(value, str) else key
+
+
+def notification_labels(locale: str) -> dict[str, str]:
+    """Return a dict of localized notification body labels for the given locale."""
+    keys = [
+        "plan", "po", "pr", "contract", "item", "qty", "date",
+        "created_by", "updated_by", "changes", "status", "title",
+        "amount", "effective", "expires", "changed_fields", "reason",
+        "carrier", "tracking", "shipment", "batch", "payment",
+        "installment", "currency", "due_date", "method", "invoice",
+        "vendor_number", "supplier", "total", "subtotal", "tax",
+        "three_way_match", "rfq", "items", "suppliers", "deadline",
+        "awarded_to", "source_pr",
+    ]
+    return {k: t(f"notification.label.{k}", locale) for k in keys}

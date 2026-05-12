@@ -1,4 +1,9 @@
 {
+  "import": {
+    "column_contact_name": "联系人",
+    "column_phone": "电话",
+    "column_email": "邮箱"
+  },
   "auth": {
     "invalid_credentials": "auth invalid credentials",
     "user_inactive": "auth user inactive",
@@ -79,6 +84,47 @@
     "reminder": {
       "pending": "待审批提醒 - {title}",
       "pending_body": "您有采购申请「{title}」(# {biz_number}) 待审批，已等待 {hours} 小时。当前阶段：{stage}"
+    },
+    "label": {
+      "plan": "计划",
+      "po": "PO",
+      "pr": "PR",
+      "contract": "合同",
+      "item": "物料",
+      "qty": "数量",
+      "date": "日期",
+      "created_by": "创建人",
+      "updated_by": "修改人",
+      "changes": "变更",
+      "status": "状态",
+      "title": "标题",
+      "amount": "金额",
+      "effective": "生效日",
+      "expires": "到期日",
+      "changed_fields": "变更字段",
+      "reason": "原因",
+      "carrier": "承运商",
+      "tracking": "运单号",
+      "shipment": "发货批次",
+      "batch": "批次",
+      "payment": "付款",
+      "installment": "期次",
+      "currency": "币种",
+      "due_date": "到期日",
+      "method": "方式",
+      "invoice": "发票",
+      "vendor_number": "供应商发票号",
+      "supplier": "供应商",
+      "total": "总额",
+      "subtotal": "小计",
+      "tax": "税额",
+      "three_way_match": "三单匹配",
+      "rfq": "RFQ",
+      "items": "物料项",
+      "suppliers": "供应商",
+      "deadline": "截止日期",
+      "awarded_to": "中标方",
+      "source_pr": "来源PR"
     }
   },
   "feishu": {

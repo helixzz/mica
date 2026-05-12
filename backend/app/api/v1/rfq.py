@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import logging
 from datetime import date, datetime
 from decimal import Decimal
 from typing import Annotated
@@ -12,6 +13,8 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.core.security import CurrentUser, require_roles
 from app.db import get_db
 from app.services import rfq as svc
+
+logger = logging.getLogger("mica.rfq")
 
 router = APIRouter(tags=["rfq"])
 
@@ -171,7 +174,7 @@ async def create_rfq(
                 )
             await db.commit()
     except Exception:
-        pass
+        logger.warning("Failed to send rfq_created notification for rfq=%s", rfq.id, exc_info=True)
 
     return rfq
 
@@ -319,7 +322,7 @@ async def award_quotes(
                 )
             await db.commit()
     except Exception:
-        pass
+        logger.warning("Failed to send rfq_awarded notification for rfq=%s", rfq.id, exc_info=True)
 
     return rfq
 

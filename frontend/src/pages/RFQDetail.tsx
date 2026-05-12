@@ -21,6 +21,8 @@ export default function RFQDetailPage() {
   const [quoteModal, setQuoteModal] = useState<{ rfqItemId: string; supplierId: string } | null>(null)
   const [quotePrice, setQuotePrice] = useState<number>(0)
   const [quoteDays, setQuoteDays] = useState<number | null>(null)
+  const [sending, setSending] = useState(false)
+  const [awarding, setAwarding] = useState(false)
 
   const load = () => {
     if (!id) return
@@ -37,11 +39,13 @@ export default function RFQDetailPage() {
   const canAward = rfq.status === 'quoting' || rfq.status === 'evaluation'
 
   const doSend = async () => {
+    setSending(true)
     try {
       await client.post(`/rfqs/${id}/send`)
       void message.success(t('message.rfq_sent'))
       load()
     } catch (e) { void message.error(extractError(e).detail || t('error.send_failed')) }
+    finally { setSending(false) }
   }
 
   const doAddQuote = async () => {
@@ -62,11 +66,13 @@ export default function RFQDetailPage() {
   }
 
   const doAward = async (quoteIds: string[]) => {
+    setAwarding(true)
     try {
       await client.post(`/rfqs/${id}/award`, { quote_ids: quoteIds })
       void message.success(t('rfq.awarded_msg'))
       load()
     } catch (e) { void message.error(extractError(e).detail || t('rfq.award_failed')) }
+    finally { setAwarding(false) }
   }
 
   const doDelete = () => {
@@ -127,10 +133,10 @@ export default function RFQDetailPage() {
         </Space>
         <Space>
           <Button onClick={() => navigate('/rfqs')}>{t('button.back')}</Button>
-          {canSend && <Button type="primary" onClick={doSend}>{t('rfq.send')}</Button>}
+          {canSend && <Button type="primary" loading={sending} onClick={doSend}>{t('rfq.send')}</Button>}
           {canSend && <Button danger icon={<DeleteOutlined />} onClick={doDelete}>{t('button.delete')}</Button>}
           {canAward && (
-            <Button type="primary" onClick={() => {
+            <Button type="primary" loading={awarding} onClick={() => {
               const selectedIds = rfq.quotes.filter((q: any) => !q.is_selected).length > 0
                 ? [] : rfq.quotes.filter((q: any) => q.is_selected).map((q: any) => q.id)
               if (selectedIds.length === 0) {

@@ -1,4 +1,7 @@
 {
+  "common": {
+    "search": "Search"
+  },
   "breadcrumb": {
     "home": "Home"
   },
@@ -163,7 +166,8 @@
     "contact_phone": "Phone",
     "contact_email": "Email",
     "actions": "Actions",
-    "source_type": "Source"
+    "source_type": "Source",
+    "pr_title": "PR Title"
   },
   "column_settings": {
     "title": "Column visibility",

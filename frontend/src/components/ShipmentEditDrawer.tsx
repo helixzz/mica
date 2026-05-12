@@ -18,6 +18,7 @@ export function ShipmentEditDrawer({ shipment, open, onClose, onSaved }: Props) 
   const [deliveryPlans, setDeliveryPlans] = useState<DeliveryPlan[]>([])
   const [loadingPlans, setLoadingPlans] = useState(false)
   const [selectedPlanId, setSelectedPlanId] = useState<string | undefined>(undefined)
+  const [saving, setSaving] = useState(false)
 
   useEffect(() => {
     if (open && shipment) {
@@ -64,6 +65,7 @@ export function ShipmentEditDrawer({ shipment, open, onClose, onSaved }: Props) 
 
   const handleSave = async () => {
     if (!shipment) return
+    setSaving(true)
     try {
       const values = form.getFieldsValue()
       await api.updateShipment(shipment.id, {
@@ -77,6 +79,8 @@ export function ShipmentEditDrawer({ shipment, open, onClose, onSaved }: Props) 
     } catch (e) {
       const err = e as { response?: { data?: { detail?: string } } }
       void message.error(err?.response?.data?.detail || t('error.save_failed'))
+    } finally {
+      setSaving(false)
     }
   }
 
@@ -89,7 +93,7 @@ export function ShipmentEditDrawer({ shipment, open, onClose, onSaved }: Props) 
       footer={
         <Space style={{ float: 'right' }}>
           <Button onClick={onClose}>{t('button.cancel')}</Button>
-          <Button type="primary" onClick={handleSave}>
+          <Button type="primary" loading={saving} onClick={handleSave}>
             {t('button.save')}
           </Button>
         </Space>
