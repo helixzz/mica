@@ -127,6 +127,8 @@ async def create_rfq(
     db: Annotated[AsyncSession, Depends(get_db)],
 ):
     rfq = await svc.create_rfq(db, user, body.model_dump())
+    for sid in body.supplier_ids:
+        svc._add_rfq_supplier(db, rfq.id, sid)
     await db.commit()
 
     try:
