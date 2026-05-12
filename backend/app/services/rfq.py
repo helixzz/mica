@@ -62,10 +62,14 @@ async def create_rfq(db: AsyncSession, user: User, data: dict) -> RFQ:
         db.add(rfq_item)
 
     for sid in data.get("supplier_ids", []):
+        try:
+            suid = UUID(sid)
+        except (ValueError, AttributeError):
+            continue
         rfq_sup = RFQSupplier(
             id=new_uuid(),
             rfq_id=rfq.id,
-            supplier_id=UUID(sid),
+            supplier_id=suid,
         )
         db.add(rfq_sup)
 
