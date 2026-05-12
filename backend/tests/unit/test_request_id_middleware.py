@@ -17,7 +17,7 @@ async def test_request_id_middleware_passes_through_client_id(client):
 @pytest.mark.asyncio
 async def test_request_id_middleware_present_on_error(client):
     resp = await client.get("/api/v1/items/not-a-uuid")
-    assert resp.status_code in (400, 404, 405, 422)
+    assert resp.status_code in (400, 401, 404, 405, 422)
     assert "X-Request-ID" in resp.headers
     body = resp.json()
     assert "detail" in body

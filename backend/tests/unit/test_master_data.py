@@ -796,16 +796,17 @@ async def test_delete_department_soft_delete_deactivates_and_audits(seeded_db_se
 
 async def test_get_item_by_id_returns_item(seeded_db_session):
     actor = await _user(seeded_db_session, "alice")
-    company = await _company(seeded_db_session)
+    category = await _category(seeded_db_session, "switch")
     created = await svc.create_item(
         seeded_db_session,
         actor,
         ItemCreate(
             code=f"ITEM-GET-{_suffix()}",
-            company_id=company.id,
-            name_zh="测试获取物料",
-            name_en="Test Get Item",
-            uom="pcs",
+            name="Test Get Item",
+            category="switch",
+            category_id=category.id,
+            uom="EA",
+            specification="Test item for get_by_id",
         ),
     )
     result = await svc.get_item(seeded_db_session, created.id)
@@ -814,6 +815,9 @@ async def test_get_item_by_id_returns_item(seeded_db_session):
     assert result.code == created.code
 
 
-async def test_get_item_not_found_returns_none(seeded_db_session):
-    result = await svc.get_item(seeded_db_session, uuid4())
-    assert result is None
+async def test_get_item_not_found_raises_404(seeded_db_session):
+    with pytest.raises(HTTPException) as exc:
+        await svc.get_item(seeded_db_session, uuid4())
+
+    assert exc.value.status_code == 404
+    assert exc.value.detail == "Item not found"

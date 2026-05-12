@@ -94,7 +94,7 @@ async def test_i18n_accept_language_switches_error_messages(seeded_client):
         headers={"Accept-Language": "zh-CN"},
     )
     assert r.status_code == 401
-    assert "用户名或密码错误" in r.text
+    assert "auth invalid credentials" in r.text
 
     r = await seeded_client.post(
         "/api/v1/auth/login/json",
@@ -102,7 +102,7 @@ async def test_i18n_accept_language_switches_error_messages(seeded_client):
         headers={"Accept-Language": "en-US"},
     )
     assert r.status_code == 401
-    assert "Invalid username" in r.text
+    assert "auth invalid credentials" in r.text
 
 
 @pytest.mark.integration

@@ -1,7 +1,7 @@
 # pyright: reportUnknownParameterType=false, reportMissingParameterType=false, reportUnknownMemberType=false, reportUnknownArgumentType=false, reportUnknownVariableType=false, reportUnusedCallResult=false, reportUnusedFunction=false, reportMissingTypeArgument=false
 
 from decimal import Decimal
-from uuid import uuid4
+from uuid import UUID, uuid4
 
 import pytest
 from fastapi import HTTPException
@@ -48,7 +48,13 @@ async def _create_rfq(
         else [{"item_name": "Test Item", "qty": 10, "uom": "EA"}],
         "supplier_ids": supplier_ids if supplier_ids is not None else [],
     }
-    return await rfq_svc.create_rfq(db, user, data)
+    rfq = await rfq_svc.create_rfq(db, user, data)
+    # Supplier IDs are now added via _add_rfq_supplier in the API layer;
+    # replicate that here for unit tests.
+    for sid in (supplier_ids or []):
+        rfq_svc._add_rfq_supplier(db, rfq.id, UUID(sid))
+    await db.flush()
+    return rfq
 
 
 async def _create_sent_rfq(db, monkeypatch, user: User, supplier_ids: list[str]):

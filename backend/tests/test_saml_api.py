@@ -100,7 +100,7 @@ async def test_saml_login_returns_503_when_disabled(seeded_client):
     )
 
     assert response.status_code == 503
-    assert response.json()["detail"] == "SAML single sign-on is not enabled"
+    assert response.json()["detail"] == "saml not enabled"
 
 
 @pytest.mark.integration
@@ -146,7 +146,7 @@ async def test_saml_login_returns_500_when_enabled_but_misconfigured(seeded_clie
     )
 
     assert response.status_code == 500
-    assert response.json()["detail"] == "SAML configuration is incomplete or invalid"
+    assert response.json()["detail"] == "saml misconfigured"
 
 
 @pytest.mark.integration

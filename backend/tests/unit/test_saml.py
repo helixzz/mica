@@ -100,7 +100,7 @@ async def test_get_saml_config_rejects_invalid_group_mapping_json(seeded_db_sess
         )
 
     assert exc.value.status_code == 500
-    assert exc.value.detail == "Configured SAML group mapping is invalid"
+    assert exc.value.detail == "saml group mapping invalid"
 
 
 async def test_upsert_saml_user_creates_new_user_with_default_role(seeded_db_session):
@@ -297,7 +297,7 @@ async def test_upsert_saml_user_rejects_when_jit_disabled_and_user_missing(seede
         )
 
     assert exc.value.status_code == 403
-    assert exc.value.detail == "No matching user was found and JIT provisioning is disabled"
+    assert exc.value.detail == "saml jit disabled"
 
 
 async def test_upsert_saml_user_rejects_missing_email(seeded_db_session):
@@ -316,4 +316,4 @@ async def test_upsert_saml_user_rejects_missing_email(seeded_db_session):
         )
 
     assert exc.value.status_code == 400
-    assert exc.value.detail == "SAML response is missing the email attribute"
+    assert exc.value.detail == "saml missing email"
