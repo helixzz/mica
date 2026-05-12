@@ -6,6 +6,7 @@ import { useEffect, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 
 import { api, type DeliveryPlan, type PurchaseOrder, type PurchaseOrderListItem, type Shipment } from '@/api'
+import { useAuth } from '@/auth/useAuth'
 import { ShipmentActions } from '@/components/ShipmentActions'
 import { downloadCSV } from '@/utils/export'
 import { fmtQty } from '@/utils/format'
@@ -22,6 +23,8 @@ const STATUS_COLORS: Record<string, string> = {
 
 export function ShipmentsPage() {
   const { t } = useTranslation()
+  const { user } = useAuth()
+  const isRequester = user?.role === 'requester'
   const [rows, setRows] = useState<Shipment[]>([])
   const [loading, setLoading] = useState(false)
 
@@ -144,7 +147,7 @@ export function ShipmentsPage() {
       title: t('common.actions'),
       width: 140,
       render: (_: unknown, r: Shipment) => (
-        <ShipmentActions shipment={r} onChanged={load} />
+        !isRequester && <ShipmentActions shipment={r} onChanged={load} />
       ),
     },
   ]
@@ -156,7 +159,7 @@ export function ShipmentsPage() {
         <Space>
           <Button icon={<DownloadOutlined />} onClick={handleExport}>{t('button.export_excel')}</Button>
           <Typography.Text type="secondary">{rows.length} {t('shipment.count')}</Typography.Text>
-          <Button type="primary" icon={<PlusOutlined />} onClick={openCreate}>{t('shipment.new')}</Button>
+          {!isRequester && <Button type="primary" icon={<PlusOutlined />} onClick={openCreate}>{t('shipment.new')}</Button>}
         </Space>
       </div>
       <Table<Shipment>

@@ -447,6 +447,9 @@ class UserOutAdmin(BaseModel):
     auth_provider: str
     last_login_at: datetime | None
     created_at: datetime
+    feishu_union_id: str | None = None
+    feishu_open_id: str | None = None
+    feishu_user_id: str | None = None
 
 
 def _user_to_admin_out(u: User) -> UserOutAdmin:
@@ -470,6 +473,9 @@ def _user_to_admin_out(u: User) -> UserOutAdmin:
         auth_provider=u.auth_provider,
         last_login_at=u.last_login_at,
         created_at=u.created_at,
+        feishu_union_id=u.feishu_union_id,
+        feishu_open_id=u.feishu_open_id,
+        feishu_user_id=u.feishu_user_id,
     )
 
 
@@ -667,7 +673,9 @@ class UserUpdateIn(BaseModel):
     department_ids: list[UUID] | None = None
     preferred_locale: str | None = None
     is_active: bool | None = None
+    feishu_union_id: str | None = None
     feishu_open_id: str | None = None
+    feishu_user_id: str | None = None
 
 
 @router.patch("/users/{user_id}", tags=["admin"])

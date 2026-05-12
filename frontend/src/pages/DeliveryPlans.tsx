@@ -5,6 +5,7 @@ import { useEffect, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 
 import { api, Contract, DeliveryPlan, DeliveryPlanOverview, PurchaseOrderListItem } from '@/api'
+import { useAuth } from '@/auth/useAuth'
 import { DeliveryPlanModal } from '@/components/DeliveryPlanModal'
 import { EmptyState } from '@/components/ui/EmptyState'
 import { PageHeader } from '@/components/ui/PageHeader'
@@ -14,6 +15,8 @@ const { Text } = Typography
 
 export function DeliveryPlansPage() {
   const { t } = useTranslation()
+  const { user } = useAuth()
+  const isRequester = user?.role === 'requester'
   const { token } = theme.useToken()
   const [loading, setLoading] = useState(false)
   const [overview, setOverview] = useState<DeliveryPlanOverview | null>(null)
@@ -149,7 +152,9 @@ export function DeliveryPlansPage() {
       dataIndex: 'plan_name',
       key: 'plan_name',
       render: (val: string, record: DeliveryPlan) => (
-        <a onClick={() => { setEditingPlan(record); setModalOpen(true) }}>{val}</a>
+        isRequester
+          ? <>{val}</>
+          : <a onClick={() => { setEditingPlan(record); setModalOpen(true) }}>{val}</a>
       )
     },
     {
@@ -183,6 +188,7 @@ export function DeliveryPlansPage() {
       key: 'notes',
       ellipsis: true,
     },
+    ...(isRequester ? [] : [
     {
       title: t('delivery_plan.actions'),
       key: 'actions',
@@ -223,6 +229,7 @@ export function DeliveryPlansPage() {
         </Space>
       ),
     },
+  ]),
   ]
 
   const hasPlans = overview && overview.plans.length > 0
@@ -232,9 +239,11 @@ export function DeliveryPlansPage() {
       <PageHeader
         title={t('delivery_plan.title')}
         actions={
-          <Button type="primary" icon={<PlusOutlined />} onClick={() => { setEditingPlan(undefined); setModalOpen(true) }}>
-            {t('delivery_plan.new_plan')}
-          </Button>
+          !isRequester && (
+            <Button type="primary" icon={<PlusOutlined />} onClick={() => { setEditingPlan(undefined); setModalOpen(true) }}>
+              {t('delivery_plan.new_plan')}
+            </Button>
+          )
         }
       />
 
@@ -312,9 +321,11 @@ export function DeliveryPlansPage() {
               title={t('delivery_plan.no_plans')}
               description={t('delivery_plan.create_first')}
               action={
-                <Button type="primary" icon={<PlusOutlined />} onClick={() => { setEditingPlan(undefined); setModalOpen(true) }}>
-                  {t('delivery_plan.new_plan')}
-                </Button>
+                !isRequester && (
+                  <Button type="primary" icon={<PlusOutlined />} onClick={() => { setEditingPlan(undefined); setModalOpen(true) }}>
+                    {t('delivery_plan.new_plan')}
+                  </Button>
+                )
               }
             />
           ) : (

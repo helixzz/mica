@@ -12,6 +12,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.db import new_uuid
 from app.i18n import t
 from app.models import (
+    AuditLog,
     Item,
     JSONValue,
     Notification,
@@ -158,6 +159,25 @@ async def create_notification(
     session.add(notification)
     await session.flush()
 
+    try:
+        session.add(
+            AuditLog(
+                actor_id=None,
+                actor_name=None,
+                event_type="notification.created",
+                resource_type="notification",
+                resource_id=str(notification.id),
+                metadata_json={
+                    "category": notification.category.value,
+                    "user_id": str(user_id),
+                    "title": notification.title,
+                },
+                comment="notification.created",
+            )
+        )
+    except Exception:
+        pass
+
     await _maybe_send_feishu_card(session, notification)
     await _maybe_send_email(session, notification)
 
@@ -230,6 +250,26 @@ async def _maybe_send_feishu_card(
                 notification.category.value,
                 "open_id" if user.feishu_open_id else "email",
             )
+            try:
+                session.add(
+                    AuditLog(
+                        actor_id=None,
+                        actor_name=None,
+                        event_type="notification.feishu_sent",
+                        resource_type="notification",
+                        resource_id=str(notification.id),
+                        metadata_json={
+                            "category": notification.category.value,
+                            "user_id": str(notification.user_id),
+                            "via": "union_id"
+                            if user.feishu_union_id
+                            else ("open_id" if user.feishu_open_id else "email"),
+                        },
+                        comment="notification.feishu_sent",
+                    )
+                )
+            except Exception:
+                pass
         finally:
             await client.close()
     except Exception:
@@ -238,6 +278,23 @@ async def _maybe_send_feishu_card(
             notification.id,
             exc_info=True,
         )
+        try:
+            session.add(
+                AuditLog(
+                    actor_id=None,
+                    actor_name=None,
+                    event_type="notification.feishu_failed",
+                    resource_type="notification",
+                    resource_id=str(notification.id),
+                    metadata_json={
+                        "category": notification.category.value,
+                        "user_id": str(notification.user_id),
+                    },
+                    comment="notification.feishu_failed",
+                )
+            )
+        except Exception:
+            pass
 
 
 async def _maybe_send_email(
@@ -266,12 +323,47 @@ async def _maybe_send_email(
             body += f'<p><a href="{notification.link_url}">View in Mica</a></p>'
 
         await send_email(session, user.email, subject, body)
+        try:
+            session.add(
+                AuditLog(
+                    actor_id=None,
+                    actor_name=None,
+                    event_type="notification.email_sent",
+                    resource_type="notification",
+                    resource_id=str(notification.id),
+                    metadata_json={
+                        "category": notification.category.value,
+                        "user_id": str(notification.user_id),
+                        "email": user.email,
+                    },
+                    comment="notification.email_sent",
+                )
+            )
+        except Exception:
+            pass
     except Exception:
         logger.warning(
             "email: send failed for notification %s",
             notification.id,
             exc_info=True,
         )
+        try:
+            session.add(
+                AuditLog(
+                    actor_id=None,
+                    actor_name=None,
+                    event_type="notification.email_failed",
+                    resource_type="notification",
+                    resource_id=str(notification.id),
+                    metadata_json={
+                        "category": notification.category.value,
+                        "user_id": str(notification.user_id),
+                    },
+                    comment="notification.email_failed",
+                )
+            )
+        except Exception:
+            pass
 
 
 def _build_feishu_card(
