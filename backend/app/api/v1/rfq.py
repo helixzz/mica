@@ -58,7 +58,7 @@ class RFQOut(BaseModel):
     notes: str | None = None
     created_by_id: UUID
     company_id: UUID
-    awarded_at: str | None = None
+    awarded_at: datetime | None = None
     created_at: datetime
     updated_at: datetime
 
@@ -335,9 +335,9 @@ def _to_detail(rfq) -> dict:
         "notes": rfq.notes,
         "created_by_id": rfq.created_by_id,
         "company_id": rfq.company_id,
-        "awarded_at": str(rfq.awarded_at) if rfq.awarded_at else None,
-        "created_at": str(rfq.created_at),
-        "updated_at": str(rfq.updated_at),
+        "awarded_at": rfq.awarded_at,
+        "created_at": rfq.created_at,
+        "updated_at": rfq.updated_at,
         "items": [
             {
                 "id": i.id,
