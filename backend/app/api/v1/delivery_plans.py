@@ -157,7 +157,16 @@ async def update_plan(
         from app.services.system_params import notification_enabled
 
         if await notification_enabled(db, "delivery_plan_updated"):
-            po = await db.get(PurchaseOrder, plan.po_id) if plan.po_id else None
+            po = None
+            contract = None
+            if plan.po_id:
+                po = await db.get(PurchaseOrder, plan.po_id)
+            elif plan.contract_id:
+                from app.models import Contract
+
+                contract = await db.get(Contract, plan.contract_id)
+                if contract:
+                    po = await db.get(PurchaseOrder, contract.po_id)
             if po and po.created_by_id:
                 recipients = {po.created_by_id}
                 admin_rows = (
@@ -195,7 +204,7 @@ async def update_plan(
                             f"**Changes**:\n{changes_str}\n"
                             f"**Updated by**: {user.display_name}"
                         ),
-                        link_url=f"/purchase-orders/{payload.po_id}" if payload.po_id else None,
+                        link_url=f"/purchase-orders/{po.id}",
                         biz_type="delivery_plan",
                         biz_id=plan.id,
                     )

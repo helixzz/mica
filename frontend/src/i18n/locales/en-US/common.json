@@ -1155,7 +1155,8 @@
     "save_failed": "Save failed",
     "create_failed": "Create failed",
     "selected_count": "{{count}} selected",
-    "preview": "Preview"
+    "preview": "Preview",
+    "saved": "Saved"
   },
   "invoice": {
     "attachments": "Invoice Attachments",
