@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from datetime import date
+from datetime import date, datetime
 from decimal import Decimal
 from typing import Annotated
 from uuid import UUID
@@ -59,8 +59,8 @@ class RFQOut(BaseModel):
     created_by_id: UUID
     company_id: UUID
     awarded_at: str | None = None
-    created_at: str
-    updated_at: str
+    created_at: datetime
+    updated_at: datetime
 
 
 class RFQItemOut(BaseModel):
