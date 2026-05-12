@@ -131,7 +131,7 @@ async def create_plan(
     return await svc._plan_to_out(db, plan)
 
 
-@router.put(
+@router.patch(
     "/delivery-plans/{plan_id}",
     response_model=DeliveryPlanOut,
     tags=["delivery-plans"],
