@@ -216,7 +216,8 @@ async def update_plan(
                         label = "关联PO"
                     changes.append(f"- **{label}**: {old_val} → {v}")
                 changes_str = "\n".join(changes) if changes else "—"
-                item_name = getattr(plan.item, "name", "") if plan.item else ""
+                plan_out = await svc._plan_to_out(db, plan)
+                item_name = plan_out.item_name
                 for uid in recipients:
                     await create_notification(
                         db,
