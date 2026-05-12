@@ -155,10 +155,17 @@ def build_contract_expiring_card(
 
 
 def _make_generic_card(title: str, body: str, link_url: str = "") -> dict[str, Any]:
-    elements: list[dict[str, Any]] = [_markdown_element(body)]
+    elements: list[dict[str, Any]] = []
+    if body:
+        elements.append(_markdown_element(body))
+
     if link_url:
+        elements.append(_hr_element())
         elements.append(_action_element([_button("查看详情", link_url)]))
-    elements.append(_note_element("Mica 采购管理系统"))
+
+    elements.append(_hr_element())
+    elements.append(_note_element("Mica 采购管理系统 · 自动通知"))
+
     return {
         "config": {"wide_screen_mode": True},
         "header": _card_header(title),

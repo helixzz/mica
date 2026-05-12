@@ -103,7 +103,14 @@ def build_scheduler(session_factory: async_sessionmaker[AsyncSession]) -> AsyncI
                                 user_id=admin.id,
                                 category=NotificationCategory.SYSTEM,
                                 title=f"Contract {c.contract_number} expires on {c.expiry_date}",
-                                body=f"Contract '{c.title}' (supplier: {c.supplier.name}) expires on {c.expiry_date}. Please review and renew if needed.",
+                                body=(
+                                    f"**Contract**: {c.contract_number}\n"
+                                    f"**Title**: {c.title}\n"
+                                    f"**Supplier**: {c.supplier.name if c.supplier else '—'}\n"
+                                    f"**Expiry**: {c.expiry_date}\n"
+                                    f"**Status**: {c.status}\n"
+                                    f"Please review and renew if needed."
+                                ),
                                 link_url=f"/contracts/{c.id}",
                                 biz_type="contract_expiry",
                                 biz_id=c.id,

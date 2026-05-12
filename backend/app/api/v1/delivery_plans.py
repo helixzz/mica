@@ -102,7 +102,13 @@ async def create_plan(
                         user_id=uid,
                         category=NotificationCategory.SYSTEM,
                         title=f"Delivery plan created: {plan.plan_name}",
-                        body=f"PO {po.po_number}: {plan.planned_qty} units of {plan.plan_name} planned for {plan.planned_date}",
+                        body=(
+                            f"**Plan**: {plan.plan_name}\n"
+                            f"**PO**: {po.po_number}\n"
+                            f"**Planned Qty**: {plan.planned_qty}\n"
+                            f"**Planned Date**: {plan.planned_date}\n"
+                            f"**Created by**: {user.display_name}"
+                        ),
                         link_url=f"/purchase-orders/{payload.po_id}",
                         biz_type="delivery_plan",
                         biz_id=plan.id,
@@ -130,7 +136,63 @@ async def update_plan(
     ],
 ):
     plan = await svc.update_delivery_plan(db, plan_id, payload)
-    return await svc._plan_to_out(db, plan)
+    result = await svc._plan_to_out(db, plan)
+
+    try:
+        from sqlalchemy import select
+
+        from app.models import NotificationCategory, PurchaseOrder, User, UserRole
+        from app.services.notifications import create_notification
+        from app.services.system_params import notification_enabled
+
+        if await notification_enabled(db, "delivery_plan_updated"):
+            po = await db.get(PurchaseOrder, plan.po_id) if plan.po_id else None
+            if po and po.created_by_id:
+                recipients = {po.created_by_id}
+                admin_rows = (
+                    (
+                        await db.execute(
+                            select(User.id).where(
+                                User.role.in_(
+                                    [UserRole.ADMIN.value, UserRole.PROCUREMENT_MGR.value]
+                                ),
+                                User.is_active.is_(True),
+                            )
+                        )
+                    )
+                    .scalars()
+                    .all()
+                )
+                recipients.update(admin_rows)
+                changes = []
+                upd = payload.model_dump(exclude_unset=True)
+                for k, v in upd.items():
+                    if k == "item_id":
+                        continue
+                    old_val = getattr(plan, k, None)
+                    changes.append(f"- **{k}**: {old_val} → {v}")
+                changes_str = "\n".join(changes)
+                for uid in recipients:
+                    await create_notification(
+                        db,
+                        user_id=uid,
+                        category=NotificationCategory.SYSTEM,
+                        title=f"Delivery plan updated: {plan.plan_name}",
+                        body=(
+                            f"**Plan**: {plan.plan_name} | **PO**: {po.po_number if po else '—'}\n"
+                            f"**Qty**: {plan.planned_qty} | **Date**: {plan.planned_date}\n"
+                            f"**Changes**:\n{changes_str}\n"
+                            f"**Updated by**: {user.display_name}"
+                        ),
+                        link_url=f"/purchase-orders/{payload.po_id}" if payload.po_id else None,
+                        biz_type="delivery_plan",
+                        biz_id=plan.id,
+                    )
+                await db.commit()
+    except Exception:
+        pass
+
+    return result
 
 
 @router.delete(

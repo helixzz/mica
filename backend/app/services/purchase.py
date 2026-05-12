@@ -172,7 +172,14 @@ async def create_pr(db: AsyncSession, actor: User, payload: PRCreateIn) -> Purch
                     user_id=_UUID(uid_str),
                     category=NotificationCategory.SYSTEM,
                     title=f"PR {pr.pr_number} created",
-                    body=f"PR '{pr.title}' has been created, total ¥{pr.total_amount}",
+                    body=(
+                        f"**PR**: {pr.pr_number}\n"
+                        f"**Title**: {pr.title}\n"
+                        f"**Amount**: ¥{pr.total_amount} {pr.currency}\n"
+                        f"**Required by**: {pr.required_date}\n"
+                        f"**Items**: {len(pr.items)} line(s)\n"
+                        f"**Created by**: {actor.display_name}"
+                    ),
                     link_url=f"/purchase-requisitions/{pr.id}",
                     biz_type="pr",
                     biz_id=pr.id,
@@ -255,6 +262,63 @@ async def update_pr(
 
     await _audit(db, actor, "pr.updated", "purchase_requisition", str(pr.id))
     await db.commit()
+
+    try:
+        from app.models import NotificationCategory
+        from app.services.notifications import create_notification
+        from app.services.system_params import notification_enabled
+
+        if await notification_enabled(db, "pr_updated"):
+            recipients = {actor.id}
+            if pr.department_id:
+                dept_managers = (
+                    (
+                        await db.execute(
+                            select(User.id).where(
+                                User.department_id == pr.department_id,
+                                User.role == UserRole.DEPT_MANAGER.value,
+                                User.is_active.is_(True),
+                            )
+                        )
+                    )
+                    .scalars()
+                    .all()
+                )
+                recipients.update(dept_managers)
+            admin_rows = (
+                (
+                    await db.execute(
+                        select(User.id).where(
+                            User.role.in_([UserRole.ADMIN.value, UserRole.PROCUREMENT_MGR.value]),
+                            User.is_active.is_(True),
+                        )
+                    )
+                )
+                .scalars()
+                .all()
+            )
+            recipients.update(admin_rows)
+            for uid in recipients:
+                await create_notification(
+                    db,
+                    user_id=uid,
+                    category=NotificationCategory.SYSTEM,
+                    title=f"PR {pr.pr_number} updated",
+                    body=(
+                        f"**PR**: {pr.pr_number}\n"
+                        f"**Title**: {pr.title}\n"
+                        f"**Amount**: ¥{pr.total_amount}\n"
+                        f"**Status**: {pr.status}\n"
+                        f"**Updated by**: {actor.display_name}"
+                    ),
+                    link_url=f"/purchase-requisitions/{pr.id}",
+                    biz_type="pr",
+                    biz_id=pr.id,
+                )
+            await db.commit()
+    except Exception:
+        pass
+
     result = await _load_pr(db, pr.id)
     if result is None:
         raise HTTPException(404, "pr.not_found")
@@ -518,13 +582,21 @@ async def convert_pr_to_po(db: AsyncSession, actor: User, pr_id: UUID) -> list[P
 
             for po in refreshed:
                 supplier_name = supplier_names.get(po.supplier_id, "Unknown")
+                items_count = len(po.items)
                 for uid in recipients:
                     await create_notification(
                         db,
                         user_id=uid,
                         category=NotificationCategory.PO_CREATED,
                         title=f"PO {po.po_number} created",
-                        body=f"PO {po.po_number} created from PR {pr.pr_number} for {supplier_name}, total ¥{po.total_amount}",
+                        body=(
+                            f"**PO**: {po.po_number}\n"
+                            f"**Source PR**: {pr.pr_number}\n"
+                            f"**Supplier**: {supplier_name}\n"
+                            f"**Amount**: ¥{po.total_amount} {po.currency}\n"
+                            f"**Items**: {items_count} line(s)\n"
+                            f"**Created by**: {actor.display_name}"
+                        ),
                         link_url=f"/purchase-orders/{po.id}",
                         biz_type="po",
                         biz_id=po.id,

@@ -155,7 +155,14 @@ async def create_rfq(
                     user_id=uid,
                     category=NotificationCategory.SYSTEM,
                     title=f"RFQ {rfq.rfq_number} created",
-                    body=f"RFQ '{rfq.title}' has been created with {len(body.items)} items and {len(body.supplier_ids)} suppliers",
+                    body=(
+                        f"**RFQ**: {rfq.rfq_number}\n"
+                        f"**Title**: {rfq.title}\n"
+                        f"**Items**: {len(body.items)} line(s)\n"
+                        f"**Suppliers**: {len(body.supplier_ids)} invited\n"
+                        f"**Deadline**: {body.deadline or '—'}\n"
+                        f"**Created by**: {user.display_name}"
+                    ),
                     link_url=f"/rfqs/{rfq.id}",
                     biz_type="rfq",
                     biz_id=rfq.id,
@@ -205,6 +212,7 @@ async def award_quotes(
     rfq_id: UUID,
     body: AwardIn,
     _user: Annotated[None, Depends(require_roles("admin", "it_buyer", "procurement_mgr"))],
+    user: CurrentUser,
     db: Annotated[AsyncSession, Depends(get_db)],
 ):
     rfq = await svc.award_quote(db, rfq_id, [str(qid) for qid in body.quote_ids])
@@ -296,7 +304,13 @@ async def award_quotes(
                     user_id=_UUID(uid_str),
                     category=NotificationCategory.SYSTEM,
                     title=f"RFQ {rfq.rfq_number} awarded",
-                    body=f"RFQ '{rfq.title}' has been awarded to: {awarded_supplier_names}",
+                    body=(
+                        f"**RFQ**: {rfq.rfq_number}\n"
+                        f"**Title**: {rfq.title}\n"
+                        f"**Awarded to**: {awarded_supplier_names}\n"
+                        f"**Awarded at**: {rfq.awarded_at}\n"
+                        f"**Awarded by**: {user.display_name}"
+                    ),
                     link_url=f"/rfqs/{rfq.id}",
                     biz_type="rfq",
                     biz_id=rfq.id,

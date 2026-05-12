@@ -179,7 +179,14 @@ async def create_contract(
                     user_id=uid,
                     category=NotificationCategory.SYSTEM,
                     title=f"Contract {contract.contract_number} created",
-                    body=f"Contract '{contract.title}' for PO {po.po_number}, total ¥{contract.total_amount}",
+                    body=(
+                        f"**Contract**: {contract.contract_number}\n"
+                        f"**Title**: {contract.title}\n"
+                        f"**PO**: {po.po_number}\n"
+                        f"**Amount**: ¥{contract.total_amount}\n"
+                        f"**Effective**: {contract.effective_date} | **Expires**: {contract.expiry_date}\n"
+                        f"**Created by**: {actor.display_name}"
+                    ),
                     link_url=f"/contracts/{contract.id}",
                     biz_type="contract",
                     biz_id=contract.id,
@@ -461,6 +468,54 @@ async def update_contract(
     )
     await db.commit()
     await db.refresh(contract)
+
+    try:
+        from app.models import NotificationCategory, PurchaseOrder, User, UserRole
+        from app.services.notifications import create_notification
+        from app.services.system_params import notification_enabled
+
+        if await notification_enabled(db, "contract_updated"):
+            recipients: set[str] = set()
+            po = await db.get(PurchaseOrder, contract.po_id)
+            if po and po.created_by_id:
+                recipients.add(str(po.created_by_id))
+            admin_rows = (
+                (
+                    await db.execute(
+                        select(User.id).where(
+                            User.role.in_([UserRole.ADMIN.value, UserRole.PROCUREMENT_MGR.value]),
+                            User.is_active.is_(True),
+                        )
+                    )
+                )
+                .scalars()
+                .all()
+            )
+            recipients.update(str(uid) for uid in admin_rows)
+            changed_fields = ", ".join(changed.keys())
+            from uuid import UUID as _UUID
+
+            for uid_str in recipients:
+                await create_notification(
+                    db,
+                    user_id=_UUID(uid_str),
+                    category=NotificationCategory.SYSTEM,
+                    title=f"Contract {contract.contract_number} updated",
+                    body=(
+                        f"**Contract**: {contract.contract_number}\n"
+                        f"**Title**: {contract.title}\n"
+                        f"**Amount**: ¥{contract.total_amount}\n"
+                        f"**Changed fields**: {changed_fields}\n"
+                        f"**Updated by**: {actor.display_name}"
+                    ),
+                    link_url=f"/contracts/{contract.id}",
+                    biz_type="contract",
+                    biz_id=contract.id,
+                )
+            await db.commit()
+    except Exception:
+        pass
+
     return contract
 
 
@@ -531,8 +586,13 @@ async def transition_contract_status(
                         user_id=_UUID(uid_str),
                         category=NotificationCategory.SYSTEM,
                         title=f"Contract {contract.contract_number} {new_status}",
-                        body=f"Contract '{contract.title}' has been {new_status}"
-                        + (f": {reason}" if reason else ""),
+                        body=(
+                            f"**Contract**: {contract.contract_number}\n"
+                            f"**Title**: {contract.title}\n"
+                            f"**Status**: {current} → {new_status}\n"
+                            f"**Reason**: {reason or '—'}\n"
+                            f"**Updated by**: {actor.display_name}"
+                        ),
                         link_url=f"/contracts/{contract.id}",
                         biz_type="contract",
                         biz_id=contract.id,
@@ -690,7 +750,13 @@ async def create_shipment(
                     user_id=uid,
                     category=NotificationCategory.PO_CREATED,
                     title=f"PO {po.po_number} {status_label}",
-                    body=f"PO {po.po_number} is now {status_label} ({po.qty_received}/{total_qty} received)",
+                    body=(
+                        f"**PO**: {po.po_number}\n"
+                        f"**Shipment**: {shipment.shipment_number} (Batch {shipment.batch_no})\n"
+                        f"**Status**: {status_label} ({po.qty_received}/{total_qty} received)\n"
+                        f"**Carrier**: {shipment.carrier or '—'} | **Tracking**: {shipment.tracking_number or '—'}\n"
+                        f"**Created by**: {actor.display_name}"
+                    ),
                     link_url=f"/purchase-orders/{po.id}",
                     biz_type="po",
                     biz_id=po.id,
@@ -773,6 +839,54 @@ async def update_shipment(
     if changes:
         await _audit_write(db, actor, "shipment.updated", "shipment", str(shipment_id), changes)
         await db.commit()
+
+        try:
+            from app.models import NotificationCategory, PurchaseOrder, User, UserRole
+            from app.services.notifications import create_notification
+            from app.services.system_params import notification_enabled
+
+            if await notification_enabled(db, "shipment_updated"):
+                po = await db.get(PurchaseOrder, shipment.po_id)
+                if po:
+                    recipients = {actor.id, po.created_by_id}
+                    admin_rows = (
+                        (
+                            await db.execute(
+                                select(User.id).where(
+                                    User.role.in_(
+                                        [UserRole.ADMIN.value, UserRole.PROCUREMENT_MGR.value]
+                                    ),
+                                    User.is_active.is_(True),
+                                )
+                            )
+                        )
+                        .scalars()
+                        .all()
+                    )
+                    recipients.update(admin_rows)
+                    changes_str = "\n".join(
+                        f"- **{k}**: {v['old']} → {v['new']}" for k, v in changes.items()
+                    )
+                    for uid in recipients:
+                        await create_notification(
+                            db,
+                            user_id=uid,
+                            category=NotificationCategory.SYSTEM,
+                            title=f"Shipment {shipment.shipment_number} updated",
+                            body=(
+                                f"**Shipment**: {shipment.shipment_number} | **PO**: {po.po_number}\n"
+                                f"**Carrier**: {shipment.carrier or '—'} | **Tracking**: {shipment.tracking_number or '—'}\n"
+                                f"**Changes**:\n{changes_str}\n"
+                                f"**Updated by**: {actor.display_name}"
+                            ),
+                            link_url=f"/purchase-orders/{shipment.po_id}",
+                            biz_type="shipment",
+                            biz_id=shipment.id,
+                        )
+                    await db.commit()
+        except Exception:
+            pass
+
     result = await db.execute(
         select(Shipment).where(Shipment.id == shipment_id).options(selectinload(Shipment.items))
     )
@@ -1005,7 +1119,14 @@ async def create_payment(
                     user_id=uid,
                     category=NotificationCategory.PAYMENT_PENDING,
                     title=f"Payment {record.payment_number} created",
-                    body=f"Payment {record.payment_number}: ¥{record.amount} {record.currency} due {record.due_date}",
+                    body=(
+                        f"**Payment**: {record.payment_number} (Installment #{record.installment_no})\n"
+                        f"**Amount**: ¥{record.amount} {record.currency}\n"
+                        f"**Due date**: {record.due_date}\n"
+                        f"**Status**: {record.status}\n"
+                        f"**Method**: {record.payment_method}\n"
+                        f"**Created by**: {actor.display_name}"
+                    ),
                     link_url=f"/purchase-orders/{record.po_id}",
                     biz_type="payment",
                     biz_id=record.id,
@@ -1162,6 +1283,54 @@ async def update_payment(
     )
     await db.commit()
     await db.refresh(record)
+
+    try:
+        from app.models import NotificationCategory, PurchaseOrder, User, UserRole
+        from app.services.notifications import create_notification
+        from app.services.system_params import notification_enabled
+
+        if await notification_enabled(db, "payment_updated"):
+            po = await db.get(PurchaseOrder, record.po_id)
+            if po:
+                recipients = {actor.id, po.created_by_id}
+                admin_rows = (
+                    (
+                        await db.execute(
+                            select(User.id).where(
+                                User.role.in_(
+                                    [UserRole.ADMIN.value, UserRole.FINANCE_AUDITOR.value]
+                                ),
+                                User.is_active.is_(True),
+                            )
+                        )
+                    )
+                    .scalars()
+                    .all()
+                )
+                recipients.update(admin_rows)
+                changes_str = "\n".join(
+                    f"- **{k}**: {v['from']} → {v['to']}" for k, v in changes.items()
+                )
+                for uid in recipients:
+                    await create_notification(
+                        db,
+                        user_id=uid,
+                        category=NotificationCategory.SYSTEM,
+                        title=f"Payment {record.payment_number} updated",
+                        body=(
+                            f"**Payment**: {record.payment_number} | **PO**: {po.po_number}\n"
+                            f"**Amount**: ¥{record.amount} {record.currency}\n"
+                            f"**Changes**:\n{changes_str}\n"
+                            f"**Updated by**: {actor.display_name}"
+                        ),
+                        link_url=f"/purchase-orders/{record.po_id}",
+                        biz_type="payment",
+                        biz_id=record.id,
+                    )
+                await db.commit()
+    except Exception:
+        pass
+
     return record
 
 
@@ -1475,7 +1644,16 @@ async def create_invoice(
                     user_id=uid,
                     category=NotificationCategory.SYSTEM,
                     title=f"Invoice {invoice.internal_number} created",
-                    body=f"Invoice {invoice.internal_number}: total ¥{invoice.total_amount} {invoice.currency}",
+                    body=(
+                        f"**Invoice**: {invoice.internal_number}\n"
+                        f"**Vendor #**: {invoice.invoice_number}\n"
+                        f"**Supplier**: {supplier.name}\n"
+                        f"**Total**: ¥{invoice.total_amount} {invoice.currency}\n"
+                        f"**Subtotal**: ¥{invoice.subtotal} | **Tax**: ¥{invoice.tax_amount}\n"
+                        f"**Status**: {invoice.status}\n"
+                        f"**Date**: {invoice.invoice_date}\n"
+                        f"**Created by**: {actor.display_name}"
+                    ),
                     link_url="/invoices",
                     biz_type="invoice",
                     biz_id=invoice.id,
@@ -1509,7 +1687,13 @@ async def create_invoice(
                     user_id=uid,
                     category=NotificationCategory.SYSTEM,
                     title=f"Invoice {invoice.internal_number} {match_label}",
-                    body=f"Invoice {invoice.internal_number}: 3-way match result is {match_label} (status: {initial_status})",
+                    body=(
+                        f"**Invoice**: {invoice.internal_number}\n"
+                        f"**3-Way Match**: {match_label}\n"
+                        f"**Status**: {initial_status}\n"
+                        f"**Total**: ¥{invoice.total_amount} {invoice.currency}\n"
+                        f"**Created by**: {actor.display_name}"
+                    ),
                     link_url="/invoices",
                     biz_type="invoice_match",
                     biz_id=invoice.id,
