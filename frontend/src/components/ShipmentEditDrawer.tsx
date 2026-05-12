@@ -17,6 +17,7 @@ export function ShipmentEditDrawer({ shipment, open, onClose, onSaved }: Props) 
   const [form] = Form.useForm()
   const [deliveryPlans, setDeliveryPlans] = useState<DeliveryPlan[]>([])
   const [loadingPlans, setLoadingPlans] = useState(false)
+  const [selectedPlanId, setSelectedPlanId] = useState<string | undefined>(undefined)
 
   useEffect(() => {
     if (open && shipment) {
@@ -30,20 +31,34 @@ export function ShipmentEditDrawer({ shipment, open, onClose, onSaved }: Props) 
         notes: shipment.notes,
       })
       setDeliveryPlans([])
+      setSelectedPlanId(undefined)
       if (shipment.po_id) {
         setLoadingPlans(true)
         api.getPODeliveryPlan(shipment.po_id)
-          .then((summary) => setDeliveryPlans(summary.po_plans || []))
+          .then((summary) => {
+            const plans = summary.po_plans || []
+            setDeliveryPlans(plans)
+            // Auto-select matching plan
+            if (shipment.expected_date) {
+              const matched = plans.find(
+                (dp) => dp.planned_date === shipment.expected_date
+              )
+              if (matched) setSelectedPlanId(matched.id)
+            }
+          })
           .catch(() => {})
           .finally(() => setLoadingPlans(false))
       }
     }
   }, [open, shipment, form])
 
-  const handleDeliveryPlanSelect = (planId: string) => {
-    const plan = deliveryPlans.find((dp) => dp.id === planId)
-    if (plan) {
-      form.setFieldsValue({ expected_date: dayjs(plan.planned_date) })
+  const handleDeliveryPlanSelect = (planId: string | undefined) => {
+    setSelectedPlanId(planId)
+    if (planId) {
+      const plan = deliveryPlans.find((dp) => dp.id === planId)
+      if (plan) {
+        form.setFieldsValue({ expected_date: dayjs(plan.planned_date) })
+      }
     }
   }
 
@@ -106,6 +121,7 @@ export function ShipmentEditDrawer({ shipment, open, onClose, onSaved }: Props) 
               placeholder={t('shipment.fulfills_delivery_plan')}
               loading={loadingPlans}
               allowClear
+              value={selectedPlanId}
               onChange={handleDeliveryPlanSelect}
             >
               {deliveryPlans.map((dp) => (
