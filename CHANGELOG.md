@@ -7,6 +7,76 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [v1.8.0] — 2026-05-12
+
+### 新增
+- **飞书通知全覆盖**：31 个业务事件触发通知（创建/编辑/删除），SYSTEM 类别自动推送飞书卡片
+- **通知开关系统**：15 个独立 toggle（Admin → 系统参数），可单独关闭任一事件的通知
+- **通知审计日志**：每次通知创建/发送/失败均记录到审计日志
+- **定时调度器**：内置 mica-scheduler 服务（每日摘要 09:00、审批提醒每小时、SLA 升级 30 分钟、合同到期 10:00）
+- **RFQ 询价功能**：创建询价、发送询价、录入报价、定标全流程
+- **发票三单匹配**：Dashboard 展示 PO 订单量/到货量/开票量匹配状态
+- **付款日历**：Dashboard 展示近期付款计划
+- **SKU 价格预测**：7 日/30 日均价移动平均趋势
+- **供应商门户**：token 只读访问（PO/合同/付款/发货）
+- **多币种汇率**：可配置汇率表，金额换算
+- **合同版本管理**：变更摘要 + 版本历史
+- **到货批次增强**：计划日期、交货计划关联下拉、PO 摘要显示
+- **PO 携带 PR 标题**：新增 pr_title 列，所有通知/列表带入
+
+### 修复
+- **RFQ 系列 bug**：supplier_ids 丢失、UUID 重复封装、awarded_at 类型错误
+- **交货计划通知**：合同交付计划不通知、编辑不通知、无变化字段过滤
+- **Dashboard 重构**：告警卡片拆分 Row、统一 accent 样式、footer Link 替代 trend/delta
+- **i18n 补全**：新增 60+ key，修复 digest.feishu 平铺 key 问题
+- **权限修正**：requester 可查看交货计划/到货批次，不可创建/编辑
+- **登录时效**：access token 默认 72h，可在 Admin 面板配置
+- **飞书通知双关拦截**：feishu_categories 过滤 + 卡片构建回退均已修复
+- **Docker 部署**：nginx IP 缓存、scheduler healthcheck 无 procps
+
+---
+
+## [v1.7.8] — 2026-05-09
+
+### 新增
+- **飞书集成基础**：消息推送、SAML JIT 建用户、FeishuClient 封装
+- **合同 OCR 提取**：AI 扫描件提取 12 字段（付款/交付/物料明细）
+- **交货计划**：PO/Contract 附属 + 批量子计划 + 进度可视化
+- **审批可视化编辑器**：Admin 拖拽配置审批链
+- **Admin 重构**：卡片导航 + URL 子路由
+- **SLA 升级**：超时审批自动通知 submitter/manager/admin
+- **邮件每日摘要**：HTML 模板 + Feishu 卡片同步
+- **Dashboard**：Drag-to-reorder (@dnd-kit) + 用户引导卡片
+- **PO 价格自动填充**：SKU 行情库→参考价
+- **打印优化**：@media print CSS
+- **批量导入**：Admin Import Tab（模板 + Excel）
+- **SAML SSO**：ADFS/通用 SAML，JIT 建用户 + 组映射
+
+### 修复
+- **安全加固**：XSS 修复、登录限流、SAML 重定向白名单、WebSocket Bearer auth
+- **i18n 审计**：前端 1184 key parity、后端 244 key parity
+- **性能监控**：perf_monitor middleware + admin stats
+- **E2E 测试**：Playwright CI 冒烟测试
+- 合同版本管理：change_summary + 版本历史
+
+---
+
+## [v1.6.7] — 2026-05-07
+
+### 新增
+- **Cerbos 授权引擎**：字段级 + 行级细粒度权限，YAML 热加载
+- **付款计划**：分期付款 + 进度跟踪 + 合同关联
+- **EXTRACT epoch 修复**：PostgreSQL 类型转换
+- 搜索增强：分类筛选 tabs + 历史查询保存
+- 供应商管理：批量启用/禁用 + 搜索排序
+
+### 修复
+- 覆盖率硬阈值恢复（test 补充）
+- CI 部署流程优化
+- Nginx 安全头修复
+
+---
+
 ## [v1.5.3] — 2026-05-05
 
 ### 新增
