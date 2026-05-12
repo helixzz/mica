@@ -35,11 +35,11 @@ async def get_rfq(db: AsyncSession, rfq_id: UUID) -> RFQ:
 
 
 async def create_rfq(db: AsyncSession, user: User, data: dict) -> RFQ:
-    from app.services.purchase import _next_number
+    from app.services.purchase import _next_rfq_number
 
     rfq = RFQ(
         id=new_uuid(),
-        rfq_number=await _next_number(db, "RFQ", user.company_id),
+        rfq_number=await _next_rfq_number(db),
         title=data["title"],
         pr_id=data.get("pr_id"),
         deadline=data.get("deadline"),

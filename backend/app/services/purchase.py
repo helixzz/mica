@@ -50,6 +50,16 @@ async def _next_pr_number(db: AsyncSession) -> str:
     return f"{prefix}{n:04d}"
 
 
+async def _next_rfq_number(db: AsyncSession) -> str:
+    from app.models import RFQ
+
+    year = datetime.now(UTC).year
+    prefix = f"RFQ-{year}-"
+    result = await db.execute(select(func.count(RFQ.id)).where(RFQ.rfq_number.startswith(prefix)))
+    n = (result.scalar_one() or 0) + 1
+    return f"{prefix}{n:04d}"
+
+
 async def _next_po_number(db: AsyncSession) -> str:
     year = datetime.now(UTC).year
     prefix = f"PO-{year}-"
