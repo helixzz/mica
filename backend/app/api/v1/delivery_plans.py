@@ -1,3 +1,4 @@
+import logging
 from typing import Annotated
 from uuid import UUID
 
@@ -13,6 +14,8 @@ from app.schemas import (
     DeliveryPlanUpdate,
 )
 from app.services import delivery_plans as svc
+
+logger = logging.getLogger("mica.delivery_plans")
 
 router = APIRouter()
 
@@ -127,6 +130,7 @@ async def create_plan(
                     )
                 await db.commit()
     except Exception:
+        logger.warning("Failed to send delivery plan created notification", exc_info=True)
         pass
 
     return await svc._plan_to_out(db, plan)
@@ -233,6 +237,7 @@ async def update_plan(
                     )
                 await db.commit()
     except Exception:
+        logger.warning("Failed to send delivery plan created notification", exc_info=True)
         pass
 
     return result
