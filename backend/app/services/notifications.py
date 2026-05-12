@@ -192,6 +192,7 @@ async def _maybe_send_feishu_card(
         NotificationCategory.FEISHU_PO_CREATED,
         NotificationCategory.FEISHU_PAYMENT_PENDING,
         NotificationCategory.FEISHU_CONTRACT_EXPIRING,
+        NotificationCategory.SYSTEM,
     }
     if notification.category not in feishu_categories:
         return

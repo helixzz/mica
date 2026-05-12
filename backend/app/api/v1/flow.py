@@ -225,10 +225,6 @@ async def create_shipment(
 async def list_shipments(
     user: CurrentUser,
     db: Annotated[AsyncSession, Depends(get_db)],
-    _role: Annotated[
-        None,
-        Depends(require_roles("admin", "it_buyer", "procurement_mgr", "finance_auditor")),
-    ],
     po_id: UUID | None = None,
     contract_id: UUID | None = None,
 ):

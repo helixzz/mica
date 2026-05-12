@@ -171,7 +171,7 @@ export function AppRoutes() {
             <Route path="/purchase-orders/:id" element={<PODetailPage />} />
             <Route path="/contracts" element={<ContractsPage />} />
             <Route path="/contracts/:id" element={<ContractDetailPage />} />
-            <Route path="/shipments" element={<ProcurementGate><ShipmentsPage /></ProcurementGate>} />
+            <Route path="/shipments" element={<Protected><ShipmentsPage /></Protected>} />
             <Route path="/delivery-plans" element={<Protected><DeliveryPlans /></Protected>} />
             <Route path="/payments" element={<ProcurementGate><PaymentsPage /></ProcurementGate>} />
             <Route path="/invoices" element={<ProcurementGate><InvoicesPage /></ProcurementGate>} />

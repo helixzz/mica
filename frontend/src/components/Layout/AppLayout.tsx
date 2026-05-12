@@ -95,9 +95,9 @@ export function AppLayout() {
     { key: '/purchase-requisitions', icon: <SolutionOutlined />, label: <Link to="/purchase-requisitions" onClick={() => setMobileMenuOpen(false)}>{t('nav.purchase_requisitions')}</Link> },
     { key: '/purchase-orders', icon: <FileTextOutlined />, label: <Link to="/purchase-orders" onClick={() => setMobileMenuOpen(false)}>{t('nav.purchase_orders')}</Link> },
     { key: '/delivery-plans', icon: <CarOutlined />, label: <Link to="/delivery-plans" onClick={() => setMobileMenuOpen(false)}>{t('nav.delivery_plans')}</Link> },
+    { key: '/shipments', icon: <CarOutlined />, label: <Link to="/shipments" onClick={() => setMobileMenuOpen(false)}>{t('nav.shipments')}</Link> },
     ...(isRequester ? [] : [
       { key: '/contracts', icon: <ApartmentOutlined />, label: <Link to="/contracts" onClick={() => setMobileMenuOpen(false)}>{t('nav.contracts')}</Link> },
-      { key: '/shipments', icon: <CarOutlined />, label: <Link to="/shipments" onClick={() => setMobileMenuOpen(false)}>{t('nav.shipments')}</Link> },
       { key: '/payments', icon: <BankOutlined />, label: <Link to="/payments" onClick={() => setMobileMenuOpen(false)}>{t('nav.payments')}</Link> },
       { key: '/invoices', icon: <DollarOutlined />, label: <Link to="/invoices" onClick={() => setMobileMenuOpen(false)}>{t('nav.invoices')}</Link> },
       { key: '/sku', icon: <BarChartOutlined />, label: <Link to="/sku" onClick={() => setMobileMenuOpen(false)}>{t('nav.sku')}</Link> },
