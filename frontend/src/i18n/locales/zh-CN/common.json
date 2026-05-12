@@ -273,7 +273,8 @@
     "permission_denied": "权限不足",
     "create_failed": "创建失败",
     "save_failed": "保存失败",
-    "send_failed": "发送失败"
+    "send_failed": "发送失败",
+    "delete_failed": "删除失败"
   },
   "language": {
     "switch": "切换语言",
@@ -514,7 +515,9 @@
     "deadline_help": "填写供应商最晚回复日期。请预留比较报价、内部审批和下单所需时间。",
     "notes_help": "可补充交付要求、报价规则、验收方式或其他供应商需要提前知道的约束。",
     "items_help": "逐项列出需要询价的物料、数量和规格，确保不同供应商基于同一范围报价。",
-    "suppliers_help": "至少邀请一家供应商；若希望横向比价，建议一次选择多家供应商。"
+    "suppliers_help": "至少邀请一家供应商；若希望横向比价，建议一次选择多家供应商。",
+    "delete_confirm_title": "删除询价单",
+    "delete_confirm_content": "确定要删除询价单 {{number}} 吗？此操作不可撤销。"
   },
   "supplier": {
     "back_to_list": "返回列表",
@@ -966,6 +969,7 @@
     "price_cny": "价格（CNY）",
     "quotation_date": "报价日期",
     "source_type": "来源",
+    "pr_title": "采购申请标题",
     "source_manual": "手工录入",
     "source_quote": "供应商报价",
     "source_actual_po": "实际订单",

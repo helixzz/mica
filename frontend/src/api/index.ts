@@ -139,6 +139,7 @@ export interface PurchaseOrder {
   po_number: string
   pr_id: string
   pr_number?: string | null
+  pr_title?: string | null
   supplier_id: string
   supplier_name?: string | null
   supplier_code?: string | null
@@ -162,6 +163,7 @@ export interface PurchaseOrderListItem {
   po_number: string
   pr_id: string
   pr_number?: string | null
+  pr_title?: string | null
   supplier_id: string
   supplier_name?: string | null
   supplier_code?: string | null

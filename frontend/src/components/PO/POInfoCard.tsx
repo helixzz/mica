@@ -14,6 +14,11 @@ export function POInfoCard({ po }: POInfoCardProps) {
   return (
     <Card>
       <Descriptions bordered size="small" column={3}>
+        {po.pr_title && (
+          <Descriptions.Item label={t('field.pr_title')} span={3}>
+            {po.pr_title}
+          </Descriptions.Item>
+        )}
         <Descriptions.Item label={t('field.total_amount')}>
           {fmtAmount(po.total_amount, po.currency)}
         </Descriptions.Item>

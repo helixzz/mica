@@ -132,3 +132,12 @@ async def award_quote(
     rfq.awarded_at = datetime.now(UTC)
     await db.flush()
     return rfq
+
+
+async def delete_rfq(db: AsyncSession, rfq_id: UUID) -> None:
+    rfq = await get_rfq(db, rfq_id)
+    if rfq.status != RFQStatus.DRAFT.value:
+        raise HTTPException(409, "rfq.cannot_delete_non_draft")
+    await db.delete(rfq)
+    await db.flush()
+    await db.commit()

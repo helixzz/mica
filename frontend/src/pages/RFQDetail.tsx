@@ -1,5 +1,5 @@
 import { useTranslation } from 'react-i18next'
-import { CheckCircleOutlined, PlusOutlined } from '@ant-design/icons'
+import { CheckCircleOutlined, DeleteOutlined, PlusOutlined } from '@ant-design/icons'
 import { Button, Card, Col, Descriptions, InputNumber, Modal, Row, Select, Space, Table, Tag, Typography, message } from 'antd'
 import { useEffect, useState } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
@@ -69,6 +69,23 @@ export default function RFQDetailPage() {
     } catch (e) { void message.error(extractError(e).detail || t('rfq.award_failed')) }
   }
 
+  const doDelete = () => {
+    Modal.confirm({
+      title: t('rfq.delete_confirm_title'),
+      content: t('rfq.delete_confirm_content', { number: rfq.rfq_number }),
+      okText: t('button.delete'),
+      okType: 'danger',
+      cancelText: t('button.cancel'),
+      onOk: async () => {
+        try {
+          await client.delete(`/rfqs/${id}`)
+          void message.success(t('message.deleted'))
+          navigate('/rfqs')
+        } catch (e) { void message.error(extractError(e).detail || t('error.delete_failed')) }
+      },
+    })
+  }
+
   const comparisonData = rfq.items.map((item: any) => {
     const row: any = { key: item.id, item_name: item.item_name, qty: Number(item.qty), uom: item.uom }
     for (const sup of rfq.suppliers) {
@@ -111,6 +128,7 @@ export default function RFQDetailPage() {
         <Space>
           <Button onClick={() => navigate('/rfqs')}>{t('button.back')}</Button>
           {canSend && <Button type="primary" onClick={doSend}>{t('rfq.send')}</Button>}
+          {canSend && <Button danger icon={<DeleteOutlined />} onClick={doDelete}>{t('button.delete')}</Button>}
           {canAward && (
             <Button type="primary" onClick={() => {
               const selectedIds = rfq.quotes.filter((q: any) => !q.is_selected).length > 0

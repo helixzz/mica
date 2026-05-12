@@ -14,6 +14,7 @@ const PO_STATUSES = ['draft', 'confirmed', 'partially_received', 'fully_received
 const COLUMN_KEYS = {
   poNumber: 'po_number',
   prNumber: 'pr_number',
+  prTitle: 'pr_title',
   supplier: 'supplier',
   status: 'status',
   totalAmount: 'total_amount',
@@ -60,6 +61,12 @@ export function POListPage() {
         dataIndex: 'pr_number',
         render: (v: string | null, r) =>
           v ? <Link to={`/purchase-requisitions/${r.pr_id}`}>{v}</Link> : '-',
+      },
+      {
+        key: COLUMN_KEYS.prTitle,
+        title: t('field.pr_title'),
+        dataIndex: 'pr_title',
+        render: (v: string | null) => v || '-',
       },
       {
         key: COLUMN_KEYS.supplier,

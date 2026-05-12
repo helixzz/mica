@@ -355,6 +355,7 @@ class POOut(BaseModel):
     id: UUID
     po_number: str
     pr_id: UUID
+    pr_title: str | None = None
     supplier_id: UUID
     company_id: UUID
     status: str
@@ -377,6 +378,7 @@ class POListOut(BaseModel):
     po_number: str
     pr_id: UUID
     pr_number: str | None = None
+    pr_title: str | None = None
     supplier_id: UUID
     supplier_name: str | None = None
     supplier_code: str | None = None
@@ -400,6 +402,8 @@ class POListOut(BaseModel):
             "po_number": value.po_number,
             "pr_id": value.pr_id,
             "pr_number": getattr(getattr(value, "pr", None), "pr_number", None),
+            "pr_title": getattr(getattr(value, "pr", None), "title", None)
+            or getattr(value, "pr_title", None),
             "supplier_id": value.supplier_id,
             "supplier_name": getattr(getattr(value, "supplier", None), "name", None),
             "supplier_code": getattr(getattr(value, "supplier", None), "code", None),

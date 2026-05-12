@@ -478,6 +478,7 @@ async def convert_pr_to_po(db: AsyncSession, actor: User, pr_id: UUID) -> list[P
         po = PurchaseOrder(
             po_number=po_number,
             pr_id=pr.id,
+            pr_title=pr.title,
             supplier_id=supplier_id,
             company_id=pr.company_id,
             status=POStatus.CONFIRMED.value,
@@ -591,7 +592,7 @@ async def convert_pr_to_po(db: AsyncSession, actor: User, pr_id: UUID) -> list[P
                         title=f"PO {po.po_number} created",
                         body=(
                             f"**PO**: {po.po_number}\n"
-                            f"**Source PR**: {pr.pr_number}\n"
+                            f"**Source PR**: {pr.pr_number} — {pr.title}\n"
                             f"**Supplier**: {supplier_name}\n"
                             f"**Amount**: ¥{po.total_amount} {po.currency}\n"
                             f"**Items**: {items_count} line(s)\n"

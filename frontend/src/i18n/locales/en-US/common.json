@@ -273,7 +273,8 @@
     "permission_denied": "Permission denied",
     "create_failed": "Create failed",
     "save_failed": "Save failed",
-    "send_failed": "Send failed"
+    "send_failed": "Send failed",
+    "delete_failed": "Delete failed"
   },
   "language": {
     "switch": "Language",
@@ -509,7 +510,9 @@
     "deadline_help": "Set the latest date suppliers should respond. Leave buffer time for comparison and approval before purchase.",
     "notes_help": "Summarize delivery expectations, bidding rules, or special constraints suppliers should know before quoting.",
     "items_help": "List the requested items with clear quantity and specification so suppliers can quote against the same scope.",
-    "suppliers_help": "Invite at least one supplier. Add multiple suppliers when you want side-by-side quote comparison."
+    "suppliers_help": "Invite at least one supplier. Add multiple suppliers when you want side-by-side quote comparison.",
+    "delete_confirm_title": "Delete RFQ",
+    "delete_confirm_content": "Are you sure you want to delete RFQ {{number}}? This action cannot be undone."
   },
   "supplier": {
     "back_to_list": "Back to List",
@@ -961,6 +964,7 @@
     "price_cny": "Price (CNY)",
     "quotation_date": "Quote Date",
     "source_type": "Source",
+    "pr_title": "PR Title",
     "source_manual": "Manual Entry",
     "source_quote": "Supplier Quote",
     "source_actual_po": "Actual PO",

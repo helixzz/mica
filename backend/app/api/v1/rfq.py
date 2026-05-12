@@ -324,6 +324,16 @@ async def award_quotes(
     return rfq
 
 
+@router.delete("/rfqs/{rfq_id}", status_code=204)
+async def delete_rfq(
+    rfq_id: UUID,
+    user: CurrentUser,
+    db: Annotated[AsyncSession, Depends(get_db)],
+    _role: Annotated[None, Depends(require_roles("admin", "it_buyer", "procurement_mgr"))],
+):
+    await svc.delete_rfq(db, rfq_id)
+
+
 def _to_detail(rfq) -> dict:
     return {
         "id": rfq.id,

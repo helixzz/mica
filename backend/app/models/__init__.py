@@ -478,6 +478,7 @@ class PurchaseOrder(Base, TimestampMixin):
     )
     source_type: Mapped[str] = mapped_column(String(32), default="manual", nullable=False)
     source_ref: Mapped[str | None] = mapped_column(String(128))
+    pr_title: Mapped[str | None] = mapped_column(String(255), nullable=True)
     created_by_id: Mapped[UUID] = mapped_column(
         PGUUID(as_uuid=True), ForeignKey("users.id"), nullable=False
     )
