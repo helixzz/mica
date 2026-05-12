@@ -78,7 +78,17 @@ async def create_plan(
         from app.services.system_params import notification_enabled
 
         if await notification_enabled(db, "delivery_plan_created"):
-            po = await db.get(PurchaseOrder, payload.po_id)
+            po = None
+            contract = None
+            if payload.po_id:
+                po = await db.get(PurchaseOrder, payload.po_id)
+            elif payload.contract_id:
+                from app.models import Contract
+
+                contract = await db.get(Contract, payload.contract_id)
+                if contract:
+                    po = await db.get(PurchaseOrder, contract.po_id)
+
             if po and po.created_by_id:
                 recipients = {po.created_by_id}
                 admin_rows = (
@@ -105,6 +115,7 @@ async def create_plan(
                         body=(
                             f"**Plan**: {plan.plan_name}\n"
                             f"**PO**: {po.po_number}\n"
+                            f"{'**Contract**: ' + contract.contract_number + chr(10) if payload.contract_id and contract else ''}"
                             f"**Planned Qty**: {plan.planned_qty}\n"
                             f"**Planned Date**: {plan.planned_date}\n"
                             f"**Created by**: {user.display_name}"
