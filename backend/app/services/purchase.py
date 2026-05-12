@@ -592,6 +592,7 @@ async def convert_pr_to_po(db: AsyncSession, actor: User, pr_id: UUID) -> list[P
                         title=f"PO {po.po_number} created",
                         body=(
                             f"**PO**: {po.po_number}\n"
+                            f"**PR**: {po.pr_title or '—'}\n"
                             f"**Source PR**: {pr.pr_number} — {pr.title}\n"
                             f"**Supplier**: {supplier_name}\n"
                             f"**Amount**: ¥{po.total_amount} {po.currency}\n"

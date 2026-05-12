@@ -183,6 +183,7 @@ async def create_contract(
                         f"**Contract**: {contract.contract_number}\n"
                         f"**Title**: {contract.title}\n"
                         f"**PO**: {po.po_number}\n"
+                        f"**PR**: {po.pr_title or '—'}\n"
                         f"**Amount**: ¥{contract.total_amount}\n"
                         f"**Effective**: {contract.effective_date} | **Expires**: {contract.expiry_date}\n"
                         f"**Created by**: {actor.display_name}"
@@ -752,6 +753,7 @@ async def create_shipment(
                     title=f"PO {po.po_number} {status_label}",
                     body=(
                         f"**PO**: {po.po_number}\n"
+                        f"**PR**: {po.pr_title or '—'}\n"
                         f"**Shipment**: {shipment.shipment_number} (Batch {shipment.batch_no})\n"
                         f"**Status**: {status_label} ({po.qty_received}/{total_qty} received)\n"
                         f"**Carrier**: {shipment.carrier or '—'} | **Tracking**: {shipment.tracking_number or '—'}\n"
@@ -875,6 +877,7 @@ async def update_shipment(
                             title=f"Shipment {shipment.shipment_number} updated",
                             body=(
                                 f"**Shipment**: {shipment.shipment_number} | **PO**: {po.po_number}\n"
+                                f"**PR**: {po.pr_title or '—'}\n"
                                 f"**Carrier**: {shipment.carrier or '—'} | **Tracking**: {shipment.tracking_number or '—'}\n"
                                 f"**Changes**:\n{changes_str}\n"
                                 f"**Updated by**: {actor.display_name}"
@@ -1121,6 +1124,8 @@ async def create_payment(
                     title=f"Payment {record.payment_number} created",
                     body=(
                         f"**Payment**: {record.payment_number} (Installment #{record.installment_no})\n"
+                        f"**PO**: {po.po_number}\n"
+                        f"**PR**: {po.pr_title or '—'}\n"
                         f"**Amount**: ¥{record.amount} {record.currency}\n"
                         f"**Due date**: {record.due_date}\n"
                         f"**Status**: {record.status}\n"
@@ -1319,6 +1324,7 @@ async def update_payment(
                         title=f"Payment {record.payment_number} updated",
                         body=(
                             f"**Payment**: {record.payment_number} | **PO**: {po.po_number}\n"
+                            f"**PR**: {po.pr_title or '—'}\n"
                             f"**Amount**: ¥{record.amount} {record.currency}\n"
                             f"**Changes**:\n{changes_str}\n"
                             f"**Updated by**: {actor.display_name}"

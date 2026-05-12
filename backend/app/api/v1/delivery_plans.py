@@ -115,6 +115,7 @@ async def create_plan(
                         body=(
                             f"**Plan**: {plan.plan_name}\n"
                             f"**PO**: {po.po_number}\n"
+                            f"**PR**: {po.pr_title or '—'}\n"
                             + (f"**Contract**: {contract.contract_number}\n" if contract else "")
                             + f"**Item**: {plan.item_name or '—'}\n"
                             f"**Qty**: {plan.planned_qty} | **Date**: {plan.planned_date}\n"
@@ -220,6 +221,7 @@ async def update_plan(
                         title=f"Delivery plan updated: {plan.plan_name}",
                         body=(
                             f"**Plan**: {plan.plan_name} | **PO**: {po.po_number if po else '—'}\n"
+                            f"**PR**: {po.pr_title if po else '—'}\n"
                             f"**Item**: {item_name or '—'}\n"
                             f"**Qty**: {plan.planned_qty} | **Date**: {plan.planned_date}\n"
                             + (f"**Changes**:\n{changes_str}\n" if changes else "")
