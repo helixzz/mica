@@ -193,6 +193,8 @@ async def _maybe_send_feishu_card(
         NotificationCategory.FEISHU_PAYMENT_PENDING,
         NotificationCategory.FEISHU_CONTRACT_EXPIRING,
         NotificationCategory.SYSTEM,
+        NotificationCategory.CONTRACT_EXPIRING,
+        NotificationCategory.PRICE_ANOMALY,
     }
     if notification.category not in feishu_categories:
         return
@@ -338,7 +340,14 @@ def _build_feishu_card(
             link_url=notification.link_url or "",
         )
 
-    return None
+    # Generic fallback for any category without a dedicated card builder
+    from app.services.feishu.messages import _make_generic_card
+
+    return _make_generic_card(
+        title=notification.title,
+        body=notification.body or "",
+        link_url=notification.link_url or "",
+    )
 
 
 async def bulk_notify_role(
