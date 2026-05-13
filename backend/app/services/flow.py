@@ -197,7 +197,11 @@ async def create_contract(
                 )
             await db.commit()
     except Exception:
-        logger.warning("Failed to send contract_created notification for contract=%s", contract.id, exc_info=True)
+        logger.warning(
+            "Failed to send contract_created notification for contract=%s",
+            contract.id,
+            exc_info=True,
+        )
 
     await db.refresh(contract)
     return contract
@@ -518,7 +522,11 @@ async def update_contract(
                 )
             await db.commit()
     except Exception:
-        logger.warning("Failed to send contract_updated notification for contract=%s", contract.id, exc_info=True)
+        logger.warning(
+            "Failed to send contract_updated notification for contract=%s",
+            contract.id,
+            exc_info=True,
+        )
 
     return contract
 
@@ -603,7 +611,11 @@ async def transition_contract_status(
                     )
                 await db.commit()
         except Exception:
-            logger.warning("Failed to send contract_status_changed notification for contract=%s", contract.id, exc_info=True)
+            logger.warning(
+                "Failed to send contract_status_changed notification for contract=%s",
+                contract.id,
+                exc_info=True,
+            )
 
     await db.refresh(contract)
     return contract
@@ -768,7 +780,11 @@ async def create_shipment(
                 )
             await db.commit()
     except Exception:
-        logger.warning("Failed to send shipment_received notification for shipment=%s", shipment.id, exc_info=True)
+        logger.warning(
+            "Failed to send shipment_received notification for shipment=%s",
+            shipment.id,
+            exc_info=True,
+        )
 
     result = await db.execute(
         select(Shipment).where(Shipment.id == shipment.id).options(selectinload(Shipment.items))
@@ -891,7 +907,11 @@ async def update_shipment(
                         )
                     await db.commit()
         except Exception:
-            logger.warning("Failed to send shipment_updated notification for shipment=%s", shipment.id, exc_info=True)
+            logger.warning(
+                "Failed to send shipment_updated notification for shipment=%s",
+                shipment.id,
+                exc_info=True,
+            )
 
     result = await db.execute(
         select(Shipment).where(Shipment.id == shipment_id).options(selectinload(Shipment.items))
@@ -1141,7 +1161,9 @@ async def create_payment(
                 )
             await db.commit()
     except Exception:
-        logger.warning("Failed to send payment_created notification for payment=%s", record.id, exc_info=True)
+        logger.warning(
+            "Failed to send payment_created notification for payment=%s", record.id, exc_info=True
+        )
 
     await db.refresh(record)
     return record
@@ -1338,7 +1360,9 @@ async def update_payment(
                     )
                 await db.commit()
     except Exception:
-        logger.warning("Failed to send payment_updated notification for payment=%s", record.id, exc_info=True)
+        logger.warning(
+            "Failed to send payment_updated notification for payment=%s", record.id, exc_info=True
+        )
 
     return record
 
@@ -1669,7 +1693,9 @@ async def create_invoice(
                 )
             await db.commit()
     except Exception:
-        logger.warning("Failed to send invoice_created notification for invoice=%s", invoice.id, exc_info=True)
+        logger.warning(
+            "Failed to send invoice_created notification for invoice=%s", invoice.id, exc_info=True
+        )
 
     try:
         from app.models import NotificationCategory, UserRole
@@ -1709,7 +1735,9 @@ async def create_invoice(
                 )
             await db.commit()
     except Exception:
-        logger.warning("Failed to send invoice_matched notification for invoice=%s", invoice.id, exc_info=True)
+        logger.warning(
+            "Failed to send invoice_matched notification for invoice=%s", invoice.id, exc_info=True
+        )
 
     loaded = (
         await db.execute(
