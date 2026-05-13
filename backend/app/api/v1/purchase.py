@@ -90,6 +90,15 @@ async def submit_pr(
     return PROut.model_validate(pr)
 
 
+@router.delete("/purchase-requisitions/{pr_id}", status_code=204, tags=["purchase"])
+async def delete_pr(
+    pr_id: UUID,
+    user: CurrentUser,
+    db: Annotated[AsyncSession, Depends(get_db)],
+):
+    await svc.delete_pr(db, user, pr_id)
+
+
 @router.post("/purchase-requisitions/{pr_id}/decide", response_model=PROut, tags=["purchase"])
 async def decide_pr(
     pr_id: UUID,

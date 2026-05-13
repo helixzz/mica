@@ -813,6 +813,14 @@ async def get_po(db: AsyncSession, po_id: UUID, actor: User | None = None) -> Pu
 _SUPPLIER_QUOTE_SOURCE_TYPE = "supplier_quote"
 
 
+async def delete_pr(db: AsyncSession, actor: User, pr_id: UUID) -> None:
+    pr = await get_pr(db, actor, pr_id)
+    if pr.status != PRStatus.DRAFT.value:
+        raise HTTPException(409, "pr.cannot_delete_submitted")
+    await db.delete(pr)
+    await db.commit()
+
+
 def _quote_source_ref(pr_number: str, line_no: int) -> str:
     return f"{pr_number}-L{line_no}"
 

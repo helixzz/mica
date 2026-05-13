@@ -1063,6 +1063,9 @@ export const api = {
     const { data } = await client.post<PurchaseRequisition>(`/purchase-requisitions/${id}/submit`)
     return data
   },
+  async deletePR(id: string): Promise<void> {
+    await client.delete(`/purchase-requisitions/${id}`)
+  },
   async decidePR(
     id: string,
     action: 'approve' | 'reject' | 'return',
