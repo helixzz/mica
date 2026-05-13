@@ -269,7 +269,7 @@ async def update_pr(
         from app.services.system_params import notification_enabled
 
         if await notification_enabled(db, "pr_updated"):
-            recipients = {actor.id}
+            recipients = {actor.id, pr.requester_id}
             if pr.department_id:
                 dept_managers = (
                     (
