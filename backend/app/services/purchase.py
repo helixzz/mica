@@ -148,6 +148,8 @@ async def create_pr(db: AsyncSession, actor: User, payload: PRCreateIn) -> Purch
 
         if await notification_enabled(db, "pr_created"):
             recipients: set[str] = {str(actor.id)}
+            if pr.requester_id:
+                recipients.add(str(pr.requester_id))
             if pr.department_id:
                 dept_managers = (
                     (
@@ -561,6 +563,8 @@ async def convert_pr_to_po(db: AsyncSession, actor: User, pr_id: UUID) -> list[P
             supplier_names = {s.id: s.name for s in supplier_rows}
 
             recipients = {actor.id}
+            if pr.requester_id:
+                recipients.add(pr.requester_id)
             admin_rows = (
                 (
                     await db.execute(

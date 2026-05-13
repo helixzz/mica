@@ -163,6 +163,9 @@ async def create_contract(
 
         if await notification_enabled(db, "contract_created"):
             recipients = {actor.id}
+            pr = await db.get(PurchaseRequisition, po.pr_id)
+            if pr and pr.requester_id:
+                recipients.add(pr.requester_id)
             admin_rows = (
                 (
                     await db.execute(
@@ -487,6 +490,10 @@ async def update_contract(
             po = await db.get(PurchaseOrder, contract.po_id)
             if po and po.created_by_id:
                 recipients.add(str(po.created_by_id))
+            if po and po.pr_id:
+                pr = await db.get(PurchaseRequisition, po.pr_id)
+                if pr and pr.requester_id:
+                    recipients.add(str(pr.requester_id))
             admin_rows = (
                 (
                     await db.execute(
@@ -575,6 +582,10 @@ async def transition_contract_status(
                 po = await db.get(PurchaseOrder, contract.po_id)
                 if po and po.created_by_id:
                     recipients.add(str(po.created_by_id))
+                if po and po.pr_id:
+                    pr = await db.get(PurchaseRequisition, po.pr_id)
+                    if pr and pr.requester_id:
+                        recipients.add(str(pr.requester_id))
                 admin_rows = (
                     (
                         await db.execute(
@@ -747,6 +758,9 @@ async def create_shipment(
                 else "partially received"
             )
             recipients = {actor.id, po.created_by_id}
+            pr = await db.get(PurchaseRequisition, po.pr_id)
+            if pr and pr.requester_id:
+                recipients.add(pr.requester_id)
             admin_rows = (
                 (
                     await db.execute(
@@ -870,6 +884,10 @@ async def update_shipment(
                 po = await db.get(PurchaseOrder, shipment.po_id)
                 if po:
                     recipients = {actor.id, po.created_by_id}
+                    if po.pr_id:
+                        pr = await db.get(PurchaseRequisition, po.pr_id)
+                        if pr and pr.requester_id:
+                            recipients.add(pr.requester_id)
                     admin_rows = (
                         (
                             await db.execute(
@@ -1126,6 +1144,9 @@ async def create_payment(
 
         if await notification_enabled(db, "payment_created"):
             recipients = {actor.id}
+            pr = await db.get(PurchaseRequisition, po.pr_id)
+            if pr and pr.requester_id:
+                recipients.add(pr.requester_id)
             admin_rows = (
                 (
                     await db.execute(
@@ -1323,6 +1344,10 @@ async def update_payment(
             po = await db.get(PurchaseOrder, record.po_id)
             if po:
                 recipients = {actor.id, po.created_by_id}
+                if po.pr_id:
+                    pr = await db.get(PurchaseRequisition, po.pr_id)
+                    if pr and pr.requester_id:
+                        recipients.add(pr.requester_id)
                 admin_rows = (
                     (
                         await db.execute(
@@ -1658,6 +1683,29 @@ async def create_invoice(
 
         if await notification_enabled(db, "invoice_created"):
             recipients = {actor.id}
+            # Add PR requesters from all touched POs
+            if touched_po_ids:
+                po_rows = (
+                    (
+                        await db.execute(
+                            select(PurchaseOrder.pr_id).where(PurchaseOrder.id.in_(touched_po_ids))
+                        )
+                    )
+                    .scalars()
+                    .all()
+                )
+                pr_ids = {pid for pid in po_rows if pid}
+                if pr_ids:
+                    pr_rows = (
+                        await db.execute(
+                            select(PurchaseRequisition.id, PurchaseRequisition.requester_id).where(
+                                PurchaseRequisition.id.in_(pr_ids)
+                            )
+                        )
+                    ).all()
+                    for _pr_id, req_id in pr_rows:
+                        if req_id:
+                            recipients.add(req_id)
             admin_rows = (
                 (
                     await db.execute(
