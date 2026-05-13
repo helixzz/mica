@@ -24,6 +24,12 @@ logger = logging.getLogger("mica.delivery_plans")
 router = APIRouter()
 
 
+async def _get_labels() -> dict[str, dict[str, str]]:
+    from app.i18n import notification_labels
+
+    return {"zh-CN": notification_labels("zh-CN"), "en-US": notification_labels("en-US")}
+
+
 async def _resolve_po(
     db: AsyncSession, po_id: UUID | None, contract_id: UUID | None
 ) -> tuple[PurchaseOrder | None, Contract | None]:
@@ -116,6 +122,12 @@ async def create_plan(
             po, contract = await _resolve_po(db, payload.po_id, payload.contract_id)
             if po and po.created_by_id:
                 recipients = {po.created_by_id} | await _admin_recipients(db)
+                from app.models import PurchaseRequisition
+
+                pr = await db.get(PurchaseRequisition, po.pr_id)
+                if pr and pr.submitter_id:
+                    recipients.add(pr.submitter_id)
+                labels = await _get_labels()
                 pn = plan.plan_name
                 po_n = po.po_number
                 pr_t = po.pr_title
@@ -129,10 +141,12 @@ async def create_plan(
                     return f"Delivery plan created: {_pn}"
 
                 def _created_body(u):
+                    loc = u.preferred_locale if u and u.preferred_locale else "zh-CN"
+                    L = labels.get(loc, labels["zh-CN"])
                     return (
-                        f"**Plan**: {pn}\n**PO**: {po_n}\n**PR**: {pr_t or '—'}\n"
-                        + (f"**Contract**: {ct_n}\n" if ct_n else "")
-                        + f"**Item**: {item or '—'}\n**Qty**: {qty} | **Date**: {dt}\n**Created by**: {actor_n}"
+                        f"**{L['plan']}**: {pn}\n**{L['po']}**: {po_n}\n**{L['pr']}**: {pr_t or '—'}\n"
+                        + (f"**{L['contract']}**: {ct_n}\n" if ct_n else "")
+                        + f"**{L['item']}**: {item or '—'}\n**{L['qty']}**: {qty} | **{L['date']}**: {dt}\n**{L['created_by']}**: {actor_n}"
                     )
 
                 await _notify(
@@ -163,6 +177,12 @@ async def update_plan(
             po, _ = await _resolve_po(db, plan.po_id, plan.contract_id)
             if po and po.created_by_id:
                 recipients = {po.created_by_id} | await _admin_recipients(db)
+                from app.models import PurchaseRequisition
+
+                pr = await db.get(PurchaseRequisition, po.pr_id)
+                if pr and pr.submitter_id:
+                    recipients.add(pr.submitter_id)
+                labels = await _get_labels()
                 changes = [
                     f"- **{k}**: {getattr(plan, k, None)} → {v}"
                     for k, v in payload.model_dump(exclude_unset=True).items()
@@ -184,11 +204,13 @@ async def update_plan(
                     return f"Delivery plan updated: {_pn}"
 
                 def _updated_body(u):
+                    loc = u.preferred_locale if u and u.preferred_locale else "zh-CN"
+                    L = labels.get(loc, labels["zh-CN"])
                     return (
-                        f"**Plan**: {pn} | **PO**: {po_n}\n**PR**: {pr_t or '—'}\n**Item**: {item_name or '—'}\n"
-                        f"**Qty**: {qty} | **Date**: {dt}\n"
-                        + (f"**Changes**:\n{changes_str}\n" if changes else "")
-                        + f"**Updated by**: {actor_n}"
+                        f"**{L['plan']}**: {pn} | **{L['po']}**: {po_n}\n**{L['pr']}**: {pr_t or '—'}\n**{L['item']}**: {item_name or '—'}\n"
+                        f"**{L['qty']}**: {qty} | **{L['date']}**: {dt}\n"
+                        + (f"**{L['changes']}**:\n{changes_str}\n" if changes else "")
+                        + f"**{L['updated_by']}**: {actor_n}"
                     )
 
                 await _notify(
