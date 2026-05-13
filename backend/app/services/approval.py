@@ -19,6 +19,7 @@ from app.models import (
     ApprovalTask,
     ApproverDelegation,
     NotificationCategory,
+    PurchaseRequisition,
     User,
     UserRole,
 )
@@ -366,6 +367,26 @@ async def _advance_next_task(db: AsyncSession, instance: ApprovalInstance) -> bo
     return True
 
 
+def _build_pr_notification_body(
+    pr: PurchaseRequisition | None,
+    comment: str | None,
+    decision_label_key: str,
+    locale: str,
+) -> str:
+    lines: list[str] = []
+    if comment:
+        lines.append(comment)
+        lines.append("")
+    if pr is not None:
+        lines.append(f"**PR**: {pr.pr_number}")
+        lines.append(f"**Title**: {pr.title}")
+        items_count = len(pr.items) if pr.items else 0
+        lines.append(f"**Items**: {items_count} line(s)")
+        lines.append(f"**Amount**: ¥{pr.total_amount or '—'}")
+    lines.append(f"**Result**: {t(decision_label_key, locale)}")
+    return "\n".join(lines)
+
+
 async def act_on_task(
     db: AsyncSession,
     user: User,
@@ -429,6 +450,13 @@ async def act_on_task(
     if instance.status in {"approved", "rejected", "returned"}:
         try:
             if await notification_enabled(db, "approval"):
+                pr_stmt = (
+                    select(PurchaseRequisition)
+                    .where(PurchaseRequisition.id == instance.biz_id)
+                    .options(selectinload(PurchaseRequisition.items))
+                )
+                pr_result = await db.execute(pr_stmt)
+                pr = pr_result.scalars().first()
                 _ = await create_notification(
                     db,
                     user_id=instance.submitter_id,
@@ -444,7 +472,14 @@ async def act_on_task(
                         else "zh-CN",
                         title=instance.title,
                     ),
-                    body=comment,
+                    body=lambda submitter: _build_pr_notification_body(
+                        pr=pr,
+                        comment=comment,
+                        decision_label_key=f"notification.approval.result_{instance.status}",
+                        locale=submitter.preferred_locale
+                        if submitter and submitter.preferred_locale
+                        else "zh-CN",
+                    ),
                     link_url=f"/purchase-requisitions/{instance.biz_id}",
                     biz_type=instance.biz_type,
                     biz_id=instance.biz_id,

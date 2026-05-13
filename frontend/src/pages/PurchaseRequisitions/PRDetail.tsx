@@ -93,6 +93,7 @@ export function PRDetailPage() {
 
   const canSubmit = (pr.status === 'draft' || pr.status === 'returned') && user?.id === pr.requester_id
   const canEdit = (pr.status === 'draft' || pr.status === 'returned') && user?.id === pr.requester_id
+  const canDelete = pr.status === 'draft' && user?.id === pr.requester_id
   const canDecide =
     pr.status === 'submitted' && (user?.role === 'dept_manager' || user?.role === 'admin')
   const isBuyer = user?.role === 'it_buyer' || user?.role === 'procurement_mgr' || user?.role === 'admin'
@@ -134,6 +135,25 @@ export function PRDetailPage() {
           void message.error(err.detail || t('error.unexpected'))
         } finally {
           setBusy(false)
+        }
+      },
+    })
+  }
+
+  const runDelete = () => {
+    Modal.confirm({
+      title: t('pr.confirm_delete_title'),
+      content: t('pr.confirm_delete_body'),
+      okText: t('button.delete'),
+      okType: 'danger',
+      cancelText: t('button.cancel'),
+      onOk: async () => {
+        try {
+          await api.deletePR(pr.id)
+          void message.success(t('message.deleted'))
+          navigate('/purchase-requisitions')
+        } catch (e) {
+          void message.error(extractError(e).detail)
         }
       },
     })
@@ -248,6 +268,11 @@ export function PRDetailPage() {
           {canEdit && (
             <Button onClick={() => navigate(`/purchase-requisitions/${pr.id}/edit`)}>
               {t('button.edit') || '编辑'}
+            </Button>
+          )}
+          {canDelete && (
+            <Button danger onClick={runDelete}>
+              {t('button.delete')}
             </Button>
           )}
           {canSubmit && (

@@ -633,7 +633,9 @@
     "business_reason_help": "Explain why the purchase is needed, who will use it, and any timing or business impact approvers should know.",
     "line_items_help": "Add one line per requested item. If the final supplier or price is not fixed yet, submit the item, quantity, and specification first.",
     "copy_button": "Copy PR",
-    "copying_from": "Copying from {{title}}"
+    "copying_from": "Copying from {{title}}",
+    "confirm_delete_title": "Confirm Delete PR",
+    "confirm_delete_body": "This action cannot be undone. Delete this PR?"
   },
   "admin": {
     "departments": "Departments",

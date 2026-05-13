@@ -65,7 +65,10 @@
       "new_task": "新审批任务: {title}",
       "approved": "审批已通过: {title}",
       "rejected": "审批被驳回: {title}",
-      "returned": "审批被退回: {title}"
+      "returned": "审批被退回: {title}",
+      "result_approved": "已批准",
+      "result_rejected": "已拒绝",
+      "result_returned": "已退回"
     },
     "contract": {
       "expiring": "合同即将到期: {name}"

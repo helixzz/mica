@@ -65,7 +65,10 @@
       "new_task": "New approval task: {title}",
       "approved": "Approved: {title}",
       "rejected": "Rejected: {title}",
-      "returned": "Returned: {title}"
+      "returned": "Returned: {title}",
+      "result_approved": "Approved",
+      "result_rejected": "Rejected",
+      "result_returned": "Returned"
     },
     "contract": {
       "expiring": "Contract expiring soon: {name}"

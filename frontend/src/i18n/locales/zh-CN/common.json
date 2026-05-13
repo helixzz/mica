@@ -638,7 +638,9 @@
     "business_reason_help": "说明采购原因、使用对象、期望时间以及不采购可能带来的业务影响。",
     "line_items_help": "每一行填写一项待采购物料。若最终供应商和价格尚未确定，也可以先提交物料、数量和规格。",
     "copy_button": "复制采购申请",
-    "copying_from": "正在复制 {{title}}"
+    "copying_from": "正在复制 {{title}}",
+    "confirm_delete_title": "确认删除采购申请",
+    "confirm_delete_body": "删除后将无法恢复，确认删除此采购申请？"
   },
   "admin": {
     "departments": "部门管理",
