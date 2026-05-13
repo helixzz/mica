@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from datetime import UTC, datetime
+from datetime import UTC, date, datetime
 from decimal import Decimal
 from uuid import UUID
 
@@ -111,6 +111,27 @@ async def add_quote(
     if sup and not sup.responded_at:
         sup.responded_at = datetime.now(UTC)
         sup.status = "quoted"
+
+    # Record SKU price for tracking
+    try:
+        rfq_item = await db.get(RFQItem, data["rfq_item_id"])
+        if rfq_item and rfq_item.item_id:
+            from app.models import SKUPriceRecord
+
+            sid = data["supplier_id"] if isinstance(data["supplier_id"], UUID) else UUID(str(data["supplier_id"]))
+            db.add(
+                SKUPriceRecord(
+                    item_id=rfq_item.item_id,
+                    supplier_id=sid,
+                    price=Decimal(str(data["unit_price"])),
+                    currency=data.get("currency", "CNY"),
+                    quotation_date=date.today(),
+                    source_type="rfq_quote",
+                    source_ref=f"RFQ:{rfq.rfq_number}",
+                )
+            )
+    except Exception:
+        pass
 
     await db.flush()
     return quote
