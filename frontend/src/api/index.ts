@@ -91,6 +91,7 @@ export interface PurchaseRequisition {
   business_reason: string | null
   status: string
   requester_id: string
+  requester_name: string
   company_id: string
   department_id: string | null
   cost_center_id: string | null
@@ -1473,6 +1474,7 @@ export const api = {
     event_type?: string
     actor_id?: string
     resource_type?: string
+    resource_id?: string
     date_from?: string
     date_to?: string
   } = {}): Promise<{ items: Record<string, unknown>[]; total: number; page: number; page_size: number }> {

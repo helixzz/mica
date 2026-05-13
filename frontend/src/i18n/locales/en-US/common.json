@@ -1386,5 +1386,9 @@
     "ma_30d": "30-Day MA",
     "recent_avg": "Recent Avg",
     "sample_size": "Sample Size"
+  },
+  "activity": {
+    "title": "Activity Log",
+    "no_events": "No activity records"
   }
 }

@@ -618,7 +618,10 @@ async def _load_pr(db: AsyncSession, pr_id: UUID) -> PurchaseRequisition | None:
     result = await db.execute(
         select(PurchaseRequisition)
         .where(PurchaseRequisition.id == pr_id)
-        .options(selectinload(PurchaseRequisition.items))
+        .options(
+            selectinload(PurchaseRequisition.items),
+            selectinload(PurchaseRequisition.requester),
+        )
     )
     return result.scalar_one_or_none()
 

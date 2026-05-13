@@ -5,6 +5,7 @@ import {
   Modal,
   Space,
   Table,
+  Tabs,
   Tag,
   Typography,
   message,
@@ -22,6 +23,7 @@ import {
   type Supplier,
 } from '@/api'
 import { extractError } from '@/api/client'
+import { ActivityTimeline } from '@/components/ActivityTimeline'
 import { fmtAmount, fmtQty } from '@/utils/format'
 import { useAuth } from '@/auth/useAuth'
 
@@ -316,6 +318,9 @@ export function PRDetailPage() {
       <Card>
         <Descriptions bordered size="small" column={2}>
           <Descriptions.Item label={t('field.title')}>{pr.title}</Descriptions.Item>
+          <Descriptions.Item label={t('field.requester')}>
+            {pr.requester_name || '-'}
+          </Descriptions.Item>
           <Descriptions.Item label={t('field.total_amount')}>
             {fmtAmount(pr.total_amount, pr.currency)}
           </Descriptions.Item>
@@ -362,6 +367,10 @@ export function PRDetailPage() {
             { title: t('field.amount'), dataIndex: 'amount', align: 'right', render: (v: string) => fmtAmount(v) },
           ]}
         />
+      </Card>
+
+      <Card title={t('activity.title', '活动日志')}>
+        <ActivityTimeline resourceType="purchase_requisition" resourceId={pr.id} />
       </Card>
 
       {(downstream.purchase_orders.length > 0 || downstream.contracts.length > 0) && (

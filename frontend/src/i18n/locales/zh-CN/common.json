@@ -1391,5 +1391,9 @@
     "ma_30d": "30日均价",
     "recent_avg": "近期均价",
     "sample_size": "样本数"
+  },
+  "activity": {
+    "title": "活动日志",
+    "no_events": "暂无活动记录"
   }
 }

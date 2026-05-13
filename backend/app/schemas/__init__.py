@@ -5,7 +5,7 @@ import re
 # pyright: reportUnannotatedClassAttribute=false, reportAny=false, reportExplicitAny=false, reportUnknownMemberType=false, reportUnknownVariableType=false
 from datetime import date, datetime
 from decimal import Decimal
-from typing import Literal
+from typing import Any, Literal
 from uuid import UUID
 
 from pydantic import BaseModel, ConfigDict, Field, field_validator, model_validator
@@ -305,6 +305,7 @@ class PROut(BaseModel):
     business_reason: str | None
     status: str
     requester_id: UUID
+    requester_name: str = ""
     company_id: UUID
     department_id: UUID | None
     cost_center_id: UUID | None = None
@@ -320,6 +321,19 @@ class PROut(BaseModel):
     created_at: datetime
     updated_at: datetime
     items: list[PRItemOut]
+
+    @model_validator(mode="before")
+    @classmethod
+    def _add_requester_name(cls, data: Any) -> Any:
+        if not isinstance(data, dict) and hasattr(data, "requester") and data.requester is not None:
+            result: dict[str, Any] = {}
+            for field_name in cls.model_fields:
+                if field_name == "requester_name":
+                    result["requester_name"] = data.requester.display_name
+                elif hasattr(data, field_name):
+                    result[field_name] = getattr(data, field_name)
+            return result
+        return data
 
 
 class PRListOut(BaseModel):

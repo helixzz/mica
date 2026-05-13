@@ -747,6 +747,7 @@ async def list_audit_logs(
     event_type: str | None = Query(None),
     actor_id: UUID | None = Query(None),
     resource_type: str | None = Query(None),
+    resource_id: str | None = Query(None),
     date_from: datetime | None = Query(None),
     date_to: datetime | None = Query(None),
 ):
@@ -757,6 +758,8 @@ async def list_audit_logs(
         query = query.where(AuditLog.actor_id == actor_id)
     if resource_type:
         query = query.where(AuditLog.resource_type == resource_type)
+    if resource_id:
+        query = query.where(AuditLog.resource_id == resource_id)
     if date_from:
         query = query.where(AuditLog.occurred_at >= date_from)
     if date_to:
