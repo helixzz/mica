@@ -213,6 +213,7 @@ async def _maybe_send_feishu_card(
         NotificationCategory.FEISHU_PAYMENT_PENDING,
         NotificationCategory.FEISHU_CONTRACT_EXPIRING,
         NotificationCategory.SYSTEM,
+        NotificationCategory.APPROVAL,
         NotificationCategory.CONTRACT_EXPIRING,
         NotificationCategory.PRICE_ANOMALY,
     }
