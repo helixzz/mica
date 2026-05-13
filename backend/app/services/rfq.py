@@ -97,8 +97,8 @@ async def add_quote(
     quote = RFQQuote(
         id=new_uuid(),
         rfq_id=rfq_id,
-        rfq_item_id=UUID(data["rfq_item_id"]),
-        supplier_id=UUID(data["supplier_id"]),
+        rfq_item_id=data["rfq_item_id"],
+        supplier_id=data["supplier_id"],
         unit_price=Decimal(str(data["unit_price"])),
         currency=data.get("currency", "CNY"),
         delivery_days=data.get("delivery_days"),
@@ -107,7 +107,7 @@ async def add_quote(
     )
     db.add(quote)
 
-    sup = next((s for s in rfq.suppliers if s.supplier_id == UUID(data["supplier_id"])), None)
+    sup = next((s for s in rfq.suppliers if str(s.supplier_id) == str(data["supplier_id"])), None)
     if sup and not sup.responded_at:
         sup.responded_at = datetime.now(UTC)
         sup.status = "quoted"
