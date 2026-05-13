@@ -125,8 +125,8 @@ async def create_plan(
                 from app.models import PurchaseRequisition
 
                 pr = await db.get(PurchaseRequisition, po.pr_id)
-                if pr and pr.submitter_id:
-                    recipients.add(pr.submitter_id)
+                if pr and pr.requester_id:
+                    recipients.add(pr.requester_id)
                 labels = await _get_labels()
                 pn = plan.plan_name
                 po_n = po.po_number
@@ -180,8 +180,8 @@ async def update_plan(
                 from app.models import PurchaseRequisition
 
                 pr = await db.get(PurchaseRequisition, po.pr_id)
-                if pr and pr.submitter_id:
-                    recipients.add(pr.submitter_id)
+                if pr and pr.requester_id:
+                    recipients.add(pr.requester_id)
                 labels = await _get_labels()
                 changes = [
                     f"- **{k}**: {getattr(plan, k, None)} → {v}"
