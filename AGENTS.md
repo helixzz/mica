@@ -263,15 +263,23 @@ docker compose up -d && sleep 15
 - commit body 解释 **why**，不只是 **what**
 - **不要**在 commit message 里写"由某某工具/助手生成"之类的元信息
 
-## 9. 未完待续
+## 9. 版本发布流程（强制规定，不可跳过）
 
-详见 [CHANGELOG.md](./CHANGELOG.md) "版本路线（规划中）" 章节。当前 v0.8.0 已交付；v0.9 候选主题：
-- 飞书集成（消息通知 + 审批卡片联动）
-- 覆盖率硬阈值（backend 70% / frontend 60%）+ E2E 浏览器测试
-- 批量导入 Excel
-- 真实 LLM 模型接通演示
+**每次代码修改（包括 bugfix 和 new feature）必须执行完整发布流程：**
 
-新功能进入开发前，建议先看 [CHANGELOG.md](./CHANGELOG.md) 和相关 ADR，避免与既有设计冲突。
+1. **Bump version** — 同时修改以下 4 个文件中的版本号：
+   - `frontend/package.json` → 第 4 行 `"version": "X.Y.Z"`
+   - `backend/pyproject.toml` → 第 3 行 `version = "X.Y.Z"`
+   - `backend/app/config.py` → `app_version: str = "X.Y.Z"`
+   - `README.md` → 第 13 行 `version-X.Y.Z` badge URL
+
+2. **Create Release** — `gh release create vX.Y.Z --title "vX.Y.Z — 简短描述" --notes "详细 changelog"`
+
+3. **Deploy** — `ssh` + `docker compose up -d --build` 到生产环境
+
+4. **Update CHANGELOG.md** — 补充该版本的入口
+
+**不 bump version → 不部署 → 不视为完成。**
 
 ---
 

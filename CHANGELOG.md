@@ -7,6 +7,27 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [v1.9.0] — 2026-05-13
+
+### 新增
+- **活动时间线组件**：PR 详情页显示变更记录和通知历史
+- **RFQ 报价自动录入 SKU**：报价时自动创建 SKUPriceRecord
+- **PR 创建人显示**：详情页展示 requester 姓名
+- **PR 删除功能**：前端删除按钮 + 后端 DELETE 端点（仅 draft）
+- **AGENTS.md 强制规定**：每次修改必须 bump version、创建 release、更新 CHANGELOG
+
+### 修复
+- **requester 通知全覆盖**：PR→PO→合同→交货→到货 链路上 10 个节点全部补上 requester 收件人
+- **飞书通知修复**：APPROVAL 类别加入 feishu_categories，审批事件正常推送
+- **交货计划通知**：合同交付计划通知修复 + 标签本地化（39 个中文标签）
+- **RFQ quote 500**：移除 UUID 重复包装
+- **PO 打印空白**：CSS 移除 .ant-space 等过激选择器
+- **合同编号格式**：自定义前缀仍追加 YYYYMMDD
+- **CI 全绿**：428 tests pass，ruff format clean
+- **异常日志**：9 处 `except: pass` → `logger.warning(exc_info=True)`
+
+---
+
 ## [v1.8.0] — 2026-05-12
 
 ### 新增
