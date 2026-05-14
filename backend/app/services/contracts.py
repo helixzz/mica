@@ -52,20 +52,22 @@ async def attach_document_to_contract(
     if run_ocr:
         try:
             content = await doc_svc.read_document_bytes(document)
-            extracted = await extract_svc.extract_invoice(
+            extracted = await extract_svc.extract_contract(
                 db, actor, content, document.content_type, document.original_filename
             )
             parts: list[str] = []
             for field_name in (
-                "invoice_number",
-                "invoice_date",
-                "seller_name",
-                "seller_tax_id",
-                "buyer_name",
-                "buyer_tax_id",
-                "subtotal",
-                "tax_amount",
+                "contract_number",
+                "title",
+                "supplier_name",
+                "supplier_contact",
+                "supplier_phone",
+                "start_date",
+                "end_date",
                 "total_amount",
+                "payment_terms",
+                "delivery_terms",
+                "description",
             ):
                 val = getattr(extracted, field_name, None)
                 if val:
