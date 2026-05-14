@@ -192,15 +192,12 @@ body {
   .no-print,
   button,
   .ant-btn,
-  .ant-space,
   .ant-dropdown,
   .ant-pagination,
   .ant-tabs-nav,
   .ant-input-search,
   .ant-select,
-  .ant-upload,
-  [class*="actions"],
-  [class*="action"] {
+  .ant-upload {
     display: none !important;
   }
 

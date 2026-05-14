@@ -76,22 +76,23 @@ async def suggest_contract_number(db: AsyncSession) -> str:
     if isinstance(raw_prefix, str) and raw_prefix.strip():
         prefix = raw_prefix.strip()
     else:
-        now = datetime.now(UTC)
-        prefix = f"ACME{now.year:04d}{now.month:02d}{now.day:02d}"
+        prefix = "ACME"
+    now = datetime.now(UTC)
+    full_prefix = f"{prefix}{now.year:04d}{now.month:02d}{now.day:02d}"
     max_suffix = (
         await db.execute(
             select(func.max(Contract.contract_number)).where(
-                Contract.contract_number.like(f"{prefix}%")
+                Contract.contract_number.like(f"{full_prefix}%")
             )
         )
     ).scalar_one_or_none()
     next_seq = 1
-    if max_suffix and len(max_suffix) == len(prefix) + 3:
+    if max_suffix and len(max_suffix) == len(full_prefix) + 3:
         try:
             next_seq = int(max_suffix[-3:]) + 1
         except ValueError:
             next_seq = 1
-    return f"{prefix}{next_seq:03d}"
+    return f"{full_prefix}{next_seq:03d}"
 
 
 async def create_contract(
