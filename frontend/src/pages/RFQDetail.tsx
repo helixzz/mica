@@ -6,6 +6,7 @@ import { useNavigate, useParams } from 'react-router-dom'
 import { api, type Supplier } from '@/api'
 import { client, extractError } from '@/api/client'
 import { fmtQty } from '@/utils/format'
+import { ActivityTimeline } from '@/components/ActivityTimeline'
 
 const statusColors: Record<string, string> = {
   draft: 'default', sent: 'processing', quoting: 'cyan',
@@ -194,6 +195,9 @@ export default function RFQDetailPage() {
           <div><Typography.Text>{t('rfq.delivery_days')}</Typography.Text><InputNumber style={{ width: '100%' }} min={0} value={quoteDays ?? undefined} onChange={(v) => setQuoteDays(v ? Number(v) : null)} /></div>
         </Space>
       </Modal>
+      <Card title={t('activity.title', '活动日志')}>
+        <ActivityTimeline resourceType="rfq" resourceId={rfq.id} />
+      </Card>
     </Space>
   )
 }

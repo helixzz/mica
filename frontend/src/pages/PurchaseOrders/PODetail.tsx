@@ -1,4 +1,4 @@
-import { Modal, Space, message } from 'antd'
+import { Card, Modal, Space, message } from 'antd'
 import { useEffect, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { useParams } from 'react-router-dom'
@@ -13,6 +13,7 @@ import {
   type Shipment,
 } from '@/api'
 import { extractError } from '@/api/client'
+import { ActivityTimeline } from '@/components/ActivityTimeline'
 import { useAuth } from '@/auth/useAuth'
 import { POHeader } from '@/components/PO/POHeader'
 import { POInfoCard } from '@/components/PO/POInfoCard'
@@ -160,6 +161,9 @@ export function PODetailPage() {
         setBusy={setBusy}
         loadAll={loadAll}
       />
+      <Card title={t('activity.title', '活动日志')}>
+        <ActivityTimeline resourceType="purchase_order" resourceId={po.id} />
+      </Card>
     </Space>
   )
 }

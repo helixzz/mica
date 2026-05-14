@@ -48,6 +48,7 @@ import { DeliveryPlanModal } from '@/components/DeliveryPlanModal'
 import { DocumentPreview } from '@/components/DocumentPreview'
 import { PaymentScheduleTab } from '@/components/PaymentScheduleTab'
 import { ShipmentActions } from '@/components/ShipmentActions'
+import { ActivityTimeline } from '@/components/ActivityTimeline'
 import { fmtAmount } from '@/utils/format'
 
 export function ContractDetailPage() {
@@ -623,6 +624,10 @@ export function ContractDetailPage() {
       </div>
 
       <Tabs items={tabItems} defaultActiveKey="info" />
+
+      <Card title={t('activity.title', '活动日志')}>
+        <ActivityTimeline resourceType="contract" resourceId={contract.id} />
+      </Card>
 
       <ContractFormModal
         open={editOpen}
