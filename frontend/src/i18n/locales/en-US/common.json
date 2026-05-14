@@ -1,6 +1,27 @@
 {
   "common": {
-    "search": "Search"
+    "total_count": "{{count}} total",
+    "save_changes": "Save Changes",
+    "download": "Download",
+    "upload": "Upload",
+    "yes": "Yes",
+    "no": "No",
+    "enabled": "Enabled",
+    "disabled": "Disabled",
+    "add": "Add",
+    "actions": "Actions",
+    "loading": "Loading...",
+    "refresh": "Refresh",
+    "required": "Required",
+    "updated": "Updated",
+    "created": "Created",
+    "deleted": "Deleted",
+    "operation_failed": "Operation failed",
+    "save_failed": "Save failed",
+    "create_failed": "Create failed",
+    "selected_count": "{{count}} selected",
+    "preview": "Preview",
+    "saved": "Saved"
   },
   "breadcrumb": {
     "home": "Home"
@@ -1138,31 +1159,9 @@
     "version_detail_title": "Version v{{version}} Details",
     "version_not_found": "Version not found",
     "renew_btn": "Renew",
-    "renew_ok": "Contract renewed successfully"
-  },
-  "common": {
-    "total_count": "{{count}} total",
-    "save_changes": "Save Changes",
-    "download": "Download",
-    "upload": "Upload",
-    "yes": "Yes",
-    "no": "No",
-    "enabled": "Enabled",
-    "disabled": "Disabled",
-    "add": "Add",
-    "actions": "Actions",
-    "loading": "Loading...",
-    "refresh": "Refresh",
-    "required": "Required",
-    "updated": "Updated",
-    "created": "Created",
-    "deleted": "Deleted",
-    "operation_failed": "Operation failed",
-    "save_failed": "Save failed",
-    "create_failed": "Create failed",
-    "selected_count": "{{count}} selected",
-    "preview": "Preview",
-    "saved": "Saved"
+    "renew_ok": "Contract renewed successfully",
+    "confirm_delete_doc_title": "Delete Document",
+    "confirm_delete_doc_body": "Delete scanned document \"{{name}}\"? This cannot be undone."
   },
   "invoice": {
     "attachments": "Invoice Attachments",

@@ -416,14 +416,23 @@ export function ContractDetailPage() {
                             size="small"
                             danger
                             icon={<DeleteOutlined />}
-                            onClick={async () => {
-                              try {
-                                await api.deleteContractDocument(id!, a.document_id)
-                                void message.success(t('common.deleted'))
-                                load()
-                              } catch (e) {
-                                void message.error(extractError(e).detail)
-                              }
+                            onClick={() => {
+                              Modal.confirm({
+                                title: t('contract.confirm_delete_doc_title'),
+                                content: t('contract.confirm_delete_doc_body', { name: a.original_filename }),
+                                okText: t('button.delete'),
+                                okType: 'danger',
+                                cancelText: t('button.cancel'),
+                                onOk: async () => {
+                                  try {
+                                    await api.deleteContractDocument(id!, a.document_id)
+                                    void message.success(t('common.deleted'))
+                                    load()
+                                  } catch (e) {
+                                    void message.error(extractError(e).detail)
+                                  }
+                                },
+                              })
                             }}
                             block
                           >

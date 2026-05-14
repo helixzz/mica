@@ -1,6 +1,27 @@
 {
   "common": {
-    "search": "搜索"
+    "total_count": "共 {{count}} 条",
+    "save_changes": "保存修改",
+    "download": "下载",
+    "upload": "上传",
+    "yes": "是",
+    "no": "否",
+    "enabled": "启用",
+    "disabled": "停用",
+    "add": "添加",
+    "actions": "操作",
+    "loading": "加载中...",
+    "refresh": "刷新",
+    "required": "此项为必填",
+    "updated": "已更新",
+    "created": "已创建",
+    "deleted": "已删除",
+    "operation_failed": "操作失败",
+    "save_failed": "保存失败",
+    "create_failed": "创建失败",
+    "selected_count": "已选择 {{count}} 项",
+    "preview": "预览",
+    "saved": "已保存"
   },
   "breadcrumb": {
     "home": "首页"
@@ -1143,31 +1164,9 @@
     "version_detail_title": "版本 v{{version}} 详情",
     "version_not_found": "版本不存在",
     "renew_btn": "续约",
-    "renew_ok": "合同续约成功"
-  },
-  "common": {
-    "total_count": "共 {{count}} 条",
-    "save_changes": "保存修改",
-    "download": "下载",
-    "upload": "上传",
-    "yes": "是",
-    "no": "否",
-    "enabled": "启用",
-    "disabled": "停用",
-    "add": "添加",
-    "actions": "操作",
-    "loading": "加载中...",
-    "refresh": "刷新",
-    "required": "此项为必填",
-    "updated": "已更新",
-    "created": "已创建",
-    "deleted": "已删除",
-    "operation_failed": "操作失败",
-    "save_failed": "保存失败",
-    "create_failed": "创建失败",
-    "selected_count": "已选择 {{count}} 项",
-    "preview": "预览",
-    "saved": "已保存"
+    "renew_ok": "合同续约成功",
+    "confirm_delete_doc_title": "确认删除扫描件",
+    "confirm_delete_doc_body": "确定要删除扫描件「{{name}}」吗？删除后不可恢复。"
   },
   "invoice": {
     "attachments": "发票附件",
