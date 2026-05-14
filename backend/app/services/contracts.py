@@ -17,8 +17,8 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
 from app.models import AuditLog, Contract, ContractDocument, ContractVersion, Document, User
+from app.services import contract_extract as extract_svc
 from app.services import documents as doc_svc
-from app.services import invoice_extract as extract_svc
 from app.services.system_params import system_params
 
 
