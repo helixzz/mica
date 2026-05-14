@@ -1179,6 +1179,9 @@ export const api = {
   async unlinkPoContract(poId: string, contractId: string): Promise<void> {
     await client.delete(`/purchase-orders/${poId}/contracts/${contractId}`)
   },
+  async deleteContractDocument(contractId: string, documentId: string): Promise<void> {
+    await client.delete(`/contracts/${contractId}/documents/${documentId}`)
+  },
   async updateContract(
     contractId: string,
     payload: {

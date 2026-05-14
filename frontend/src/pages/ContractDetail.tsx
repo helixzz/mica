@@ -412,6 +412,23 @@ export function ContractDetailPage() {
                           >
                             {t('common.download')}
                           </Button>
+                          <Button
+                            size="small"
+                            danger
+                            icon={<DeleteOutlined />}
+                            onClick={async () => {
+                              try {
+                                await api.deleteContractDocument(id!, a.document_id)
+                                void message.success(t('common.deleted'))
+                                load()
+                              } catch (e) {
+                                void message.error(extractError(e).detail)
+                              }
+                            }}
+                            block
+                          >
+                            {t('button.delete')}
+                          </Button>
                         </Space>
                       </Space>
                     </Card>

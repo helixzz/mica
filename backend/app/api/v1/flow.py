@@ -165,6 +165,15 @@ async def list_linked_pos(
     ]
 
 
+@router.delete("/contracts/{contract_id}/documents/{document_id}", status_code=204, tags=["flow"])
+async def delete_contract_document(
+    contract_id: UUID, document_id: UUID, user: CurrentUser, db: Annotated[AsyncSession, Depends(get_db)],
+    _role: Annotated[None, Depends(require_roles("admin", "procurement_mgr", "it_buyer"))],
+):
+    from app.services import contracts as contract_svc
+    await contract_svc.remove_contract_document(db, contract_id, document_id)
+
+
 @router.post(
     "/purchase-orders/{po_id}/contracts/{contract_id}",
     status_code=status.HTTP_201_CREATED,

@@ -307,3 +307,18 @@ async def get_contract_version(
         )
     ).scalar_one_or_none()
     return row
+
+
+async def remove_contract_document(db: AsyncSession, contract_id: UUID, document_id: UUID) -> None:
+    link = (
+        await db.execute(
+            select(ContractDocument).where(
+                ContractDocument.contract_id == contract_id,
+                ContractDocument.document_id == document_id,
+            )
+        )
+    ).scalar_one_or_none()
+    if link is None:
+        raise HTTPException(404, "document.not_found")
+    await db.delete(link)
+    await db.commit()
