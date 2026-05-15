@@ -588,6 +588,11 @@ export function ContractDetailPage() {
         />
       ),
     },
+    {
+      key: 'activity',
+      label: t('activity.title'),
+      children: <ActivityTimeline resourceType="contract" resourceId={contract.id} />,
+    },
   ]
 
   return (
@@ -650,10 +655,6 @@ export function ContractDetailPage() {
       </div>
 
       <Tabs items={tabItems} defaultActiveKey="info" />
-
-      <Card title={t('activity.title', '活动日志')}>
-        <ActivityTimeline resourceType="contract" resourceId={contract.id} />
-      </Card>
 
       <ContractFormModal
         open={editOpen}

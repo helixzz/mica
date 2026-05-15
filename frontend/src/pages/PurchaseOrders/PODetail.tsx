@@ -1,4 +1,4 @@
-import { Card, Modal, Space, message } from 'antd'
+import { Card, Modal, Space, Tabs, message } from 'antd'
 import { useEffect, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { useParams } from 'react-router-dom'
@@ -115,55 +115,69 @@ export function PODetailPage() {
         canCreateContract={canCreateContract}
         onCreateContract={() => setContractOpen(true)}
       />
-      <POInfoCard po={po} />
-      {progress && <POProgressCard progress={progress} />}
-      <POTabs
-        po={po}
-        shipments={shipments}
-        payments={payments}
-        invoices={invoices}
-        contracts={contracts}
-        deliveryPlans={deliveryPlans}
-        canCreateContract={canCreateContract}
-        canWriteSchedule={canWriteSchedule}
-        loadAll={loadAll}
-        setShipmentOpen={setShipmentOpen}
-        setPaymentOpen={setPaymentOpen}
-        setInvoiceOpen={setInvoiceOpen}
-        setContractOpen={setContractOpen}
-        setLinkContractOpen={setLinkContractOpen}
-        setDeliveryPlanOpen={setDeliveryPlanOpen}
-        setEditingPayment={setEditingPayment}
-        setEditingPlan={setEditingPlan}
-        handleDeleteDeliveryPlan={handleDeleteDeliveryPlan}
-        handleUnlinkContract={handleUnlinkContract}
+      <Tabs
+        items={[
+          {
+            key: 'details',
+            label: t('common.details', 'Details'),
+            children: (
+              <Space direction="vertical" size="large" style={{ width: '100%' }}>
+                <POInfoCard po={po} />
+                {progress && <POProgressCard progress={progress} />}
+                <POTabs
+                  po={po}
+                  shipments={shipments}
+                  payments={payments}
+                  invoices={invoices}
+                  contracts={contracts}
+                  deliveryPlans={deliveryPlans}
+                  canCreateContract={canCreateContract}
+                  canWriteSchedule={canWriteSchedule}
+                  loadAll={loadAll}
+                  setShipmentOpen={setShipmentOpen}
+                  setPaymentOpen={setPaymentOpen}
+                  setInvoiceOpen={setInvoiceOpen}
+                  setContractOpen={setContractOpen}
+                  setLinkContractOpen={setLinkContractOpen}
+                  setDeliveryPlanOpen={setDeliveryPlanOpen}
+                  setEditingPayment={setEditingPayment}
+                  setEditingPlan={setEditingPlan}
+                  handleDeleteDeliveryPlan={handleDeleteDeliveryPlan}
+                  handleUnlinkContract={handleUnlinkContract}
+                />
+                <POModals
+                  po={po}
+                  shipmentOpen={shipmentOpen}
+                  paymentOpen={paymentOpen}
+                  invoiceOpen={invoiceOpen}
+                  contractOpen={contractOpen}
+                  linkContractOpen={linkContractOpen}
+                  deliveryPlanOpen={deliveryPlanOpen}
+                  editingPayment={editingPayment}
+                  editingPlan={editingPlan}
+                  busy={busy}
+                  contracts={contracts}
+                  setShipmentOpen={setShipmentOpen}
+                  setPaymentOpen={setPaymentOpen}
+                  setInvoiceOpen={setInvoiceOpen}
+                  setContractOpen={setContractOpen}
+                  setLinkContractOpen={setLinkContractOpen}
+                  setDeliveryPlanOpen={setDeliveryPlanOpen}
+                  setEditingPayment={setEditingPayment}
+                  setEditingPlan={setEditingPlan}
+                  setBusy={setBusy}
+                  loadAll={loadAll}
+                />
+              </Space>
+            ),
+          },
+          {
+            key: 'activity',
+            label: t('activity.title'),
+            children: <ActivityTimeline resourceType="purchase_order" resourceId={po.id} />,
+          },
+        ]}
       />
-      <POModals
-        po={po}
-        shipmentOpen={shipmentOpen}
-        paymentOpen={paymentOpen}
-        invoiceOpen={invoiceOpen}
-        contractOpen={contractOpen}
-        linkContractOpen={linkContractOpen}
-        deliveryPlanOpen={deliveryPlanOpen}
-        editingPayment={editingPayment}
-        editingPlan={editingPlan}
-        busy={busy}
-        contracts={contracts}
-        setShipmentOpen={setShipmentOpen}
-        setPaymentOpen={setPaymentOpen}
-        setInvoiceOpen={setInvoiceOpen}
-        setContractOpen={setContractOpen}
-        setLinkContractOpen={setLinkContractOpen}
-        setDeliveryPlanOpen={setDeliveryPlanOpen}
-        setEditingPayment={setEditingPayment}
-        setEditingPlan={setEditingPlan}
-        setBusy={setBusy}
-        loadAll={loadAll}
-      />
-      <Card title={t('activity.title', '活动日志')}>
-        <ActivityTimeline resourceType="purchase_order" resourceId={po.id} />
-      </Card>
     </Space>
   )
 }
