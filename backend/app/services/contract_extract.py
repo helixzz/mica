@@ -238,7 +238,7 @@ async def _dispatch(
                 error=str(e),
             )
         )
-        await db.commit()
+        await db.flush()
         return ContractExtract(error=f"AI call failed: {e}")
 
     choice = response.choices[0]
@@ -258,6 +258,6 @@ async def _dispatch(
             status="success",
         )
     )
-    await db.commit()
+    await db.flush()
 
     return _parse_response(text)
