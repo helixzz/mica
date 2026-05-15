@@ -53,11 +53,12 @@ async def attach_document_to_contract(
     ocr_text: str | None = None
     if run_ocr:
         try:
-            content = await doc_svc.read_document_bytes(document)
-            extracted = await extract_svc.extract_contract(
-                db, actor, content, document.content_type, document.original_filename
-            )
-            parts: list[str] = []
+            async with db.begin_nested():
+                content = await doc_svc.read_document_bytes(document)
+                extracted = await extract_svc.extract_contract(
+                    db, actor, content, document.content_type, document.original_filename
+                )
+                parts: list[str] = []
             for field_name in (
                 "contract_number",
                 "title",
