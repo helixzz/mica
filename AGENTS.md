@@ -281,6 +281,8 @@ docker compose up -d && sleep 15
 
 **不 bump version → 不部署 → 不视为完成。**
 
+**所有新增功能和 bug 修复必须完成端到端测试（E2E）后才视为正式交付。** 修改后端代码后应 `curl` 生产环境关键端点验证返回；修改前端代码后应在浏览器中确认交互流程正常。不可仅凭 `ruff check` 或 `tsc --noEmit` 通过就声称已完成。
+
 ---
 
 ## 10. 一句话指引给 AI assistant

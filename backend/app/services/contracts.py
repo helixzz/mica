@@ -24,7 +24,7 @@ from app.services.system_params import system_params
 
 async def attach_document_to_contract(
     db: AsyncSession,
-    actor: User,
+    actor_id: UUID,
     contract_id: UUID,
     document_id: UUID,
     role: str = "scan",
@@ -47,6 +47,8 @@ async def attach_document_to_contract(
     ).scalar_one_or_none()
     if existing:
         return existing
+
+    actor = await db.get(User, actor_id)
 
     ocr_text: str | None = None
     if run_ocr:
@@ -91,8 +93,8 @@ async def attach_document_to_contract(
     db.add(link)
     db.add(
         AuditLog(
-            actor_id=actor.id,
-            actor_name=actor.display_name,
+            actor_id=actor_id,
+            actor_name=actor.display_name if actor else None,
             event_type="contract.document_attached",
             resource_type="contract",
             resource_id=str(contract_id),
