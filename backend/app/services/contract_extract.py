@@ -5,7 +5,6 @@ from __future__ import annotations
 import base64
 import json
 import logging
-import time
 from dataclasses import dataclass
 from typing import Any
 from uuid import UUID
@@ -15,7 +14,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.crypto import decrypt
 from app.core.litellm_helpers import resolve_litellm_model
-from app.models import AICallLog, AIModel, User
+from app.models import AIModel, User
 
 logger = logging.getLogger("mica.contract_extract")
 
@@ -104,7 +103,6 @@ async def extract_contract(
     content_type: str,
     filename: str = "",
 ) -> ContractExtract:
-    start = time.monotonic()
     try:
         result = await _dispatch(db, document_id, content, content_type, filename)
         # Auto-match supplier
@@ -130,24 +128,6 @@ async def extract_contract(
                 pass
     except Exception as e:
         result = ContractExtract(error=str(e))
-    finally:
-        elapsed = int((time.monotonic() - start) * 1000)
-        try:
-            db.add(
-                AICallLog(
-                    feature_code="contract_extract",
-                    user_id=actor.id if actor else None,
-                    model_name=None,
-                    provider=None,
-                    prompt_tokens=0,
-                    completion_tokens=0,
-                    latency_ms=elapsed,
-                    status="success" if not result.error else "error",
-                    error=result.error,
-                )
-            )
-        except Exception:
-            pass
     return result
 
 
@@ -158,7 +138,6 @@ async def _dispatch(
     content_type: str,
     filename: str,
 ) -> ContractExtract:
-    start_ms = time.monotonic()
     from app.models import AIFeatureRouting
 
     routing_row = (
@@ -227,21 +206,6 @@ async def _dispatch(
             extra_body={"enable_thinking": False},
         )
     except Exception as e:
-        try:
-            db.add(
-                AICallLog(
-                    feature_code="contract_extract",
-                    model_name=model_row.name if model_row else None,
-                    provider=model_row.provider if model_row else None,
-                    prompt_tokens=len(prompt) // 4,
-                    latency_ms=int((time.monotonic() - start_ms) * 1000),
-                    status="error",
-                    error=str(e),
-                )
-            )
-            await db.flush()
-        except Exception:
-            pass
         return ContractExtract(error=f"AI call failed: {e}")
 
     choice = response.choices[0]
@@ -249,21 +213,4 @@ async def _dispatch(
     if not text:
         text = getattr(choice.message, "reasoning_content", None) or ""
     logger.info("contract_extract: response (%d chars) finish=%s", len(text), choice.finish_reason)
-
-    try:
-        db.add(
-            AICallLog(
-                feature_code="contract_extract",
-                model_name=model_row.name,
-                provider=model_row.provider,
-                prompt_tokens=len(prompt) // 4,
-                completion_tokens=len(text) // 4,
-                latency_ms=int((time.monotonic() - start_ms) * 1000),
-                status="success",
-            )
-        )
-        await db.flush()
-    except Exception:
-        pass
-
     return _parse_response(text)
