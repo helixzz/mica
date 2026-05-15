@@ -29,7 +29,7 @@ async def attach_doc(
     db: Annotated[AsyncSession, Depends(get_db)],
 ):
     link = await svc.attach_document_to_contract(
-        db, user.id, contract_id, payload.document_id, payload.role, payload.run_ocr
+        db, user.id, contract_id, payload.document_id, payload.role, False
     )
     return {
         "contract_id": str(link.contract_id),
