@@ -203,7 +203,6 @@ async def _dispatch(
             temperature=0.1,
             max_tokens=4000,
             timeout=120,
-            extra_body={"enable_thinking": False},
         )
     except Exception as e:
         return ContractExtract(error=f"AI call failed: {e}")
