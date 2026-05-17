@@ -9,7 +9,7 @@ import { api, type DeliveryPlan, type PurchaseOrder, type PurchaseOrderListItem,
 import { useAuth } from '@/auth/useAuth'
 import { ShipmentActions } from '@/components/ShipmentActions'
 import { downloadCSV } from '@/utils/export'
-import { fmtQty } from '@/utils/format'
+import { fmtAmount, fmtQty } from '@/utils/format'
 
 const STATUS_COLORS: Record<string, string> = {
   pending: 'default',
@@ -196,7 +196,7 @@ export function ShipmentsPage() {
                   {po.supplier_name || '-'}
                 </span>
                 <span style={{ color: '#1677ff', marginLeft: 8 }}>
-                  ¥{Number(po.total_amount).toLocaleString('zh-CN', { minimumFractionDigits: 2 })}
+                  {fmtAmount(po.total_amount, po.currency || 'CNY')}
                 </span>
                 <span style={{ color: '#999', marginLeft: 8, fontSize: 12 }}>
                   {dayjs(po.created_at).format('YYYY-MM-DD')}

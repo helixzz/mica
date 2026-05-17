@@ -54,6 +54,7 @@ import { useAuth } from '@/auth/useAuth'
 import { PageHeader, StatCard, Section, EmptyState } from '@/components/ui'
 import { PaymentTracker } from '@/components/PaymentForecastChart'
 import { InvoiceTracker } from '@/components/InvoiceTrackerChart'
+import { fmtAmount } from '@/utils/format'
 
 const { Text } = Typography
 
@@ -306,7 +307,7 @@ export function DashboardPage() {
             <Col xs={24} sm={12} lg={6}>
               <StatCard
                 label={t('dashboard.total_amount_cny')}
-                value={`¥${totalAmount}`}
+                value={fmtAmount(totalAmount)}
                 icon={<WarningOutlined />}
                 loading={loading}
                 variant={isFinanceAuditor || isProcurementMgr ? 'accent' : 'default'}
@@ -542,7 +543,7 @@ export function DashboardPage() {
                               }}
                             >
                               <Text type="secondary" style={{ fontSize: 11, marginBottom: 4 }}>
-                                ¥{(point.total / 10000).toFixed(1)}w
+                                {fmtAmount(point.total / 10000)}w
                               </Text>
                               <div
                                 style={{
@@ -579,7 +580,7 @@ export function DashboardPage() {
                           title: t('dashboard.total_spend_col'),
                           dataIndex: 'total',
                           key: 'total',
-                          render: (v: number) => `¥${v.toLocaleString()}`,
+                          render: (v: number) => fmtAmount(v),
                         },
                         {
                           title: t('dashboard.pct_of_total'),
@@ -682,7 +683,7 @@ export function DashboardPage() {
                       }
                       title={
                         <Space>
-<Text strong>¥{item.amount.toLocaleString(i18n.language)}</Text>
+<Text strong>{fmtAmount(item.amount, 'CNY')}</Text>
 <Tag color={color}>{new Date(item.due_date).toLocaleDateString(i18n.language)}</Tag>
                         </Space>
                       }
@@ -708,7 +709,7 @@ export function DashboardPage() {
                 <Card size="small">
                   <StatCard
                     label={t('dashboard.total_budget')}
-                    value={`¥${budgetSummary.total_budget.toLocaleString()}`}
+                    value={fmtAmount(budgetSummary.total_budget)}
                     loading={loading}
                   />
                 </Card>
@@ -717,7 +718,7 @@ export function DashboardPage() {
                 <Card size="small">
                   <StatCard
                     label={t('dashboard.total_spend')}
-                    value={`¥${budgetSummary.total_spend.toLocaleString()}`}
+                    value={fmtAmount(budgetSummary.total_spend)}
                     loading={loading}
                   />
                 </Card>
@@ -754,10 +755,10 @@ export function DashboardPage() {
                   <Space direction="vertical" style={{ width: '100%' }} size="small">
                     <Row justify="space-between">
                       <Col>
-                        <Text type="secondary">{t('dashboard.budget')}: ¥{item.annual_budget?.toLocaleString() ?? '-'}</Text>
+                        <Text type="secondary">{t('dashboard.budget')}: {fmtAmount(item.annual_budget)}</Text>
                       </Col>
                       <Col>
-                        <Text type="secondary">{t('dashboard.actual_spend')}: ¥{item.actual_spend.toLocaleString()}</Text>
+                        <Text type="secondary">{t('dashboard.actual_spend')}: {fmtAmount(item.actual_spend)}</Text>
                       </Col>
                     </Row>
                     <Progress

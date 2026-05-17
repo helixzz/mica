@@ -5,7 +5,7 @@ import { useEffect, useState } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
 import { api, type Supplier } from '@/api'
 import { client, extractError } from '@/api/client'
-import { fmtQty } from '@/utils/format'
+import { fmtAmount, fmtQty, getCurrencySymbol } from '@/utils/format'
 import { ActivityTimeline } from '@/components/ActivityTimeline'
 
 const statusColors: Record<string, string> = {
@@ -116,7 +116,7 @@ export default function RFQDetailPage() {
       return (
         <Space direction="vertical" size={0}>
           <Typography.Text strong style={q.selected ? { color: '#22C55E' } : undefined}>
-            ¥{q.price.toLocaleString()}
+            {fmtAmount(q.price)}
           </Typography.Text>
           {q.days && <Typography.Text type="secondary" style={{ fontSize: 11 }}>{q.days} {t('rfq.days_delivery')}</Typography.Text>}
           {q.selected && <Tag color="success" icon={<CheckCircleOutlined />}>{t('rfq.awarded')}</Tag>}
@@ -191,7 +191,7 @@ export default function RFQDetailPage() {
 
       <Modal title={t('rfq.enter_quote')} open={!!quoteModal} onCancel={() => setQuoteModal(null)} onOk={doAddQuote} okText={t('button.save')}>
         <Space direction="vertical" size="middle" style={{ width: '100%' }}>
-          <div><Typography.Text>{t('rfq.unit_price')}</Typography.Text><InputNumber style={{ width: '100%' }} min={0} value={quotePrice} onChange={(v) => setQuotePrice(Number(v ?? 0))} prefix="¥" /></div>
+          <div><Typography.Text>{t('rfq.unit_price')}</Typography.Text><InputNumber style={{ width: '100%' }} min={0} value={quotePrice} onChange={(v) => setQuotePrice(Number(v ?? 0))} prefix={getCurrencySymbol('CNY')} /></div>
           <div><Typography.Text>{t('rfq.delivery_days')}</Typography.Text><InputNumber style={{ width: '100%' }} min={0} value={quoteDays ?? undefined} onChange={(v) => setQuoteDays(v ? Number(v) : null)} /></div>
         </Space>
       </Modal>

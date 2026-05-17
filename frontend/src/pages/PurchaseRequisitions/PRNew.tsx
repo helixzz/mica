@@ -27,6 +27,7 @@ import { AIStreamButton } from '@/components/AIStreamButton'
 import { AutosaveBanner, AutosaveUnavailableBanner } from '@/components/AutosaveBanner'
 import { PRQuoteConfirmModal } from '@/components/PRQuoteConfirmModal'
 import { useAutosave } from '@/hooks/useAutosave'
+import { fmtAmount } from '@/utils/format'
 
 interface LineForm {
   key: number
@@ -257,8 +258,8 @@ export function PRNewPage() {
           />
           {r.item_id && refPrices[r.item_id] && (
             <Typography.Text type="secondary" style={{ fontSize: 11 }}>
-              {t('sku.ref_latest')}: ¥{refPrices[r.item_id].latest_price?.toLocaleString() ?? '-'}
-              {refPrices[r.item_id].avg_price ? ` · ${t('sku.ref_avg')}: ¥${refPrices[r.item_id].avg_price?.toLocaleString()}` : ''}
+{t('sku.ref_latest')}: {fmtAmount(refPrices[r.item_id].latest_price)}
+{refPrices[r.item_id].avg_price ? ` · ${t('sku.ref_avg')}: ${fmtAmount(refPrices[r.item_id].avg_price)}` : ''}
             </Typography.Text>
           )}
         </Space>
@@ -332,7 +333,7 @@ export function PRNewPage() {
       align: 'right' as const,
       render: (_: unknown, r: LineForm) => {
         const amt = r.qty * (r.unit_price || 0)
-        return amt > 0 ? `¥${amt.toLocaleString()}` : '-'
+        return amt > 0 ? fmtAmount(amt) : '-'
       },
     },
     {
@@ -498,7 +499,7 @@ export function PRNewPage() {
                 <strong>{t('field.total_amount')}</strong>
               </Table.Summary.Cell>
               <Table.Summary.Cell index={1} align="right">
-                <strong>{total > 0 ? `¥${total.toLocaleString(undefined, { maximumFractionDigits: 2 })}` : '-'}</strong>
+                <strong>{total > 0 ? fmtAmount(total) : '-'}</strong>
               </Table.Summary.Cell>
               <Table.Summary.Cell index={2} />
             </Table.Summary.Row>

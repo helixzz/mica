@@ -48,6 +48,10 @@ async def send_daily_digest(db: AsyncSession) -> dict:
     anomaly_since = today - timedelta(days=anomaly_days)
     sku_anomalies = await _count_recent_anomalies(db, since=anomaly_since)
 
+    today_po_count, today_po_amount = await _count_today_pos(db)
+    upcoming_pay_count, upcoming_pay_amount = await _count_upcoming_payments(db, today)
+    overdue_count = await _count_overdue_approvals(db)
+
     # Pre-fetch anomaly rows once for reuse across recipients
     anomaly_rows = await _fetch_anomaly_rows(db, since=anomaly_since)
 
@@ -69,6 +73,11 @@ async def send_daily_digest(db: AsyncSession) -> dict:
             expiry_rows_html=expiry_rows_html,
             sku_anomalies=sku_anomalies,
             anomaly_detail_html=anomaly_detail_html,
+            today_po_count=today_po_count,
+            today_po_amount=today_po_amount,
+            upcoming_pay_count=upcoming_pay_count,
+            upcoming_pay_amount=upcoming_pay_amount,
+            overdue_count=overdue_count,
             today=today,
             locale=locale,
         )
@@ -85,7 +94,18 @@ async def send_daily_digest(db: AsyncSession) -> dict:
 
         # Also send via Feishu if enabled
         try:
-            await _send_feishu_digest(db, user, pending_approvals, expiring_count, sku_anomalies)
+            await _send_feishu_digest(
+                db,
+                user,
+                pending_approvals,
+                expiring_count,
+                sku_anomalies,
+                today_po_count,
+                today_po_amount,
+                upcoming_pay_count,
+                upcoming_pay_amount,
+                overdue_count,
+            )
         except Exception:
             logger.warning("Feishu digest skipped for user %s", user.email, exc_info=True)
 
@@ -93,6 +113,11 @@ async def send_daily_digest(db: AsyncSession) -> dict:
         "pending_approvals": pending_approvals,
         "expiring_contracts": expiring_count,
         "sku_anomalies": sku_anomalies,
+        "today_po_count": today_po_count,
+        "today_po_amount": today_po_amount,
+        "upcoming_payments": upcoming_pay_count,
+        "upcoming_pay_amount": upcoming_pay_amount,
+        "overdue_approvals": overdue_count,
         "recipients_total": len(recipients),
         "sent_successfully": sent_count,
         "failed_recipients": failed_recipients,
@@ -117,6 +142,59 @@ async def _count_recent_anomalies(db: AsyncSession, since: date | None = None) -
         since_dt = datetime.combine(since, datetime.min.time(), tzinfo=UTC)
         stmt = stmt.where(SKUPriceAnomaly.created_at >= since_dt)
     result = await db.execute(stmt)
+    return int(result.scalar_one() or 0)
+
+
+async def _count_today_pos(db: AsyncSession) -> tuple[int, float]:
+    from app.models import PurchaseOrder
+
+    today = datetime.now(UTC).date()
+    start = datetime.combine(today, datetime.min.time(), tzinfo=UTC)
+    end = datetime.combine(today, datetime.max.time(), tzinfo=UTC)
+
+    result = await db.execute(
+        select(
+            func.count(PurchaseOrder.id),
+            func.coalesce(func.sum(PurchaseOrder.total_amount), 0),
+        ).where(
+            PurchaseOrder.created_at >= start,
+            PurchaseOrder.created_at <= end,
+        )
+    )
+    row = result.one()
+    return int(row[0] or 0), float(row[1] or 0)
+
+
+async def _count_upcoming_payments(db: AsyncSession, today: date) -> tuple[int, float]:
+    from app.models import PaymentSchedule
+
+    end_date = today + timedelta(days=7)
+    result = await db.execute(
+        select(
+            func.count(PaymentSchedule.id),
+            func.coalesce(func.sum(PaymentSchedule.planned_amount), 0),
+        ).where(
+            PaymentSchedule.planned_date >= today,
+            PaymentSchedule.planned_date <= end_date,
+            PaymentSchedule.status != "paid",
+        )
+    )
+    row = result.one()
+    return int(row[0] or 0), float(row[1] or 0)
+
+
+async def _count_overdue_approvals(db: AsyncSession) -> int:
+    sla_hours = await system_params.get_int_or(db, "approval.sla_hours", 24)
+    cutoff = datetime.now(UTC) - timedelta(hours=sla_hours)
+
+    from app.models import ApprovalInstance
+
+    result = await db.execute(
+        select(func.count(ApprovalInstance.id)).where(
+            ApprovalInstance.status == "pending",
+            ApprovalInstance.submitted_at < cutoff,
+        )
+    )
     return int(result.scalar_one() or 0)
 
 
@@ -224,19 +302,58 @@ def _build_email_body(
     expiry_rows_html: str,
     sku_anomalies: int,
     anomaly_detail_html: str,
+    today_po_count: int,
+    today_po_amount: float,
+    upcoming_pay_count: int,
+    upcoming_pay_amount: float,
+    overdue_count: int,
     today: date,
     locale: str,
 ) -> str:
     base_url = get_settings().app_base_url.rstrip("/")
     email_title = t("digest.email_title", locale)
+    po_amount_fmt = f"¥{today_po_amount:,.2f}"
+    pay_amount_fmt = f"¥{upcoming_pay_amount:,.2f}"
+
+    today_overview_label = t("digest.email_title_today_overview", locale)
+    today_po_text = t("digest.today_po_text", locale, count=today_po_count, amount=po_amount_fmt)
+    upcoming_pay_text = t(
+        "digest.upcoming_payments_text",
+        locale,
+        count=upcoming_pay_count,
+        amount=pay_amount_fmt,
+    )
+
     pending_label = t("digest.email_title_pending_approvals", locale, count=pending_approvals)
     pending_text = t("digest.pending_approvals_text", locale, count=pending_approvals)
     view_approvals = t("digest.view_pending_approvals_link", locale)
+
+    overdue_label = t("digest.email_title_overdue_approvals", locale, count=overdue_count)
+    overdue_text = t("digest.overdue_approvals_text", locale, count=overdue_count)
+
     expiring_label = t("digest.email_title_expiring_contracts", locale, count=expiring_count)
     view_contracts = t("digest.view_all_contracts_link", locale)
     anomalies_label = t("digest.price_anomalies_header", locale, count=sku_anomalies)
     footer = t("digest.email_footer", locale)
     manage_settings = t("digest.manage_settings_link", locale)
+
+    today_overview_rows = ""
+    if today_po_count > 0:
+        today_overview_rows += f"<li>{today_po_text}</li>"
+    if upcoming_pay_count > 0:
+        today_overview_rows += f"<li>{upcoming_pay_text}</li>"
+
+    overdue_html = ""
+    if overdue_count > 0:
+        overdue_html = f'<h3 style="color:#8B5E3C">{overdue_label}</h3>\n<p>{overdue_text}</p>\n'
+
+    today_overview_html = ""
+    if today_overview_rows:
+        today_overview_html = (
+            f'<h3 style="color:#8B5E3C">{today_overview_label}</h3>\n'
+            f"<ul>{today_overview_rows}</ul>\n"
+        )
+
     return f"""<!DOCTYPE html>
 <html lang="en">
 <head><meta charset="UTF-8"></head>
@@ -244,10 +361,12 @@ def _build_email_body(
 <h2 style="color:#8B5E3C">{email_title}</h2>
 <p style="color:#666">{today.isoformat()}</p>
 
+{today_overview_html}
 <h3 style="color:#8B5E3C">{pending_label}</h3>
 <p>{pending_text}
 <a href="{base_url}/approvals" style="color:#8B5E3C">{view_approvals} →</a></p>
 
+{overdue_html}
 <h3 style="color:#8B5E3C">{expiring_label}</h3>
 {expiry_rows_html}
 <p style="margin-top:8px"><a href="{base_url}/contracts" style="color:#8B5E3C">{view_contracts} →</a></p>
@@ -270,6 +389,11 @@ async def _send_feishu_digest(
     pending_approvals: int,
     expiring_count: int,
     sku_anomalies: int,
+    today_po_count: int,
+    today_po_amount: float,
+    upcoming_pay_count: int,
+    upcoming_pay_amount: float,
+    overdue_count: int,
 ) -> None:
     from app.services.feishu.client import FeishuClient
     from app.services.system_params import system_params
@@ -283,13 +407,35 @@ async def _send_feishu_digest(
     locale = user.preferred_locale or "zh-CN"
     base_url = get_settings().app_base_url.rstrip("/")
 
-    body = (
-        f"{t('digest.feishu.pending_approvals', locale, count=pending_approvals)}\n"
-        f"{t('digest.feishu.expiring_contracts', locale, count=expiring_count)}\n"
-        f"{t('digest.feishu.price_anomalies', locale, count=sku_anomalies)}\n\n"
+    po_amount_fmt = f"¥{today_po_amount:,.2f}"
+    pay_amount_fmt = f"¥{upcoming_pay_amount:,.2f}"
+
+    today_po_line = t("digest.feishu.today_pos", locale, count=today_po_count, amount=po_amount_fmt)
+    pay_line = t(
+        "digest.feishu.upcoming_payments", locale, count=upcoming_pay_count, amount=pay_amount_fmt
+    )
+
+    lines = []
+    if today_po_count > 0 or upcoming_pay_count > 0:
+        lines.append(t("digest.feishu.today_overview", locale))
+        if today_po_count > 0:
+            lines.append(f"• {today_po_line}")
+        if upcoming_pay_count > 0:
+            lines.append(f"• {pay_line}")
+        lines.append("")
+
+    lines.append(t("digest.feishu.pending_approvals", locale, count=pending_approvals))
+    if overdue_count > 0:
+        lines.append(t("digest.feishu.overdue_approvals", locale, count=overdue_count))
+    lines.append(t("digest.feishu.expiring_contracts", locale, count=expiring_count))
+    lines.append(t("digest.feishu.price_anomalies", locale, count=sku_anomalies))
+    lines.append("")
+    lines.append(
         f"[{t('digest.feishu.view_dashboard', locale)}]({base_url}/dashboard) ｜ "
         f"[{t('digest.feishu.view_approvals', locale)}]({base_url}/approvals)"
     )
+
+    body = "\n".join(lines)
 
     card = {
         "header": {

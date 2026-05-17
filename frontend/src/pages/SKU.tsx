@@ -40,7 +40,7 @@ import {
   type Supplier,
 } from '@/api'
 import { extractError } from '@/api/client'
-import { fmtAmount, fmtQty } from '@/utils/format'
+import { fmtAmount, fmtQty, getCurrencySymbol } from '@/utils/format'
 
 export function SKUPage() {
   const { t } = useTranslation()
@@ -257,9 +257,9 @@ export function SKUPage() {
                 <Col key={itemId} xs={24} md={12} lg={8} style={{ marginBottom: 12 }}>
                   <Card size="small" title={name} type="inner">
                     <Row gutter={8}>
-                      <Col span={8}><Statistic title={t('sku.avg')} value={bm.avg_price} prefix="¥" precision={2} valueStyle={{ fontSize: 14 }} /></Col>
-                      <Col span={8}><Statistic title={t('sku.min')} value={bm.min_price} prefix="¥" precision={2} valueStyle={{ fontSize: 14 }} /></Col>
-                      <Col span={8}><Statistic title={t('sku.max')} value={bm.max_price} prefix="¥" precision={2} valueStyle={{ fontSize: 14 }} /></Col>
+<Col span={8}><Statistic title={t('sku.avg')} value={bm.avg_price} prefix={getCurrencySymbol('CNY')} precision={2} valueStyle={{ fontSize: 14 }} /></Col>
+<Col span={8}><Statistic title={t('sku.min')} value={bm.min_price} prefix={getCurrencySymbol('CNY')} precision={2} valueStyle={{ fontSize: 14 }} /></Col>
+<Col span={8}><Statistic title={t('sku.max')} value={bm.max_price} prefix={getCurrencySymbol('CNY')} precision={2} valueStyle={{ fontSize: 14 }} /></Col>
                     </Row>
                   </Card>
                 </Col>
@@ -460,7 +460,7 @@ function ChartContent({
             <path d={pathD} fill="none" stroke={color} strokeWidth={2} strokeLinejoin="round" />
             {points.map((p, i) => (
               <circle key={i} cx={xScale(p.date)} cy={yScale(p.price)} r={3} fill={color} stroke="white" strokeWidth={1}>
-                <title>{`${sku}\n${p.date}: ¥${p.price.toLocaleString()}`}</title>
+                <title>{`${sku}\n${p.date}: ${fmtAmount(p.price)}`}</title>
               </circle>
             ))}
           </g>
@@ -475,7 +475,7 @@ function ChartContent({
         return (
           <g key={`purchase-${i}`}>
             <circle cx={x} cy={y} r={7} fill="#3B82F6" stroke="white" strokeWidth={2} opacity={0.9}>
-              <title>{`★ PO ${pp.po_number}\n${pp.date}: ¥${Number(pp.unit_price).toLocaleString()}\n${pp.supplier_name}`}</title>
+              <title>{`★ PO ${pp.po_number}\n${pp.date}: ${fmtAmount(Number(pp.unit_price))}\n${pp.supplier_name}`}</title>
             </circle>
             <text x={x} y={y - 12} textAnchor="middle" fontSize={9} fill="#3B82F6" fontWeight={600}>
               ★
@@ -505,13 +505,13 @@ function InsightsPanel({ insights, itemName }: { insights: SKUInsights; itemName
             <Statistic title={t('sku.purchase_count')} value={ps.count} suffix={t('sku.times')} />
           </Col>
           <Col span={6}>
-            <Statistic title={t('sku.purchase_avg')} value={ps.avg_price ?? '-'} prefix="¥" precision={2} />
+            <Statistic title={t('sku.purchase_avg')} value={ps.avg_price ?? '-'} prefix={getCurrencySymbol('CNY')} precision={2} />
           </Col>
           <Col span={6}>
-            <Statistic title={t('sku.purchase_median')} value={ps.median_price ?? '-'} prefix="¥" precision={2} />
+            <Statistic title={t('sku.purchase_median')} value={ps.median_price ?? '-'} prefix={getCurrencySymbol('CNY')} precision={2} />
           </Col>
           <Col span={6}>
-            <Statistic title={t('sku.purchase_total')} value={ps.total_amount} prefix="¥" precision={2} />
+            <Statistic title={t('sku.purchase_total')} value={ps.total_amount} prefix={getCurrencySymbol('CNY')} precision={2} />
           </Col>
         </Row>
       </Card>
@@ -520,7 +520,7 @@ function InsightsPanel({ insights, itemName }: { insights: SKUInsights; itemName
         <Card size="small" title={t('sku.market_signal')}>
           <Row gutter={16}>
             <Col span={6}>
-              <Statistic title={t('sku.current_price')} value={ms.current_price} prefix="¥" precision={2} />
+              <Statistic title={t('sku.current_price')} value={ms.current_price} prefix={getCurrencySymbol('CNY')} precision={2} />
             </Col>
             <Col span={6}>
               <Statistic

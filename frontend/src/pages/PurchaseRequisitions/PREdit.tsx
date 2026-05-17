@@ -11,6 +11,7 @@ import { useAuth } from '@/auth/useAuth'
 import { AutosaveBanner, AutosaveUnavailableBanner } from '@/components/AutosaveBanner'
 import { PRQuoteConfirmModal } from '@/components/PRQuoteConfirmModal'
 import { useAutosave } from '@/hooks/useAutosave'
+import { fmtAmount } from '@/utils/format'
 
 interface LineForm {
   key: number
@@ -190,8 +191,8 @@ export function PREditPage() {
           />
           {r.item_id && refPrices[r.item_id] && (
             <Typography.Text type="secondary" style={{ fontSize: 11 }}>
-              {t('sku.ref_latest')}: ¥{refPrices[r.item_id].latest_price?.toLocaleString() ?? '-'}
-              {refPrices[r.item_id].avg_price ? ` · ${t('sku.ref_avg')}: ¥${refPrices[r.item_id].avg_price?.toLocaleString()}` : ''}
+{t('sku.ref_latest')}: {fmtAmount(refPrices[r.item_id].latest_price)}
+{refPrices[r.item_id].avg_price ? ` · ${t('sku.ref_avg')}: ${fmtAmount(refPrices[r.item_id].avg_price)}` : ''}
             </Typography.Text>
           )}
         </Space>
@@ -231,7 +232,7 @@ export function PREditPage() {
     },
     {
       title: t('field.amount'), width: 100, align: 'right' as const,
-      render: (_: unknown, r: LineForm) => { const a = r.qty * (r.unit_price || 0); return a > 0 ? `¥${a.toLocaleString()}` : '-' },
+      render: (_: unknown, r: LineForm) => { const a = r.qty * (r.unit_price || 0); return a > 0 ? fmtAmount(a) : '-' },
     },
     {
       title: '', width: 40,
@@ -318,7 +319,7 @@ export function PREditPage() {
         </div>
         <Table dataSource={lines} columns={columns} rowKey="key" size="small" pagination={false} />
         <div style={{ textAlign: 'right', marginTop: 8 }}>
-          <Typography.Text strong>{t('pr.total_label')}: {total > 0 ? `¥${total.toLocaleString()}` : '-'}</Typography.Text>
+          <Typography.Text strong>{t('pr.total_label')}: {total > 0 ? fmtAmount(total) : '-'}</Typography.Text>
         </div>
       </Card>
 
