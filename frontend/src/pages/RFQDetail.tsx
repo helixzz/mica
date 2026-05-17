@@ -1,6 +1,6 @@
 import { useTranslation } from 'react-i18next'
 import { CheckCircleOutlined, DeleteOutlined, PlusOutlined } from '@ant-design/icons'
-import { Button, Card, Col, Descriptions, InputNumber, Modal, Row, Select, Space, Table, Tag, Typography, message } from 'antd'
+import { Button, Card, Col, Descriptions, InputNumber, Modal, Row, Select, Space, Table, Tabs, Tag, Typography, message } from 'antd'
 import { useEffect, useState } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
 import { api, type Supplier } from '@/api'
@@ -24,6 +24,7 @@ export default function RFQDetailPage() {
   const [quoteDays, setQuoteDays] = useState<number | null>(null)
   const [sending, setSending] = useState(false)
   const [awarding, setAwarding] = useState(false)
+  const [activeTab, setActiveTab] = useState('details')
 
   const load = () => {
     if (!id) return
@@ -125,6 +126,46 @@ export default function RFQDetailPage() {
     },
   }))
 
+  const tabItems = [
+    {
+      key: 'details',
+      label: t('details', '详情'),
+      children: (
+        <Space direction="vertical" size="large" style={{ width: '100%' }}>
+          <Card>
+            <Descriptions bordered size="small" column={2}>
+              <Descriptions.Item label={t('field.title')}>{rfq.title}</Descriptions.Item>
+              <Descriptions.Item label={t('field.deadline')}>{rfq.deadline || '-'}</Descriptions.Item>
+              <Descriptions.Item label={t('field.status')}><Tag color={statusColors[rfq.status]}>{rfq.status}</Tag></Descriptions.Item>
+              <Descriptions.Item label={t('field.created_at')}>{rfq.created_at?.slice(0, 10)}</Descriptions.Item>
+              {rfq.notes && <Descriptions.Item label={t('field.notes')} span={2}>{rfq.notes}</Descriptions.Item>}
+            </Descriptions>
+          </Card>
+
+          <Card title={t('rfq.comparison_table')}>
+            <Table
+              dataSource={comparisonData}
+              rowKey="key"
+              size="small"
+              pagination={false}
+              scroll={{ x: 'max-content' }}
+              columns={[
+                { title: t('rfq.item_col'), dataIndex: 'item_name', fixed: 'left', width: 200 },
+                 { title: t('rfq.qty_col'), dataIndex: 'qty', width: 80, align: 'right', render: (v: number, r: any) => `${fmtQty(v)} ${r.uom}` },
+                ...supplierCols,
+              ]}
+            />
+          </Card>
+        </Space>
+      ),
+    },
+    {
+      key: 'activity',
+      label: t('activity.title', '活动日志'),
+      children: <ActivityTimeline resourceType="rfq" resourceId={rfq.id} />,
+    },
+  ]
+
   return (
     <Space direction="vertical" size="large" style={{ width: '100%' }}>
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
@@ -164,30 +205,7 @@ export default function RFQDetailPage() {
         </Space>
       </div>
 
-      <Card>
-        <Descriptions bordered size="small" column={2}>
-          <Descriptions.Item label={t('field.title')}>{rfq.title}</Descriptions.Item>
-          <Descriptions.Item label={t('field.deadline')}>{rfq.deadline || '-'}</Descriptions.Item>
-          <Descriptions.Item label={t('field.status')}><Tag color={statusColors[rfq.status]}>{rfq.status}</Tag></Descriptions.Item>
-          <Descriptions.Item label={t('field.created_at')}>{rfq.created_at?.slice(0, 10)}</Descriptions.Item>
-          {rfq.notes && <Descriptions.Item label={t('field.notes')} span={2}>{rfq.notes}</Descriptions.Item>}
-        </Descriptions>
-      </Card>
-
-      <Card title={t('rfq.comparison_table')}>
-        <Table
-          dataSource={comparisonData}
-          rowKey="key"
-          size="small"
-          pagination={false}
-          scroll={{ x: 'max-content' }}
-          columns={[
-            { title: t('rfq.item_col'), dataIndex: 'item_name', fixed: 'left', width: 200 },
-             { title: t('rfq.qty_col'), dataIndex: 'qty', width: 80, align: 'right', render: (v: number, r: any) => `${fmtQty(v)} ${r.uom}` },
-            ...supplierCols,
-          ]}
-        />
-      </Card>
+      <Tabs items={tabItems} activeKey={activeTab} onChange={setActiveTab} />
 
       <Modal title={t('rfq.enter_quote')} open={!!quoteModal} onCancel={() => setQuoteModal(null)} onOk={doAddQuote} okText={t('button.save')}>
         <Space direction="vertical" size="middle" style={{ width: '100%' }}>
@@ -195,9 +213,6 @@ export default function RFQDetailPage() {
           <div><Typography.Text>{t('rfq.delivery_days')}</Typography.Text><InputNumber style={{ width: '100%' }} min={0} value={quoteDays ?? undefined} onChange={(v) => setQuoteDays(v ? Number(v) : null)} /></div>
         </Space>
       </Modal>
-      <Card title={t('activity.title', '活动日志')}>
-        <ActivityTimeline resourceType="rfq" resourceId={rfq.id} />
-      </Card>
     </Space>
   )
 }

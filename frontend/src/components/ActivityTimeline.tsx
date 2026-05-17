@@ -47,6 +47,7 @@ function getEventTypeColor(eventType: string): string {
   if (eventType.includes('.rejected')) return 'red'
   if (eventType.includes('.returned')) return 'gold'
   if (eventType.includes('.converted')) return 'cyan'
+  if (eventType.startsWith('notification.')) return 'purple'
   return 'default'
 }
 
@@ -63,6 +64,7 @@ export function ActivityTimeline({ resourceType, resourceId }: ActivityTimelineP
         resource_type: resourceType,
         resource_id: resourceId,
         page_size: 50,
+        include_notifications: true,
       })
       .then((result) => {
         if (!cancelled) {

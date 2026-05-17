@@ -29,6 +29,7 @@ from app.models import (
     AIModel,
     AuditLog,
     JSONValue,
+    Notification,
     User,
     UserRole,
 )
@@ -750,40 +751,95 @@ async def list_audit_logs(
     resource_id: str | None = Query(None),
     date_from: datetime | None = Query(None),
     date_to: datetime | None = Query(None),
+    include_notifications: bool = Query(False),
 ):
-    query = select(AuditLog).order_by(AuditLog.occurred_at.desc())
+    audit_query = select(AuditLog).order_by(AuditLog.occurred_at.desc())
     if event_type:
-        query = query.where(AuditLog.event_type == event_type)
+        audit_query = audit_query.where(AuditLog.event_type == event_type)
     if actor_id:
-        query = query.where(AuditLog.actor_id == actor_id)
+        audit_query = audit_query.where(AuditLog.actor_id == actor_id)
     if resource_type:
-        query = query.where(AuditLog.resource_type == resource_type)
+        audit_query = audit_query.where(AuditLog.resource_type == resource_type)
     if resource_id:
-        query = query.where(AuditLog.resource_id == resource_id)
+        audit_query = audit_query.where(AuditLog.resource_id == resource_id)
     if date_from:
-        query = query.where(AuditLog.occurred_at >= date_from)
+        audit_query = audit_query.where(AuditLog.occurred_at >= date_from)
     if date_to:
-        query = query.where(AuditLog.occurred_at <= date_to)
+        audit_query = audit_query.where(AuditLog.occurred_at <= date_to)
 
-    total = (await db.execute(select(func.count()).select_from(query.subquery()))).scalar() or 0
+    def _audit_log_item(a: AuditLog) -> dict[str, object]:
+        return {
+            "id": str(a.id),
+            "occurred_at": a.occurred_at.isoformat(),
+            "actor_id": str(a.actor_id) if a.actor_id else None,
+            "actor_name": a.actor_name,
+            "event_type": a.event_type,
+            "resource_type": a.resource_type,
+            "resource_id": a.resource_id,
+            "comment": a.comment,
+            "metadata": a.metadata_json,
+        }
+
+    def _notification_item(n: Notification) -> dict[str, object]:
+        return {
+            "id": str(n.id),
+            "occurred_at": n.created_at.isoformat(),
+            "actor_id": str(n.user_id) if n.user_id else None,
+            "actor_name": n.user.display_name if n.user else None,
+            "event_type": "notification.created",
+            "resource_type": n.biz_type,
+            "resource_id": str(n.biz_id) if n.biz_id else None,
+            "comment": None,
+            "metadata": {
+                "title": n.title,
+                "category": n.category.value if n.category else None,
+                "sent_via": n.sent_via,
+            },
+        }
+
+    if include_notifications and resource_type:
+        audit_rows = (await db.execute(audit_query)).scalars().all()
+        audit_items = [_audit_log_item(r) for r in audit_rows]
+
+        notif_query = (
+            select(Notification)
+            .options(selectinload(Notification.user))
+            .where(Notification.biz_type == resource_type)
+            .order_by(Notification.created_at.desc())
+        )
+        if resource_id:
+            notif_query = notif_query.where(Notification.biz_id == UUID(resource_id))
+        if date_from:
+            notif_query = notif_query.where(Notification.created_at >= date_from)
+        if date_to:
+            notif_query = notif_query.where(Notification.created_at <= date_to)
+
+        notif_rows = (await db.execute(notif_query)).scalars().all()
+        notif_items = [_notification_item(r) for r in notif_rows]
+
+        combined = audit_items + notif_items
+        combined.sort(key=lambda x: cast(str, x["occurred_at"]), reverse=True)
+
+        total = len(combined)
+        offset = (page - 1) * page_size
+        paged = combined[offset : offset + page_size]
+
+        return {
+            "items": paged,
+            "total": total,
+            "page": page,
+            "page_size": page_size,
+        }
+
+    # Audit-only path: SQL-level pagination
+    total = (
+        (await db.execute(select(func.count()).select_from(audit_query.subquery()))).scalar() or 0
+    )
     offset = (page - 1) * page_size
-    rows = (await db.execute(query.offset(offset).limit(page_size))).scalars().all()
+    rows = (await db.execute(audit_query.offset(offset).limit(page_size))).scalars().all()
 
     return {
-        "items": [
-            {
-                "id": str(r.id),
-                "occurred_at": r.occurred_at.isoformat(),
-                "actor_id": str(r.actor_id) if r.actor_id else None,
-                "actor_name": r.actor_name,
-                "event_type": r.event_type,
-                "resource_type": r.resource_type,
-                "resource_id": r.resource_id,
-                "comment": r.comment,
-                "metadata": r.metadata_json,
-            }
-            for r in rows
-        ],
+        "items": [_audit_log_item(r) for r in rows],
         "total": total,
         "page": page,
         "page_size": page_size,

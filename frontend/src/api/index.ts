@@ -1480,6 +1480,7 @@ export const api = {
     resource_id?: string
     date_from?: string
     date_to?: string
+    include_notifications?: boolean
   } = {}): Promise<{ items: Record<string, unknown>[]; total: number; page: number; page_size: number }> {
     const { data } = await client.get('/admin/audit-logs', { params })
     return data as { items: Record<string, unknown>[]; total: number; page: number; page_size: number }
