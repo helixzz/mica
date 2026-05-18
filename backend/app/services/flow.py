@@ -22,6 +22,7 @@ from app.models import (
     PaymentSchedule,
     PaymentStatus,
     POContractLink,
+    PODocument,
     POItem,
     POStatus,
     PurchaseOrder,
@@ -1006,6 +1007,62 @@ async def remove_shipment_document(db: AsyncSession, shipment_id: UUID, document
     link = await db.get(ShipmentDocument, (shipment_id, document_id))
     if link is None:
         raise HTTPException(404, "shipment_document.not_found")
+    await db.delete(link)
+    await db.commit()
+
+
+async def attach_po_document(
+    db: AsyncSession, actor: User, po_id: UUID, document_id: UUID, role: str = "attachment"
+) -> PODocument:
+    po = await db.get(PurchaseOrder, po_id)
+    if po is None:
+        raise HTTPException(404, "purchase_order.not_found")
+    doc = await db.get(Document, document_id)
+    if doc is None:
+        raise HTTPException(404, "document.not_found")
+    link = PODocument(
+        po_id=po_id,
+        document_id=document_id,
+        role=role,
+    )
+    db.add(link)
+    await _audit_write(
+        db,
+        actor,
+        "po.document.attached",
+        "purchase_order",
+        str(po_id),
+        {"document_id": str(document_id), "filename": doc.original_filename},
+    )
+    await db.commit()
+    return link
+
+
+async def list_po_documents(db: AsyncSession, po_id: UUID) -> list[dict]:
+    stmt = (
+        select(PODocument, Document)
+        .join(Document, PODocument.document_id == Document.id)
+        .where(PODocument.po_id == po_id)
+        .order_by(PODocument.display_order)
+    )
+    rows = (await db.execute(stmt)).all()
+    return [
+        {
+            "document_id": str(pd.document_id),
+            "role": pd.role,
+            "original_filename": d.original_filename,
+            "content_type": d.content_type,
+            "file_size": d.file_size,
+            "created_at": pd.created_at.isoformat() if pd.created_at else None,
+        }
+        for pd, d in rows
+    ]
+
+
+async def remove_po_document(db: AsyncSession, po_id: UUID, document_id: UUID) -> None:
+    link = await db.get(PODocument, (po_id, document_id))
+    if link is None:
+        raise HTTPException(404, "po_document.not_found")
     await db.delete(link)
     await db.commit()
 

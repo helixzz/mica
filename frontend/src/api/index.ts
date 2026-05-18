@@ -1246,6 +1246,17 @@ export const api = {
   async removeShipmentAttachment(shipmentId: string, documentId: string): Promise<void> {
     await client.delete(`/shipments/${shipmentId}/attachments/${documentId}`)
   },
+  async attachPODocument(poId: string, documentId: string, role: string = 'attachment'): Promise<{ po_id: string; document_id: string; role: string }> {
+    const { data } = await client.post(`/purchase-orders/${poId}/attachments`, { document_id: documentId, role })
+    return data
+  },
+  async listPODocuments(poId: string): Promise<{ document_id: string; role: string; original_filename: string; content_type: string; file_size: number; created_at: string }[]> {
+    const { data } = await client.get(`/purchase-orders/${poId}/attachments`)
+    return data as any
+  },
+  async deletePODocument(poId: string, documentId: string): Promise<void> {
+    await client.delete(`/purchase-orders/${poId}/attachments/${documentId}`)
+  },
   async listPayments(po_id?: string): Promise<PaymentRecord[]> {
     const { data } = await client.get<PaymentRecord[]>('/payments', { params: { po_id } })
     return data

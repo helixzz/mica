@@ -502,6 +502,9 @@ class PurchaseOrder(Base, TimestampMixin):
     delivery_plans: Mapped[list[DeliveryPlan]] = relationship(
         back_populates="po", cascade="all, delete-orphan"
     )
+    documents: Mapped[list[PODocument]] = relationship(
+        back_populates="po", cascade="all, delete-orphan"
+    )
 
 
 class POItem(Base, TimestampMixin):
@@ -984,6 +987,25 @@ class ContractDocument(Base):
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), default=lambda: datetime.utcnow(), nullable=False
     )
+
+
+class PODocument(Base):
+    __tablename__ = "po_documents"
+
+    po_id: Mapped[UUID] = mapped_column(
+        PGUUID(as_uuid=True), ForeignKey("purchase_orders.id", ondelete="CASCADE"), primary_key=True
+    )
+    document_id: Mapped[UUID] = mapped_column(
+        PGUUID(as_uuid=True), ForeignKey("documents.id", ondelete="RESTRICT"), primary_key=True
+    )
+    role: Mapped[str] = mapped_column(String(32), default="attachment", nullable=False)
+    display_order: Mapped[int] = mapped_column(Integer, default=0, nullable=False)
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), default=lambda: datetime.now(UTC), nullable=False
+    )
+
+    po: Mapped[PurchaseOrder] = relationship(back_populates="documents")
+    document: Mapped[Document] = relationship()
 
 
 class InvoiceLine(Base, TimestampMixin):

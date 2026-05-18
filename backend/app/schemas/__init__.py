@@ -600,6 +600,11 @@ class ShipmentAttachIn(BaseModel):
     role: str = "attachment"
 
 
+class POAttachIn(BaseModel):
+    document_id: UUID
+    role: str = "attachment"
+
+
 class SerialNumberIn(BaseModel):
     serial_number: str = Field(..., min_length=1, max_length=128)
     manufacturer: str | None = None

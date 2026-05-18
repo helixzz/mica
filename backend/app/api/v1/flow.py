@@ -22,6 +22,7 @@ from app.schemas import (
     PaymentListOut,
     PaymentOut,
     PaymentUpdateIn,
+    POAttachIn,
     POProgressOut,
     SerialNumberIn,
     ShipmentAttachIn,
@@ -315,6 +316,45 @@ async def remove_shipment_attachment(
     db: Annotated[AsyncSession, Depends(get_db)],
 ) -> Response:
     await flow.remove_shipment_document(db, shipment_id, document_id)
+    return Response(status_code=status.HTTP_204_NO_CONTENT)
+
+
+@router.post("/purchase-orders/{po_id}/attachments", status_code=201, tags=["flow"])
+async def attach_po_document(
+    po_id: UUID,
+    payload: POAttachIn,
+    user: CurrentUser,
+    db: Annotated[AsyncSession, Depends(get_db)],
+):
+    link = await flow.attach_po_document(db, user, po_id, payload.document_id, payload.role)
+    return {
+        "po_id": str(link.po_id),
+        "document_id": str(link.document_id),
+        "role": link.role,
+    }
+
+
+@router.get("/purchase-orders/{po_id}/attachments", tags=["flow"])
+async def list_po_attachments(
+    po_id: UUID,
+    user: CurrentUser,
+    db: Annotated[AsyncSession, Depends(get_db)],
+):
+    return await flow.list_po_documents(db, po_id)
+
+
+@router.delete(
+    "/purchase-orders/{po_id}/attachments/{document_id}",
+    status_code=status.HTTP_204_NO_CONTENT,
+    tags=["flow"],
+)
+async def remove_po_attachment(
+    po_id: UUID,
+    document_id: UUID,
+    user: CurrentUser,
+    db: Annotated[AsyncSession, Depends(get_db)],
+) -> Response:
+    await flow.remove_po_document(db, po_id, document_id)
     return Response(status_code=status.HTTP_204_NO_CONTENT)
 
 
