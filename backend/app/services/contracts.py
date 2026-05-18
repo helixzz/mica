@@ -105,10 +105,13 @@ async def attach_document_to_contract(
 
     if run_ocr:
         try:
+            from app.db import AsyncSessionLocal
+
             content = await doc_svc.read_document_bytes(document)
-            extracted = await extract_svc.extract_contract(
-                db, actor, content, document.content_type, document.original_filename
-            )
+            async with AsyncSessionLocal() as ocr_db:
+                extracted = await extract_svc.extract_contract(
+                    ocr_db, actor, content, document.content_type, document.original_filename
+                )
             parts: list[str] = []
             for field_name in (
                 "contract_number",
@@ -136,7 +139,7 @@ async def attach_document_to_contract(
                 link.ocr_text = ocr_text
                 await db.commit()
         except Exception:
-            pass
+            await db.rollback()
 
     return link
 
