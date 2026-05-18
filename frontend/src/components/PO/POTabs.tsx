@@ -5,6 +5,7 @@ import { type Contract, type InvoiceListRow, type PaymentRecord, type PurchaseOr
 import { PaymentScheduleTab } from '@/components/PaymentScheduleTab'
 import { ContractsTab } from '@/components/PO/ContractsTab'
 import { DeliveryPlanTab } from '@/components/PO/DeliveryPlanTab'
+import { POAttachmentsTab } from '@/components/PO/POAttachmentsTab'
 import { InvoicesTab } from '@/components/PO/InvoicesTab'
 import { ItemsTab } from '@/components/PO/ItemsTab'
 import { PaymentsTab } from '@/components/PO/PaymentsTab'
@@ -121,6 +122,11 @@ export function POTabs({
               onUnlinkContract={handleUnlinkContract}
             />
           ),
+        },
+        {
+          key: 'attachments',
+          label: t('po.attachments', 'Attachments'),
+          children: <POAttachmentsTab poId={po.id} />,
         },
         {
           key: 'payment-plan',
