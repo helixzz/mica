@@ -68,7 +68,8 @@
       "returned": "Returned: {title}",
       "result_approved": "Approved",
       "result_rejected": "Rejected",
-      "result_returned": "Returned"
+      "result_returned": "Returned",
+      "new_task_body": "PR #{pr_number} \"{title}\"\nAmount: {amount}\nStage: {stage}\nSubmitter: {submitter}"
     },
     "contract": {
       "expiring": "Contract expiring soon: {name}"

@@ -68,7 +68,8 @@
       "returned": "审批被退回: {title}",
       "result_approved": "已批准",
       "result_rejected": "已拒绝",
-      "result_returned": "已退回"
+      "result_returned": "已退回",
+      "new_task_body": "采购申请 #{pr_number}「{title}」\n金额：{amount}\n审批阶段：{stage}\n提交人：{submitter}"
     },
     "contract": {
       "expiring": "合同即将到期: {name}"

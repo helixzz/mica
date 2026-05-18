@@ -223,6 +223,17 @@ async def _send_assignment_notification(
                 else "zh-CN",
                 title=instance.title,
             ),
+            body=lambda current_user: t(
+                "notification.approval.new_task_body",
+                current_user.preferred_locale
+                if current_user and current_user.preferred_locale
+                else "zh-CN",
+                pr_number=str(instance.biz_number or ""),
+                title=instance.title or "",
+                amount=str(instance.amount) if instance.amount else "—",
+                stage=task.stage_name or "",
+                submitter=getattr(getattr(instance, "submitter", None), "display_name", "") or "",
+            ),
             link_url="/approvals",
             biz_type="approval_task",
             biz_id=task.id,
