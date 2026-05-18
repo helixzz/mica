@@ -32,7 +32,7 @@ async def attach_doc(
     # The litellm HTTP call inside extract_contract corrupts the async session.
     # Manual "AI Extract & Create" button uses a separate API call and works correctly.
     link = await svc.attach_document_to_contract(
-        db, user.id, contract_id, payload.document_id, payload.role, False
+        db, user.id, contract_id, payload.document_id, payload.role, payload.run_ocr
     )
     return {
         "contract_id": str(link.contract_id),
