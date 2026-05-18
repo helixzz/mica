@@ -58,7 +58,12 @@ async def attach_document_to_contract(
 
             async with AsyncSessionLocal() as ocr_db:
                 extracted = await extract_svc.extract_contract(
-                    ocr_db, None, document.id, content, document.content_type, document.original_filename
+                    ocr_db,
+                    None,
+                    document.id,
+                    content,
+                    document.content_type,
+                    document.original_filename,
                 )
             if extracted.error:
                 raise ValueError(extracted.error)

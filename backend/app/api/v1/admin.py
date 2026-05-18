@@ -833,8 +833,8 @@ async def list_audit_logs(
 
     # Audit-only path: SQL-level pagination
     total = (
-        (await db.execute(select(func.count()).select_from(audit_query.subquery()))).scalar() or 0
-    )
+        await db.execute(select(func.count()).select_from(audit_query.subquery()))
+    ).scalar() or 0
     offset = (page - 1) * page_size
     rows = (await db.execute(audit_query.offset(offset).limit(page_size))).scalars().all()
 

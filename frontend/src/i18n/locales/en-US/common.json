@@ -1204,7 +1204,9 @@
     "unlink_contract_body": "This only removes the secondary association from the current PO. The contract's primary PO remains unchanged.",
     "unlink_success": "Contract unlinked",
     "primary_contract": "Primary PO",
-    "invoice_help": "Record the supplier's invoice number, date, tax info, and supporting files so later matching and payment review stay traceable."
+    "invoice_help": "Record the supplier's invoice number, date, tax info, and supporting files so later matching and payment review stay traceable.",
+    "attachments_hint": "Upload packing lists, serial number sheets, signed receipts, etc.",
+    "attachments": "Attachments"
   },
   "autosave": {
     "banner_text": "An unsaved draft from {{time}} was found.",

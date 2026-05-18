@@ -1209,7 +1209,9 @@
     "unlink_contract_body": "此操作只会移除当前 PO 的次级关联，不会改变该合同的主采购订单。",
     "unlink_success": "合同关联已解除",
     "primary_contract": "主采购订单",
-    "invoice_help": "录入供应商发票号、日期、税务信息和附件，确保后续匹配、付款和审计链路都可追溯。"
+    "invoice_help": "录入供应商发票号、日期、税务信息和附件，确保后续匹配、付款和审计链路都可追溯。",
+    "attachments_hint": "上传装箱单、序列号清单、签收单等交付文档",
+    "attachments": "附件"
   },
   "autosave": {
     "banner_text": "检测到 {{time}} 的未保存草稿。",

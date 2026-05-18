@@ -80,7 +80,7 @@ export function POAttachmentsTab({ poId }: Props) {
         </Button>
       </Upload>
       <Typography.Text type="secondary">
-        {t('po.attachments_hint', 'Upload packing lists, serial number sheets, signed receipts, etc.')}
+        {t('po.attachments_hint')}
       </Typography.Text>
       <Table
         rowKey="document_id"

@@ -118,7 +118,11 @@ async def add_quote(
         if rfq_item and rfq_item.item_id:
             from app.models import SKUPriceRecord
 
-            sid = data["supplier_id"] if isinstance(data["supplier_id"], UUID) else UUID(str(data["supplier_id"]))
+            sid = (
+                data["supplier_id"]
+                if isinstance(data["supplier_id"], UUID)
+                else UUID(str(data["supplier_id"]))
+            )
             db.add(
                 SKUPriceRecord(
                     item_id=rfq_item.item_id,
