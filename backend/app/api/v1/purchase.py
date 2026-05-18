@@ -212,6 +212,16 @@ async def get_po_delivery_plans(
     from app.services import delivery_plans as dp_svc
 
     plans = await dp_svc.list_delivery_plans(db, po_id=po_id)
+    # Also include contract-linked plans
+    from sqlalchemy import select
+
+    from app.models import Contract
+
+    contracts = (
+        (await db.execute(select(Contract.id).where(Contract.po_id == po_id))).scalars().all()
+    )
+    for cid in contracts:
+        plans += await dp_svc.list_delivery_plans(db, contract_id=cid)
     plan_outs = [await dp_svc._plan_to_out(db, plan) for plan in plans]
     total_planned = sum(p.planned_qty for p in plans)
     total_actual = sum(p.actual_qty for p in plans)
