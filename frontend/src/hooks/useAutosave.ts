@@ -16,7 +16,16 @@ interface AutosaveReturn {
   save: (values: Record<string, unknown>) => void
 }
 
+function hasValues(v: Record<string, unknown>): boolean {
+  for (const k of Object.keys(v)) {
+    const val = v[k]
+    if (val !== null && val !== undefined && val !== '' && !(Array.isArray(val) && val.length === 1 && val[0] && typeof val[0] === 'object' && Object.keys(val[0] as Record<string,unknown>).every(kk => !(val[0] as Record<string,unknown>)[kk]))) return true
+  }
+  return false
+}
+
 function _storageAvailable(): boolean {
+
   try {
     const key = '__mica_storage_test__'
     localStorage.setItem(key, '1')
@@ -39,7 +48,7 @@ export function useAutosave(key: string, debounceMs = 2000): AutosaveReturn {
       const raw = localStorage.getItem(fullKey)
       if (raw) {
         const parsed = JSON.parse(raw) as AutosaveState
-        if (parsed.savedAt && parsed.formValues) {
+        if (parsed.savedAt && parsed.formValues && hasValues(parsed.formValues)) {
           setState(parsed)
         }
       }

@@ -43,7 +43,7 @@ export function PREditPage() {
   const [submitting, setSubmitting] = useState(false)
   const [loaded, setLoaded] = useState(false)
   const [quoteModalOpen, setQuoteModalOpen] = useState(false)
-  const autosave = useAutosave(`pr-edit-${id || 'unknown'}`)
+  const autosave = useAutosave(`pr-edit-${id || user?.id || 'unknown'}`)
   const [autosaveDismissed, setAutosaveDismissed] = useState(false)
 
   useEffect(() => {

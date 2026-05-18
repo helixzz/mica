@@ -59,7 +59,7 @@ export function PRNewPage() {
   const [savedPRId, setSavedPRId] = useState<string | null>(null)
   const { user } = useAuth()
   const isRequester = user?.role === 'requester'
-  const autosave = useAutosave('pr-new')
+  const autosave = useAutosave(`pr-new-${user?.id || 'anon'}`)
   const [autosaveDismissed, setAutosaveDismissed] = useState(false)
   const [refPrices, setRefPrices] = useState<Record<string, { latest_price: number | null; avg_price: number | null }>>({})
   const copyId = useParams<{ copyId: string }>().copyId
