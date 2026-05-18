@@ -87,7 +87,7 @@ async def attach_document_to_contract(
         contract_id=contract_id,
         document_id=document_id,
         role=role,
-        ocr_text=ocr_text,
+        ocr_text=None,
         display_order=0,
     )
     db.add(link)
@@ -98,10 +98,46 @@ async def attach_document_to_contract(
             event_type="contract.document_attached",
             resource_type="contract",
             resource_id=str(contract_id),
-            metadata_json={"document_id": str(document_id), "ocr_chars": len(ocr_text or "")},
+            metadata_json={"document_id": str(document_id), "ocr_chars": 0},
         )
     )
     await db.commit()
+
+    if run_ocr:
+        try:
+            content = await doc_svc.read_document_bytes(document)
+            extracted = await extract_svc.extract_contract(
+                db, actor, content, document.content_type, document.original_filename
+            )
+            parts: list[str] = []
+            for field_name in (
+                "contract_number",
+                "title",
+                "supplier_name",
+                "supplier_contact",
+                "supplier_phone",
+                "start_date",
+                "end_date",
+                "total_amount",
+                "payment_terms",
+                "delivery_terms",
+                "description",
+            ):
+                val = getattr(extracted, field_name, None)
+                if val:
+                    parts.append(str(val))
+            for line in extracted.lines or []:
+                if line.item_name:
+                    parts.append(line.item_name)
+                if line.spec:
+                    parts.append(line.spec)
+            ocr_text = "\n".join(parts) if parts else None
+            if ocr_text:
+                link.ocr_text = ocr_text
+                await db.commit()
+        except Exception:
+            pass
+
     return link
 
 
