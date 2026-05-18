@@ -10,7 +10,7 @@ export const clearToken = () => localStorage.removeItem(TOKEN_KEY)
 
 export const client: AxiosInstance = axios.create({
   baseURL: '/api/v1',
-  timeout: 20000,
+  timeout: 120000,
 })
 
 client.interceptors.request.use((cfg: InternalAxiosRequestConfig) => {
