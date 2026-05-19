@@ -7,6 +7,30 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [v1.18.0] — 2026-05-20
+
+### 新增
+- **数据洞察 Phase 2+3**：7 个新面板 + 全套后端 API
+  - **预算水位仪表** (BudgetGauge)：各部门/品类预算执行率水平条，红黄绿三级着色
+  - **供应商评分卡** (SupplierScorecard)：综合评分（准时率 40% + 价格稳定性 30% + 响应速度 30%）+ 排名表
+  - **品类涨价雷达** (CategoryRadar)：季度环比价格变动 + 采购量变化
+  - **审批瓶颈分析** (ApprovalBottleneck)：待审数量 / 30 天通过数 / 平均耗时 + 阶段耗时条形图 + 待批最多的审批人
+  - **LLM 季度摘要** (QuarterlySummary)：AI 自动生成采购趋势分析段落（中文），24h 缓存
+  - **异常红旗墙** (AnomalyWall)：价格异常 / 延迟交付 / 停滞审批 / 供应商集中度风险，按严重程度排序
+  - **现金流预测** (CashFlowForecast)：未来 3 个月付款义务聚合（计划 vs 已确认）
+
+### 后端 API
+- `POST/GET/DELETE /insights/budgets` — 预算 CRUD
+- `GET /insights/budgets/execution` — 预算执行率聚合
+- `GET /insights/supplier-scorecard` — 供应商综合评分
+- `GET /insights/category-trends` — 品类季度价格趋势
+- `GET /insights/approval-bottleneck` — 审批漏斗分析
+- `GET /insights/cash-flow-forecast` — 现金流预测
+- `GET /insights/quarterly-summary` — LLM 季度摘要（含缓存）
+- `GET /insights/anomaly-wall` — 异常事件聚合
+
+---
+
 ## [v1.17.0] — 2026-05-19
 
 ### 新增

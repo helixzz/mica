@@ -871,6 +871,74 @@ export interface PaymentCalendarItem {
   status: string
 }
 
+
+export interface BudgetExecutionItem {
+  budget_id: string
+  scope_type: string
+  scope_id: string
+  scope_name: string
+  period_start: string
+  period_end: string
+  budget_amount: number
+  actual_spend: number
+  execution_pct: number
+  remaining: number
+  currency: string
+}
+
+export interface SupplierScorecardItem {
+  supplier_id: string
+  supplier_name: string
+  total_orders: number
+  total_amount: number
+  on_time_rate: number
+  avg_delivery_days: number
+  price_stability: number
+  score: number
+}
+
+export interface CategoryTrendItem {
+  category_id: string
+  category_name: string
+  avg_price_current: number
+  avg_price_prev: number
+  change_pct: number
+  volume_current: number
+  volume_prev: number
+}
+
+export interface ApprovalBottleneckData {
+  avg_time_to_approve: number
+  stages: { stage_label: string; avg_hours: number; pending_count: number; completed_count: number }[]
+  top_pending_approvers: { user_id: string; display_name: string; pending_count: number; avg_age_hours: number }[]
+  total_pending: number
+  total_approved_30d: number
+  total_rejected_30d: number
+}
+
+
+export interface AnomalyItem {
+  type: string
+  severity: string
+  title: string
+  description: string
+  link: string | null
+  created_at: string
+}
+
+export interface CashFlowMonth {
+  month: string
+  planned: number
+  confirmed: number
+  net_outflow: number
+}
+
+export interface CashFlowData {
+  months: CashFlowMonth[]
+  total_planned: number
+  total_confirmed: number
+}
+
 export interface PanelConfig {
   panel_id: string
   x: number
@@ -1907,6 +1975,35 @@ export const api = {
       }
     }
     onDone?.()
+  },
+  async getInsightsBudgetExecution(): Promise<BudgetExecutionItem[]> {
+    const { data } = await client.get<BudgetExecutionItem[]>('/insights/budgets/execution')
+    return data
+  },
+  async getInsightsSupplierScorecard(): Promise<SupplierScorecardItem[]> {
+    const { data } = await client.get<SupplierScorecardItem[]>('/insights/supplier-scorecard')
+    return data
+  },
+  async getInsightsCategoryTrends(): Promise<CategoryTrendItem[]> {
+    const { data } = await client.get<CategoryTrendItem[]>('/insights/category-trends')
+    return data
+  },
+  async getInsightsApprovalBottleneck(): Promise<ApprovalBottleneckData> {
+    const { data } = await client.get<ApprovalBottleneckData>('/insights/approval-bottleneck')
+    return data
+  },
+
+  async getInsightsQuarterlySummary(quarter?: string): Promise<{ quarter: string; summary_text: string; generated_at: string; data_snapshot: Record<string, unknown> }> {
+    const { data } = await client.get('/insights/quarterly-summary', { params: quarter ? { quarter } : {} })
+    return data
+  },
+  async getInsightsAnomalyWall(): Promise<{ anomalies: AnomalyItem[] }> {
+    const { data } = await client.get('/insights/anomaly-wall')
+    return data
+  },
+  async getInsightsCashFlow(months?: number): Promise<CashFlowData> {
+    const { data } = await client.get('/insights/cash-flow-forecast', { params: { months: months ?? 3 } })
+    return data
   },
   async getInsightsDashboardConfig(): Promise<{ panels: PanelConfig[] }> {
     const { data } = await client.get('/insights/dashboard-config')

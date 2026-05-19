@@ -45,3 +45,59 @@ registerPanel({
   defaultSize: { w: 12, h: 6 },
   component: lazy(() => import('./panels/WorkflowKanbanPanel')),
 })
+
+registerPanel({
+  id: 'budget_gauge',
+  titleKey: 'insights.budget_gauge',
+  descriptionKey: 'insights.budget_gauge_desc',
+  defaultSize: { w: 12, h: 5 },
+  component: lazy(() => import('./panels/BudgetGaugePanel')),
+})
+
+registerPanel({
+  id: 'supplier_scorecard',
+  titleKey: 'insights.supplier_scorecard',
+  descriptionKey: 'insights.supplier_scorecard_desc',
+  defaultSize: { w: 12, h: 6 },
+  component: lazy(() => import('./panels/SupplierScorecardPanel')),
+})
+
+registerPanel({
+  id: 'category_radar',
+  titleKey: 'insights.category_radar',
+  descriptionKey: 'insights.category_radar_desc',
+  defaultSize: { w: 12, h: 6 },
+  component: lazy(() => import('./panels/CategoryRadarPanel')),
+})
+
+registerPanel({
+  id: 'approval_bottleneck',
+  titleKey: 'insights.approval_bottleneck',
+  descriptionKey: 'insights.approval_bottleneck_desc',
+  defaultSize: { w: 12, h: 8 },
+  component: lazy(() => import('./panels/ApprovalBottleneckPanel')),
+})
+
+registerPanel({
+  id: 'quarterly_summary',
+  titleKey: 'insights.quarterly_summary',
+  descriptionKey: 'insights.quarterly_summary_desc',
+  defaultSize: { w: 12, h: 5 },
+  component: lazy(() => import('./panels/QuarterlySummaryPanel')),
+})
+
+registerPanel({
+  id: 'anomaly_wall',
+  titleKey: 'insights.anomaly_wall',
+  descriptionKey: 'insights.anomaly_wall_desc',
+  defaultSize: { w: 6, h: 6 },
+  component: lazy(() => import('./panels/AnomalyWallPanel')),
+})
+
+registerPanel({
+  id: 'cash_flow',
+  titleKey: 'insights.cash_flow',
+  descriptionKey: 'insights.cash_flow_desc',
+  defaultSize: { w: 6, h: 6 },
+  component: lazy(() => import('./panels/CashFlowForecastPanel')),
+})
