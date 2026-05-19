@@ -28,9 +28,9 @@ export function InvoicesTab({ invoices, onRecordInvoice }: InvoicesTabProps) {
           { title: t('field.internal_number'), dataIndex: 'internal_number' },
           { title: t('field.invoice_number'), dataIndex: 'invoice_number' },
           { title: t('field.invoice_date'), dataIndex: 'invoice_date' },
-          { title: t('field.subtotal'), dataIndex: 'subtotal', align: 'right', render: (v: string) => fmtAmount(v) },
-          { title: t('field.tax_amount'), dataIndex: 'tax_amount', align: 'right', render: (v: string) => fmtAmount(v) },
-          { title: t('field.total_amount'), dataIndex: 'total_amount', align: 'right', render: (v: string) => fmtAmount(v) },
+          { title: t('field.subtotal'), dataIndex: 'subtotal', align: 'right', render: (v: string, r: InvoiceListRow) => fmtAmount(v, r.currency) },
+          { title: t('field.tax_amount'), dataIndex: 'tax_amount', align: 'right', render: (v: string, r: InvoiceListRow) => fmtAmount(v, r.currency) },
+          { title: t('field.total_amount'), dataIndex: 'total_amount', align: 'right', render: (v: string, r: InvoiceListRow) => fmtAmount(v, r.currency) },
           { title: t('field.status'), dataIndex: 'status',
             render: (s: string) => <Tag>{t(`status.${s}` as 'status.draft')}</Tag> },
         ]}

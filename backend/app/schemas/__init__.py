@@ -276,6 +276,7 @@ class PRCreateIn(BaseModel):
     procurement_category_id: UUID | None = None
     currency: str = "CNY"
     required_date: date | None = None
+    requester_id: UUID | None = None
     items: list[PRItemIn] = Field(default_factory=list)
 
 

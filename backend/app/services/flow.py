@@ -10,6 +10,7 @@ from sqlalchemy import func, or_, select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
+from app.core.money import fmt_amount
 from app.models import (
     AuditLog,
     Contract,
@@ -192,7 +193,7 @@ async def create_contract(
                         f"**Title**: {contract.title}\n"
                         f"**PO**: {po.po_number}\n"
                         f"**PR**: {po.pr_title or '—'}\n"
-                        f"**Amount**: ¥{contract.total_amount}\n"
+                        f"**Amount**: {fmt_amount(contract.total_amount, contract.currency)}\n"
                         f"**Effective**: {contract.effective_date} | **Expires**: {contract.expiry_date}\n"
                         f"**Created by**: {actor.display_name}"
                     ),
@@ -521,7 +522,7 @@ async def update_contract(
                     body=(
                         f"**Contract**: {contract.contract_number}\n"
                         f"**Title**: {contract.title}\n"
-                        f"**Amount**: ¥{contract.total_amount}\n"
+                        f"**Amount**: {fmt_amount(contract.total_amount, contract.currency)}\n"
                         f"**Changed fields**: {changed_fields}\n"
                         f"**Updated by**: {actor.display_name}"
                     ),
@@ -1228,7 +1229,7 @@ async def create_payment(
                         f"**Payment**: {record.payment_number} (Installment #{record.installment_no})\n"
                         f"**PO**: {po.po_number}\n"
                         f"**PR**: {po.pr_title or '—'}\n"
-                        f"**Amount**: ¥{record.amount} {record.currency}\n"
+                        f"**Amount**: {fmt_amount(record.amount, record.currency)}\n"
                         f"**Due date**: {record.due_date}\n"
                         f"**Status**: {record.status}\n"
                         f"**Method**: {record.payment_method}\n"
@@ -1433,7 +1434,7 @@ async def update_payment(
                         body=(
                             f"**Payment**: {record.payment_number} | **PO**: {po.po_number}\n"
                             f"**PR**: {po.pr_title or '—'}\n"
-                            f"**Amount**: ¥{record.amount} {record.currency}\n"
+                            f"**Amount**: {fmt_amount(record.amount, record.currency)}\n"
                             f"**Changes**:\n{changes_str}\n"
                             f"**Updated by**: {actor.display_name}"
                         ),
@@ -1787,8 +1788,8 @@ async def create_invoice(
                         f"**Invoice**: {invoice.internal_number}\n"
                         f"**Vendor #**: {invoice.invoice_number}\n"
                         f"**Supplier**: {supplier.name}\n"
-                        f"**Total**: ¥{invoice.total_amount} {invoice.currency}\n"
-                        f"**Subtotal**: ¥{invoice.subtotal} | **Tax**: ¥{invoice.tax_amount}\n"
+                        f"**Total**: {fmt_amount(invoice.total_amount, invoice.currency)}\n"
+                        f"**Subtotal**: {fmt_amount(invoice.subtotal, invoice.currency)} | **Tax**: {fmt_amount(invoice.tax_amount, invoice.currency)}\n"
                         f"**Status**: {invoice.status}\n"
                         f"**Date**: {invoice.invoice_date}\n"
                         f"**Created by**: {actor.display_name}"
@@ -1832,7 +1833,7 @@ async def create_invoice(
                         f"**Invoice**: {invoice.internal_number}\n"
                         f"**3-Way Match**: {match_label}\n"
                         f"**Status**: {initial_status}\n"
-                        f"**Total**: ¥{invoice.total_amount} {invoice.currency}\n"
+                        f"**Total**: {fmt_amount(invoice.total_amount, invoice.currency)}\n"
                         f"**Created by**: {actor.display_name}"
                     ),
                     link_url="/invoices",

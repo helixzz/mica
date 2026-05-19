@@ -12,6 +12,15 @@ export interface User {
   is_active: boolean
 }
 
+export interface ProxyCandidate {
+  id: string
+  display_name: string
+  email: string
+  role: string
+  department_id: string | null
+  company_id: string
+}
+
 export interface TokenResponse {
   access_token: string
   token_type: 'bearer'
@@ -40,6 +49,14 @@ export interface Department {
   code: string
   name_zh: string
   name_en: string | null
+}
+
+export interface SchedulerJob {
+  id: string
+  name: string
+  schedule: string
+  description: string
+  enabled: boolean
 }
 
 export interface Supplier {
@@ -1055,9 +1072,14 @@ export const api = {
     department_id?: string | null
     currency: string
     required_date?: string | null
+    requester_id?: string | null
     items: PRItem[]
   }): Promise<PurchaseRequisition> {
     const { data } = await client.post<PurchaseRequisition>('/purchase-requisitions', payload)
+    return data
+  },
+  async listProxyCandidates(): Promise<ProxyCandidate[]> {
+    const { data } = await client.get<ProxyCandidate[]>('/purchase-requisitions/proxy-candidates')
     return data
   },
   async submitPR(id: string): Promise<PurchaseRequisition> {
@@ -1503,6 +1525,10 @@ export const api = {
   async adminAICallStats(since_days = 7): Promise<Record<string, unknown>[]> {
     const { data } = await client.get('/admin/ai-call-stats', { params: { since_days } })
     return data as Record<string, unknown>[]
+  },
+  async adminSchedulerStatus(): Promise<SchedulerJob[]> {
+    const { data } = await client.get('/admin/scheduler-status')
+    return data as SchedulerJob[]
   },
   async recordSKUPrice(body: {
     item_id: string

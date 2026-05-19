@@ -10,6 +10,7 @@ from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
+from app.core.money import fmt_amount
 from app.models import (
     AuditLog,
     Contract,
@@ -94,14 +95,29 @@ async def _audit(
 
 async def create_pr(db: AsyncSession, actor: User, payload: PRCreateIn) -> PurchaseRequisition:
     pr_number = await _next_pr_number(db)
+
+    proxy_roles = {
+        UserRole.ADMIN.value,
+        UserRole.PROCUREMENT_MGR.value,
+        UserRole.IT_BUYER.value,
+    }
+    requester: User = actor
+    if payload.requester_id is not None and payload.requester_id != actor.id:
+        if actor.role not in proxy_roles:
+            raise HTTPException(403, "pr.proxy_not_allowed")
+        target = await db.get(User, payload.requester_id)
+        if target is None or not target.is_active:
+            raise HTTPException(404, "pr.requester_not_found")
+        requester = target
+
     pr = PurchaseRequisition(
         pr_number=pr_number,
         title=payload.title,
         business_reason=payload.business_reason,
         status=PRStatus.DRAFT.value,
-        requester_id=actor.id,
-        company_id=payload.company_id or actor.company_id,
-        department_id=payload.department_id or actor.department_id,
+        requester_id=requester.id,
+        company_id=payload.company_id or requester.company_id,
+        department_id=payload.department_id or requester.department_id,
         cost_center_id=payload.cost_center_id,
         expense_type_id=payload.expense_type_id,
         procurement_category_id=payload.procurement_category_id,
@@ -130,19 +146,23 @@ async def create_pr(db: AsyncSession, actor: User, payload: PRCreateIn) -> Purch
             )
         )
     pr.total_amount = total
+    audit_meta: dict[str, JSONValue] = {"pr_number": pr.pr_number}
+    if requester.id != actor.id:
+        audit_meta["proxy_for"] = str(requester.id)
+        audit_meta["proxy_for_name"] = requester.display_name
     await _audit(
         db,
         actor,
         "pr.created",
         "purchase_requisition",
         str(pr.id),
-        metadata={"pr_number": pr.pr_number},
+        metadata=audit_meta,
     )
     await db.commit()
     await db.refresh(pr)
 
     try:
-        from app.models import NotificationCategory, User, UserRole
+        from app.models import NotificationCategory
         from app.services.notifications import create_notification
         from app.services.system_params import notification_enabled
 
@@ -177,7 +197,7 @@ async def create_pr(db: AsyncSession, actor: User, payload: PRCreateIn) -> Purch
                     body=(
                         f"**PR**: {pr.pr_number}\n"
                         f"**Title**: {pr.title}\n"
-                        f"**Amount**: ¥{pr.total_amount} {pr.currency}\n"
+                        f"**Amount**: {fmt_amount(pr.total_amount, pr.currency)}\n"
                         f"**Required by**: {pr.required_date}\n"
                         f"**Items**: {len(pr.items)} line(s)\n"
                         f"**Created by**: {actor.display_name}"
@@ -309,7 +329,7 @@ async def update_pr(
                     body=(
                         f"**PR**: {pr.pr_number}\n"
                         f"**Title**: {pr.title}\n"
-                        f"**Amount**: ¥{pr.total_amount}\n"
+                        f"**Amount**: {fmt_amount(pr.total_amount, pr.currency)}\n"
                         f"**Status**: {pr.status}\n"
                         f"**Updated by**: {actor.display_name}"
                     ),
@@ -599,7 +619,7 @@ async def convert_pr_to_po(db: AsyncSession, actor: User, pr_id: UUID) -> list[P
                             f"**PR**: {po.pr_title or '—'}\n"
                             f"**Source PR**: {pr.pr_number} — {pr.title}\n"
                             f"**Supplier**: {supplier_name}\n"
-                            f"**Amount**: ¥{po.total_amount} {po.currency}\n"
+                            f"**Amount**: {fmt_amount(po.total_amount, po.currency)}\n"
                             f"**Items**: {items_count} line(s)\n"
                             f"**Created by**: {actor.display_name}"
                         ),

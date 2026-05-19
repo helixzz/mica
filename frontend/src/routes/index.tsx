@@ -197,6 +197,7 @@ export function AppRoutes() {
             <Route path="/admin/audit-logs" element={<AdminPage />} />
             <Route path="/admin/import" element={<AdminPage />} />
             <Route path="/admin/document-templates" element={<AdminPage />} />
+            <Route path="/admin/scheduler" element={<AdminPage />} />
             <Route path="/search" element={<SearchResults />} />
             <Route path="/notifications" element={<NotificationCenter />} />
             <Route path="*" element={<NotFound />} />

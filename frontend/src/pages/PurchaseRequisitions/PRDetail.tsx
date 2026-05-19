@@ -308,8 +308,8 @@ export function PRDetailPage() {
                 },
                 { title: t('field.qty'), dataIndex: 'qty', align: 'right', render: (v: string) => fmtQty(v) },
                 { title: t('field.uom'), dataIndex: 'uom', width: 80 },
-                { title: t('field.unit_price'), dataIndex: 'unit_price', align: 'right', render: (v: string) => fmtAmount(v) },
-                { title: t('field.amount'), dataIndex: 'amount', align: 'right', render: (v: string) => fmtAmount(v) },
+                { title: t('field.unit_price'), dataIndex: 'unit_price', align: 'right', render: (v: string) => fmtAmount(v, pr.currency) },
+                { title: t('field.amount'), dataIndex: 'amount', align: 'right', render: (v: string) => fmtAmount(v, pr.currency) },
               ]}
             />
           </Card>

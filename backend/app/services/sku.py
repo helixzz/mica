@@ -225,6 +225,102 @@ async def acknowledge_anomaly(
     return row
 
 
+async def scan_all_anomalies(db: AsyncSession) -> dict[str, int]:
+    """Batch scan all items with recent price records for price anomalies.
+
+    Iterates items with records in the benchmark window, refreshes benchmarks,
+    and creates SKUPriceAnomaly records for any detected anomalies that don't
+    already exist for that price_record_id.
+
+    Returns a dict with ``scanned`` (items examined) and ``anomalies_found``.
+    """
+    from decimal import Decimal
+
+    window_days = await system_params.get_int(db, "sku.benchmark_window_days")
+    threshold_pct = Decimal(
+        str(await system_params.get_int(db, "sku.anomaly_threshold_pct"))
+    )
+    sample_size_min = await system_params.get_int(db, "sku.sample_size_min")
+    critical_multiplier = await system_params.get_decimal(db, "sku.critical_multiplier")
+
+    since = datetime.now(UTC).date() - timedelta(days=window_days)
+
+    item_ids = (
+        (
+            await db.execute(
+                select(SKUPriceRecord.item_id)
+                .distinct()
+                .where(SKUPriceRecord.quotation_date >= since)
+            )
+        )
+        .scalars()
+        .all()
+    )
+
+    scanned = 0
+    anomalies_found = 0
+
+    for item_id in item_ids:
+        latest = (
+            (
+                await db.execute(
+                    select(SKUPriceRecord)
+                    .where(SKUPriceRecord.item_id == item_id)
+                    .order_by(SKUPriceRecord.quotation_date.desc())
+                    .limit(1)
+                )
+            )
+            .scalar_one_or_none()
+        )
+        if latest is None:
+            continue
+
+        scanned += 1
+
+        benchmark = await _refresh_benchmark(db, item_id, window_days=window_days)
+        if not benchmark or benchmark.sample_size < sample_size_min:
+            continue
+
+        price = _as_decimal(latest.price)
+        dev_pct = (
+            (price - benchmark.avg_price) / benchmark.avg_price * Decimal("100")
+        ).quantize(Decimal("0.0001"))
+
+        if abs(dev_pct) < threshold_pct:
+            continue
+
+        # Avoid duplicating an anomaly for the same price_record_id
+        already = (
+            await db.execute(
+                select(SKUPriceAnomaly).where(
+                    SKUPriceAnomaly.price_record_id == latest.id,
+                )
+            )
+        ).first()
+        if already:
+            continue
+
+        severity = (
+            "critical"
+            if abs(dev_pct) >= threshold_pct * critical_multiplier
+            else "warning"
+        )
+        anomaly = SKUPriceAnomaly(
+            item_id=item_id,
+            price_record_id=latest.id,
+            baseline_avg_price=benchmark.avg_price,
+            observed_price=price,
+            deviation_pct=dev_pct,
+            severity=severity,
+            status="new",
+        )
+        db.add(anomaly)
+        anomalies_found += 1
+
+    await db.commit()
+    return {"scanned": scanned, "anomalies_found": anomalies_found}
+
+
 async def price_trend(
     db: AsyncSession, item_id: UUID, days: int | None = None
 ) -> list[dict[str, str | None]]:

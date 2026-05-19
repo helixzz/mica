@@ -10,6 +10,7 @@ import {
 import { useEffect, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { useParams } from 'react-router-dom'
+import { fmtAmount } from '@/utils/format'
 
 interface PortalPO {
   po_number: string
@@ -86,16 +87,6 @@ const statusColors: Record<string, string> = {
 function formatDate(d: string | null, locale: string) {
   if (!d) return '-'
   return new Date(d).toLocaleDateString(locale)
-}
-
-function formatAmount(amount: string, currency: string, locale: string) {
-  const n = parseFloat(amount)
-  if (isNaN(n)) return '-'
-  const intlLocale = locale.startsWith('zh') ? 'zh-CN' : 'en-US'
-  return new Intl.NumberFormat(intlLocale, {
-    style: 'currency',
-    currency: currency || 'CNY',
-  }).format(n)
 }
 
 export default function SupplierPortalPage() {
@@ -176,7 +167,7 @@ export default function SupplierPortalPage() {
       title: t('field.amount'),
       dataIndex: 'total_amount',
       key: 'total_amount',
-      render: (_: string, r: PortalPO) => formatAmount(r.total_amount, r.currency, i18n.language),
+      render: (_: string, r: PortalPO) => fmtAmount(r.total_amount, r.currency),
     },
     {
       title: t('supplier_portal.qty_received'),
@@ -187,7 +178,7 @@ export default function SupplierPortalPage() {
       title: t('supplier_portal.amount_paid'),
       dataIndex: 'amount_paid',
       key: 'amount_paid',
-      render: (_: string, r: PortalPO) => formatAmount(r.amount_paid, r.currency, i18n.language),
+      render: (_: string, r: PortalPO) => fmtAmount(r.amount_paid, r.currency),
     },
     {
       title: t('field.created_at'),
@@ -223,7 +214,7 @@ export default function SupplierPortalPage() {
       dataIndex: 'total_amount',
       key: 'total_amount',
       render: (_: string, r: PortalContract) =>
-        formatAmount(r.total_amount, r.currency, i18n.language),
+        fmtAmount(r.total_amount, r.currency),
     },
     {
       title: t('supplier_portal.signed_date'),
@@ -260,7 +251,7 @@ export default function SupplierPortalPage() {
       dataIndex: 'amount',
       key: 'amount',
       render: (_: string, r: PortalPayment) =>
-        formatAmount(r.amount, r.currency, i18n.language),
+        fmtAmount(r.amount, r.currency),
     },
     {
       title: t('field.due_date'),

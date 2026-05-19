@@ -117,7 +117,7 @@ export default function RFQDetailPage() {
       return (
         <Space direction="vertical" size={0}>
           <Typography.Text strong style={q.selected ? { color: '#22C55E' } : undefined}>
-            {fmtAmount(q.price)}
+            {fmtAmount(q.price, 'CNY')}
           </Typography.Text>
           {q.days && <Typography.Text type="secondary" style={{ fontSize: 11 }}>{q.days} {t('rfq.days_delivery')}</Typography.Text>}
           {q.selected && <Tag color="success" icon={<CheckCircleOutlined />}>{t('rfq.awarded')}</Tag>}

@@ -33,7 +33,7 @@ import dayjs from 'dayjs'
 
 import { api, type PaymentScheduleItem, type PaymentScheduleSummary } from '@/api'
 import { extractError } from '@/api/client'
-import { fmtAmount } from '@/utils/format'
+import { fmtAmount, getCurrencySymbol } from '@/utils/format'
 
 function StatusTag({ status }: { status: string }) {
   const colorMap: Record<string, string> = {
@@ -312,12 +312,12 @@ export function PaymentScheduleTab({
     <Space direction="vertical" size="large" style={{ width: '100%' }}>
       {schedule && hasItems && (
         <>
-          <Row gutter={16}>
+           <Row gutter={16}>
             <Col xs={12} md={6}>
               <Statistic
                 title={t('contract.contract_total')}
                 value={Number(schedule.contract_total)}
-                prefix={currency}
+                prefix={getCurrencySymbol(currency)}
                 precision={2}
               />
             </Col>
@@ -325,7 +325,7 @@ export function PaymentScheduleTab({
               <Statistic
                 title={t('contract.planned_total')}
                 value={Number(schedule.planned_total)}
-                prefix={currency}
+                prefix={getCurrencySymbol(currency)}
                 precision={2}
               />
             </Col>
@@ -333,7 +333,7 @@ export function PaymentScheduleTab({
               <Statistic
                 title={t('contract.paid_total')}
                 value={Number(schedule.paid_total)}
-                prefix={currency}
+                prefix={getCurrencySymbol(currency)}
                 precision={2}
                 valueStyle={{ color: '#52c41a' }}
               />
@@ -342,7 +342,7 @@ export function PaymentScheduleTab({
               <Statistic
                 title={t('contract.remaining')}
                 value={Number(schedule.remaining)}
-                prefix={currency}
+                prefix={getCurrencySymbol(currency)}
                 precision={2}
                 valueStyle={{ color: '#8B5E3C' }}
               />
@@ -476,7 +476,7 @@ export function PaymentScheduleTab({
                             style={{ width: '100%' }}
                             min={0}
                             precision={2}
-                            prefix={currency}
+                            prefix={getCurrencySymbol(currency)}
                           />
                         </Form.Item>
                       </Col>

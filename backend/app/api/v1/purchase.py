@@ -1,12 +1,15 @@
 from typing import Annotated
 from uuid import UUID
 
-from fastapi import APIRouter, Depends, status
+from fastapi import APIRouter, Depends, HTTPException, status
 from fastapi.responses import Response
+from pydantic import BaseModel
+from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.security import CurrentUser, require_roles
 from app.db import get_db
+from app.models import User, UserRole
 from app.schemas import (
     POListOut,
     POOut,
@@ -24,6 +27,51 @@ from app.services import export_pdf
 from app.services import purchase as svc
 
 router = APIRouter()
+
+
+class ProxyCandidateOut(BaseModel):
+    id: UUID
+    display_name: str
+    email: str
+    role: str
+    department_id: UUID | None
+    company_id: UUID
+
+
+@router.get(
+    "/purchase-requisitions/proxy-candidates",
+    response_model=list[ProxyCandidateOut],
+    tags=["purchase"],
+)
+async def list_proxy_candidates(
+    user: CurrentUser,
+    db: Annotated[AsyncSession, Depends(get_db)],
+) -> list[ProxyCandidateOut]:
+    allowed = {
+        UserRole.ADMIN.value,
+        UserRole.PROCUREMENT_MGR.value,
+        UserRole.IT_BUYER.value,
+    }
+    if user.role not in allowed:
+        raise HTTPException(403, "pr.proxy_not_allowed")
+    rows = (
+        await db.execute(
+            select(User)
+            .where(User.is_active.is_(True))
+            .order_by(User.display_name)
+        )
+    ).scalars().all()
+    return [
+        ProxyCandidateOut(
+            id=u.id,
+            display_name=u.display_name,
+            email=u.email,
+            role=u.role,
+            department_id=u.department_id,
+            company_id=u.company_id,
+        )
+        for u in rows
+    ]
 
 
 @router.get("/purchase-requisitions", response_model=list[PRListOut], tags=["purchase"])

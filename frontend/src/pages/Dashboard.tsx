@@ -218,7 +218,7 @@ export function DashboardPage() {
   }, [])
 
   const role = user?.role || 'admin'
-  const totalAmount = pos.reduce((s, p) => s + Number(p.total_amount || 0), 0).toFixed(2)
+  const totalAmount = pos.reduce((s, p) => s + Number(p.total_amount || 0), 0)
 
   // Role-specific tweaks
   const isItBuyer = role === 'it_buyer'
@@ -307,7 +307,7 @@ export function DashboardPage() {
             <Col xs={24} sm={12} lg={6}>
               <StatCard
                 label={t('dashboard.total_amount_cny')}
-                value={fmtAmount(totalAmount)}
+                value={fmtAmount(totalAmount, 'CNY')}
                 icon={<WarningOutlined />}
                 loading={loading}
                 variant={isFinanceAuditor || isProcurementMgr ? 'accent' : 'default'}
@@ -543,7 +543,7 @@ export function DashboardPage() {
                               }}
                             >
                               <Text type="secondary" style={{ fontSize: 11, marginBottom: 4 }}>
-                                {fmtAmount(point.total / 10000)}w
+                                {fmtAmount(point.total / 10000, 'CNY')}w
                               </Text>
                               <div
                                 style={{
@@ -580,7 +580,7 @@ export function DashboardPage() {
                           title: t('dashboard.total_spend_col'),
                           dataIndex: 'total',
                           key: 'total',
-                          render: (v: number) => fmtAmount(v),
+                          render: (v: number) => fmtAmount(v, 'CNY'),
                         },
                         {
                           title: t('dashboard.pct_of_total'),
@@ -709,7 +709,7 @@ export function DashboardPage() {
                 <Card size="small">
                   <StatCard
                     label={t('dashboard.total_budget')}
-                    value={fmtAmount(budgetSummary.total_budget)}
+                    value={fmtAmount(budgetSummary.total_budget, 'CNY')}
                     loading={loading}
                   />
                 </Card>
@@ -718,7 +718,7 @@ export function DashboardPage() {
                 <Card size="small">
                   <StatCard
                     label={t('dashboard.total_spend')}
-                    value={fmtAmount(budgetSummary.total_spend)}
+                    value={fmtAmount(budgetSummary.total_spend, 'CNY')}
                     loading={loading}
                   />
                 </Card>
@@ -755,10 +755,10 @@ export function DashboardPage() {
                   <Space direction="vertical" style={{ width: '100%' }} size="small">
                     <Row justify="space-between">
                       <Col>
-                        <Text type="secondary">{t('dashboard.budget')}: {fmtAmount(item.annual_budget)}</Text>
+                        <Text type="secondary">{t('dashboard.budget')}: {fmtAmount(item.annual_budget, 'CNY')}</Text>
                       </Col>
                       <Col>
-                        <Text type="secondary">{t('dashboard.actual_spend')}: {fmtAmount(item.actual_spend)}</Text>
+                        <Text type="secondary">{t('dashboard.actual_spend')}: {fmtAmount(item.actual_spend, 'CNY')}</Text>
                       </Col>
                     </Row>
                     <Progress

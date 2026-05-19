@@ -94,7 +94,7 @@ export function PaymentTracker({ title }: PaymentTrackerProps) {
       align: 'right',
       render: (v: string) => (
         <Typography.Text style={{ color: PLANNED_COLOR }}>
-          {fmtAmount(v)}
+          {fmtAmount(v, 'CNY')}
         </Typography.Text>
       ),
     },
@@ -103,14 +103,14 @@ export function PaymentTracker({ title }: PaymentTrackerProps) {
       dataIndex: 'paid',
       align: 'right',
       render: (v: string) => (
-        <Typography.Text style={{ color: PAID_COLOR }}>{fmtAmount(v)}</Typography.Text>
+        <Typography.Text style={{ color: PAID_COLOR }}>{fmtAmount(v, 'CNY')}</Typography.Text>
       ),
     },
     {
       title: t('dashboard.forecast_remaining_col'),
       dataIndex: 'remaining',
       align: 'right',
-      render: (v: string) => fmtAmount(v),
+      render: (v: string) => fmtAmount(v, 'CNY'),
     },
   ]
 
@@ -266,16 +266,16 @@ export function PaymentTracker({ title }: PaymentTrackerProps) {
                   </Table.Summary.Cell>
                   <Table.Summary.Cell index={1} align="right">
                     <Typography.Text strong style={{ color: PLANNED_COLOR }}>
-                      {fmtAmount(totalPlanned)}
+                      {fmtAmount(totalPlanned, 'CNY')}
                     </Typography.Text>
                   </Table.Summary.Cell>
                   <Table.Summary.Cell index={2} align="right">
                     <Typography.Text strong style={{ color: PAID_COLOR }}>
-                      {fmtAmount(totalPaid)}
+                      {fmtAmount(totalPaid, 'CNY')}
                     </Typography.Text>
                   </Table.Summary.Cell>
                   <Table.Summary.Cell index={3} align="right">
-                    <Typography.Text strong>{fmtAmount(totalRemaining)}</Typography.Text>
+                    <Typography.Text strong>{fmtAmount(totalRemaining, 'CNY')}</Typography.Text>
                   </Table.Summary.Cell>
                 </Table.Summary.Row>
               )
@@ -391,8 +391,8 @@ function BarChart({ months, maxValue, todayMonth }: BarChartProps) {
         return (
           <g key={m.month}>
             <title>
-              {m.month} · {t('dashboard.planned_amount')}: {fmtAmount(m.planned)} ·{' '}
-              {t('dashboard.paid_amount')}: {fmtAmount(m.paid)}
+              {m.month} · {t('dashboard.planned_amount')}: {fmtAmount(m.planned, 'CNY')} ·{' '}
+              {t('dashboard.paid_amount')}: {fmtAmount(m.paid, 'CNY')}
             </title>
             <rect
               x={cx - barW - 2}

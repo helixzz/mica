@@ -1,4 +1,4 @@
-import { ApartmentOutlined, AuditOutlined, BarChartOutlined, BranchesOutlined, CloudOutlined, DatabaseOutlined, DeleteOutlined, FileTextOutlined, ImportOutlined, RobotOutlined, SettingOutlined, TeamOutlined, ThunderboltOutlined } from '@ant-design/icons'
+import { ApartmentOutlined, AuditOutlined, BarChartOutlined, BranchesOutlined, ClockCircleOutlined, CloudOutlined, DatabaseOutlined, DeleteOutlined, FileTextOutlined, ImportOutlined, RobotOutlined, SettingOutlined, TeamOutlined, ThunderboltOutlined } from '@ant-design/icons'
 import { Card, Col, Row, Typography, theme } from 'antd'
 import { useTranslation } from 'react-i18next'
 import { useNavigate, useLocation } from 'react-router-dom'
@@ -13,6 +13,7 @@ import { DocumentTemplatesPanel } from './admin/DocumentTemplatesPanel'
 import { FeishuSettingsTab } from './admin/FeishuSettingsTab'
 import { ImportTab } from './admin/ImportTab'
 import { RoutingsPanel } from './admin/RoutingsPanel'
+import { SchedulerTab } from './admin/SchedulerTab'
 import { SystemParamsTab } from './admin/SystemParamsTab'
 import { UsersPanel } from './admin/UsersPanel'
 
@@ -48,6 +49,7 @@ export function AdminPage() {
         case 'audit-logs': return <AuditLogsTab />
         case 'import': return <ImportTab />
         case 'document-templates': return <DocumentTemplatesPanel />
+        case 'scheduler': return <SchedulerTab />
         default: return null
       }
     }
@@ -72,6 +74,7 @@ export function AdminPage() {
     { key: '/admin/audit-logs', icon: <AuditOutlined />, label: t('admin.tab.audit_logs'), desc: t('admin.audit_logs_desc') },
     { key: '/admin/import', icon: <ImportOutlined />, label: t('admin.tab.import'), desc: t('admin.import_desc') },
     { key: '/admin/document-templates', icon: <FileTextOutlined />, label: t('admin.document_templates'), desc: t('admin.document_templates_desc') },
+    { key: '/admin/scheduler', icon: <ClockCircleOutlined />, label: t('admin.scheduler_tab'), desc: t('admin.scheduler_help') },
   ]
 
   return (

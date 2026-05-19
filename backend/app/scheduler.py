@@ -129,6 +129,101 @@ def build_scheduler(session_factory: async_sessionmaker[AsyncSession]) -> AsyncI
             except Exception:
                 logger.exception("contract_expiry_check failed")
 
+    async def _run_price_anomaly_scan():
+        from app.models import Item, NotificationCategory, SKUPriceAnomaly, User, UserRole
+        from app.services.notifications import create_notification
+        from app.services.sku import scan_all_anomalies
+        from app.services.system_params import notification_enabled
+
+        async with session_factory() as db:
+            try:
+                from sqlalchemy import select
+
+                result = await scan_all_anomalies(db)
+                scanned = result["scanned"]
+                anomalies_found = result["anomalies_found"]
+                logger.info(
+                    "price_anomaly_scan: scanned=%d anomalies=%d",
+                    scanned,
+                    anomalies_found,
+                )
+
+                if anomalies_found == 0:
+                    return
+
+                if not await notification_enabled(db, "sku_price_anomaly"):
+                    logger.info(
+                        "price_anomaly_scan: notifications disabled for sku_price_anomaly"
+                    )
+                    return
+
+                admins = (
+                    (
+                        await db.execute(
+                            select(User).where(
+                                User.role.in_(
+                                    [UserRole.ADMIN.value, UserRole.PROCUREMENT_MGR.value]
+                                ),
+                                User.is_active.is_(True),
+                            )
+                        )
+                    )
+                    .scalars()
+                    .all()
+                )
+
+                new_anomalies = (
+                    (
+                        await db.execute(
+                            select(SKUPriceAnomaly)
+                            .where(SKUPriceAnomaly.status == "new")
+                            .order_by(SKUPriceAnomaly.created_at.desc())
+                            .limit(anomalies_found)
+                        )
+                    )
+                    .scalars()
+                    .all()
+                )
+
+                notified = 0
+                for anomaly in new_anomalies:
+                    item = await db.get(Item, anomaly.item_id)
+                    item_name = item.name if item else str(anomaly.item_id)[:8]
+
+                    for admin in admins:
+                        try:
+                            await create_notification(
+                                db,
+                                user_id=admin.id,
+                                category=NotificationCategory.PRICE_ANOMALY,
+                                title=f"Price anomaly detected for {item_name}",
+                                body=(
+                                    f"**Item**: {item_name}\n"
+                                    f"**Observed Price**: {anomaly.observed_price}\n"
+                                    f"**Baseline Avg**: {anomaly.baseline_avg_price}\n"
+                                    f"**Deviation**: {anomaly.deviation_pct}%\n"
+                                    f"**Severity**: {anomaly.severity}\n"
+                                    f"Please review in SKU price monitoring."
+                                ),
+                                link_url=f"/sku/items/{anomaly.item_id}",
+                                biz_type="sku_price_anomaly",
+                                biz_id=anomaly.id,
+                            )
+                            notified += 1
+                        except Exception:
+                            logger.warning(
+                                "price_anomaly notification failed for admin %s",
+                                admin.id,
+                            )
+                await db.commit()
+                logger.info(
+                    "price_anomaly_scan: %d anomalies, %d notifications sent",
+                    anomalies_found,
+                    notified,
+                )
+            except Exception:
+                logger.exception("price_anomaly_scan failed")
+
     scheduler.add_job(
         _run_daily_digest,
         CronTrigger(hour=9, minute=0),
@@ -158,6 +253,14 @@ def build_scheduler(session_factory: async_sessionmaker[AsyncSession]) -> AsyncI
         CronTrigger(hour=10, minute=0),
         id="contract_expiry_check",
         name="Contract expiry notifications",
+        misfire_grace_time=300,
+    )
+
+    scheduler.add_job(
+        _run_price_anomaly_scan,
+        CronTrigger(hour=8, minute=0),
+        id="price_anomaly_scan",
+        name="SKU price anomaly detection",
         misfire_grace_time=300,
     )
 

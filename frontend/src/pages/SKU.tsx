@@ -118,13 +118,13 @@ export function SKUPage() {
       title: t('sku.benchmark_avg'),
       dataIndex: 'baseline_avg_price',
       align: 'right',
-      render: (v: string) => fmtAmount(v),
+      render: (v: string) => fmtAmount(v, 'CNY'),
     },
     {
       title: t('sku.this_price'),
       dataIndex: 'observed_price',
       align: 'right',
-      render: (v: string) => fmtAmount(v),
+      render: (v: string) => fmtAmount(v, 'CNY'),
     },
     {
       title: t('sku.deviation'),
@@ -173,7 +173,7 @@ export function SKUPage() {
       title: t('sku.price_col'),
       dataIndex: 'price',
       align: 'right',
-      render: (v: string) => fmtAmount(v),
+      render: (v: string) => fmtAmount(v, 'CNY'),
     },
     {
       title: t('sku.source_col'),
@@ -460,7 +460,7 @@ function ChartContent({
             <path d={pathD} fill="none" stroke={color} strokeWidth={2} strokeLinejoin="round" />
             {points.map((p, i) => (
               <circle key={i} cx={xScale(p.date)} cy={yScale(p.price)} r={3} fill={color} stroke="white" strokeWidth={1}>
-                <title>{`${sku}\n${p.date}: ${fmtAmount(p.price)}`}</title>
+                <title>{`${sku}\n${p.date}: ${fmtAmount(p.price, 'CNY')}`}</title>
               </circle>
             ))}
           </g>
@@ -475,7 +475,7 @@ function ChartContent({
         return (
           <g key={`purchase-${i}`}>
             <circle cx={x} cy={y} r={7} fill="#3B82F6" stroke="white" strokeWidth={2} opacity={0.9}>
-              <title>{`★ PO ${pp.po_number}\n${pp.date}: ${fmtAmount(Number(pp.unit_price))}\n${pp.supplier_name}`}</title>
+              <title>{`★ PO ${pp.po_number}\n${pp.date}: ${fmtAmount(Number(pp.unit_price), 'CNY')}\n${pp.supplier_name}`}</title>
             </circle>
             <text x={x} y={y - 12} textAnchor="middle" fontSize={9} fill="#3B82F6" fontWeight={600}>
               ★
@@ -566,7 +566,7 @@ function InsightsPanel({ insights, itemName }: { insights: SKUInsights; itemName
                   }}
                 />
               </div>
-               <Typography.Text strong style={{ width: 100, textAlign: 'right' }}>{fmtAmount(s.avg_price)}</Typography.Text>
+               <Typography.Text strong style={{ width: 100, textAlign: 'right' }}>{fmtAmount(s.avg_price, 'CNY')}</Typography.Text>
               <Tag>{s.count} {t('sku.times')}</Tag>
             </div>
           ))}
@@ -583,9 +583,9 @@ function InsightsPanel({ insights, itemName }: { insights: SKUInsights; itemName
             columns={[
               { title: t('sku.date_col'), dataIndex: 'date', width: 110 },
               { title: t('sku.supplier_col'), dataIndex: 'supplier_name' },
-               { title: t('field.unit_price'), dataIndex: 'unit_price', align: 'right' as const, render: (v: number) => fmtAmount(v) },
+               { title: t('field.unit_price'), dataIndex: 'unit_price', align: 'right' as const, render: (v: number) => fmtAmount(v, 'CNY') },
                { title: t('field.qty'), dataIndex: 'qty', align: 'right' as const, render: (v: string) => fmtQty(v) },
-               { title: t('field.amount'), dataIndex: 'amount', align: 'right' as const, render: (v: number) => fmtAmount(v) },
+               { title: t('field.amount'), dataIndex: 'amount', align: 'right' as const, render: (v: number) => fmtAmount(v, 'CNY') },
               { title: 'PO', dataIndex: 'po_number' },
               {
                 title: t('sku.deviation'),

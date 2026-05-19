@@ -37,7 +37,7 @@ export function PaymentsPage() {
   const columns: ColumnsType<PaymentRecord> = [
     { title: t('field.payment_number'), dataIndex: 'payment_number' },
     { title: t('field.installment_no'), dataIndex: 'installment_no' },
-    { title: t('field.amount'), align: 'right', render: (_, r) => `${r.currency} ${Number(r.amount).toLocaleString(undefined, { maximumFractionDigits: 2 })}` },
+    { title: t('field.amount'), align: 'right', render: (_, r) => fmtAmount(r.amount, r.currency) },
     { title: t('field.status'), dataIndex: 'status',
       filters: [{text:'pending',value:'pending'},{text:'confirmed',value:'confirmed'},{text:'cancelled',value:'cancelled'}],
       onFilter: (value: any, record: any) => record.status === value,

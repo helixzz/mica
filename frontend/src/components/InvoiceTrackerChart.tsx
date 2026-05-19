@@ -96,7 +96,7 @@ export function InvoiceTracker({ title }: InvoiceTrackerProps) {
       dataIndex: 'invoiceable',
       align: 'right',
       render: (v: string) => (
-        <Typography.Text style={{ color: INVOICEABLE_COLOR }}>{fmtAmount(v)}</Typography.Text>
+        <Typography.Text style={{ color: INVOICEABLE_COLOR }}>{fmtAmount(v, 'CNY')}</Typography.Text>
       ),
     },
     {
@@ -104,7 +104,7 @@ export function InvoiceTracker({ title }: InvoiceTrackerProps) {
       dataIndex: 'invoiced',
       align: 'right',
       render: (v: string) => (
-        <Typography.Text style={{ color: INVOICED_COLOR }}>{fmtAmount(v)}</Typography.Text>
+        <Typography.Text style={{ color: INVOICED_COLOR }}>{fmtAmount(v, 'CNY')}</Typography.Text>
       ),
     },
     {
@@ -112,7 +112,7 @@ export function InvoiceTracker({ title }: InvoiceTrackerProps) {
       dataIndex: 'pending',
       align: 'right',
       render: (v: string) => (
-        <Typography.Text style={{ color: PENDING_COLOR }}>{fmtAmount(v)}</Typography.Text>
+        <Typography.Text style={{ color: PENDING_COLOR }}>{fmtAmount(v, 'CNY')}</Typography.Text>
       ),
     },
   ]
@@ -234,17 +234,17 @@ export function InvoiceTracker({ title }: InvoiceTrackerProps) {
                   </Table.Summary.Cell>
                   <Table.Summary.Cell index={1} align="right">
                     <Typography.Text strong style={{ color: INVOICEABLE_COLOR }}>
-                      {fmtAmount(totalInvoiceable)}
+                      {fmtAmount(totalInvoiceable, 'CNY')}
                     </Typography.Text>
                   </Table.Summary.Cell>
                   <Table.Summary.Cell index={2} align="right">
                     <Typography.Text strong style={{ color: INVOICED_COLOR }}>
-                      {fmtAmount(totalInvoiced)}
+                      {fmtAmount(totalInvoiced, 'CNY')}
                     </Typography.Text>
                   </Table.Summary.Cell>
                   <Table.Summary.Cell index={3} align="right">
                     <Typography.Text strong style={{ color: PENDING_COLOR }}>
-                      {fmtAmount(totalPending)}
+                      {fmtAmount(totalPending, 'CNY')}
                     </Typography.Text>
                   </Table.Summary.Cell>
                 </Table.Summary.Row>
@@ -353,8 +353,8 @@ function BarChart({ months, maxValue, todayMonth }: BarChartProps) {
         return (
           <g key={m.month}>
             <title>
-              {m.month} · {t('dashboard.invoiceable_amount')}: {fmtAmount(m.invoiceable)} ·{' '}
-              {t('dashboard.invoiced_amount')}: {fmtAmount(m.invoiced)}
+              {m.month} · {t('dashboard.invoiceable_amount')}: {fmtAmount(m.invoiceable, 'CNY')} ·{' '}
+              {t('dashboard.invoiced_amount')}: {fmtAmount(m.invoiced, 'CNY')}
             </title>
             <rect
               x={cx - barW - 2}

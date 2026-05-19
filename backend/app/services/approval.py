@@ -12,6 +12,7 @@ from sqlalchemy import func, or_, select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
+from app.core.money import fmt_amount
 from app.i18n import t
 from app.models import (
     ApprovalInstance,
@@ -393,7 +394,7 @@ def _build_pr_notification_body(
         lines.append(f"**Title**: {pr.title}")
         items_count = len(pr.items) if pr.items else 0
         lines.append(f"**Items**: {items_count} line(s)")
-        lines.append(f"**Amount**: ¥{pr.total_amount or '—'}")
+        lines.append(f"**Amount**: {fmt_amount(pr.total_amount, getattr(pr, 'currency', 'CNY'))}")
     lines.append(f"**Result**: {t(decision_label_key, locale)}")
     return "\n".join(lines)
 

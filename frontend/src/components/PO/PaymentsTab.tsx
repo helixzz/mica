@@ -10,12 +10,13 @@ import { fmtAmount } from '@/utils/format'
 
 interface PaymentsTabProps {
   payments: PaymentRecord[]
+  currency?: string
   loadAll: () => void
   onRecordPayment: () => void
   onEditPayment: (payment: PaymentRecord) => void
 }
 
-export function PaymentsTab({ payments, loadAll, onRecordPayment, onEditPayment }: PaymentsTabProps) {
+export function PaymentsTab({ payments, currency, loadAll, onRecordPayment, onEditPayment }: PaymentsTabProps) {
   const { t } = useTranslation()
   const navigate = useNavigate()
 
@@ -47,7 +48,7 @@ export function PaymentsTab({ payments, loadAll, onRecordPayment, onEditPayment 
             title: t('field.amount'),
             dataIndex: 'amount',
             align: 'right',
-            render: (v: string) => fmtAmount(v),
+            render: (v: string, r: PaymentRecord) => fmtAmount(v, r.currency),
           },
           { title: t('field.due_date'), dataIndex: 'due_date' },
           { title: t('field.payment_date'), dataIndex: 'payment_date' },

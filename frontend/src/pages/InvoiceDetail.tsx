@@ -146,9 +146,9 @@ export function InvoiceDetailPage() {
             },
             { title: t('field.item_name'), dataIndex: 'item_name' },
             { title: t('field.qty'), dataIndex: 'qty', align: 'right', width: 80, render: (v: string) => fmtQty(v) },
-            { title: t('field.unit_price'), dataIndex: 'unit_price', align: 'right', width: 110, render: (v: string) => fmtAmount(v) },
-            { title: t('field.subtotal'), dataIndex: 'subtotal', align: 'right', width: 110, render: (v: string) => fmtAmount(v) },
-            { title: t('field.tax_amount'), dataIndex: 'tax_amount', align: 'right', width: 100, render: (v: string) => fmtAmount(v) },
+            { title: t('field.unit_price'), dataIndex: 'unit_price', align: 'right', width: 110, render: (v: string) => fmtAmount(v, inv.currency) },
+            { title: t('field.subtotal'), dataIndex: 'subtotal', align: 'right', width: 110, render: (v: string) => fmtAmount(v, inv.currency) },
+            { title: t('field.tax_amount'), dataIndex: 'tax_amount', align: 'right', width: 100, render: (v: string) => fmtAmount(v, inv.currency) },
             {
               title: 'PO Item',
               dataIndex: 'po_item_id',

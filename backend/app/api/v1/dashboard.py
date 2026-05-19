@@ -7,7 +7,7 @@ from typing import Annotated, Literal
 
 from fastapi import APIRouter, Depends, Query
 from pydantic import BaseModel
-from sqlalchemy import func, or_, select
+from sqlalchemy import Date, Integer, Numeric, func, or_, select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import aliased
 
@@ -606,20 +606,17 @@ async def get_analytics(
         for row in dept_rows
     ]
 
+    # PostgreSQL: date - date returns integer (days), not interval.
+    # Use the integer directly instead of EXTRACT(epoch FROM ...) which fails on integers.
+    days_expr = func.cast(
+        Shipment.actual_date - func.cast(PurchaseOrder.created_at, Date), Integer
+    )
     supplier_stmt = (
         select(
             Supplier.name.label("supplier"),
             func.count(Shipment.id).label("total_shipments"),
             func.coalesce(
-                func.round(
-                    func.avg(
-                        func.extract(
-                            "epoch", Shipment.actual_date - func.date(PurchaseOrder.created_at)
-                        )
-                        / 86400.0
-                    ),
-                    1,
-                ),
+                func.round(func.avg(days_expr).cast(Numeric), 1),
                 0,
             ).label("avg_delivery_days"),
         )
@@ -635,14 +632,7 @@ async def get_analytics(
     supplier_rows = (
         await db.execute(
             supplier_stmt.group_by(Supplier.id, Supplier.name)
-            .order_by(
-                func.avg(
-                    func.extract(
-                        "epoch", Shipment.actual_date - func.date(PurchaseOrder.created_at)
-                    )
-                    / 86400.0
-                ).asc()
-            )
+            .order_by(func.avg(days_expr).asc())
             .limit(10)
         )
     ).all()

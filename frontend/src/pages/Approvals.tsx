@@ -29,7 +29,7 @@ export function ApprovalsPage() {
     },
     { title: t('field.title'), dataIndex: 'biz_title', ellipsis: true },
     { title: t('field.requester'), dataIndex: 'submitter_name' },
-    { title: t('field.total_amount'), dataIndex: 'biz_amount', align: 'right', render: (v: number | null) => v != null ? fmtAmount(v) : '-' },
+    { title: t('field.total_amount'), dataIndex: 'biz_amount', align: 'right', render: (v: number | null) => v != null ? fmtAmount(v, 'CNY') /* Assuming CNY as biz_currency is not available */ : '-' },
     { title: t('field.status'), dataIndex: 'status', width: 100, render: (s) => <Tag color="processing">{t(`status.${s}` as 'status.pending')}</Tag> },
     { title: t('field.display_name'), dataIndex: 'stage_name' },
     {

@@ -13,6 +13,7 @@ from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.config import get_settings
+from app.core.money import fmt_amount
 from app.i18n import t
 from app.models import (
     Contract,
@@ -222,7 +223,7 @@ def _build_expiry_rows(contracts: list[Contract], locale: str) -> str:
     rows = ""
     for c in contracts:
         expiry_str = c.expiry_date.isoformat() if c.expiry_date else "N/A"
-        amount = f"¥{float(c.total_amount):,.2f}" if c.total_amount else "—"
+        amount = fmt_amount(c.total_amount, getattr(c, 'currency', 'CNY'))
         rows += (
             f"<tr>"
             f"<td>{c.contract_number}</td>"
@@ -269,9 +270,9 @@ def _build_anomaly_detail_html(rows: list, locale: str) -> str:
 
     html = ""
     for anomaly, item in rows:
-        observed = f"¥{float(anomaly.observed_price):,.2f}" if anomaly.observed_price else "—"
+        observed = fmt_amount(anomaly.observed_price)
         baseline = (
-            f"¥{float(anomaly.baseline_avg_price):,.2f}" if anomaly.baseline_avg_price else "—"
+            fmt_amount(anomaly.baseline_avg_price)
         )
         deviation = (
             f"{float(anomaly.deviation_pct):+.2f}%" if anomaly.deviation_pct is not None else "—"
@@ -312,8 +313,8 @@ def _build_email_body(
 ) -> str:
     base_url = get_settings().app_base_url.rstrip("/")
     email_title = t("digest.email_title", locale)
-    po_amount_fmt = f"¥{today_po_amount:,.2f}"
-    pay_amount_fmt = f"¥{upcoming_pay_amount:,.2f}"
+    po_amount_fmt = fmt_amount(today_po_amount)
+    pay_amount_fmt = fmt_amount(upcoming_pay_amount)
 
     today_overview_label = t("digest.email_title_today_overview", locale)
     today_po_text = t("digest.today_po_text", locale, count=today_po_count, amount=po_amount_fmt)
@@ -407,8 +408,8 @@ async def _send_feishu_digest(
     locale = user.preferred_locale or "zh-CN"
     base_url = get_settings().app_base_url.rstrip("/")
 
-    po_amount_fmt = f"¥{today_po_amount:,.2f}"
-    pay_amount_fmt = f"¥{upcoming_pay_amount:,.2f}"
+    po_amount_fmt = fmt_amount(today_po_amount)
+    pay_amount_fmt = fmt_amount(upcoming_pay_amount)
 
     today_po_line = t("digest.feishu.today_pos", locale, count=today_po_count, amount=po_amount_fmt)
     pay_line = t(

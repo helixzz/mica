@@ -5,7 +5,7 @@ import { useEffect, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { useNavigate, useParams } from 'react-router-dom'
 
-import { api, type ClassificationItem, flattenCategoryTree, type Item, type Supplier } from '@/api'
+import { api, type ClassificationItem, flattenCategoryTree, type Item, type Supplier, type ProxyCandidate } from '@/api'
 import { client, extractError } from '@/api/client'
 import { useAuth } from '@/auth/useAuth'
 import { AutosaveBanner, AutosaveUnavailableBanner } from '@/components/AutosaveBanner'
@@ -32,6 +32,8 @@ export function PREditPage() {
   const [form] = Form.useForm()
   const { user } = useAuth()
   const isRequester = user?.role === 'requester'
+  const canProxy = user?.role === 'admin' || user?.role === 'procurement_mgr' || user?.role === 'it_buyer'
+  const [proxyCandidates, setProxyCandidates] = useState<ProxyCandidate[]>([])
   const [suppliers, setSuppliers] = useState<Supplier[]>([])
   const [items, setItems] = useState<Item[]>([])
   const [companies, setCompanies] = useState<{ id: string; name_zh: string }[]>([])
@@ -56,6 +58,11 @@ export function PREditPage() {
   }, [])
 
   useEffect(() => {
+    if (!canProxy) return
+    void api.listProxyCandidates().then(setProxyCandidates).catch(() => {})
+  }, [canProxy])
+
+  useEffect(() => {
     const formValues = form.getFieldsValue()
     autosave.save({ ...formValues, items: lines })
   })
@@ -69,6 +76,7 @@ export function PREditPage() {
         business_reason: pr.business_reason,
         currency: pr.currency,
         required_date: pr.required_date ? dayjs(pr.required_date) : undefined,
+        requester_id: pr.requester_id,
         company_id: pr.company_id,
         cost_center_id: pr.cost_center_id,
         expense_type_id: pr.expense_type_id,
@@ -147,6 +155,7 @@ export function PREditPage() {
         business_reason: values.business_reason,
         currency: values.currency || 'CNY',
         required_date: values.required_date?.format('YYYY-MM-DD') ?? null,
+        requester_id: canProxy ? (values.requester_id || null) : null,
         company_id: values.company_id || null,
         cost_center_id: values.cost_center_id || null,
         expense_type_id: values.expense_type_id || null,
@@ -274,7 +283,7 @@ export function PREditPage() {
             </Col>
             <Col span={6}>
               <Form.Item label={t('field.currency')} name="currency">
-                <Select options={[{ value: 'CNY' }, { value: 'USD' }, { value: 'EUR' }]} />
+                <Select options={[{ value: 'CNY', label: 'CNY ¥' }, { value: 'USD', label: 'USD $' }, { value: 'EUR', label: 'EUR €' }, { value: 'GBP', label: 'GBP £' }, { value: 'JPY', label: 'JPY ¥' }, { value: 'KRW', label: 'KRW ₩' }, { value: 'HKD', label: 'HKD HK$' }, { value: 'TWD', label: 'TWD NT$' }]} />
               </Form.Item>
             </Col>
             <Col span={6}>
@@ -283,6 +292,20 @@ export function PREditPage() {
               </Form.Item>
             </Col>
           </Row>
+          {canProxy && (
+            <Row gutter={16}>
+              <Col span={12}>
+                <Form.Item label={t('pr.requester_label')} name="requester_id" help={t('pr.requester_help')}>
+                  <Select
+                    showSearch
+                    optionFilterProp="label"
+                    placeholder={t('pr.select_requester')}
+                    options={proxyCandidates.map(c => ({ value: c.id, label: `${c.display_name} (${c.email}) — ${c.role}` }))}
+                  />
+                </Form.Item>
+              </Col>
+            </Row>
+          )}
           <Row gutter={16}>
             <Col span={6}>
               <Form.Item label={t('pr.company_label')} name="company_id" help={t('pr.company_help')} rules={[{ required: true }]}>

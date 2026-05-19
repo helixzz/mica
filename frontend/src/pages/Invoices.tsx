@@ -39,9 +39,9 @@ export function InvoicesPage() {
     },
     { title: t('field.invoice_number'), dataIndex: 'invoice_number' },
     { title: t('field.invoice_date'), dataIndex: 'invoice_date' },
-    { title: t('field.subtotal'), dataIndex: 'subtotal', align: 'right', render: (v: string) => fmtAmount(v) },
-    { title: t('field.tax_amount'), dataIndex: 'tax_amount', align: 'right', render: (v: string) => fmtAmount(v) },
-    { title: t('field.total_amount'), dataIndex: 'total_amount', align: 'right', render: (v: string) => fmtAmount(v) },
+    { title: t('field.subtotal'), dataIndex: 'subtotal', align: 'right', render: (v: string, r) => fmtAmount(v, r.currency) },
+    { title: t('field.tax_amount'), dataIndex: 'tax_amount', align: 'right', render: (v: string, r) => fmtAmount(v, r.currency) },
+    { title: t('field.total_amount'), dataIndex: 'total_amount', align: 'right', render: (v: string, r) => fmtAmount(v, r.currency) },
     {
       title: 'Match',
       dataIndex: 'is_fully_matched',

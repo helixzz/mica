@@ -8,11 +8,12 @@ import { fmtAmount, fmtQty } from '@/utils/format'
 
 interface ShipmentsTabProps {
   shipments: Shipment[]
+  currency: string
   loadAll: () => void
   onRecordShipment: () => void
 }
 
-export function ShipmentsTab({ shipments, loadAll, onRecordShipment }: ShipmentsTabProps) {
+export function ShipmentsTab({ shipments, currency, loadAll, onRecordShipment }: ShipmentsTabProps) {
   const { t } = useTranslation()
 
   return (
@@ -54,7 +55,7 @@ export function ShipmentsTab({ shipments, loadAll, onRecordShipment }: Shipments
                 { title: t('field.item_name'), dataIndex: 'item_name' },
                  { title: t('field.qty_shipped'), dataIndex: 'qty_shipped', align: 'right', render: (v: string) => fmtQty(v) },
                  { title: t('field.qty_received'), dataIndex: 'qty_received', align: 'right', render: (v: string) => fmtQty(v) },
-                 { title: t('field.unit_price'), dataIndex: 'unit_price', align: 'right', render: (v: string) => fmtAmount(v) },
+                 { title: t('field.unit_price'), dataIndex: 'unit_price', align: 'right', render: (v: string) => fmtAmount(v, currency) },
               ]}
             />
           ),

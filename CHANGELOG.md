@@ -7,6 +7,45 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [v1.15.0] — 2026-05-19
+
+### 新增
+- **代提采购申请**：admin / procurement_mgr / it_buyer 可代任意活跃用户提交 PR
+  - 后端：`PRCreateIn.requester_id` 字段 + 角色守卫 + `GET /purchase-requisitions/proxy-candidates` 端点
+  - 前端：受限角色才显示「申请人」下拉；选择他人时显示提示 Alert
+  - 审计日志记录代提关系（`proxy_for`、`proxy_for_name`）
+- **SKU 价格异常自动检测**：scheduler 每日 08:00 扫描所有有近期记录的物料并自动创建异常通知
+  - 新增 `scan_all_anomalies(db)` 批量扫描函数
+  - 自动通知 admin / procurement_mgr，遵循 `sku_price_anomaly` 通知开关
+- **调度器状态管理面板**：Admin → 定时任务 显示 5 个 cron 任务（每日摘要 / 审批提醒 / SLA 升级 / 合同到期 / 价格异常扫描）
+- **Suppliers 页面响应式**：
+  - `Grid.useBreakpoint()` 双视图：桌面 Table（固定 code/actions 列 + 横向滚动）+ 移动端 Card List
+  - 接入 ColumnSettings + usePersistedColumns（与 POList 一致），用户可自定义可见列
+  - 搜索/筛选/批量操作行响应式堆叠
+- **PR 表单 8 币种支持**：CNY / USD / EUR / GBP / JPY / KRW / HKD / TWD（之前只有 3 种）
+
+### 改进
+- **全站金额格式统一**：新建 `app/core/money.py` 共享 helper（`fmt_amount` / `fmt_amount_with_code` / `currency_symbol`）
+  - 后端 19 处替换：通知正文 / 邮件摘要 / 审批通知 / 付款卡片不再硬编码 `¥`
+  - 前端 28 处替换：`fmtAmount(value)` 改为 `fmtAmount(value, currency)`，PO 子组件接收 `currency` prop
+  - SupplierPortal 删除本地 `formatAmount`，统一走共享 `fmtAmount`
+  - SKU/Dashboard/Chart 聚合金额显式传 `'CNY'`，杜绝隐式假设
+- **付款计划币种显示**：`<Statistic prefix>` 用 `getCurrencySymbol(currency)` 替代原始 ISO 码
+- **PR 表单金额联动**：`Form.useWatch('currency')` 实时驱动行金额和总额币种显示
+
+### 修复
+- **ActivityTimeline 通知事件空白**：`admin.py` 增加 `resource_type → biz_type` 映射表
+  - `purchase_requisition ↔ pr` / `purchase_order ↔ po` / `contract ↔ contract_expiry`
+  - PR 详情和合同详情的 Activity tab 现在能正确显示历史通知
+- **Dashboard analytics 500 错误**：PostgreSQL `date - date` 返回 integer（不是 interval）
+  - 移除无效的 `EXTRACT(epoch FROM ...)`，直接 cast 为 Integer 用天数计算供应商交付周期
+- **scheduler.py 任务模块化**：所有 scheduler job 共享 `session_factory` 上下文，避免 session 泄漏
+
+### 文档
+- AGENTS.md 明确：所有 bug 修复和新功能必须完成端到端验证后才视为完成
+
+---
+
 ## [v1.9.0] — 2026-05-13
 
 ### 新增

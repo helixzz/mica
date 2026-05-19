@@ -62,7 +62,7 @@ export function POTabs({
         {
           key: 'items',
           label: `${t('nav.purchase_orders')} · ${t('field.item_name')}`,
-          children: <ItemsTab items={po.items} />,
+          children: <ItemsTab items={po.items} currency={po.currency} />,
         },
         {
           key: 'delivery-plan',
@@ -79,11 +79,12 @@ export function POTabs({
         {
           key: 'shipments',
           label: `${t('nav.shipments')} (${shipments.length})`,
-          children: (
+children: (
             <ShipmentsTab
               shipments={shipments}
               loadAll={loadAll}
               onRecordShipment={() => setShipmentOpen(true)}
+              currency={po.currency}
             />
           ),
         },
@@ -93,6 +94,7 @@ export function POTabs({
           children: (
             <PaymentsTab
               payments={payments}
+              currency={po.currency}
               loadAll={loadAll}
               onRecordPayment={() => setPaymentOpen(true)}
               onEditPayment={setEditingPayment}

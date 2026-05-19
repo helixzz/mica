@@ -46,7 +46,9 @@
     "no_items": "pr no items",
     "must_be_approved_to_convert": "pr must be approved to convert",
     "approval_not_found": "pr approval not found",
-    "items_missing_supplier": "pr items missing supplier"
+    "items_missing_supplier": "pr items missing supplier",
+    "proxy_not_allowed": "您没有权限代他人提交采购申请",
+    "requester_not_found": "指定的需求方不存在或已停用"
   },
   "po": {
     "not_found": "po不存在"

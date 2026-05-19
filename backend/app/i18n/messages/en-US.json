@@ -46,7 +46,9 @@
     "no_items": "pr no items",
     "must_be_approved_to_convert": "pr must be approved to convert",
     "approval_not_found": "pr approval not found",
-    "items_missing_supplier": "pr items missing supplier"
+    "items_missing_supplier": "pr items missing supplier",
+    "proxy_not_allowed": "You don't have permission to submit PRs on behalf of others",
+    "requester_not_found": "Specified requester not found or inactive"
   },
   "po": {
     "not_found": "Po not found"

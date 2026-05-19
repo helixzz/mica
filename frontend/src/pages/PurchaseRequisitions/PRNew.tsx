@@ -20,7 +20,7 @@ import { useEffect, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { useNavigate, useParams } from 'react-router-dom'
 
-import { api, type ClassificationItem, flattenCategoryTree, type Item, type PRItem, type Supplier } from '@/api'
+import { api, type ClassificationItem, flattenCategoryTree, type Item, type PRItem, type Supplier, type ProxyCandidate } from '@/api'
 import { client, extractError } from '@/api/client'
 import { useAuth } from '@/auth/useAuth'
 import { AIStreamButton } from '@/components/AIStreamButton'
@@ -59,6 +59,8 @@ export function PRNewPage() {
   const [savedPRId, setSavedPRId] = useState<string | null>(null)
   const { user } = useAuth()
   const isRequester = user?.role === 'requester'
+  const canProxy = ['admin', 'procurement_mgr', 'it_buyer'].includes(user?.role ?? '')
+  const [proxyCandidates, setProxyCandidates] = useState<ProxyCandidate[]>([])
   const autosave = useAutosave(`pr-new-${user?.id || 'anon'}`)
   const [autosaveDismissed, setAutosaveDismissed] = useState(false)
   const [refPrices, setRefPrices] = useState<Record<string, { latest_price: number | null; avg_price: number | null }>>({})
@@ -72,7 +74,15 @@ export function PRNewPage() {
     void api.listLookupValues('expense_type').then(setExpenseTypes)
     void api.getCategoryTree().then((tree) => setProcCategories(flattenCategoryTree(tree)))
     void client.get<Record<string, boolean>>('/ai/features-available').then((r) => setAiFeatures(r.data)).catch(() => {})
-  }, [])
+    if (canProxy) {
+      void api.listProxyCandidates().then(setProxyCandidates).catch(() => {})
+    }
+  }, [canProxy])
+
+  useEffect(() => {
+    if (!canProxy) return
+    void api.listProxyCandidates().then(setProxyCandidates).catch(() => {})
+  }, [canProxy])
 
   useEffect(() => {
     if (!copyId) return
@@ -195,6 +205,9 @@ export function PRNewPage() {
   }
 
   const total = lines.reduce((s, l) => s + l.qty * l.unit_price, 0)
+  const watchedCurrency = Form.useWatch('currency', form) || 'CNY'
+  const watchedRequesterId = Form.useWatch('requester_id', form)
+  const isProxying = canProxy && watchedRequesterId && watchedRequesterId !== user?.id
 
   const onFinish = async (saveOnly: boolean) => {
     try {
@@ -206,6 +219,7 @@ export function PRNewPage() {
         business_reason: values.business_reason,
         currency: values.currency || 'CNY',
         required_date: values.required_date ? values.required_date.format('YYYY-MM-DD') : null,
+        requester_id: canProxy ? (values.requester_id || null) : null,
         company_id: values.company_id || null,
         cost_center_id: values.cost_center_id || null,
         expense_type_id: values.expense_type_id || null,
@@ -258,8 +272,8 @@ export function PRNewPage() {
           />
           {r.item_id && refPrices[r.item_id] && (
             <Typography.Text type="secondary" style={{ fontSize: 11 }}>
-{t('sku.ref_latest')}: {fmtAmount(refPrices[r.item_id].latest_price)}
-{refPrices[r.item_id].avg_price ? ` · ${t('sku.ref_avg')}: ${fmtAmount(refPrices[r.item_id].avg_price)}` : ''}
+{t('sku.ref_latest')}: {fmtAmount(refPrices[r.item_id].latest_price, 'CNY')}
+{refPrices[r.item_id].avg_price ? ` · ${t('sku.ref_avg')}: ${fmtAmount(refPrices[r.item_id].avg_price, 'CNY')}` : ''}
             </Typography.Text>
           )}
         </Space>
@@ -333,7 +347,7 @@ export function PRNewPage() {
       align: 'right' as const,
       render: (_: unknown, r: LineForm) => {
         const amt = r.qty * (r.unit_price || 0)
-        return amt > 0 ? fmtAmount(amt) : '-'
+        return amt > 0 ? fmtAmount(amt, watchedCurrency) : '-'
       },
     },
     {
@@ -393,8 +407,39 @@ export function PRNewPage() {
       )}
       {!autosave.storageAvailable && <AutosaveUnavailableBanner />}
 
+      {isProxying && (
+        <Alert
+          type="info"
+          showIcon
+          message={t('pr.proxy_mode_active')}
+          description={t('pr.proxy_mode_help', { name: proxyCandidates.find((c) => c.id === watchedRequesterId)?.display_name ?? '' })}
+        />
+      )}
+
       <Card>
-        <Form form={form} layout="vertical" initialValues={{ currency: 'CNY' }}>
+        <Form form={form} layout="vertical" initialValues={{ currency: 'CNY', requester_id: canProxy ? user?.id : undefined }}>
+          {canProxy && (
+            <Row gutter={16}>
+              <Col span={12}>
+                <Form.Item
+                  label={t('pr.requester_label')}
+                  name="requester_id"
+                  help={t('pr.requester_help')}
+                  rules={[{ required: true, message: t('validation.select_requester') }]}
+                >
+                  <Select
+                    showSearch
+                    optionFilterProp="label"
+                    placeholder={t('pr.select_requester')}
+                    options={proxyCandidates.map((u) => ({
+                      value: u.id,
+                      label: `${u.display_name} (${u.email})`,
+                    }))}
+                  />
+                </Form.Item>
+              </Col>
+            </Row>
+          )}
           <Row gutter={16}>
             <Col span={12}>
               <Form.Item
@@ -408,7 +453,7 @@ export function PRNewPage() {
             </Col>
             <Col span={6}>
               <Form.Item label={t('field.currency')} name="currency">
-                <Select options={[{ value: 'CNY' }, { value: 'USD' }, { value: 'EUR' }]} />
+                <Select options={[{ value: 'CNY', label: 'CNY ¥' }, { value: 'USD', label: 'USD $' }, { value: 'EUR', label: 'EUR €' }, { value: 'GBP', label: 'GBP £' }, { value: 'JPY', label: 'JPY ¥' }, { value: 'KRW', label: 'KRW ₩' }, { value: 'HKD', label: 'HKD HK$' }, { value: 'TWD', label: 'TWD NT$' }]} />
               </Form.Item>
             </Col>
             <Col span={6}>
@@ -499,7 +544,7 @@ export function PRNewPage() {
                 <strong>{t('field.total_amount')}</strong>
               </Table.Summary.Cell>
               <Table.Summary.Cell index={1} align="right">
-                <strong>{total > 0 ? fmtAmount(total) : '-'}</strong>
+                <strong>{total > 0 ? fmtAmount(total, watchedCurrency) : '-'}</strong>
               </Table.Summary.Cell>
               <Table.Summary.Cell index={2} />
             </Table.Summary.Row>

@@ -801,10 +801,21 @@ async def list_audit_logs(
         audit_rows = (await db.execute(audit_query)).scalars().all()
         audit_items = [_audit_log_item(r) for r in audit_rows]
 
+        # Map resource_type to all possible biz_type values used in notifications.
+        # Notifications may use abbreviated biz_type (e.g. "pr") while audit logs
+        # use the full resource_type (e.g. "purchase_requisition").
+        _RESOURCE_TO_BIZ_TYPES: dict[str, list[str]] = {
+            "purchase_requisition": ["purchase_requisition", "pr"],
+            "purchase_order": ["purchase_order", "po"],
+            "contract": ["contract", "contract_expiry"],
+            "rfq": ["rfq"],
+        }
+        biz_types = _RESOURCE_TO_BIZ_TYPES.get(resource_type, [resource_type])
+
         notif_query = (
             select(Notification)
             .options(selectinload(Notification.user))
-            .where(Notification.biz_type == resource_type)
+            .where(Notification.biz_type.in_(biz_types))
             .order_by(Notification.created_at.desc())
         )
         if resource_id:
@@ -1130,6 +1141,59 @@ async def test_feishu_connection(
         return {"success": False, "token_ok": False, "message_sent": False, "error": str(e)}
     finally:
         await client.close()
+
+
+class SchedulerJobOut(BaseModel):
+    id: str
+    name: str
+    schedule: str
+    description: str
+    enabled: bool
+
+
+@router.get(
+    "/scheduler-status",
+    response_model=list[SchedulerJobOut],
+    tags=["admin"],
+)
+async def scheduler_status() -> list[SchedulerJobOut]:
+    return [
+        SchedulerJobOut(
+            id="daily_digest",
+            name="Daily digest",
+            schedule="09:00 daily (Asia/Shanghai)",
+            description="Send daily email + Feishu digest to all users",
+            enabled=True,
+        ),
+        SchedulerJobOut(
+            id="approval_reminders",
+            name="Approval reminders",
+            schedule="Every 1 hour",
+            description="Nudge approvers about pending tasks",
+            enabled=True,
+        ),
+        SchedulerJobOut(
+            id="sla_escalation",
+            name="SLA escalation",
+            schedule="Every 30 minutes",
+            description="Escalate overdue approvals to next-level managers",
+            enabled=True,
+        ),
+        SchedulerJobOut(
+            id="contract_expiry_check",
+            name="Contract expiry check",
+            schedule="10:00 daily (Asia/Shanghai)",
+            description="Notify admins about contracts expiring within 30 days",
+            enabled=True,
+        ),
+        SchedulerJobOut(
+            id="price_anomaly_scan",
+            name="SKU price anomaly scan",
+            schedule="08:00 daily (Asia/Shanghai)",
+            description="Scan all items for price anomalies and notify procurement",
+            enabled=True,
+        ),
+    ]
 
 
 # === Performance monitoring ===
