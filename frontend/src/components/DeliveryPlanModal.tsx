@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 
 import { api, Contract, DeliveryPlan, PurchaseOrderListItem } from '@/api'
+import { MarqueeOption } from '@/components/ui/MarqueeOption'
 
 interface DeliveryPlanModalProps {
   open: boolean
@@ -234,9 +235,11 @@ export function DeliveryPlanModal({
               optionFilterProp="children"
               onChange={handlePOChange}
               disabled={!!poId}
+              popupMatchSelectWidth={false}
+              optionRender={(option) => <MarqueeOption>{option.label}</MarqueeOption>}
             >
               {pos.map((p) => (
-                <Select.Option key={p.id} value={p.id}>
+                <Select.Option key={p.id} value={p.id} label={p.po_number}>
                   {p.po_number}
                 </Select.Option>
               ))}
@@ -255,9 +258,11 @@ export function DeliveryPlanModal({
               optionFilterProp="children"
               onChange={handleContractChange}
               disabled={!!contractId}
+              popupMatchSelectWidth={false}
+              optionRender={(option) => <MarqueeOption>{option.label}</MarqueeOption>}
             >
               {contracts.map((c) => (
-                <Select.Option key={c.id} value={c.id}>
+                <Select.Option key={c.id} value={c.id} label={`${c.contract_number} - ${c.title}`}>
                   {c.contract_number} - {c.title}
                 </Select.Option>
               ))}
@@ -270,9 +275,14 @@ export function DeliveryPlanModal({
           label={t('nav.items')}
           rules={[{ required: true, message: t('common.required') }]}
         >
-          <Select showSearch optionFilterProp="children">
+          <Select 
+            showSearch 
+            optionFilterProp="children"
+            popupMatchSelectWidth={false}
+            optionRender={(option) => <MarqueeOption>{option.label}</MarqueeOption>}
+          >
             {items.map((i) => (
-              <Select.Option key={i.id} value={i.id}>
+              <Select.Option key={i.id} value={i.id} label={`${i.name} (Remaining: ${i.remaining})`}>
                 {i.name} (Remaining: {i.remaining})
               </Select.Option>
             ))}

@@ -8,6 +8,7 @@ import {
   type Contract,
   type InvoiceListRow,
   type PaymentRecord,
+  type PaymentScheduleItem,
   type POProgress,
   type PurchaseOrder,
   type Shipment,
@@ -45,6 +46,7 @@ export function PODetailPage() {
   const [editingPayment, setEditingPayment] = useState<PaymentRecord | null>(null)
   const [editingPlan, setEditingPlan] = useState<any | undefined>(undefined)
   const [busy, setBusy] = useState(false)
+  const [paymentPreFill, setPaymentPreFill] = useState<{ contractId?: string; scheduleItemId?: string; amount?: number } | null>(null)
 
   const canCreateContract = Boolean(
     user && ['admin', 'procurement_mgr', 'it_buyer'].includes(user.role),
@@ -152,6 +154,14 @@ export function PODetailPage() {
                   setEditingPlan={setEditingPlan}
                   handleDeleteDeliveryPlan={handleDeleteDeliveryPlan}
                   handleUnlinkContract={handleUnlinkContract}
+                  onExecuteSchedulePayment={(item: PaymentScheduleItem) => {
+                    setPaymentPreFill({
+                      contractId: item.contract_id ?? undefined,
+                      scheduleItemId: item.id,
+                      amount: Number(item.planned_amount),
+                    })
+                    setPaymentOpen(true)
+                  }}
                 />
                 <POModals
                   po={po}
@@ -165,8 +175,9 @@ export function PODetailPage() {
                   editingPlan={editingPlan}
                   busy={busy}
                   contracts={contracts}
+                  paymentPreFill={paymentPreFill}
                   setShipmentOpen={setShipmentOpen}
-                  setPaymentOpen={setPaymentOpen}
+                  setPaymentOpen={(open) => { setPaymentOpen(open); if (!open) setPaymentPreFill(null) }}
                   setInvoiceOpen={setInvoiceOpen}
                   setContractOpen={setContractOpen}
                   setLinkContractOpen={setLinkContractOpen}

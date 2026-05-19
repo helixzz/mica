@@ -18,6 +18,7 @@ import { useTranslation } from 'react-i18next'
 import { api, type DeliveryPlan, type PurchaseOrder } from '@/api'
 import { extractError } from '@/api/client'
 import { AutosaveBanner, AutosaveUnavailableBanner } from '@/components/AutosaveBanner'
+import { MarqueeOption } from '@/components/ui/MarqueeOption'
 import { useAutosave } from '@/hooks/useAutosave'
 import { fmtQty } from '@/utils/format'
 
@@ -155,9 +156,11 @@ export function ShipmentModal({ open, po, onClose, onDone, busy, setBusy }: Ship
             allowClear
             value={selectedDeliveryPlanId}
             onChange={onSelectDeliveryPlan}
+            popupMatchSelectWidth={false}
+            optionRender={(option) => <MarqueeOption>{option.label}</MarqueeOption>}
           >
             {deliveryPlans.map(dp => (
-              <Select.Option key={dp.id} value={dp.id}>
+              <Select.Option key={dp.id} value={dp.id} label={`${dp.plan_name} — ${t('delivery_plan.planned_qty')}: ${dp.planned_qty} — ${dayjs(dp.planned_date).format('YYYY-MM-DD')}`}>
                 {dp.plan_name} — {t('delivery_plan.planned_qty')}: {dp.planned_qty} — {dayjs(dp.planned_date).format('YYYY-MM-DD')}
               </Select.Option>
             ))}

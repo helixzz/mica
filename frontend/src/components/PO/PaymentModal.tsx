@@ -20,6 +20,7 @@ import { api, type Contract, type PaymentScheduleItem, type PurchaseOrder } from
 import { extractError } from '@/api/client'
 import { AutosaveBanner, AutosaveUnavailableBanner } from '@/components/AutosaveBanner'
 import { ContractFormModal } from '@/components/ContractFormModal'
+import { MarqueeOption } from '@/components/ui/MarqueeOption'
 import { useAutosave } from '@/hooks/useAutosave'
 import { fmtAmount } from '@/utils/format'
 
@@ -30,9 +31,12 @@ interface PaymentModalProps {
   onDone: () => void
   busy: boolean
   setBusy: (b: boolean) => void
+  initialContractId?: string | null
+  initialScheduleItemId?: string | null
+  initialAmount?: number | null
 }
 
-export function PaymentModal({ open, po, onClose, onDone, busy, setBusy }: PaymentModalProps) {
+export function PaymentModal({ open, po, onClose, onDone, busy, setBusy, initialContractId, initialScheduleItemId, initialAmount }: PaymentModalProps) {
   const { t } = useTranslation()
   const remaining = Math.max(0, Number(po.total_amount) - Number(po.amount_paid || 0))
   const [amount, setAmount] = useState<number>(remaining)
@@ -67,8 +71,11 @@ export function PaymentModal({ open, po, onClose, onDone, busy, setBusy }: Payme
 
   useEffect(() => {
     if (!open) return
-    setAmount(Math.max(0, Number(po.total_amount) - Number(po.amount_paid || 0)))
-    setScheduleItemId(null)
+    setAmount(initialAmount ?? Math.max(0, Number(po.total_amount) - Number(po.amount_paid || 0)))
+    setScheduleItemId(initialScheduleItemId ?? null)
+    if (initialContractId) {
+      setContractId(initialContractId)
+    }
     void loadContracts()
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [open, po.id])
@@ -184,6 +191,8 @@ export function PaymentModal({ open, po, onClose, onDone, busy, setBusy }: Payme
               <Select
                 value={contractId}
                 onChange={(v) => setContractId(v)}
+                popupMatchSelectWidth={false}
+                optionRender={(option) => <MarqueeOption>{option.label}</MarqueeOption>}
                 options={contractOptions.map((c) => ({
                   value: c.id,
                   label: `${c.contract_number} · ${c.title}`,
@@ -202,6 +211,8 @@ export function PaymentModal({ open, po, onClose, onDone, busy, setBusy }: Payme
                 placeholder={t('po.payment_linked_schedule_placeholder')}
                 value={scheduleItemId}
                 onChange={(v) => setScheduleItemId(v ?? null)}
+                popupMatchSelectWidth={false}
+                optionRender={(option) => <MarqueeOption>{option.label}</MarqueeOption>}
                 options={scheduleOptions.map((s) => ({
                   value: s.id,
                   label: `${t('contract.installment_n', { n: s.installment_no })} · ${s.label} · ${fmtAmount(s.planned_amount, po.currency)}${s.planned_date ? ` · ${s.planned_date}` : ''}`,

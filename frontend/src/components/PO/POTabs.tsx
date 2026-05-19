@@ -1,7 +1,7 @@
 import { Tabs } from 'antd'
 import { useTranslation } from 'react-i18next'
 
-import { type Contract, type InvoiceListRow, type PaymentRecord, type PurchaseOrder, type Shipment } from '@/api'
+import { type Contract, type InvoiceListRow, type PaymentRecord, type PaymentScheduleItem, type PurchaseOrder, type Shipment } from '@/api'
 import { PaymentScheduleTab } from '@/components/PaymentScheduleTab'
 import { ContractsTab } from '@/components/PO/ContractsTab'
 import { DeliveryPlanTab } from '@/components/PO/DeliveryPlanTab'
@@ -33,6 +33,7 @@ interface POTabsProps {
   setEditingPlan: (plan: any) => void
   handleDeleteDeliveryPlan: (id: string) => void
   handleUnlinkContract: (contract: Contract) => void
+  onExecuteSchedulePayment?: (item: PaymentScheduleItem) => void
 }
 
 export function POTabs({
@@ -57,6 +58,7 @@ export function POTabs({
   setEditingPlan,
   handleDeleteDeliveryPlan,
   handleUnlinkContract,
+  onExecuteSchedulePayment,
 }: POTabsProps) {
   const { t } = useTranslation()
 
@@ -142,6 +144,7 @@ children: (
               poId={po.id}
               currency={po.currency}
               canWrite={canWriteSchedule}
+              onExecutePayment={onExecuteSchedulePayment}
             />
           ),
         },

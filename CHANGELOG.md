@@ -7,6 +7,21 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [v1.15.2] — 2026-05-19
+
+### 新增
+- **MarqueeOption 动态滚动组件**：Select 下拉菜单中溢出的长文本选项在高亮时自动来回滚动显示全文
+  - 仅在文本实际溢出时触发（ResizeObserver 检测）
+  - 0.3s 延迟防止鼠标快速扫过闪烁
+  - 尊重 `prefers-reduced-motion: reduce` 无障碍偏好
+  - 应用到 6 个模态对话框的 Select：DeliveryPlanModal / PaymentModal / PaymentEditModal / ShipmentModal / LinkContractModal / PRNew 代提人下拉
+
+### 改进
+- **付款计划"执行"改为打开付款表单**：点击付款计划的"执行"按钮不再直接创建付款记录，而是打开 PaymentModal 并预填金额/合同/期次，由用户确认后提交
+- **PO 详情页自动刷新**：PaymentModal 完成后触发 `loadAll()` 刷新付款记录列表
+
+---
+
 ## [v1.15.1] — 2026-05-19
 
 ### 修复

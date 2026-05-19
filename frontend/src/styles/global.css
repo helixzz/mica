@@ -363,3 +363,34 @@ body {
     flex: 1;
   }
 }
+
+/* MarqueeOption: scroll long text in Select dropdowns when highlighted */
+.marquee-option {
+  position: relative;
+}
+
+.marquee-option__text {
+  display: inline-block;
+  white-space: nowrap;
+}
+
+/* Only animate when: (1) text overflows AND (2) option is active/highlighted */
+.ant-select-item-option-active .marquee-option--overflow .marquee-option__text {
+  animation: marquee-scroll var(--marquee-duration, 3s) ease-in-out 0.3s infinite alternate;
+}
+
+@keyframes marquee-scroll {
+  0%, 15% {
+    transform: translateX(0);
+  }
+  85%, 100% {
+    transform: translateX(var(--marquee-offset, 0));
+  }
+}
+
+/* Respect reduced motion preference */
+@media (prefers-reduced-motion: reduce) {
+  .ant-select-item-option-active .marquee-option--overflow .marquee-option__text {
+    animation: none;
+  }
+}

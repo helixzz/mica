@@ -10,6 +10,7 @@ import { useTranslation } from 'react-i18next'
 
 import { api, type Contract, type PurchaseOrder } from '@/api'
 import { extractError } from '@/api/client'
+import { MarqueeOption } from '@/components/ui/MarqueeOption'
 
 interface LinkContractModalProps {
   open: boolean
@@ -78,6 +79,8 @@ export function LinkContractModal({
           placeholder={t('po.link_existing_contract_placeholder')}
           onChange={(value) => setSelectedId(value)}
           loading={loading}
+          popupMatchSelectWidth={false}
+          optionRender={(option) => <MarqueeOption>{option.label}</MarqueeOption>}
           options={options.map((contract) => ({
             value: contract.id,
             label: `${contract.contract_number} · ${contract.title} · ${contract.po_number ?? '-'}`,

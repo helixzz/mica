@@ -16,6 +16,7 @@ import { useTranslation } from 'react-i18next'
 import { api, type Contract, type PaymentRecord, type PaymentScheduleItem } from '@/api'
 import { extractError } from '@/api/client'
 import { AutosaveBanner, AutosaveUnavailableBanner } from '@/components/AutosaveBanner'
+import { MarqueeOption } from '@/components/ui/MarqueeOption'
 import { useAutosave } from '@/hooks/useAutosave'
 import { fmtAmount } from '@/utils/format'
 
@@ -167,6 +168,8 @@ export function PaymentEditModal({ open, payment, onClose, onSaved }: PaymentEdi
                 : undefined
             }
             disabled={contractOptions.length === 0}
+            popupMatchSelectWidth={false}
+            optionRender={(option) => <MarqueeOption>{option.label}</MarqueeOption>}
             options={contractOptions.map((c) => ({
               value: c.id,
               label: `${c.contract_number} · ${c.title}`,
@@ -183,6 +186,8 @@ export function PaymentEditModal({ open, payment, onClose, onSaved }: PaymentEdi
               placeholder={t('po.payment_linked_schedule_placeholder')}
               value={scheduleItemId}
               onChange={(v) => setScheduleItemId(v ?? null)}
+              popupMatchSelectWidth={false}
+              optionRender={(option) => <MarqueeOption>{option.label}</MarqueeOption>}
               options={scheduleOptions.map((s) => ({
                 value: s.id,
                 label: `${t('contract.installment_n', { n: s.installment_no })} · ${s.label} · ${fmtAmount(s.planned_amount, payment?.currency ?? 'CNY')}${s.planned_date ? ` · ${s.planned_date}` : ''}${s.status === 'paid' ? ` · ${t('status.paid')}` : ''}`,

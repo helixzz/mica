@@ -21,6 +21,7 @@ interface POModalsProps {
   editingPlan: DeliveryPlan | undefined
   busy: boolean
   contracts: Contract[]
+  paymentPreFill?: { contractId?: string; scheduleItemId?: string; amount?: number } | null
   setShipmentOpen: (open: boolean) => void
   setPaymentOpen: (open: boolean) => void
   setInvoiceOpen: (open: boolean) => void
@@ -55,6 +56,7 @@ export function POModals({
   setEditingPlan,
   setBusy,
   loadAll,
+  paymentPreFill,
 }: POModalsProps) {
   const navigate = useNavigate()
 
@@ -75,6 +77,9 @@ export function POModals({
         onDone={() => { setPaymentOpen(false); void loadAll() }}
         busy={busy}
         setBusy={setBusy}
+        initialContractId={paymentPreFill?.contractId}
+        initialScheduleItemId={paymentPreFill?.scheduleItemId}
+        initialAmount={paymentPreFill?.amount}
       />
       <InvoiceModal
         open={invoiceOpen}

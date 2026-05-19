@@ -26,6 +26,7 @@ import { useAuth } from '@/auth/useAuth'
 import { AIStreamButton } from '@/components/AIStreamButton'
 import { AutosaveBanner, AutosaveUnavailableBanner } from '@/components/AutosaveBanner'
 import { PRQuoteConfirmModal } from '@/components/PRQuoteConfirmModal'
+import { MarqueeOption } from '@/components/ui/MarqueeOption'
 import { useAutosave } from '@/hooks/useAutosave'
 import { fmtAmount } from '@/utils/format'
 
@@ -431,6 +432,8 @@ export function PRNewPage() {
                     showSearch
                     optionFilterProp="label"
                     placeholder={t('pr.select_requester')}
+                    popupMatchSelectWidth={false}
+                    optionRender={(option) => <MarqueeOption>{option.label}</MarqueeOption>}
                     options={proxyCandidates.map((u) => ({
                       value: u.id,
                       label: `${u.display_name} (${u.email})`,

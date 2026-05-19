@@ -51,6 +51,7 @@ export interface PaymentScheduleTabProps {
   poId?: string
   currency: string
   canWrite: boolean
+  onExecutePayment?: (item: PaymentScheduleItem) => void
 }
 
 export function PaymentScheduleTab({
@@ -58,6 +59,7 @@ export function PaymentScheduleTab({
   poId,
   currency,
   canWrite,
+  onExecutePayment,
 }: PaymentScheduleTabProps) {
   const { t } = useTranslation()
   const [schedule, setSchedule] = useState<PaymentScheduleSummary | null>(null)
@@ -135,6 +137,10 @@ export function PaymentScheduleTab({
   }
 
   const handleExecute = (item: PaymentScheduleItem) => {
+    if (onExecutePayment) {
+      onExecutePayment(item)
+      return
+    }
     Modal.confirm({
       title: t('contract.execute_title', { name: item.label }),
       content: t('contract.confirm_execute', {
