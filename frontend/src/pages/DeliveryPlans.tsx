@@ -41,8 +41,8 @@ export function DeliveryPlansPage() {
   const loadOptions = async () => {
     try {
       const [poData, contractData] = await Promise.all([
-        api.listPOs(),
-        api.listContracts(),
+        api.listPOs().catch(() => []),
+        api.listContracts().catch(() => []),
       ])
       setPos(poData)
       setContracts(contractData)
@@ -80,7 +80,7 @@ export function DeliveryPlansPage() {
         plans: filteredPlans
       })
     } catch (err) {
-      console.error(err)
+      setOverview({ total_planned: 0, total_actual: 0, completion_pct: 0, plans: [] })
     } finally {
       setLoading(false)
     }

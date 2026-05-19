@@ -196,11 +196,11 @@ export function DashboardPage() {
       api.getDashboardMetrics('last_month').catch(() => null),
       api.getDeliveryPlansOverview().catch(() => null),
       api.getBudgetSummary().catch(() => null),
-        api.getAgingApprovals().catch(() => []),
-        api.getAnalytics().catch(() => null),
-        api.getInvoiceMatchSummary().catch(() => []),
-        api.getPaymentCalendar().catch(() => []),
-      ]).then(([prsData, posData, pendingData, contractsData, anomaliesData, metricsData, deliveryData, budgetData, agingData, analyticsData, invoiceMatchData, paymentCalendarData]) => {
+      api.getAgingApprovals().catch(() => []),
+      api.getAnalytics().catch(() => null),
+      api.getInvoiceMatchSummary().catch(() => []),
+      api.getPaymentCalendar().catch(() => []),
+    ]).then(([prsData, posData, pendingData, contractsData, anomaliesData, metricsData, deliveryData, budgetData, agingData, analyticsData, invoiceMatchData, paymentCalendarData]) => {
       setPrs(prsData)
       setPos(posData)
       setPending(pendingData)
@@ -209,11 +209,13 @@ export function DashboardPage() {
       setMetrics(metricsData)
       setDeliveryOverview(deliveryData)
       setBudgetSummary(budgetData)
-        setAgingApprovals(agingData)
-        setAnalytics(analyticsData)
-        setInvoiceMatch(invoiceMatchData)
-        setPaymentCalendar(paymentCalendarData)
-        setLoading(false)
+      setAgingApprovals(agingData)
+      setAnalytics(analyticsData)
+      setInvoiceMatch(invoiceMatchData)
+      setPaymentCalendar(paymentCalendarData)
+      setLoading(false)
+    }).catch(() => {
+      setLoading(false)
     })
   }, [])
 

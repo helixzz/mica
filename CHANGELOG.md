@@ -7,6 +7,27 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [v1.15.1] — 2026-05-19
+
+### 修复
+- **合同附件上传 504 超时**：Nginx TLS 配置 `proxy_read_timeout` 从 60s 增加到 300s
+  - 根因：OCR LLM 调用最长需 120s，但 Nginx TLS 只等 60s 就断开
+  - 同步补齐 TLS 配置缺失的 WebSocket Upgrade 头（与非 TLS 配置对齐）
+- **合同详情页创建后 500**：`ContractDetail.tsx` load 函数中 `listContractAttachments` 缺少 try/catch，偶发 500 导致整页崩溃
+- **全站 17 个页面 try/catch 补全**：所有 detail / list 页面的 load 函数统一加上错误兜底
+  - ContractDetail / PODetail / PRDetail / RFQDetail / InvoiceDetail / SupplierDetail / ItemDetail
+  - Dashboard / SKU / Shipments / Payments / Invoices / Contracts / DeliveryPlans / Items
+  - Admin: AILogsPanel / RoutingsPanel
+- **后端通知发送隔离 session**：10 个 service 函数的 post-commit 通知块改用 `AsyncSessionLocal()` 独立 session
+  - flow.py: create_contract / update_contract / transition_contract_status / create_shipment / update_shipment / create_payment / update_payment
+  - purchase.py: create_pr / update_pr / convert_pr_to_po
+  - 消除 API 响应延迟和 session 状态污染
+
+### 改进
+- **PO 详情标签页计数统一**：所有 8 个 Tab 均显示数量（物料/交货计划/到货/付款/发票/合同/附件/付款计划）
+
+---
+
 ## [v1.15.0] — 2026-05-19
 
 ### 新增

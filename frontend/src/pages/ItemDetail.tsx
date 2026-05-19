@@ -16,13 +16,21 @@ export default function ItemDetailPage() {
 
   useEffect(() => {
     if (!id) return
-    api.getItem(id)
-      .then(setItem)
-      .catch(() => setError(t('error.unexpected')))
-    api.getSKUForecast(id)
-      .then(setForecast)
-      .catch(() => {})
-      .finally(() => setForecastLoading(false))
+    try {
+      api.getItem(id)
+        .then(setItem)
+        .catch(() => setError(t('error.unexpected')))
+    } catch {
+      setError(t('error.unexpected'))
+    }
+    try {
+      api.getSKUForecast(id)
+        .then(setForecast)
+        .catch(() => {})
+        .finally(() => setForecastLoading(false))
+    } catch {
+      setForecastLoading(false)
+    }
   }, [id, t])
 
   if (error) return (

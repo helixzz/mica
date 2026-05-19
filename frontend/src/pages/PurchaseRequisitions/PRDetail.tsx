@@ -68,18 +68,23 @@ export function PRDetailPage() {
     }[]
   }>({ purchase_orders: [], contracts: [] })
 
-  const load = () => {
+  const load = async () => {
     if (!id) return
-    void api.getPR(id).then(setPr)
-    void api
-      .getPRDownstream(id)
-      .then((d) =>
-        setDownstream({
-          purchase_orders: d.purchase_orders,
-          contracts: d.contracts,
-        }),
-      )
-      .catch(() => setDownstream({ purchase_orders: [], contracts: [] }))
+    try {
+      const prData = await api.getPR(id)
+      setPr(prData)
+    } catch {
+      setPr(null)
+    }
+    try {
+      const d = await api.getPRDownstream(id)
+      setDownstream({
+        purchase_orders: d.purchase_orders,
+        contracts: d.contracts,
+      })
+    } catch {
+      setDownstream({ purchase_orders: [], contracts: [] })
+    }
   }
 
   useEffect(() => {

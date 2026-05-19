@@ -88,9 +88,7 @@ export function ShipmentsPage() {
       setDeliveryPlans(summary.po_plans || [])
       setSelectedDeliveryPlanId(undefined)
     } catch {
-      setSelectedPO(null)
-      setCreateLines([])
-      setDeliveryPlans([])
+      void message.error(t('error.unexpected'))
     }
   }
 

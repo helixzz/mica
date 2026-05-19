@@ -57,11 +57,11 @@ export function SKUPage() {
   const [insights, setInsights] = useState<SKUInsights | null>(null)
 
   const load = () => {
-    void api.items().then(setItems)
-    void api.suppliers().then(setSuppliers)
-    void api.listSKUAnomalies('new').then(setAnomalies)
-    void api.listSKUPrices().then(setPrices)
-    void api.getCategoryTree().then((tree) => setCategories(flattenCategoryTree(tree)))
+    void api.items().then(setItems).catch(() => {})
+    void api.suppliers().then(setSuppliers).catch(() => {})
+    void api.listSKUAnomalies('new').then(setAnomalies).catch(() => {})
+    void api.listSKUPrices().then(setPrices).catch(() => {})
+    void api.getCategoryTree().then((tree) => setCategories(flattenCategoryTree(tree))).catch(() => {})
   }
 
   useEffect(load, [])
@@ -86,7 +86,7 @@ export function SKUPage() {
     ).then(() => {
       setBenchmarks(newBenchmarks)
       setTrends(newTrends)
-    })
+    }).catch(() => {})
 
     if (selectedItems.length === 1) {
       void api.getSKUInsights(selectedItems[0]).then(setInsights).catch(() => setInsights(null))

@@ -18,6 +18,8 @@ interface POTabsProps {
   invoices: InvoiceListRow[]
   contracts: Contract[]
   deliveryPlans: any[]
+  attachmentsCount: number
+  paymentScheduleCount: number
   canCreateContract: boolean
   canWriteSchedule: boolean
   loadAll: () => void
@@ -40,6 +42,8 @@ export function POTabs({
   invoices,
   contracts,
   deliveryPlans,
+  attachmentsCount,
+  paymentScheduleCount,
   canCreateContract,
   canWriteSchedule,
   loadAll,
@@ -61,12 +65,12 @@ export function POTabs({
       items={[
         {
           key: 'items',
-          label: `${t('nav.purchase_orders')} · ${t('field.item_name')}`,
+          label: `${t('nav.purchase_orders')} · ${t('field.item_name')} (${po.items.length})`,
           children: <ItemsTab items={po.items} currency={po.currency} />,
         },
         {
           key: 'delivery-plan',
-          label: t('delivery_plan.title'),
+          label: `${t('delivery_plan.title')} (${deliveryPlans.length})`,
           children: (
             <DeliveryPlanTab
               deliveryPlans={deliveryPlans}
@@ -127,12 +131,12 @@ children: (
         },
         {
           key: 'attachments',
-          label: t('po.attachments', 'Attachments'),
+          label: `${t('po.attachments', 'Attachments')} (${attachmentsCount})`,
           children: <POAttachmentsTab poId={po.id} />,
         },
         {
           key: 'payment-plan',
-          label: t('contract.payment_schedule'),
+          label: `${t('contract.payment_schedule')} (${paymentScheduleCount})`,
           children: (
             <PaymentScheduleTab
               poId={po.id}

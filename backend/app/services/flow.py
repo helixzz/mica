@@ -160,48 +160,52 @@ async def create_contract(
     await db.commit()
 
     try:
+        from app.db import AsyncSessionLocal
         from app.models import NotificationCategory, UserRole
         from app.services.notifications import create_notification
         from app.services.system_params import notification_enabled
 
-        if await notification_enabled(db, "contract_created"):
-            recipients = {actor.id}
-            pr = await db.get(PurchaseRequisition, po.pr_id)
-            if pr and pr.requester_id:
-                recipients.add(pr.requester_id)
-            admin_rows = (
-                (
-                    await db.execute(
-                        select(User.id).where(
-                            User.role.in_([UserRole.ADMIN.value, UserRole.PROCUREMENT_MGR.value]),
-                            User.is_active.is_(True),
+        async with AsyncSessionLocal() as notif_db:
+            if await notification_enabled(notif_db, "contract_created"):
+                recipients = {actor.id}
+                pr = await notif_db.get(PurchaseRequisition, po.pr_id)
+                if pr and pr.requester_id:
+                    recipients.add(pr.requester_id)
+                admin_rows = (
+                    (
+                        await notif_db.execute(
+                            select(User.id).where(
+                                User.role.in_(
+                                    [UserRole.ADMIN.value, UserRole.PROCUREMENT_MGR.value]
+                                ),
+                                User.is_active.is_(True),
+                            )
                         )
                     )
+                    .scalars()
+                    .all()
                 )
-                .scalars()
-                .all()
-            )
-            recipients.update(admin_rows)
-            for uid in recipients:
-                await create_notification(
-                    db,
-                    user_id=uid,
-                    category=NotificationCategory.SYSTEM,
-                    title=f"Contract {contract.contract_number} created",
-                    body=(
-                        f"**Contract**: {contract.contract_number}\n"
-                        f"**Title**: {contract.title}\n"
-                        f"**PO**: {po.po_number}\n"
-                        f"**PR**: {po.pr_title or '—'}\n"
-                        f"**Amount**: {fmt_amount(contract.total_amount, contract.currency)}\n"
-                        f"**Effective**: {contract.effective_date} | **Expires**: {contract.expiry_date}\n"
-                        f"**Created by**: {actor.display_name}"
-                    ),
-                    link_url=f"/contracts/{contract.id}",
-                    biz_type="contract",
-                    biz_id=contract.id,
-                )
-            await db.commit()
+                recipients.update(admin_rows)
+                for uid in recipients:
+                    await create_notification(
+                        notif_db,
+                        user_id=uid,
+                        category=NotificationCategory.SYSTEM,
+                        title=f"Contract {contract.contract_number} created",
+                        body=(
+                            f"**Contract**: {contract.contract_number}\n"
+                            f"**Title**: {contract.title}\n"
+                            f"**PO**: {po.po_number}\n"
+                            f"**PR**: {po.pr_title or '—'}\n"
+                            f"**Amount**: {fmt_amount(contract.total_amount, contract.currency)}\n"
+                            f"**Effective**: {contract.effective_date} | **Expires**: {contract.expiry_date}\n"
+                            f"**Created by**: {actor.display_name}"
+                        ),
+                        link_url=f"/contracts/{contract.id}",
+                        biz_type="contract",
+                        biz_id=contract.id,
+                    )
+                await notif_db.commit()
     except Exception:
         logger.warning(
             "Failed to send contract_created notification for contract=%s",
@@ -484,53 +488,57 @@ async def update_contract(
     await db.refresh(contract)
 
     try:
+        from app.db import AsyncSessionLocal
         from app.models import NotificationCategory, PurchaseOrder, User, UserRole
         from app.services.notifications import create_notification
         from app.services.system_params import notification_enabled
 
-        if await notification_enabled(db, "contract_updated"):
-            recipients: set[str] = set()
-            po = await db.get(PurchaseOrder, contract.po_id)
-            if po and po.created_by_id:
-                recipients.add(str(po.created_by_id))
-            if po and po.pr_id:
-                pr = await db.get(PurchaseRequisition, po.pr_id)
-                if pr and pr.requester_id:
-                    recipients.add(str(pr.requester_id))
-            admin_rows = (
-                (
-                    await db.execute(
-                        select(User.id).where(
-                            User.role.in_([UserRole.ADMIN.value, UserRole.PROCUREMENT_MGR.value]),
-                            User.is_active.is_(True),
+        async with AsyncSessionLocal() as notif_db:
+            if await notification_enabled(notif_db, "contract_updated"):
+                recipients: set[str] = set()
+                po = await notif_db.get(PurchaseOrder, contract.po_id)
+                if po and po.created_by_id:
+                    recipients.add(str(po.created_by_id))
+                if po and po.pr_id:
+                    pr = await notif_db.get(PurchaseRequisition, po.pr_id)
+                    if pr and pr.requester_id:
+                        recipients.add(str(pr.requester_id))
+                admin_rows = (
+                    (
+                        await notif_db.execute(
+                            select(User.id).where(
+                                User.role.in_(
+                                    [UserRole.ADMIN.value, UserRole.PROCUREMENT_MGR.value]
+                                ),
+                                User.is_active.is_(True),
+                            )
                         )
                     )
+                    .scalars()
+                    .all()
                 )
-                .scalars()
-                .all()
-            )
-            recipients.update(str(uid) for uid in admin_rows)
-            changed_fields = ", ".join(changed.keys())
-            from uuid import UUID as _UUID
+                recipients.update(str(uid) for uid in admin_rows)
+                changed_fields = ", ".join(changed.keys())
+                from uuid import UUID as _UUID
 
-            for uid_str in recipients:
-                await create_notification(
-                    db,
-                    user_id=_UUID(uid_str),
-                    category=NotificationCategory.SYSTEM,
-                    title=f"Contract {contract.contract_number} updated",
-                    body=(
-                        f"**Contract**: {contract.contract_number}\n"
-                        f"**Title**: {contract.title}\n"
-                        f"**Amount**: {fmt_amount(contract.total_amount, contract.currency)}\n"
-                        f"**Changed fields**: {changed_fields}\n"
-                        f"**Updated by**: {actor.display_name}"
-                    ),
-                    link_url=f"/contracts/{contract.id}",
-                    biz_type="contract",
-                    biz_id=contract.id,
-                )
-            await db.commit()
+                for uid_str in recipients:
+                    await create_notification(
+                        notif_db,
+                        user_id=_UUID(uid_str),
+                        category=NotificationCategory.SYSTEM,
+                        title=f"Contract {contract.contract_number} updated",
+                        body=(
+                            f"**Contract**: {contract.contract_number}\n"
+                            f"**Title**: {contract.title}\n"
+                            f"**Amount**: {fmt_amount(contract.total_amount, contract.currency)}\n"
+                            f"**Changed fields**: {changed_fields}\n"
+                            f"**Updated by**: {actor.display_name}"
+                        ),
+                        link_url=f"/contracts/{contract.id}",
+                        biz_type="contract",
+                        biz_id=contract.id,
+                    )
+                await notif_db.commit()
     except Exception:
         logger.warning(
             "Failed to send contract_updated notification for contract=%s",
@@ -576,54 +584,56 @@ async def transition_contract_status(
 
     if new_status in ("terminated", "superseded"):
         try:
+            from app.db import AsyncSessionLocal
             from app.models import NotificationCategory, PurchaseOrder, User, UserRole
             from app.services.notifications import create_notification
             from app.services.system_params import notification_enabled
 
-            if await notification_enabled(db, "contract_status_changed"):
-                recipients: set[str] = set()
-                po = await db.get(PurchaseOrder, contract.po_id)
-                if po and po.created_by_id:
-                    recipients.add(str(po.created_by_id))
-                if po and po.pr_id:
-                    pr = await db.get(PurchaseRequisition, po.pr_id)
-                    if pr and pr.requester_id:
-                        recipients.add(str(pr.requester_id))
-                admin_rows = (
-                    (
-                        await db.execute(
-                            select(User.id).where(
-                                User.role.in_(
-                                    [UserRole.ADMIN.value, UserRole.PROCUREMENT_MGR.value]
-                                ),
-                                User.is_active.is_(True),
+            async with AsyncSessionLocal() as notif_db:
+                if await notification_enabled(notif_db, "contract_status_changed"):
+                    recipients: set[str] = set()
+                    po = await notif_db.get(PurchaseOrder, contract.po_id)
+                    if po and po.created_by_id:
+                        recipients.add(str(po.created_by_id))
+                    if po and po.pr_id:
+                        pr = await notif_db.get(PurchaseRequisition, po.pr_id)
+                        if pr and pr.requester_id:
+                            recipients.add(str(pr.requester_id))
+                    admin_rows = (
+                        (
+                            await notif_db.execute(
+                                select(User.id).where(
+                                    User.role.in_(
+                                        [UserRole.ADMIN.value, UserRole.PROCUREMENT_MGR.value]
+                                    ),
+                                    User.is_active.is_(True),
+                                )
                             )
                         )
+                        .scalars()
+                        .all()
                     )
-                    .scalars()
-                    .all()
-                )
-                recipients.update(str(uid) for uid in admin_rows)
-                from uuid import UUID as _UUID
+                    recipients.update(str(uid) for uid in admin_rows)
+                    from uuid import UUID as _UUID
 
-                for uid_str in recipients:
-                    await create_notification(
-                        db,
-                        user_id=_UUID(uid_str),
-                        category=NotificationCategory.SYSTEM,
-                        title=f"Contract {contract.contract_number} {new_status}",
-                        body=(
-                            f"**Contract**: {contract.contract_number}\n"
-                            f"**Title**: {contract.title}\n"
-                            f"**Status**: {current} → {new_status}\n"
-                            f"**Reason**: {reason or '—'}\n"
-                            f"**Updated by**: {actor.display_name}"
-                        ),
-                        link_url=f"/contracts/{contract.id}",
-                        biz_type="contract",
-                        biz_id=contract.id,
-                    )
-                await db.commit()
+                    for uid_str in recipients:
+                        await create_notification(
+                            notif_db,
+                            user_id=_UUID(uid_str),
+                            category=NotificationCategory.SYSTEM,
+                            title=f"Contract {contract.contract_number} {new_status}",
+                            body=(
+                                f"**Contract**: {contract.contract_number}\n"
+                                f"**Title**: {contract.title}\n"
+                                f"**Status**: {current} → {new_status}\n"
+                                f"**Reason**: {reason or '—'}\n"
+                                f"**Updated by**: {actor.display_name}"
+                            ),
+                            link_url=f"/contracts/{contract.id}",
+                            biz_type="contract",
+                            biz_id=contract.id,
+                        )
+                    await notif_db.commit()
         except Exception:
             logger.warning(
                 "Failed to send contract_status_changed notification for contract=%s",
@@ -750,52 +760,56 @@ async def create_shipment(
     await db.commit()
 
     try:
+        from app.db import AsyncSessionLocal
         from app.models import NotificationCategory, UserRole
         from app.services.notifications import create_notification
         from app.services.system_params import notification_enabled
 
-        if await notification_enabled(db, "shipment_received"):
-            status_label = (
-                "fully received"
-                if po.status == POStatus.FULLY_RECEIVED.value
-                else "partially received"
-            )
-            recipients = {actor.id, po.created_by_id}
-            pr = await db.get(PurchaseRequisition, po.pr_id)
-            if pr and pr.requester_id:
-                recipients.add(pr.requester_id)
-            admin_rows = (
-                (
-                    await db.execute(
-                        select(User.id).where(
-                            User.role.in_([UserRole.ADMIN.value, UserRole.PROCUREMENT_MGR.value]),
-                            User.is_active.is_(True),
+        async with AsyncSessionLocal() as notif_db:
+            if await notification_enabled(notif_db, "shipment_received"):
+                status_label = (
+                    "fully received"
+                    if po.status == POStatus.FULLY_RECEIVED.value
+                    else "partially received"
+                )
+                recipients = {actor.id, po.created_by_id}
+                pr = await notif_db.get(PurchaseRequisition, po.pr_id)
+                if pr and pr.requester_id:
+                    recipients.add(pr.requester_id)
+                admin_rows = (
+                    (
+                        await notif_db.execute(
+                            select(User.id).where(
+                                User.role.in_(
+                                    [UserRole.ADMIN.value, UserRole.PROCUREMENT_MGR.value]
+                                ),
+                                User.is_active.is_(True),
+                            )
                         )
                     )
+                    .scalars()
+                    .all()
                 )
-                .scalars()
-                .all()
-            )
-            recipients.update(admin_rows)
-            for uid in recipients:
-                await create_notification(
-                    db,
-                    user_id=uid,
-                    category=NotificationCategory.PO_CREATED,
-                    title=f"PO {po.po_number} {status_label}",
-                    body=(
-                        f"**PO**: {po.po_number}\n"
-                        f"**PR**: {po.pr_title or '—'}\n"
-                        f"**Shipment**: {shipment.shipment_number} (Batch {shipment.batch_no})\n"
-                        f"**Status**: {status_label} ({po.qty_received}/{total_qty} received)\n"
-                        f"**Carrier**: {shipment.carrier or '—'} | **Tracking**: {shipment.tracking_number or '—'}\n"
-                        f"**Created by**: {actor.display_name}"
-                    ),
-                    link_url=f"/purchase-orders/{po.id}",
-                    biz_type="po",
-                    biz_id=po.id,
-                )
-            await db.commit()
+                recipients.update(admin_rows)
+                for uid in recipients:
+                    await create_notification(
+                        notif_db,
+                        user_id=uid,
+                        category=NotificationCategory.PO_CREATED,
+                        title=f"PO {po.po_number} {status_label}",
+                        body=(
+                            f"**PO**: {po.po_number}\n"
+                            f"**PR**: {po.pr_title or '—'}\n"
+                            f"**Shipment**: {shipment.shipment_number} (Batch {shipment.batch_no})\n"
+                            f"**Status**: {status_label} ({po.qty_received}/{total_qty} received)\n"
+                            f"**Carrier**: {shipment.carrier or '—'} | **Tracking**: {shipment.tracking_number or '—'}\n"
+                            f"**Created by**: {actor.display_name}"
+                        ),
+                        link_url=f"/purchase-orders/{po.id}",
+                        biz_type="po",
+                        biz_id=po.id,
+                    )
+                await notif_db.commit()
     except Exception:
         logger.warning(
             "Failed to send shipment_received notification for shipment=%s",
@@ -879,54 +893,56 @@ async def update_shipment(
         await db.commit()
 
         try:
+            from app.db import AsyncSessionLocal
             from app.models import NotificationCategory, PurchaseOrder, User, UserRole
             from app.services.notifications import create_notification
             from app.services.system_params import notification_enabled
 
-            if await notification_enabled(db, "shipment_updated"):
-                po = await db.get(PurchaseOrder, shipment.po_id)
-                if po:
-                    recipients = {actor.id, po.created_by_id}
-                    if po.pr_id:
-                        pr = await db.get(PurchaseRequisition, po.pr_id)
-                        if pr and pr.requester_id:
-                            recipients.add(pr.requester_id)
-                    admin_rows = (
-                        (
-                            await db.execute(
-                                select(User.id).where(
-                                    User.role.in_(
-                                        [UserRole.ADMIN.value, UserRole.PROCUREMENT_MGR.value]
-                                    ),
-                                    User.is_active.is_(True),
+            async with AsyncSessionLocal() as notif_db:
+                if await notification_enabled(notif_db, "shipment_updated"):
+                    po = await notif_db.get(PurchaseOrder, shipment.po_id)
+                    if po:
+                        recipients = {actor.id, po.created_by_id}
+                        if po.pr_id:
+                            pr = await notif_db.get(PurchaseRequisition, po.pr_id)
+                            if pr and pr.requester_id:
+                                recipients.add(pr.requester_id)
+                        admin_rows = (
+                            (
+                                await notif_db.execute(
+                                    select(User.id).where(
+                                        User.role.in_(
+                                            [UserRole.ADMIN.value, UserRole.PROCUREMENT_MGR.value]
+                                        ),
+                                        User.is_active.is_(True),
+                                    )
                                 )
                             )
+                            .scalars()
+                            .all()
                         )
-                        .scalars()
-                        .all()
-                    )
-                    recipients.update(admin_rows)
-                    changes_str = "\n".join(
-                        f"- **{k}**: {v['old']} → {v['new']}" for k, v in changes.items()
-                    )
-                    for uid in recipients:
-                        await create_notification(
-                            db,
-                            user_id=uid,
-                            category=NotificationCategory.SYSTEM,
-                            title=f"Shipment {shipment.shipment_number} updated",
-                            body=(
-                                f"**Shipment**: {shipment.shipment_number} | **PO**: {po.po_number}\n"
-                                f"**PR**: {po.pr_title or '—'}\n"
-                                f"**Carrier**: {shipment.carrier or '—'} | **Tracking**: {shipment.tracking_number or '—'}\n"
-                                f"**Changes**:\n{changes_str}\n"
-                                f"**Updated by**: {actor.display_name}"
-                            ),
-                            link_url=f"/purchase-orders/{shipment.po_id}",
-                            biz_type="shipment",
-                            biz_id=shipment.id,
+                        recipients.update(admin_rows)
+                        changes_str = "\n".join(
+                            f"- **{k}**: {v['old']} → {v['new']}" for k, v in changes.items()
                         )
-                    await db.commit()
+                        for uid in recipients:
+                            await create_notification(
+                                notif_db,
+                                user_id=uid,
+                                category=NotificationCategory.SYSTEM,
+                                title=f"Shipment {shipment.shipment_number} updated",
+                                body=(
+                                    f"**Shipment**: {shipment.shipment_number} | **PO**: {po.po_number}\n"
+                                    f"**PR**: {po.pr_title or '—'}\n"
+                                    f"**Carrier**: {shipment.carrier or '—'} | **Tracking**: {shipment.tracking_number or '—'}\n"
+                                    f"**Changes**:\n{changes_str}\n"
+                                    f"**Updated by**: {actor.display_name}"
+                                ),
+                                link_url=f"/purchase-orders/{shipment.po_id}",
+                                biz_type="shipment",
+                                biz_id=shipment.id,
+                            )
+                        await notif_db.commit()
         except Exception:
             logger.warning(
                 "Failed to send shipment_updated notification for shipment=%s",
@@ -1197,49 +1213,51 @@ async def create_payment(
     await db.commit()
 
     try:
+        from app.db import AsyncSessionLocal
         from app.models import NotificationCategory, UserRole
         from app.services.notifications import create_notification
         from app.services.system_params import notification_enabled
 
-        if await notification_enabled(db, "payment_created"):
-            recipients = {actor.id}
-            pr = await db.get(PurchaseRequisition, po.pr_id)
-            if pr and pr.requester_id:
-                recipients.add(pr.requester_id)
-            admin_rows = (
-                (
-                    await db.execute(
-                        select(User.id).where(
-                            User.role.in_([UserRole.ADMIN.value, UserRole.FINANCE_AUDITOR.value]),
-                            User.is_active.is_(True),
+        async with AsyncSessionLocal() as notif_db:
+            if await notification_enabled(notif_db, "payment_created"):
+                recipients = {actor.id}
+                pr = await notif_db.get(PurchaseRequisition, po.pr_id)
+                if pr and pr.requester_id:
+                    recipients.add(pr.requester_id)
+                admin_rows = (
+                    (
+                        await notif_db.execute(
+                            select(User.id).where(
+                                User.role.in_([UserRole.ADMIN.value, UserRole.FINANCE_AUDITOR.value]),
+                                User.is_active.is_(True),
+                            )
                         )
                     )
+                    .scalars()
+                    .all()
                 )
-                .scalars()
-                .all()
-            )
-            recipients.update(admin_rows)
-            for uid in recipients:
-                await create_notification(
-                    db,
-                    user_id=uid,
-                    category=NotificationCategory.PAYMENT_PENDING,
-                    title=f"Payment {record.payment_number} created",
-                    body=(
-                        f"**Payment**: {record.payment_number} (Installment #{record.installment_no})\n"
-                        f"**PO**: {po.po_number}\n"
-                        f"**PR**: {po.pr_title or '—'}\n"
-                        f"**Amount**: {fmt_amount(record.amount, record.currency)}\n"
-                        f"**Due date**: {record.due_date}\n"
-                        f"**Status**: {record.status}\n"
-                        f"**Method**: {record.payment_method}\n"
-                        f"**Created by**: {actor.display_name}"
-                    ),
-                    link_url=f"/purchase-orders/{record.po_id}",
-                    biz_type="payment",
-                    biz_id=record.id,
-                )
-            await db.commit()
+                recipients.update(admin_rows)
+                for uid in recipients:
+                    await create_notification(
+                        notif_db,
+                        user_id=uid,
+                        category=NotificationCategory.PAYMENT_PENDING,
+                        title=f"Payment {record.payment_number} created",
+                        body=(
+                            f"**Payment**: {record.payment_number} (Installment #{record.installment_no})\n"
+                            f"**PO**: {po.po_number}\n"
+                            f"**PR**: {po.pr_title or '—'}\n"
+                            f"**Amount**: {fmt_amount(record.amount, record.currency)}\n"
+                            f"**Due date**: {record.due_date}\n"
+                            f"**Status**: {record.status}\n"
+                            f"**Method**: {record.payment_method}\n"
+                            f"**Created by**: {actor.display_name}"
+                        ),
+                        link_url=f"/purchase-orders/{record.po_id}",
+                        biz_type="payment",
+                        biz_id=record.id,
+                    )
+                await notif_db.commit()
     except Exception:
         logger.warning(
             "Failed to send payment_created notification for payment=%s", record.id, exc_info=True
@@ -1395,54 +1413,56 @@ async def update_payment(
     await db.refresh(record)
 
     try:
+        from app.db import AsyncSessionLocal
         from app.models import NotificationCategory, PurchaseOrder, User, UserRole
         from app.services.notifications import create_notification
         from app.services.system_params import notification_enabled
 
-        if await notification_enabled(db, "payment_updated"):
-            po = await db.get(PurchaseOrder, record.po_id)
-            if po:
-                recipients = {actor.id, po.created_by_id}
-                if po.pr_id:
-                    pr = await db.get(PurchaseRequisition, po.pr_id)
-                    if pr and pr.requester_id:
-                        recipients.add(pr.requester_id)
-                admin_rows = (
-                    (
-                        await db.execute(
-                            select(User.id).where(
-                                User.role.in_(
-                                    [UserRole.ADMIN.value, UserRole.FINANCE_AUDITOR.value]
-                                ),
-                                User.is_active.is_(True),
+        async with AsyncSessionLocal() as notif_db:
+            if await notification_enabled(notif_db, "payment_updated"):
+                po = await notif_db.get(PurchaseOrder, record.po_id)
+                if po:
+                    recipients = {actor.id, po.created_by_id}
+                    if po.pr_id:
+                        pr = await notif_db.get(PurchaseRequisition, po.pr_id)
+                        if pr and pr.requester_id:
+                            recipients.add(pr.requester_id)
+                    admin_rows = (
+                        (
+                            await notif_db.execute(
+                                select(User.id).where(
+                                    User.role.in_(
+                                        [UserRole.ADMIN.value, UserRole.FINANCE_AUDITOR.value]
+                                    ),
+                                    User.is_active.is_(True),
+                                )
                             )
                         )
+                        .scalars()
+                        .all()
                     )
-                    .scalars()
-                    .all()
-                )
-                recipients.update(admin_rows)
-                changes_str = "\n".join(
-                    f"- **{k}**: {v['from']} → {v['to']}" for k, v in changes.items()
-                )
-                for uid in recipients:
-                    await create_notification(
-                        db,
-                        user_id=uid,
-                        category=NotificationCategory.SYSTEM,
-                        title=f"Payment {record.payment_number} updated",
-                        body=(
-                            f"**Payment**: {record.payment_number} | **PO**: {po.po_number}\n"
-                            f"**PR**: {po.pr_title or '—'}\n"
-                            f"**Amount**: {fmt_amount(record.amount, record.currency)}\n"
-                            f"**Changes**:\n{changes_str}\n"
-                            f"**Updated by**: {actor.display_name}"
-                        ),
-                        link_url=f"/purchase-orders/{record.po_id}",
-                        biz_type="payment",
-                        biz_id=record.id,
+                    recipients.update(admin_rows)
+                    changes_str = "\n".join(
+                        f"- **{k}**: {v['from']} → {v['to']}" for k, v in changes.items()
                     )
-                await db.commit()
+                    for uid in recipients:
+                        await create_notification(
+                            notif_db,
+                            user_id=uid,
+                            category=NotificationCategory.SYSTEM,
+                            title=f"Payment {record.payment_number} updated",
+                            body=(
+                                f"**Payment**: {record.payment_number} | **PO**: {po.po_number}\n"
+                                f"**PR**: {po.pr_title or '—'}\n"
+                                f"**Amount**: {fmt_amount(record.amount, record.currency)}\n"
+                                f"**Changes**:\n{changes_str}\n"
+                                f"**Updated by**: {actor.display_name}"
+                            ),
+                            link_url=f"/purchase-orders/{record.po_id}",
+                            biz_type="payment",
+                            biz_id=record.id,
+                        )
+                    await notif_db.commit()
     except Exception:
         logger.warning(
             "Failed to send payment_updated notification for payment=%s", record.id, exc_info=True

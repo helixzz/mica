@@ -33,6 +33,8 @@ export function PODetailPage() {
   const [invoices, setInvoices] = useState<InvoiceListRow[]>([])
   const [contracts, setContracts] = useState<Contract[]>([])
   const [deliveryPlans, setDeliveryPlans] = useState<any[]>([])
+  const [attachmentsCount, setAttachmentsCount] = useState(0)
+  const [paymentScheduleCount, setPaymentScheduleCount] = useState(0)
 
   const [shipmentOpen, setShipmentOpen] = useState(false)
   const [paymentOpen, setPaymentOpen] = useState(false)
@@ -53,14 +55,16 @@ export function PODetailPage() {
 
   const loadAll = async () => {
     if (!id) return
-    const [po0, pr0, sh, pay, inv, ct, dp] = await Promise.all([
-      api.getPO(id),
+    const [po0, pr0, sh, pay, inv, ct, dp, docs, sched] = await Promise.all([
+      api.getPO(id).catch(() => null as PurchaseOrder | null),
       api.getPOProgress(id).catch(() => null),
       api.listShipments({ po_id: id }).catch(() => []),
       api.listPayments(id).catch(() => []),
       api.listInvoices(id).catch(() => []),
       api.listContracts(id).catch(() => [] as Contract[]),
       api.getPODeliveryPlan(id).catch(() => ({ all_plans: [] })),
+      api.listPODocuments(id).catch(() => []),
+      api.getPOPaymentSchedule(id).catch(() => ({ items: [] })),
     ])
     setPo(po0)
     setProgress(pr0)
@@ -69,6 +73,8 @@ export function PODetailPage() {
     setInvoices(inv)
     setContracts(ct)
     setDeliveryPlans(dp.all_plans)
+    setAttachmentsCount(docs.length)
+    setPaymentScheduleCount(sched.items ? sched.items.length : 0)
   }
 
   useEffect(() => {
@@ -131,6 +137,8 @@ export function PODetailPage() {
                   invoices={invoices}
                   contracts={contracts}
                   deliveryPlans={deliveryPlans}
+                  attachmentsCount={attachmentsCount}
+                  paymentScheduleCount={paymentScheduleCount}
                   canCreateContract={canCreateContract}
                   canWriteSchedule={canWriteSchedule}
                   loadAll={loadAll}

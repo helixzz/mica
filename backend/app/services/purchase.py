@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 # pyright: reportUnknownParameterType=false, reportMissingParameterType=false, reportExplicitAny=false
+import logging
 from datetime import UTC, datetime
 from decimal import Decimal
 from uuid import UUID
@@ -29,6 +30,8 @@ from app.models import (
 )
 from app.schemas import PRCreateIn, PRDecisionIn, PRUpdateIn
 from app.services import approval as approval_svc
+
+logger = logging.getLogger("mica.purchase")
 
 
 def _as_decimal(v: Decimal | int | float | str) -> Decimal:
@@ -162,53 +165,58 @@ async def create_pr(db: AsyncSession, actor: User, payload: PRCreateIn) -> Purch
     await db.refresh(pr)
 
     try:
+        from app.db import AsyncSessionLocal
         from app.models import NotificationCategory
         from app.services.notifications import create_notification
         from app.services.system_params import notification_enabled
 
-        if await notification_enabled(db, "pr_created"):
-            recipients: set[str] = {str(actor.id)}
-            if pr.requester_id:
-                recipients.add(str(pr.requester_id))
-            if pr.department_id:
-                dept_managers = (
-                    (
-                        await db.execute(
-                            select(User.id).where(
-                                User.department_id == pr.department_id,
-                                User.role == UserRole.DEPT_MANAGER.value,
-                                User.is_active.is_(True),
+        async with AsyncSessionLocal() as notif_db:
+            if await notification_enabled(notif_db, "pr_created"):
+                notif_pr = await _load_pr(notif_db, pr.id)
+                if notif_pr is None:
+                    raise LookupError(f"PR not found for notification: {pr.id}")
+                recipients: set[str] = {str(actor.id)}
+                if notif_pr.requester_id:
+                    recipients.add(str(notif_pr.requester_id))
+                if notif_pr.department_id:
+                    dept_managers = (
+                        (
+                            await notif_db.execute(
+                                select(User.id).where(
+                                    User.department_id == notif_pr.department_id,
+                                    User.role == UserRole.DEPT_MANAGER.value,
+                                    User.is_active.is_(True),
+                                )
                             )
                         )
+                        .scalars()
+                        .all()
                     )
-                    .scalars()
-                    .all()
-                )
-                recipients.update(str(uid) for uid in dept_managers)
+                    recipients.update(str(uid) for uid in dept_managers)
 
-            from uuid import UUID as _UUID
+                from uuid import UUID as _UUID
 
-            for uid_str in recipients:
-                await create_notification(
-                    db,
-                    user_id=_UUID(uid_str),
-                    category=NotificationCategory.SYSTEM,
-                    title=f"PR {pr.pr_number} created",
-                    body=(
-                        f"**PR**: {pr.pr_number}\n"
-                        f"**Title**: {pr.title}\n"
-                        f"**Amount**: {fmt_amount(pr.total_amount, pr.currency)}\n"
-                        f"**Required by**: {pr.required_date}\n"
-                        f"**Items**: {len(pr.items)} line(s)\n"
-                        f"**Created by**: {actor.display_name}"
-                    ),
-                    link_url=f"/purchase-requisitions/{pr.id}",
-                    biz_type="pr",
-                    biz_id=pr.id,
-                )
-            await db.commit()
+                for uid_str in recipients:
+                    await create_notification(
+                        notif_db,
+                        user_id=_UUID(uid_str),
+                        category=NotificationCategory.SYSTEM,
+                        title=f"PR {notif_pr.pr_number} created",
+                        body=(
+                            f"**PR**: {notif_pr.pr_number}\n"
+                            f"**Title**: {notif_pr.title}\n"
+                            f"**Amount**: {fmt_amount(notif_pr.total_amount, notif_pr.currency)}\n"
+                            f"**Required by**: {notif_pr.required_date}\n"
+                            f"**Items**: {len(notif_pr.items)} line(s)\n"
+                            f"**Created by**: {actor.display_name}"
+                        ),
+                        link_url=f"/purchase-requisitions/{notif_pr.id}",
+                        biz_type="pr",
+                        biz_id=notif_pr.id,
+                    )
+                await notif_db.commit()
     except Exception:
-        pass
+        logger.warning("Failed to send pr_created notification for pr=%s", pr.id, exc_info=True)
 
     result = await _load_pr(db, pr.id)
     if result is None:
@@ -286,19 +294,39 @@ async def update_pr(
     await db.commit()
 
     try:
+        from app.db import AsyncSessionLocal
         from app.models import NotificationCategory
         from app.services.notifications import create_notification
         from app.services.system_params import notification_enabled
 
-        if await notification_enabled(db, "pr_updated"):
-            recipients = {actor.id, pr.requester_id}
-            if pr.department_id:
-                dept_managers = (
+        async with AsyncSessionLocal() as notif_db:
+            if await notification_enabled(notif_db, "pr_updated"):
+                notif_pr = await _load_pr(notif_db, pr.id)
+                if notif_pr is None:
+                    raise LookupError(f"PR not found for notification: {pr.id}")
+                recipients = {actor.id, notif_pr.requester_id}
+                if notif_pr.department_id:
+                    dept_managers = (
+                        (
+                            await notif_db.execute(
+                                select(User.id).where(
+                                    User.department_id == notif_pr.department_id,
+                                    User.role == UserRole.DEPT_MANAGER.value,
+                                    User.is_active.is_(True),
+                                )
+                            )
+                        )
+                        .scalars()
+                        .all()
+                    )
+                    recipients.update(dept_managers)
+                admin_rows = (
                     (
-                        await db.execute(
+                        await notif_db.execute(
                             select(User.id).where(
-                                User.department_id == pr.department_id,
-                                User.role == UserRole.DEPT_MANAGER.value,
+                                User.role.in_(
+                                    [UserRole.ADMIN.value, UserRole.PROCUREMENT_MGR.value]
+                                ),
                                 User.is_active.is_(True),
                             )
                         )
@@ -306,40 +334,27 @@ async def update_pr(
                     .scalars()
                     .all()
                 )
-                recipients.update(dept_managers)
-            admin_rows = (
-                (
-                    await db.execute(
-                        select(User.id).where(
-                            User.role.in_([UserRole.ADMIN.value, UserRole.PROCUREMENT_MGR.value]),
-                            User.is_active.is_(True),
-                        )
+                recipients.update(admin_rows)
+                for uid in recipients:
+                    await create_notification(
+                        notif_db,
+                        user_id=uid,
+                        category=NotificationCategory.SYSTEM,
+                        title=f"PR {notif_pr.pr_number} updated",
+                        body=(
+                            f"**PR**: {notif_pr.pr_number}\n"
+                            f"**Title**: {notif_pr.title}\n"
+                            f"**Amount**: {fmt_amount(notif_pr.total_amount, notif_pr.currency)}\n"
+                            f"**Status**: {notif_pr.status}\n"
+                            f"**Updated by**: {actor.display_name}"
+                        ),
+                        link_url=f"/purchase-requisitions/{notif_pr.id}",
+                        biz_type="pr",
+                        biz_id=notif_pr.id,
                     )
-                )
-                .scalars()
-                .all()
-            )
-            recipients.update(admin_rows)
-            for uid in recipients:
-                await create_notification(
-                    db,
-                    user_id=uid,
-                    category=NotificationCategory.SYSTEM,
-                    title=f"PR {pr.pr_number} updated",
-                    body=(
-                        f"**PR**: {pr.pr_number}\n"
-                        f"**Title**: {pr.title}\n"
-                        f"**Amount**: {fmt_amount(pr.total_amount, pr.currency)}\n"
-                        f"**Status**: {pr.status}\n"
-                        f"**Updated by**: {actor.display_name}"
-                    ),
-                    link_url=f"/purchase-requisitions/{pr.id}",
-                    biz_type="pr",
-                    biz_id=pr.id,
-                )
-            await db.commit()
+                await notif_db.commit()
     except Exception:
-        pass
+        logger.warning("Failed to send pr_updated notification for pr=%s", pr.id, exc_info=True)
 
     result = await _load_pr(db, pr.id)
     if result is None:
@@ -569,67 +584,78 @@ async def convert_pr_to_po(db: AsyncSession, actor: User, pr_id: UUID) -> list[P
     refreshed.sort(key=lambda p: p.po_number)
 
     try:
+        from app.db import AsyncSessionLocal
         from app.models import NotificationCategory
         from app.services.notifications import create_notification
         from app.services.system_params import notification_enabled
 
-        if await notification_enabled(db, "po_created"):
-            supplier_ids = {po.supplier_id for po in refreshed}
-            supplier_rows = (
-                (await db.execute(select(Supplier).where(Supplier.id.in_(supplier_ids))))
-                .scalars()
-                .all()
-            )
-            supplier_names = {s.id: s.name for s in supplier_rows}
+        async with AsyncSessionLocal() as notif_db:
+            if await notification_enabled(notif_db, "po_created"):
+                notif_pr = await _load_pr(notif_db, pr.id)
+                if notif_pr is None:
+                    raise LookupError(f"PR not found for notification: {pr.id}")
+                notif_pos: list[PurchaseOrder] = []
+                for po in refreshed:
+                    loaded = await _load_po(notif_db, po.id)
+                    if loaded is not None:
+                        notif_pos.append(loaded)
 
-            recipients = {actor.id}
-            if pr.requester_id:
-                recipients.add(pr.requester_id)
-            admin_rows = (
-                (
-                    await db.execute(
-                        select(User.id).where(
-                            User.role.in_(
-                                [
-                                    UserRole.ADMIN.value,
-                                    UserRole.PROCUREMENT_MGR.value,
-                                    UserRole.FINANCE_AUDITOR.value,
-                                ]
-                            ),
-                            User.is_active.is_(True),
+                supplier_ids = {po.supplier_id for po in notif_pos}
+                supplier_rows = (
+                    (await notif_db.execute(select(Supplier).where(Supplier.id.in_(supplier_ids))))
+                    .scalars()
+                    .all()
+                )
+                supplier_names = {s.id: s.name for s in supplier_rows}
+
+                recipients = {actor.id}
+                if notif_pr.requester_id:
+                    recipients.add(notif_pr.requester_id)
+                admin_rows = (
+                    (
+                        await notif_db.execute(
+                            select(User.id).where(
+                                User.role.in_(
+                                    [
+                                        UserRole.ADMIN.value,
+                                        UserRole.PROCUREMENT_MGR.value,
+                                        UserRole.FINANCE_AUDITOR.value,
+                                    ]
+                                ),
+                                User.is_active.is_(True),
+                            )
                         )
                     )
+                    .scalars()
+                    .all()
                 )
-                .scalars()
-                .all()
-            )
-            recipients.update(admin_rows)
+                recipients.update(admin_rows)
 
-            for po in refreshed:
-                supplier_name = supplier_names.get(po.supplier_id, "Unknown")
-                items_count = len(po.items)
-                for uid in recipients:
-                    await create_notification(
-                        db,
-                        user_id=uid,
-                        category=NotificationCategory.PO_CREATED,
-                        title=f"PO {po.po_number} created",
-                        body=(
-                            f"**PO**: {po.po_number}\n"
-                            f"**PR**: {po.pr_title or '—'}\n"
-                            f"**Source PR**: {pr.pr_number} — {pr.title}\n"
-                            f"**Supplier**: {supplier_name}\n"
-                            f"**Amount**: {fmt_amount(po.total_amount, po.currency)}\n"
-                            f"**Items**: {items_count} line(s)\n"
-                            f"**Created by**: {actor.display_name}"
-                        ),
-                        link_url=f"/purchase-orders/{po.id}",
-                        biz_type="po",
-                        biz_id=po.id,
-                    )
-            await db.commit()
+                for po in notif_pos:
+                    supplier_name = supplier_names.get(po.supplier_id, "Unknown")
+                    items_count = len(po.items)
+                    for uid in recipients:
+                        await create_notification(
+                            notif_db,
+                            user_id=uid,
+                            category=NotificationCategory.PO_CREATED,
+                            title=f"PO {po.po_number} created",
+                            body=(
+                                f"**PO**: {po.po_number}\n"
+                                f"**PR**: {po.pr_title or '—'}\n"
+                                f"**Source PR**: {notif_pr.pr_number} — {notif_pr.title}\n"
+                                f"**Supplier**: {supplier_name}\n"
+                                f"**Amount**: {fmt_amount(po.total_amount, po.currency)}\n"
+                                f"**Items**: {items_count} line(s)\n"
+                                f"**Created by**: {actor.display_name}"
+                            ),
+                            link_url=f"/purchase-orders/{po.id}",
+                            biz_type="po",
+                            biz_id=po.id,
+                        )
+                await notif_db.commit()
     except Exception:
-        pass
+        logger.warning("Failed to send po_created notification for pr=%s", pr.id, exc_info=True)
 
     return refreshed
 

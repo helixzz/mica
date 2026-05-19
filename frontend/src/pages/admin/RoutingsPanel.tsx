@@ -31,7 +31,10 @@ export function RoutingsPanel() {
 
   const load = () => {
     setLoading(true)
-    Promise.all([api.adminListRoutings(), api.adminListAIModels()])
+    Promise.all([
+      api.adminListRoutings().catch(() => []),
+      api.adminListAIModels().catch(() => [])
+    ])
       .then(([r, m]) => { setRows(r); setModels(m as AIModelRow[]) })
       .finally(() => setLoading(false))
   }

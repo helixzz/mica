@@ -48,7 +48,10 @@ export function ContractsPage() {
   const load = useCallback(async () => {
     setLoading(true)
     try {
-      const [a, b] = await Promise.all([api.listContracts(), api.listExpiringContracts(30)])
+      const [a, b] = await Promise.all([
+        api.listContracts().catch(() => []),
+        api.listExpiringContracts(30).catch(() => [])
+      ])
       setRows(a)
       setExpiring(b)
     } finally {

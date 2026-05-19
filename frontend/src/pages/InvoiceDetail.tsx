@@ -27,7 +27,7 @@ export function InvoiceDetailPage() {
 
   useEffect(() => {
     if (!id) return
-    void api.getInvoice(id).then(setInv)
+    void api.getInvoice(id).then(setInv).catch(() => setInv(null))
   }, [id])
 
   if (!inv) return <div>{t('message.loading')}</div>

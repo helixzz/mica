@@ -16,7 +16,7 @@ export function InvoicesPage() {
 
   useEffect(() => {
     setLoading(true)
-    api.listInvoices().then(setRows).finally(() => setLoading(false))
+    api.listInvoices().then(setRows).catch(() => setRows([])).finally(() => setLoading(false))
   }, [])
 
   const handleExport = () => {

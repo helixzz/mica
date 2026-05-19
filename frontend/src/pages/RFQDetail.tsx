@@ -28,8 +28,16 @@ export default function RFQDetailPage() {
 
   const load = () => {
     if (!id) return
-    void client.get(`/rfqs/${id}`).then((r) => setRfq(r.data))
-    void api.suppliers().then(setSuppliers)
+    try {
+      void client.get(`/rfqs/${id}`).then((r) => setRfq(r.data))
+    } catch {
+      setRfq(null)
+    }
+    try {
+      void api.suppliers().then(setSuppliers)
+    } catch {
+      setSuppliers([])
+    }
   }
   useEffect(load, [id])
 

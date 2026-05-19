@@ -137,13 +137,11 @@ export function ContractDetailPage() {
   const load = useCallback(async () => {
     if (!id) return
     try {
-      const fetched = await api.getContract(id)
-      setContract(fetched)
+      const att = await api.listContractAttachments(id)
+      setAttachments(att)
     } catch {
-      setContract(null)
+      setAttachments([])
     }
-    const att = await api.listContractAttachments(id)
-    setAttachments(att)
     try {
       const dp = await api.listDeliveryPlans({ contract_id: id })
       setDeliveryPlans(dp)

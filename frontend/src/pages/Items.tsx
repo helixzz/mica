@@ -41,7 +41,7 @@ export default function ItemsPage() {
   }
 
   useEffect(() => {
-    void api.getCategoryTree().then((tree) => setCategories(flattenCategoryTree(tree)))
+    void api.getCategoryTree().then((tree) => setCategories(flattenCategoryTree(tree))).catch(() => setCategories([]))
   }, [])
 
   useEffect(() => {

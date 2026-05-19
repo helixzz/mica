@@ -14,7 +14,7 @@ export default function SupplierDetailPage() {
     if (!id) return
     void api.suppliers().then((list) => {
       setSupplier(list.find((s) => s.id === id) || null)
-    })
+    }).catch(() => setSupplier(null))
   }, [id])
 
   if (!supplier) return <div>{t('message.loading')}</div>

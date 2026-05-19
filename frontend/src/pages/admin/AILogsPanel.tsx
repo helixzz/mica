@@ -17,7 +17,10 @@ export function AILogsPanel() {
 
   const load = () => {
     setLoading(true)
-    Promise.all([api.adminAICallLogs({ since_days: 7 }), api.adminAICallStats(7)])
+    Promise.all([
+      api.adminAICallLogs({ since_days: 7 }).catch(() => []),
+      api.adminAICallStats(7).catch(() => [])
+    ])
       .then(([l, s]) => { setLogs(l); setStats(s) })
       .finally(() => setLoading(false))
   }

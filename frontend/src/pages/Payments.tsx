@@ -15,7 +15,7 @@ export function PaymentsPage() {
 
   useEffect(() => {
     setLoading(true)
-    api.listPayments().then(setRows).finally(() => setLoading(false))
+    api.listPayments().then(setRows).catch(() => setRows([])).finally(() => setLoading(false))
   }, [])
 
   const exportExcel = async () => {
