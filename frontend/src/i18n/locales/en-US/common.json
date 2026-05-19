@@ -356,6 +356,21 @@
       "date": "Date"
     }
   },
+  "insights": {
+    "title": "Insights",
+    "edit_mode": "Edit Panels",
+    "save_layout": "Save Layout",
+    "cancel_edit": "Cancel",
+    "add_panel": "Add Panel",
+    "remove_panel": "Remove",
+    "delivery_calendar": "My Delivery Calendar",
+    "delivery_calendar_desc": "Track your PRs from submission to delivery",
+    "workflow_kanban": "My Workflow",
+    "workflow_kanban_desc": "Pending, in progress, and completed work items",
+    "coming_soon": "Coming Soon",
+    "no_panels": "No panels yet. Click \"Edit Panels\" to add some.",
+    "layout_saved": "Layout saved"
+  },
   "dashboard": {
     "greeting": "Hi, {{name}}",
     "total_amount_cny": "Total Amount (CNY)",

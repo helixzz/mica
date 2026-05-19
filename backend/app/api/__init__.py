@@ -17,6 +17,7 @@ from app.api.v1 import (
     feishu_webhook,
     flow,
     import_excel,
+    insights,
     master_data,
     notifications,
     payment_schedule,
@@ -61,6 +62,7 @@ api_router.include_router(document_templates.router)
 api_router.include_router(feishu_webhook.router)
 api_router.include_router(websocket.router)
 api_router.include_router(supplier_portal.router)
+api_router.include_router(insights.router)
 
 # v2 router — mirrors v1 for forward compatibility
 v2_router = APIRouter(prefix="/v2")

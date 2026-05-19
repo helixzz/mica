@@ -7,6 +7,29 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [v1.17.0] — 2026-05-19
+
+### 新增
+- **数据洞察模块（Phase 1）**：全新 `/insights` 页面，模块化可拖拽面板看板
+  - **面板框架**：基于 @dnd-kit 的可编辑 grid 布局，支持拖拽排序、添加/移除面板、保存个人配置
+  - **交付日历面板**：显示用户的 PR → PO → 到货时间轴，按进度着色
+  - **工作流看板面板**：四列 Kanban（待我处理 / 进行中 / 待对方 / 近期完成）
+  - **角色默认配置**：6 种角色各有默认面板组合，首次进入自动展示
+  - **后端 API**：`GET/PUT /insights/dashboard-config`、`GET /insights/role-defaults`、`GET /insights/delivery-calendar`、`GET /insights/workflow-kanban`
+
+### 数据模型
+- 新建 `budgets` 表（部门/品类/项目级预算，年/季/月周期）
+- 新建 `user_dashboard_configs` 表（用户面板布局 JSONB 存储）
+- 新建 `insight_cache` 表（LLM 洞察缓存，TTL 过期）
+- Alembic migration 0045
+
+### 架构
+- 面板注册表机制 (`PanelRegistry.ts`)：面板通过 `registerPanel()` 注册，支持 `React.lazy()` 懒加载
+- 面板包装器 (`PanelWrapper.tsx`)：统一的 Card + Suspense + 刷新/移除交互
+- 前端路由 `/insights` + 侧栏导航入口
+
+---
+
 ## [v1.16.0] — 2026-05-19
 
 ### 改进

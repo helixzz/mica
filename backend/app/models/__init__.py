@@ -1492,3 +1492,63 @@ class DeliveryPlan(Base, TimestampMixin):
         Index("ix_delivery_plans_contract_date", "contract_id", "planned_date"),
         Index("ix_delivery_plans_status", "status"),
     )
+
+
+# ── Reporting & Insights ──────────────────────────────────────────────
+
+
+class BudgetScopeType(StrEnum):
+    DEPARTMENT = "department"
+    CATEGORY = "category"
+    PROJECT = "project"
+    COMPANY = "company"
+
+
+class BudgetPeriodType(StrEnum):
+    ANNUAL = "annual"
+    QUARTERLY = "quarterly"
+    MONTHLY = "monthly"
+
+
+class Budget(Base, TimestampMixin):
+    __tablename__ = "budgets"
+
+    id: Mapped[UUID] = mapped_column(primary_key=True, default=new_uuid)
+    scope_type: Mapped[str] = mapped_column(String(20), nullable=False)
+    scope_id: Mapped[UUID] = mapped_column(nullable=False)
+    period_type: Mapped[str] = mapped_column(String(20), nullable=False)
+    period_start: Mapped[date] = mapped_column(Date, nullable=False)
+    period_end: Mapped[date] = mapped_column(Date, nullable=False)
+    amount: Mapped[Decimal] = mapped_column(Numeric(18, 2), nullable=False)
+    currency: Mapped[str] = mapped_column(String(3), default="CNY")
+    notes: Mapped[str | None] = mapped_column(Text)
+    created_by_id: Mapped[UUID | None] = mapped_column(ForeignKey("users.id"))
+
+    __table_args__ = (
+        Index("ix_budgets_scope", "scope_type", "scope_id"),
+        Index("ix_budgets_period", "period_start", "period_end"),
+    )
+
+
+class UserDashboardConfig(Base, TimestampMixin):
+    __tablename__ = "user_dashboard_configs"
+
+    id: Mapped[UUID] = mapped_column(primary_key=True, default=new_uuid)
+    user_id: Mapped[UUID] = mapped_column(
+        ForeignKey("users.id"), unique=True, nullable=False
+    )
+    panels: Mapped[dict] = mapped_column(JSONB, default=list)
+
+
+class InsightCache(Base, TimestampMixin):
+    __tablename__ = "insight_cache"
+
+    id: Mapped[UUID] = mapped_column(primary_key=True, default=new_uuid)
+    cache_key: Mapped[str] = mapped_column(String(255), unique=True, nullable=False)
+    content: Mapped[dict] = mapped_column(JSONB, nullable=False)
+    generated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
+    expires_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
+
+    __table_args__ = (
+        Index("ix_insight_cache_expires", "expires_at"),
+    )

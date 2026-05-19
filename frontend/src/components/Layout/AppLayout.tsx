@@ -91,6 +91,7 @@ export function AppLayout() {
 
   const menuItems = [
     { key: '/dashboard', icon: <DashboardOutlined />, label: <Link to="/dashboard" onClick={() => setMobileMenuOpen(false)}>{t('nav.dashboard')}</Link> },
+    { key: '/insights', icon: <BarChartOutlined />, label: <Link to="/insights" onClick={() => setMobileMenuOpen(false)}>{t('insights.title')}</Link> },
     { key: '/approvals', icon: <AuditOutlined />, label: <Link to="/approvals" onClick={() => setMobileMenuOpen(false)}>{t('nav.approvals')}</Link> },
     { key: '/purchase-requisitions', icon: <SolutionOutlined />, label: <Link to="/purchase-requisitions" onClick={() => setMobileMenuOpen(false)}>{t('nav.purchase_requisitions')}</Link> },
     { key: '/purchase-orders', icon: <FileTextOutlined />, label: <Link to="/purchase-orders" onClick={() => setMobileMenuOpen(false)}>{t('nav.purchase_orders')}</Link> },

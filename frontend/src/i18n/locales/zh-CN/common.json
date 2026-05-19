@@ -356,6 +356,21 @@
       "date": "日期"
     }
   },
+  "insights": {
+    "title": "数据洞察",
+    "edit_mode": "编辑面板",
+    "save_layout": "保存布局",
+    "cancel_edit": "取消",
+    "add_panel": "添加面板",
+    "remove_panel": "移除",
+    "delivery_calendar": "我的交付日历",
+    "delivery_calendar_desc": "追踪采购申请到交货的全流程时间轴",
+    "workflow_kanban": "我的工作流",
+    "workflow_kanban_desc": "待处理、进行中、已完成的工作看板",
+    "coming_soon": "即将上线",
+    "no_panels": "暂无面板，点击\"编辑面板\"添加",
+    "layout_saved": "布局已保存"
+  },
   "dashboard": {
     "greeting": "你好，{{name}}",
     "total_amount_cny": "总金额 (CNY)",

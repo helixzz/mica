@@ -871,6 +871,15 @@ export interface PaymentCalendarItem {
   status: string
 }
 
+export interface PanelConfig {
+  panel_id: string
+  x: number
+  y: number
+  w: number
+  h: number
+  config?: Record<string, unknown>
+}
+
 export const api = {
   async listDeliveryPlans(params?: { po_id?: string; contract_id?: string; status?: string }): Promise<DeliveryPlan[]> {
     const { data } = await client.get<DeliveryPlan[]>('/delivery-plans', { params })
@@ -1898,5 +1907,16 @@ export const api = {
       }
     }
     onDone?.()
+  },
+  async getInsightsDashboardConfig(): Promise<{ panels: PanelConfig[] }> {
+    const { data } = await client.get('/insights/dashboard-config')
+    return data
+  },
+  async saveInsightsDashboardConfig(panels: PanelConfig[]): Promise<void> {
+    await client.put('/insights/dashboard-config', { panels })
+  },
+  async getInsightsRoleDefaults(): Promise<{ panels: PanelConfig[] }> {
+    const { data } = await client.get('/insights/role-defaults')
+    return data
   },
 }

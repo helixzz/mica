@@ -23,6 +23,7 @@ const ContractDetailPage = lazy(() =>
 const ContractsPage = lazy(() =>
   import('@/pages/Contracts').then((m) => ({ default: m.ContractsPage })),
 )
+const InsightsPage = lazy(() => import('@/pages/Insights'))
 const DashboardPage = lazy(() =>
   import('@/pages/Dashboard').then((m) => ({ default: m.DashboardPage })),
 )
@@ -161,6 +162,7 @@ export function AppRoutes() {
           >
             <Route path="/" element={<Navigate to="/dashboard" replace />} />
             <Route path="/dashboard" element={<DashboardPage />} />
+            <Route path="/insights" element={<InsightsPage />} />
             <Route path="/approvals" element={<ApprovalsPage />} />
             <Route path="/purchase-requisitions" element={<PRListPage />} />
             <Route path="/purchase-requisitions/new" element={<PRNewPage />} />
