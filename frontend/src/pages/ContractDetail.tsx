@@ -137,6 +137,12 @@ export function ContractDetailPage() {
   const load = useCallback(async () => {
     if (!id) return
     try {
+      const fetched = await api.getContract(id)
+      setContract(fetched)
+    } catch {
+      setContract(null)
+    }
+    try {
       const att = await api.listContractAttachments(id)
       setAttachments(att)
     } catch {

@@ -56,7 +56,7 @@ export function PODetailPage() {
   const loadAll = async () => {
     if (!id) return
     const [po0, pr0, sh, pay, inv, ct, dp, docs, sched] = await Promise.all([
-      api.getPO(id).catch(() => null as PurchaseOrder | null),
+      api.getPO(id),
       api.getPOProgress(id).catch(() => null),
       api.listShipments({ po_id: id }).catch(() => []),
       api.listPayments(id).catch(() => []),
