@@ -21,7 +21,9 @@
     "create_failed": "Create failed",
     "selected_count": "{{count}} selected",
     "preview": "Preview",
-    "saved": "Saved"
+    "saved": "Saved",
+    "details": "Details",
+    "search": "Search"
   },
   "breadcrumb": {
     "home": "Home"
@@ -116,7 +118,8 @@
     "close": "Close",
     "copy": "Copy",
     "enable_selected": "Enable Selected",
-    "disable_selected": "Disable Selected"
+    "disable_selected": "Disable Selected",
+    "upload": "Upload"
   },
   "field": {
     "username": "Username",
@@ -188,7 +191,9 @@
     "contact_email": "Email",
     "actions": "Actions",
     "source_type": "Source",
-    "pr_title": "PR Title"
+    "pr_title": "PR Title",
+    "filename": "Filename",
+    "file_size": "Size"
   },
   "column_settings": {
     "title": "Column visibility",
@@ -225,7 +230,9 @@
     "planned": "Planned",
     "partial": "Partial",
     "complete": "Complete",
-    "unmatched": "Unmatched"
+    "unmatched": "Unmatched",
+    "due": "Due",
+    "partially_paid": "Partially Paid"
   },
   "role": {
     "admin": "Administrator",
@@ -299,7 +306,8 @@
     "create_failed": "Create failed",
     "save_failed": "Save failed",
     "send_failed": "Send failed",
-    "delete_failed": "Delete failed"
+    "delete_failed": "Delete failed",
+    "upload_failed": "Upload failed"
   },
   "language": {
     "switch": "Language",
@@ -480,6 +488,37 @@
     },
     "mark_all_read": "Mark All Read",
     "settings": "Notification Settings"
+  },
+  "event_type": {
+    "pr.created": "PR Created",
+    "pr.updated": "PR Updated",
+    "pr.submitted": "Submitted for Approval",
+    "pr.approved": "Approved",
+    "pr.rejected": "Rejected",
+    "pr.returned": "Returned for Revision",
+    "pr.converted": "Converted to PO",
+    "pr.deleted": "PR Deleted",
+    "po.created": "PO Created",
+    "po.created_from_pr": "PO Created from PR",
+    "po.updated": "PO Updated",
+    "po.confirmed": "PO Confirmed",
+    "contract.created": "Contract Created",
+    "contract.updated": "Contract Updated",
+    "contract.document_attached": "Document Attached",
+    "contract.status_changed": "Status Changed",
+    "contract.version_created": "Version Created",
+    "shipment.created": "Shipment Recorded",
+    "shipment.updated": "Shipment Updated",
+    "payment.created": "Payment Recorded",
+    "payment.updated": "Payment Updated",
+    "payment.confirmed": "Payment Confirmed",
+    "invoice.created": "Invoice Recorded",
+    "invoice.matched": "Invoice Matched",
+    "notification.created": "Notification",
+    "approval.task_assigned": "Approval Task Assigned",
+    "approval.task_completed": "Approval Task Completed",
+    "sku.price_recorded": "Price Recorded",
+    "system_parameter.upserted": "System Parameter Updated"
   },
   "rfq": {
     "title": "RFQ",
@@ -949,7 +988,8 @@
     "at_least_one_item": "At least one item required",
     "at_least_one_supplier": "At least one supplier required",
     "at_least_one_line": "At least one line required",
-    "required": "This field is required"
+    "required": "This field is required",
+    "select_requester": "Please select a requester"
   },
   "ai": {
     "unavailable_tooltip": "AI requires admin model configuration"
@@ -1078,6 +1118,7 @@
     "trigger_fixed_date": "Fixed Date",
     "trigger_milestone": "Milestone",
     "trigger_invoice": "After Invoice",
+    "trigger_invoice_received": "After Invoice",
     "trigger_acceptance": "After Acceptance",
     "basic_info": "Basic Info",
     "upload_hint": "No scans yet. Upload PDF/OFD/XML/image files — OCR will be applied automatically for full-text search.",

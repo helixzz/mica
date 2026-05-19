@@ -104,7 +104,7 @@ export function ActivityTimeline({ resourceType, resourceId }: ActivityTimelineP
             <div>
               <div style={{ marginBottom: 4, display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
                 <Tag color={getEventTypeColor(item.event_type)} style={{ margin: 0 }}>
-                  {item.event_type}
+                  {t(`event_type.${item.event_type}` as 'event_type.pr.created', item.event_type)}
                 </Tag>
                 {item.actor_name && (
                   <Typography.Text strong style={{ fontSize: 13 }}>

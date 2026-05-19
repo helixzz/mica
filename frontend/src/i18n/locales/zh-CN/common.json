@@ -21,7 +21,9 @@
     "create_failed": "创建失败",
     "selected_count": "已选择 {{count}} 项",
     "preview": "预览",
-    "saved": "已保存"
+    "saved": "已保存",
+    "details": "详情",
+    "search": "搜索"
   },
   "breadcrumb": {
     "home": "首页"
@@ -116,7 +118,8 @@
     "close": "关闭",
     "copy": "复制",
     "enable_selected": "启用所选",
-    "disable_selected": "禁用所选"
+    "disable_selected": "禁用所选",
+    "upload": "上传"
   },
   "field": {
     "username": "用户名",
@@ -188,7 +191,9 @@
     "contact_email": "邮箱",
     "actions": "操作",
     "source_type": "来源",
-    "pr_title": "采购申请标题"
+    "pr_title": "采购申请标题",
+    "filename": "文件名",
+    "file_size": "大小"
   },
   "column_settings": {
     "title": "列显示设置",
@@ -225,7 +230,9 @@
     "planned": "计划中",
     "partial": "部分完成",
     "complete": "已完成",
-    "unmatched": "未匹配"
+    "unmatched": "未匹配",
+    "due": "到期",
+    "partially_paid": "部分付款"
   },
   "role": {
     "admin": "管理员",
@@ -299,7 +306,8 @@
     "create_failed": "创建失败",
     "save_failed": "保存失败",
     "send_failed": "发送失败",
-    "delete_failed": "删除失败"
+    "delete_failed": "删除失败",
+    "upload_failed": "上传失败"
   },
   "language": {
     "switch": "切换语言",
@@ -485,6 +493,37 @@
     },
     "mark_all_read": "全部标为已读",
     "settings": "通知设置"
+  },
+  "event_type": {
+    "pr.created": "创建采购申请",
+    "pr.updated": "更新采购申请",
+    "pr.submitted": "提交审批",
+    "pr.approved": "审批通过",
+    "pr.rejected": "审批拒绝",
+    "pr.returned": "退回修改",
+    "pr.converted": "生成采购订单",
+    "pr.deleted": "删除采购申请",
+    "po.created": "创建采购订单",
+    "po.created_from_pr": "从申请生成订单",
+    "po.updated": "更新采购订单",
+    "po.confirmed": "确认采购订单",
+    "contract.created": "创建合同",
+    "contract.updated": "更新合同",
+    "contract.document_attached": "上传合同附件",
+    "contract.status_changed": "合同状态变更",
+    "contract.version_created": "合同版本更新",
+    "shipment.created": "登记交货",
+    "shipment.updated": "更新交货记录",
+    "payment.created": "登记付款",
+    "payment.updated": "更新付款记录",
+    "payment.confirmed": "确认付款",
+    "invoice.created": "登记发票",
+    "invoice.matched": "发票匹配",
+    "notification.created": "系统通知",
+    "approval.task_assigned": "审批任务分配",
+    "approval.task_completed": "审批任务完成",
+    "sku.price_recorded": "记录物料价格",
+    "system_parameter.upserted": "系统参数更新"
   },
   "rfq": {
     "title": "询价单",
@@ -954,7 +993,8 @@
     "at_least_one_item": "请至少添加一个物料",
     "at_least_one_supplier": "请至少选择一个供应商",
     "at_least_one_line": "请至少添加一行明细",
-    "required": "此项为必填"
+    "required": "此项为必填",
+    "select_requester": "请选择申请人"
   },
   "ai": {
     "unavailable_tooltip": "AI 功能需要管理员配置模型后方可使用"
@@ -1083,6 +1123,7 @@
     "trigger_fixed_date": "固定日期",
     "trigger_milestone": "里程碑",
     "trigger_invoice": "收到发票后",
+    "trigger_invoice_received": "收到发票后",
     "trigger_acceptance": "验收合格后",
     "basic_info": "基本信息",
     "upload_hint": "暂无扫描件。点击右上角上传 PDF / OFD / XML / 图片，系统会自动 OCR 识别便于后续全文检索。",

@@ -7,6 +7,28 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [v1.16.0] — 2026-05-19
+
+### 改进
+- **全站 i18n 大梳理**：消除所有用户能看到的原始英文 key 和未翻译枚举值
+  - **PaymentScheduleTab**：付款计划状态（planned/due/paid/partially_paid/cancelled）不再显示原始英文，改为本地化的"计划中/到期/已付款/部分付款/已取消"
+  - **PaymentScheduleTab**：触发条件（fixed_date/milestone/invoice_received/acceptance）不再显示原始英文，改为本地化的"固定日期/里程碑/收到发票后/验收合格后"
+  - **ActivityTimeline**：活动事件类型（notification.created / po.created_from_pr 等 29 个）不再显示技术字符串，改为本地化的"系统通知 / 从申请生成订单"等
+
+### 新增 i18n key
+- **`event_type.*`** 新建分类（29 个事件）：覆盖 PR / PO / Contract / Shipment / Payment / Invoice / Notification / Approval / SKU / SystemParameter 所有审计事件类型
+- **`common.details`**（"详情"）、**`common.search`**（"搜索"）
+- **`button.upload`**（"上传"）
+- **`field.filename`**（"文件名"）、**`field.file_size`**（"大小"）
+- **`error.upload_failed`**（"上传失败"）
+- **`status.due`**（"到期"）、**`status.partially_paid`**（"部分付款"）
+- **`validation.select_requester`**（"请选择申请人"）
+- **`contract.trigger_invoice_received`**（别名，对齐 Select 实际存储值）
+
+中英文双语完全对齐。
+
+---
+
 ## [v1.15.2] — 2026-05-19
 
 ### 新增

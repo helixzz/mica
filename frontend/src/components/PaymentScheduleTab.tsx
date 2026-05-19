@@ -36,6 +36,7 @@ import { extractError } from '@/api/client'
 import { fmtAmount, getCurrencySymbol } from '@/utils/format'
 
 function StatusTag({ status }: { status: string }) {
+  const { t } = useTranslation()
   const colorMap: Record<string, string> = {
     planned: 'default',
     due: 'warning',
@@ -43,7 +44,7 @@ function StatusTag({ status }: { status: string }) {
     partially_paid: 'processing',
     cancelled: 'error',
   }
-  return <Tag color={colorMap[status] || 'default'}>{status}</Tag>
+  return <Tag color={colorMap[status] || 'default'}>{t(`status.${status}` as 'status.pending')}</Tag>
 }
 
 export interface PaymentScheduleTabProps {
@@ -255,7 +256,7 @@ export function PaymentScheduleTab({
       dataIndex: 'trigger_type',
       render: (v: string, r) => (
         <Space direction="vertical" size={0}>
-          <Tag>{v}</Tag>
+          <Tag>{t(`contract.trigger_${v}` as 'contract.trigger_fixed_date')}</Tag>
           {r.trigger_description && (
             <Typography.Text type="secondary" style={{ fontSize: 12 }}>
               {r.trigger_description}
