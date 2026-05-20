@@ -191,3 +191,63 @@ async def test_upsert_subscription_persists_and_updates_preference(seeded_db_ses
     assert updated.id == created.id
     assert stored.in_app_enabled is True
     assert stored.email_enabled is False
+
+
+async def test_list_notifications_for_user_returns_list(seeded_db_session):
+    alice = await _alice(seeded_db_session)
+    items = await svc.list_notifications_for_user(seeded_db_session, alice)
+    assert isinstance(items, list)
+
+
+async def test_get_unread_count_returns_int(seeded_db_session):
+    alice = await _alice(seeded_db_session)
+    count = await svc.get_unread_count(seeded_db_session, alice)
+    assert isinstance(count, int)
+    assert count >= 0
+
+
+async def test_create_notification_feishu_category(seeded_db_session):
+    alice = await _alice(seeded_db_session)
+    notification = await svc.create_notification(
+        seeded_db_session,
+        category=NotificationCategory.APPROVAL_ESCALATED.value,
+        title="Feishu test",
+        body="Body text",
+        recipient_ids=[alice.id],
+    )
+    assert notification is not None
+    assert notification.title == "Feishu test"
+
+
+async def test_bulk_notify_role_creates_notifications(seeded_db_session):
+    from app.models import UserRole
+    from sqlalchemy import select
+
+    admin = (await seeded_db_session.execute(
+        select(User).where(User.role == UserRole.ADMIN.value)
+    )).scalars().first()
+
+    results = await svc.bulk_notify_role(
+        seeded_db_session,
+        role=UserRole.ADMIN,
+        company_id=admin.company_id,
+        category=NotificationCategory.SYSTEM,
+        title="Bulk test",
+        body="This is a bulk notification test.",
+    )
+    assert isinstance(results, list)
+    assert len(results) >= 1
+
+
+async def test_mark_all_read(seeded_db_session):
+    alice = await _alice(seeded_db_session)
+    await svc.create_notification(
+        seeded_db_session,
+        user_id=alice.id,
+        category=NotificationCategory.SYSTEM,
+        title="Test mark all",
+        body="Should be marked read",
+    )
+    await svc.mark_read(seeded_db_session, all_=True, user_id=alice.id)
+    unread = await svc.count_unread(seeded_db_session, user_id=alice.id)
+    assert unread["total"] == 0

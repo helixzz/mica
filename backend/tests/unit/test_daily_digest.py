@@ -277,3 +277,21 @@ async def test_send_feishu_digest_no_feishu_id(db_session):
         await _send_feishu_digest(db_session, user, 0, 0, 0, 0, 0.0, 0, 0.0, 0)
     finally:
         monkeypatch.undo()
+
+
+async def test_count_recent_anomalies_returns_int(seeded_db_session):
+    from app.services.daily_digest import _count_recent_anomalies
+    result = await _count_recent_anomalies(seeded_db_session)
+    assert isinstance(result, int)
+
+
+async def test_fetch_anomaly_rows_returns_list(seeded_db_session):
+    from app.services.daily_digest import _fetch_anomaly_rows
+    result = await _fetch_anomaly_rows(seeded_db_session)
+    assert isinstance(result, list)
+
+
+def test_build_anomaly_detail_html_zh():
+    from app.services.daily_digest import _build_anomaly_detail_html
+    html = _build_anomaly_detail_html([], locale="zh-CN")
+    assert isinstance(html, str)

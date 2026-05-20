@@ -331,3 +331,31 @@ async def test_update_accepts_blank_default_company_code(svc, seeded_db_session)
         str(actor.id),
     )
     assert updated.value == ""
+
+
+async def test_get_string_returns_str(svc, seeded_db_session):
+    val = await svc.get_string(seeded_db_session, "brand.app_name")
+    assert isinstance(val, str)
+    assert len(val) > 0
+
+
+async def test_get_bool_returns_bool(svc, seeded_db_session):
+    val = await svc.get_bool(seeded_db_session, "notification.pr_submitted_enabled")
+    assert isinstance(val, bool)
+
+
+async def test_get_decimal_returns_decimal(svc, seeded_db_session):
+    val = await svc.get_decimal(seeded_db_session, "brand.tax_rate")
+    assert isinstance(val, Decimal)
+
+
+async def test_notification_enabled_weekly_insights(svc, seeded_db_session):
+    from app.services.system_params import notification_enabled
+    result = await notification_enabled(seeded_db_session, "weekly_insights_digest")
+    assert isinstance(result, bool)
+
+
+async def test_get_all_returns_dict(svc, seeded_db_session):
+    result = await svc.get_all(seeded_db_session)
+    assert isinstance(result, dict)
+    assert len(result) > 0

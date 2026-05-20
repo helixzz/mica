@@ -58,20 +58,8 @@ test.describe('Purchase Requisitions', () => {
     const reasonInput = page.getByLabel(/business reason|业务原因|申请原因/i);
     await reasonInput.fill('Testing PR creation flow via Playwright E2E');
 
-    // The line items table should be visible
-    await expect(page.locator('.ant-table')).toBeVisible({ timeout: 10_000 });
-
-    // Fill in the first line item - item name
-    const itemNameInput = page.locator('.ant-table input').first();
-    if (await itemNameInput.isVisible()) {
-      await itemNameInput.fill('Test Item - Laptop');
-    }
-
-    // Fill in quantity
-    const qtyInput = page.locator('.ant-table .ant-input-number-input').first();
-    if (await qtyInput.isVisible()) {
-      await qtyInput.fill('5');
-    }
+    // The line item cards should be visible (Card layout, not Table)
+    await expect(page.locator('.ant-card').first()).toBeVisible({ timeout: 10_000 });
 
     // Verify the form has a submit/save button
     const submitBtn = page.getByRole('button', { name: /submit|提交/i });
@@ -85,12 +73,29 @@ test.describe('Purchase Requisitions', () => {
     // Click "Add line" button
     const addLineBtn = page.getByRole('button', { name: /add|添加|plus/i }).first();
     if (await addLineBtn.isVisible({ timeout: 5000 }).catch(() => false)) {
+      const cardsBefore = await page.locator('.ant-card-small').count();
       await addLineBtn.click();
       await page.waitForTimeout(500);
 
-      // Should now have more rows in the table
-      const rows = page.locator('.ant-table-tbody tr');
-      const count = await rows.count();
+      // Should now have more cards
+      const cardsAfter = await page.locator('.ant-card-small').count();
+      expect(cardsAfter).toBeGreaterThan(cardsBefore);
+    }
+  });
+
+  test('PR creation: add multiple line items', async ({ page }) => {
+    await page.goto('/purchase-requisitions/new');
+    await page.waitForLoadState('networkidle');
+
+    // Click "Add line" button
+    const addLineBtn = page.getByRole('button', { name: /add|添加|plus/i }).first();
+    if (await addLineBtn.isVisible({ timeout: 5000 }).catch(() => false)) {
+      await addLineBtn.click();
+      await page.waitForTimeout(500);
+
+      // Should now have more Cards (each line item is a Card)
+      const cards = page.locator('.ant-card-small, .ant-card[class*="small"]');
+      const count = await cards.count();
       expect(count).toBeGreaterThanOrEqual(2);
     }
   });
