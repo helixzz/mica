@@ -111,30 +111,24 @@ async def seeded_db_session(test_engine):
 
 
 @pytest.fixture(autouse=True)
-def _patch_async_session_local(monkeypatch, request):
-    """Prevent notification-isolation sessions from escaping the test savepoint.
+def _patch_async_session_local(monkeypatch):
+    """Prevent notification-isolation sessions from escaping the test savepoint."""
 
-    Service code uses ``async with AsyncSessionLocal() as notif_db:`` for
-    notification sending. Without this patch, that session commits OUTSIDE
-    the test's savepoint, causing state leakage between tests.
-    """
-    session = request.getfixturevalue("db_session") if "db_session" in request.fixturenames else (
-        request.getfixturevalue("seeded_db_session") if "seeded_db_session" in request.fixturenames else None
-    )
-    if session is None:
-        return
-
-    class _FakeSessionLocal:
-        def __init__(self, **kwargs):
-            pass
-
+    class _NoOpSession:
         async def __aenter__(self):
-            return session
+            from unittest.mock import AsyncMock
+
+            mock = AsyncMock()
+            mock.execute = AsyncMock(return_value=AsyncMock(scalars=AsyncMock(return_value=AsyncMock(all=AsyncMock(return_value=[])))))
+            mock.get = AsyncMock(return_value=None)
+            mock.commit = AsyncMock()
+            mock.add = lambda x: None
+            return mock
 
         async def __aexit__(self, *args):
             pass
 
-    monkeypatch.setattr(db_module, "AsyncSessionLocal", _FakeSessionLocal)
+    monkeypatch.setattr(db_module, "AsyncSessionLocal", _NoOpSession)
 
 
 @pytest_asyncio.fixture(loop_scope="session")

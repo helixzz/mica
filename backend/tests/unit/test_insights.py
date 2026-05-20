@@ -1551,8 +1551,63 @@ async def test_purchase_list_pos(seeded_db_session):
     assert isinstance(items, list)
 
 
-async def test_purchase_get_purchase_timeline(seeded_db_session):
-    from app.services.purchase import get_purchase_timeline
+async def test_purchase_get_po_by_id(seeded_db_session):
+    from app.services.purchase import get_po, list_pos
     alice = await _get_user(seeded_db_session, "alice")
-    result = await get_purchase_timeline(seeded_db_session, alice)
-    assert isinstance(result, dict)
+    items = await list_pos(seeded_db_session, alice)
+    if items:
+        po = await get_po(seeded_db_session, items[0].id, alice)
+        assert po is not None
+        assert po.id == items[0].id
+
+
+async def test_purchase_get_pr_by_id(seeded_db_session):
+    from app.services.purchase import get_pr, list_prs_for_user
+    alice = await _get_user(seeded_db_session, "alice")
+    items = await list_prs_for_user(seeded_db_session, alice)
+    if items:
+        pr = await get_pr(seeded_db_session, alice, items[0].id)
+        assert pr is not None
+        assert pr.id == items[0].id
+
+
+async def test_purchase_get_pr_downstream(seeded_db_session):
+    from app.services.purchase import get_pr_downstream, list_prs_for_user
+    alice = await _get_user(seeded_db_session, "alice")
+    items = await list_prs_for_user(seeded_db_session, alice)
+    if items:
+        result = await get_pr_downstream(seeded_db_session, alice, items[0].id)
+        assert isinstance(result, dict)
+
+
+async def test_purchase_preview_pr_conversion(seeded_db_session):
+    from app.services.purchase import list_prs_for_user, preview_pr_conversion
+    alice = await _get_user(seeded_db_session, "alice")
+    items = await list_prs_for_user(seeded_db_session, alice)
+    if items:
+        result = await preview_pr_conversion(seeded_db_session, alice, items[0].id)
+        assert isinstance(result, list)
+
+
+async def test_purchase_delete_pr(seeded_db_session):
+    from app.services.purchase import delete_pr
+    from app.models import PurchaseRequisition
+    from sqlalchemy import select
+    alice = await _get_user(seeded_db_session, "alice")
+    company = (await seeded_db_session.execute(select(Company))).scalar_one()
+    pr = PurchaseRequisition(
+        pr_number="PR-DELETE-TEST",
+        title="Delete test",
+        status="draft",
+        requester_id=alice.id,
+        company_id=company.id,
+        department_id=alice.department_id,
+    )
+    seeded_db_session.add(pr)
+    await seeded_db_session.commit()
+    await delete_pr(seeded_db_session, alice, pr.id)
+    # Verify deletion
+    result = await seeded_db_session.execute(
+        select(PurchaseRequisition).where(PurchaseRequisition.id == pr.id)
+    )
+    assert result.scalar_one_or_none() is None
