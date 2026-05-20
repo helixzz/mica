@@ -46,7 +46,16 @@ class _TestNoOpSession:
         pass
 
 
-db_module.AsyncSessionLocal = _TestNoOpSession
+_original_async_session_local = db_module.AsyncSessionLocal
+
+
+def pytest_runtest_setup(item):
+    if "seeded_client" not in item.fixturenames:
+        db_module.AsyncSessionLocal = _TestNoOpSession
+
+
+def pytest_runtest_teardown(item):
+    db_module.AsyncSessionLocal = _original_async_session_local
 
 TEST_DB_URL = "postgresql+asyncpg://mica:mica@localhost:5432/mica_test"
 
@@ -175,6 +184,7 @@ async def seeded_client(test_engine, monkeypatch):
         await seed_dev_data(session)
 
     monkeypatch.setattr(db_module, "engine", test_engine)
+    monkeypatch.setattr(db_module, "AsyncSessionLocal", session_factory)
 
     async with AsyncClient(
         transport=ASGITransport(app=app),
