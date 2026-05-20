@@ -82,11 +82,7 @@ async def get_dashboard_config(
     db: Annotated[AsyncSession, Depends(get_db)],
 ) -> DashboardConfigOut:
     row = (
-        await db.execute(
-            select(UserDashboardConfig).where(
-                UserDashboardConfig.user_id == user.id
-            )
-        )
+        await db.execute(select(UserDashboardConfig).where(UserDashboardConfig.user_id == user.id))
     ).scalar_one_or_none()
     if row is not None:
         return DashboardConfigOut(panels=row.panels)
@@ -100,11 +96,7 @@ async def save_dashboard_config(
     db: Annotated[AsyncSession, Depends(get_db)],
 ) -> DashboardConfigOut:
     row = (
-        await db.execute(
-            select(UserDashboardConfig).where(
-                UserDashboardConfig.user_id == user.id
-            )
-        )
+        await db.execute(select(UserDashboardConfig).where(UserDashboardConfig.user_id == user.id))
     ).scalar_one_or_none()
     if row is None:
         row = UserDashboardConfig(user_id=user.id, panels=payload.panels)
@@ -149,9 +141,7 @@ async def delivery_calendar(
     if user.role == UserRole.REQUESTER.value:
         pr_query = pr_query.where(PurchaseRequisition.requester_id == user.id)
     elif user.role == UserRole.DEPT_MANAGER.value and user.department_id:
-        pr_query = pr_query.where(
-            PurchaseRequisition.department_id == user.department_id
-        )
+        pr_query = pr_query.where(PurchaseRequisition.department_id == user.department_id)
 
     prs = (await db.execute(pr_query)).scalars().all()
     pr_ids = [pr.id for pr in prs]
@@ -159,12 +149,7 @@ async def delivery_calendar(
         return []
 
     pos = (
-        (
-            await db.execute(
-                select(PurchaseOrder)
-                .where(PurchaseOrder.pr_id.in_(pr_ids))
-            )
-        )
+        (await db.execute(select(PurchaseOrder).where(PurchaseOrder.pr_id.in_(pr_ids))))
         .scalars()
         .all()
     )
@@ -204,7 +189,9 @@ async def delivery_calendar(
                 po_number=po.po_number if po else None,
                 po_status=po.status if po else None,
                 po_created_at=po.created_at.isoformat() if po else None,
-                expected_date=str(latest.expected_date) if latest and latest.expected_date else None,
+                expected_date=str(latest.expected_date)
+                if latest and latest.expected_date
+                else None,
                 actual_date=str(latest.actual_date) if latest and latest.actual_date else None,
                 shipment_count=len(po_shipments),
             )
@@ -241,12 +228,14 @@ async def workflow_kanban(
         .all()
     )
     for t in tasks:
-        pending_approvals.append({
-            "id": str(t.id),
-            "type": "approval",
-            "title": t.stage_label or "Approval",
-            "created_at": t.created_at.isoformat(),
-        })
+        pending_approvals.append(
+            {
+                "id": str(t.id),
+                "type": "approval",
+                "title": t.stage_label or "Approval",
+                "created_at": t.created_at.isoformat(),
+            }
+        )
 
     draft_prs = (
         (
@@ -277,10 +266,12 @@ async def workflow_kanban(
     awaiting_q = (
         select(PurchaseOrder)
         .where(
-            PurchaseOrder.status.in_([
-                POStatus.CONFIRMED.value,
-                POStatus.PARTIALLY_RECEIVED.value,
-            ])
+            PurchaseOrder.status.in_(
+                [
+                    POStatus.CONFIRMED.value,
+                    POStatus.PARTIALLY_RECEIVED.value,
+                ]
+            )
         )
         .order_by(PurchaseOrder.created_at.desc())
         .limit(20)
@@ -311,10 +302,12 @@ async def workflow_kanban(
     recent_q = (
         select(PurchaseOrder)
         .where(
-            PurchaseOrder.status.in_([
-                POStatus.FULLY_RECEIVED.value,
-                POStatus.CLOSED.value,
-            ]),
+            PurchaseOrder.status.in_(
+                [
+                    POStatus.FULLY_RECEIVED.value,
+                    POStatus.CLOSED.value,
+                ]
+            ),
             PurchaseOrder.updated_at >= seven_days_ago,
         )
         .order_by(PurchaseOrder.updated_at.desc())
@@ -531,11 +524,13 @@ async def budget_execution(
 
     results: list[BudgetExecutionItem] = []
     for budget in budgets:
-        po_stmt = select(func.coalesce(func.sum(PurchaseOrder.total_amount), 0)).join(
-            PurchaseRequisition, PurchaseOrder.pr_id == PurchaseRequisition.id
-        ).where(
-            PurchaseOrder.created_at >= _start_of_day(budget.period_start),
-            PurchaseOrder.created_at <= _end_of_day(budget.period_end),
+        po_stmt = (
+            select(func.coalesce(func.sum(PurchaseOrder.total_amount), 0))
+            .join(PurchaseRequisition, PurchaseOrder.pr_id == PurchaseRequisition.id)
+            .where(
+                PurchaseOrder.created_at >= _start_of_day(budget.period_start),
+                PurchaseOrder.created_at <= _end_of_day(budget.period_end),
+            )
         )
         if budget.scope_type == "department":
             po_stmt = po_stmt.where(PurchaseRequisition.department_id == budget.scope_id)
@@ -619,7 +614,9 @@ async def supplier_scorecard(
             )
         ).all()
         completed_shipments = [r for r in shipment_rows if r.actual_date is not None]
-        on_time = [r for r in completed_shipments if r.expected_date and r.actual_date <= r.expected_date]
+        on_time = [
+            r for r in completed_shipments if r.expected_date and r.actual_date <= r.expected_date
+        ]
         delivery_days = [
             (datetime.combine(r.actual_date, time.min, tzinfo=UTC) - r.created_at).days
             for r in completed_shipments
@@ -720,7 +717,9 @@ async def category_trends(
             category_id, (previous.get(category_id, ("未分类", 0.0, 0.0))[0], 0.0, 0.0)
         )
         _prev_name, prev_price, prev_volume = previous.get(category_id, (current_name, 0.0, 0.0))
-        change_pct = 0.0 if prev_price == 0 else round((current_price - prev_price) / prev_price * 100, 2)
+        change_pct = (
+            0.0 if prev_price == 0 else round((current_price - prev_price) / prev_price * 100, 2)
+        )
         items.append(
             CategoryTrendItem(
                 category_id=str(category_id) if category_id else None,
@@ -811,7 +810,14 @@ async def approval_bottleneck(
         "top_pending_approvers": top_pending_approvers,
         "total_pending": len([t for t in tasks if t.status == "pending"]),
         "total_approved_30d": len(
-            [t for t in tasks if t.status == "completed" and t.action == "approve" and t.acted_at and t.acted_at >= since_30d]
+            [
+                t
+                for t in tasks
+                if t.status == "completed"
+                and t.action == "approve"
+                and t.acted_at
+                and t.acted_at >= since_30d
+            ]
         ),
         "total_rejected_30d": len(
             [t for t in tasks if t.action == "reject" and t.acted_at and t.acted_at >= since_30d]
@@ -876,10 +882,14 @@ async def _quarter_snapshot(
     db: AsyncSession, user: CurrentUser, quarter: str
 ) -> tuple[dict, datetime, datetime, datetime]:
     prev_start, start, end = _parse_quarter(quarter)
-    po_stmt = select(PurchaseOrder).where(PurchaseOrder.created_at >= start, PurchaseOrder.created_at < end)
+    po_stmt = select(PurchaseOrder).where(
+        PurchaseOrder.created_at >= start, PurchaseOrder.created_at < end
+    )
     po_stmt = _po_scoped_stmt(po_stmt, user)
     pos = (await db.execute(po_stmt)).scalars().all()
-    prev_stmt = select(func.coalesce(func.sum(PurchaseOrder.total_amount), 0), func.count(PurchaseOrder.id)).where(
+    prev_stmt = select(
+        func.coalesce(func.sum(PurchaseOrder.total_amount), 0), func.count(PurchaseOrder.id)
+    ).where(
         PurchaseOrder.created_at >= prev_start,
         PurchaseOrder.created_at < start,
     )
@@ -890,7 +900,11 @@ async def _quarter_snapshot(
             {"supplier_id": str(row[0]), "supplier_name": row[1], "amount": _money(row[2])}
             for row in (
                 await db.execute(
-                    select(Supplier.id, Supplier.name, func.coalesce(func.sum(PurchaseOrder.total_amount), 0))
+                    select(
+                        Supplier.id,
+                        Supplier.name,
+                        func.coalesce(func.sum(PurchaseOrder.total_amount), 0),
+                    )
                     .join(PurchaseOrder, PurchaseOrder.supplier_id == Supplier.id)
                     .where(PurchaseOrder.created_at >= start, PurchaseOrder.created_at < end)
                     .group_by(Supplier.id, Supplier.name)
@@ -902,7 +916,11 @@ async def _quarter_snapshot(
     )[:5]
     top_categories = sorted(
         [
-            {"category_id": str(row[0]) if row[0] else None, "category_name": row[1] or "未分类", "amount": _money(row[2])}
+            {
+                "category_id": str(row[0]) if row[0] else None,
+                "category_name": row[1] or "未分类",
+                "amount": _money(row[2]),
+            }
             for row in (
                 await db.execute(
                     select(
@@ -916,7 +934,9 @@ async def _quarter_snapshot(
                         PurchaseRequisition.procurement_category_id == ProcurementCategory.id,
                     )
                     .where(PurchaseOrder.created_at >= start, PurchaseOrder.created_at < end)
-                    .group_by(PurchaseRequisition.procurement_category_id, ProcurementCategory.label_zh)
+                    .group_by(
+                        PurchaseRequisition.procurement_category_id, ProcurementCategory.label_zh
+                    )
                 )
             ).all()
         ],
@@ -976,7 +996,10 @@ async def quarterly_summary(
     try:
         model = (
             await db.execute(
-                select(AIModel).where(AIModel.is_active.is_(True)).order_by(AIModel.priority).limit(1)
+                select(AIModel)
+                .where(AIModel.is_active.is_(True))
+                .order_by(AIModel.priority)
+                .limit(1)
             )
         ).scalar_one_or_none()
         if model is not None:
@@ -1048,7 +1071,12 @@ async def anomaly_wall(
 
     overdue_rows = (
         await db.execute(
-            select(PurchaseOrder.id, PurchaseOrder.po_number, PurchaseOrder.pr_title, PurchaseOrder.created_at)
+            select(
+                PurchaseOrder.id,
+                PurchaseOrder.po_number,
+                PurchaseOrder.pr_title,
+                PurchaseOrder.created_at,
+            )
             .outerjoin(Shipment, Shipment.po_id == PurchaseOrder.id)
             .where(
                 PurchaseOrder.status == POStatus.CONFIRMED.value,

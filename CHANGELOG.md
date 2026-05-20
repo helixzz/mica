@@ -7,6 +7,19 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [v1.18.1] — 2026-05-20
+
+### 新增
+- **周报洞察订阅**：新增 `weekly_insights_digest` scheduler job，每周一 09:00 自动发送采购周报到 admin / procurement_mgr / it_buyer / dept_manager / finance_auditor
+  - 聚合：新增 PR/PO 数量及金额、到货批次、待审批数、价格异常数
+  - 邮件正文：中英双语 HTML 表格 + Insights 页链接
+  - 可通过系统参数 `weekly_insights_digest` 开关
+
+### 改进
+- **ruff format**：统一代码格式（9 个文件自动格式化）
+
+---
+
 ## [v1.18.0] — 2026-05-20
 
 ### 新增

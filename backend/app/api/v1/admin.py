@@ -1193,6 +1193,13 @@ async def scheduler_status() -> list[SchedulerJobOut]:
             description="Scan all items for price anomalies and notify procurement",
             enabled=True,
         ),
+        SchedulerJobOut(
+            id="weekly_insights_digest",
+            name="Weekly insights digest",
+            schedule="Monday 09:00 (Asia/Shanghai)",
+            description="Send weekly procurement insights summary via email",
+            enabled=True,
+        ),
     ]
 
 

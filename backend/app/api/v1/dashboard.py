@@ -608,9 +608,7 @@ async def get_analytics(
 
     # PostgreSQL: date - date returns integer (days), not interval.
     # Use the integer directly instead of EXTRACT(epoch FROM ...) which fails on integers.
-    days_expr = func.cast(
-        Shipment.actual_date - func.cast(PurchaseOrder.created_at, Date), Integer
-    )
+    days_expr = func.cast(Shipment.actual_date - func.cast(PurchaseOrder.created_at, Date), Integer)
     supplier_stmt = (
         select(
             Supplier.name.label("supplier"),

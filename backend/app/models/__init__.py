@@ -1534,9 +1534,7 @@ class UserDashboardConfig(Base, TimestampMixin):
     __tablename__ = "user_dashboard_configs"
 
     id: Mapped[UUID] = mapped_column(primary_key=True, default=new_uuid)
-    user_id: Mapped[UUID] = mapped_column(
-        ForeignKey("users.id"), unique=True, nullable=False
-    )
+    user_id: Mapped[UUID] = mapped_column(ForeignKey("users.id"), unique=True, nullable=False)
     panels: Mapped[dict] = mapped_column(JSONB, default=list)
 
 
@@ -1549,6 +1547,4 @@ class InsightCache(Base, TimestampMixin):
     generated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
     expires_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
 
-    __table_args__ = (
-        Index("ix_insight_cache_expires", "expires_at"),
-    )
+    __table_args__ = (Index("ix_insight_cache_expires", "expires_at"),)

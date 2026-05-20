@@ -55,12 +55,10 @@ async def list_proxy_candidates(
     if user.role not in allowed:
         raise HTTPException(403, "pr.proxy_not_allowed")
     rows = (
-        await db.execute(
-            select(User)
-            .where(User.is_active.is_(True))
-            .order_by(User.display_name)
-        )
-    ).scalars().all()
+        (await db.execute(select(User).where(User.is_active.is_(True)).order_by(User.display_name)))
+        .scalars()
+        .all()
+    )
     return [
         ProxyCandidateOut(
             id=u.id,

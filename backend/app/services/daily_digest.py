@@ -223,7 +223,7 @@ def _build_expiry_rows(contracts: list[Contract], locale: str) -> str:
     rows = ""
     for c in contracts:
         expiry_str = c.expiry_date.isoformat() if c.expiry_date else "N/A"
-        amount = fmt_amount(c.total_amount, getattr(c, 'currency', 'CNY'))
+        amount = fmt_amount(c.total_amount, getattr(c, "currency", "CNY"))
         rows += (
             f"<tr>"
             f"<td>{c.contract_number}</td>"
@@ -271,9 +271,7 @@ def _build_anomaly_detail_html(rows: list, locale: str) -> str:
     html = ""
     for anomaly, item in rows:
         observed = fmt_amount(anomaly.observed_price)
-        baseline = (
-            fmt_amount(anomaly.baseline_avg_price)
-        )
+        baseline = fmt_amount(anomaly.baseline_avg_price)
         deviation = (
             f"{float(anomaly.deviation_pct):+.2f}%" if anomaly.deviation_pct is not None else "—"
         )

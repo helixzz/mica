@@ -152,9 +152,7 @@ def build_scheduler(session_factory: async_sessionmaker[AsyncSession]) -> AsyncI
                     return
 
                 if not await notification_enabled(db, "sku_price_anomaly"):
-                    logger.info(
-                        "price_anomaly_scan: notifications disabled for sku_price_anomaly"
-                    )
+                    logger.info("price_anomaly_scan: notifications disabled for sku_price_anomaly")
                     return
 
                 admins = (
@@ -262,6 +260,28 @@ def build_scheduler(session_factory: async_sessionmaker[AsyncSession]) -> AsyncI
         id="price_anomaly_scan",
         name="SKU price anomaly detection",
         misfire_grace_time=300,
+    )
+
+    async def _run_weekly_insights_digest():
+        from app.services.weekly_insights import send_weekly_insights_digest
+
+        async with session_factory() as db:
+            try:
+                result = await send_weekly_insights_digest(db)
+                logger.info(
+                    "weekly_insights_digest: sent=%d failed=%d",
+                    result.get("sent", 0),
+                    result.get("failed", 0),
+                )
+            except Exception:
+                logger.exception("weekly_insights_digest failed")
+
+    scheduler.add_job(
+        _run_weekly_insights_digest,
+        CronTrigger(day_of_week="mon", hour=9, minute=0),
+        id="weekly_insights_digest",
+        name="Weekly insights digest (email + Feishu)",
+        misfire_grace_time=600,
     )
 
     return scheduler

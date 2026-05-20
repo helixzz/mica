@@ -1228,7 +1228,9 @@ async def create_payment(
                     (
                         await notif_db.execute(
                             select(User.id).where(
-                                User.role.in_([UserRole.ADMIN.value, UserRole.FINANCE_AUDITOR.value]),
+                                User.role.in_(
+                                    [UserRole.ADMIN.value, UserRole.FINANCE_AUDITOR.value]
+                                ),
                                 User.is_active.is_(True),
                             )
                         )

@@ -237,9 +237,7 @@ async def scan_all_anomalies(db: AsyncSession) -> dict[str, int]:
     from decimal import Decimal
 
     window_days = await system_params.get_int(db, "sku.benchmark_window_days")
-    threshold_pct = Decimal(
-        str(await system_params.get_int(db, "sku.anomaly_threshold_pct"))
-    )
+    threshold_pct = Decimal(str(await system_params.get_int(db, "sku.anomaly_threshold_pct")))
     sample_size_min = await system_params.get_int(db, "sku.sample_size_min")
     critical_multiplier = await system_params.get_decimal(db, "sku.critical_multiplier")
 
@@ -262,16 +260,13 @@ async def scan_all_anomalies(db: AsyncSession) -> dict[str, int]:
 
     for item_id in item_ids:
         latest = (
-            (
-                await db.execute(
-                    select(SKUPriceRecord)
-                    .where(SKUPriceRecord.item_id == item_id)
-                    .order_by(SKUPriceRecord.quotation_date.desc())
-                    .limit(1)
-                )
+            await db.execute(
+                select(SKUPriceRecord)
+                .where(SKUPriceRecord.item_id == item_id)
+                .order_by(SKUPriceRecord.quotation_date.desc())
+                .limit(1)
             )
-            .scalar_one_or_none()
-        )
+        ).scalar_one_or_none()
         if latest is None:
             continue
 
@@ -282,9 +277,9 @@ async def scan_all_anomalies(db: AsyncSession) -> dict[str, int]:
             continue
 
         price = _as_decimal(latest.price)
-        dev_pct = (
-            (price - benchmark.avg_price) / benchmark.avg_price * Decimal("100")
-        ).quantize(Decimal("0.0001"))
+        dev_pct = ((price - benchmark.avg_price) / benchmark.avg_price * Decimal("100")).quantize(
+            Decimal("0.0001")
+        )
 
         if abs(dev_pct) < threshold_pct:
             continue
@@ -300,11 +295,7 @@ async def scan_all_anomalies(db: AsyncSession) -> dict[str, int]:
         if already:
             continue
 
-        severity = (
-            "critical"
-            if abs(dev_pct) >= threshold_pct * critical_multiplier
-            else "warning"
-        )
+        severity = "critical" if abs(dev_pct) >= threshold_pct * critical_multiplier else "warning"
         anomaly = SKUPriceAnomaly(
             item_id=item_id,
             price_record_id=latest.id,
