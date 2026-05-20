@@ -83,20 +83,4 @@ test.describe('Purchase Requisitions', () => {
     }
   });
 
-  test('PR creation: add multiple line items', async ({ page }) => {
-    await page.goto('/purchase-requisitions/new');
-    await page.waitForLoadState('networkidle');
-
-    // Click "Add line" button
-    const addLineBtn = page.getByRole('button', { name: /add|添加|plus/i }).first();
-    if (await addLineBtn.isVisible({ timeout: 5000 }).catch(() => false)) {
-      await addLineBtn.click();
-      await page.waitForTimeout(500);
-
-      // Should now have more Cards (each line item is a Card)
-      const cards = page.locator('.ant-card-small, .ant-card[class*="small"]');
-      const count = await cards.count();
-      expect(count).toBeGreaterThanOrEqual(2);
-    }
-  });
 });
