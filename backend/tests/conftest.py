@@ -175,7 +175,6 @@ async def seeded_client(test_engine, monkeypatch):
         await seed_dev_data(session)
 
     monkeypatch.setattr(db_module, "engine", test_engine)
-    monkeypatch.setattr(db_module, "AsyncSessionLocal", session_factory)
 
     async with AsyncClient(
         transport=ASGITransport(app=app),

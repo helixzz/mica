@@ -44,7 +44,7 @@ GitHub: https://github.com/helixzz/mica/releases/tag/v1.19.0
 **CI gate**: Currently set to `--cov-fail-under=68` (actual: 68.42%). Target: 70%.
 
 ### Production state
-- mica.jqdomain.com running v1.19.0 (all features working)
+- mica.[REDACTED].com running v1.19.0 (all features working)
 - 18 memory SKUs created on production
 - Nginx proxy_read_timeout: 300s
 - Scheduler: 6 cron jobs (daily_digest, approval_reminders, sla_escalation, contract_expiry, price_anomaly_scan, weekly_insights_digest)
