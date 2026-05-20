@@ -1532,3 +1532,27 @@ def test_weekly_insights_build_body_en():
     assert "New POs" in body
     assert "Pending Approvals" in body
     assert "Insights" in body
+
+
+# ── Purchase service integration tests ────────────────────────────────────
+
+
+async def test_purchase_list_prs_for_user(seeded_db_session):
+    from app.services.purchase import list_prs_for_user
+    alice = await _get_user(seeded_db_session, "alice")
+    items = await list_prs_for_user(seeded_db_session, alice)
+    assert isinstance(items, list)
+
+
+async def test_purchase_list_pos(seeded_db_session):
+    from app.services.purchase import list_pos
+    alice = await _get_user(seeded_db_session, "alice")
+    items = await list_pos(seeded_db_session, alice)
+    assert isinstance(items, list)
+
+
+async def test_purchase_get_purchase_timeline(seeded_db_session):
+    from app.services.purchase import get_purchase_timeline
+    alice = await _get_user(seeded_db_session, "alice")
+    result = await get_purchase_timeline(seeded_db_session, alice)
+    assert isinstance(result, dict)

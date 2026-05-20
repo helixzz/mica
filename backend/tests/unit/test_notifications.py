@@ -2,7 +2,7 @@ from uuid import uuid4
 
 from sqlalchemy import select
 
-from app.models import NotificationCategory, NotificationSubscription, User
+from app.models import NotificationCategory, NotificationSubscription, User, UserRole
 from app.services import notifications as svc
 
 
@@ -220,9 +220,6 @@ async def test_create_notification_feishu_category(seeded_db_session):
 
 
 async def test_bulk_notify_role_creates_notifications(seeded_db_session):
-    from app.models import UserRole
-    from sqlalchemy import select
-
     admin = (await seeded_db_session.execute(
         select(User).where(User.role == UserRole.ADMIN.value)
     )).scalars().first()
@@ -248,6 +245,6 @@ async def test_mark_all_read(seeded_db_session):
         title="Test mark all",
         body="Should be marked read",
     )
-    await svc.mark_read(seeded_db_session, all_=True, user_id=alice.id)
+    await svc.mark_read(seeded_db_session, all=True, user_id=alice.id)
     unread = await svc.count_unread(seeded_db_session, user_id=alice.id)
     assert unread["total"] == 0
