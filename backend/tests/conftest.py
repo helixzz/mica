@@ -19,6 +19,35 @@ from app.db import get_db
 from app.main import app
 from app.services.seed import seed_dev_data
 
+
+class _TestNoOpSession:
+    """No-op session that discards notification writes during tests."""
+
+    async def __aenter__(self):
+        from unittest.mock import AsyncMock, MagicMock
+
+        scalars_result = MagicMock()
+        scalars_result.all = MagicMock(return_value=[])
+        scalars_result.first = MagicMock(return_value=None)
+
+        execute_result = MagicMock()
+        execute_result.scalars = MagicMock(return_value=scalars_result)
+
+        mock = MagicMock()
+        mock.execute = AsyncMock(return_value=execute_result)
+        mock.get = AsyncMock(return_value=None)
+        mock.commit = AsyncMock()
+        mock.flush = AsyncMock()
+        mock.add = MagicMock()
+        mock.refresh = AsyncMock()
+        return mock
+
+    async def __aexit__(self, *args: object) -> None:
+        pass
+
+
+db_module.AsyncSessionLocal = _TestNoOpSession
+
 TEST_DB_URL = "postgresql+asyncpg://mica:mica@localhost:5432/mica_test"
 
 BACKEND_ROOT = Path(__file__).parent.parent
@@ -108,27 +137,6 @@ async def seeded_db_session(test_engine):
             await seed_dev_data(session)
             yield session
         await conn.rollback()
-
-
-@pytest.fixture(autouse=True)
-def _patch_async_session_local(monkeypatch):
-    """Prevent notification-isolation sessions from escaping the test savepoint."""
-
-    class _NoOpSession:
-        async def __aenter__(self):
-            from unittest.mock import AsyncMock
-
-            mock = AsyncMock()
-            mock.execute = AsyncMock(return_value=AsyncMock(scalars=AsyncMock(return_value=AsyncMock(all=AsyncMock(return_value=[])))))
-            mock.get = AsyncMock(return_value=None)
-            mock.commit = AsyncMock()
-            mock.add = lambda x: None
-            return mock
-
-        async def __aexit__(self, *args):
-            pass
-
-    monkeypatch.setattr(db_module, "AsyncSessionLocal", _NoOpSession)
 
 
 @pytest_asyncio.fixture(loop_scope="session")

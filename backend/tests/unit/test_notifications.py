@@ -220,9 +220,11 @@ async def test_create_notification_feishu_category(seeded_db_session):
 
 
 async def test_bulk_notify_role_creates_notifications(seeded_db_session):
-    admin = (await seeded_db_session.execute(
-        select(User).where(User.role == UserRole.ADMIN.value)
-    )).scalars().first()
+    admin = (
+        (await seeded_db_session.execute(select(User).where(User.role == UserRole.ADMIN.value)))
+        .scalars()
+        .first()
+    )
 
     results = await svc.bulk_notify_role(
         seeded_db_session,

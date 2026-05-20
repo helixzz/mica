@@ -351,6 +351,7 @@ async def test_get_decimal_returns_decimal(svc, seeded_db_session):
 
 async def test_notification_enabled_weekly_insights(svc, seeded_db_session):
     from app.services.system_params import notification_enabled
+
     result = await notification_enabled(seeded_db_session, "weekly_insights_digest")
     assert isinstance(result, bool)
 

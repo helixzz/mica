@@ -1539,6 +1539,7 @@ def test_weekly_insights_build_body_en():
 
 async def test_purchase_list_prs_for_user(seeded_db_session):
     from app.services.purchase import list_prs_for_user
+
     alice = await _get_user(seeded_db_session, "alice")
     items = await list_prs_for_user(seeded_db_session, alice)
     assert isinstance(items, list)
@@ -1546,6 +1547,7 @@ async def test_purchase_list_prs_for_user(seeded_db_session):
 
 async def test_purchase_list_pos(seeded_db_session):
     from app.services.purchase import list_pos
+
     alice = await _get_user(seeded_db_session, "alice")
     items = await list_pos(seeded_db_session, alice)
     assert isinstance(items, list)
@@ -1553,6 +1555,7 @@ async def test_purchase_list_pos(seeded_db_session):
 
 async def test_purchase_get_po_by_id(seeded_db_session):
     from app.services.purchase import get_po, list_pos
+
     alice = await _get_user(seeded_db_session, "alice")
     items = await list_pos(seeded_db_session, alice)
     if items:
@@ -1563,6 +1566,7 @@ async def test_purchase_get_po_by_id(seeded_db_session):
 
 async def test_purchase_get_pr_by_id(seeded_db_session):
     from app.services.purchase import get_pr, list_prs_for_user
+
     alice = await _get_user(seeded_db_session, "alice")
     items = await list_prs_for_user(seeded_db_session, alice)
     if items:
@@ -1573,6 +1577,7 @@ async def test_purchase_get_pr_by_id(seeded_db_session):
 
 async def test_purchase_get_pr_downstream(seeded_db_session):
     from app.services.purchase import get_pr_downstream, list_prs_for_user
+
     alice = await _get_user(seeded_db_session, "alice")
     items = await list_prs_for_user(seeded_db_session, alice)
     if items:
@@ -1582,6 +1587,7 @@ async def test_purchase_get_pr_downstream(seeded_db_session):
 
 async def test_purchase_preview_pr_conversion(seeded_db_session):
     from app.services.purchase import list_prs_for_user, preview_pr_conversion
+
     alice = await _get_user(seeded_db_session, "alice")
     items = await list_prs_for_user(seeded_db_session, alice)
     if items:
@@ -1591,6 +1597,7 @@ async def test_purchase_preview_pr_conversion(seeded_db_session):
 
 async def test_purchase_list_pr_quote_candidates(seeded_db_session):
     from app.services.purchase import list_pr_quote_candidates, list_prs_for_user
+
     alice = await _get_user(seeded_db_session, "alice")
     items = await list_prs_for_user(seeded_db_session, alice)
     if items:
