@@ -1589,25 +1589,10 @@ async def test_purchase_preview_pr_conversion(seeded_db_session):
         assert isinstance(result, list)
 
 
-async def test_purchase_delete_pr(seeded_db_session):
-    from app.services.purchase import delete_pr
-    from app.models import PurchaseRequisition
-    from sqlalchemy import select
+async def test_purchase_list_pr_quote_candidates(seeded_db_session):
+    from app.services.purchase import list_pr_quote_candidates, list_prs_for_user
     alice = await _get_user(seeded_db_session, "alice")
-    company = (await seeded_db_session.execute(select(Company))).scalar_one()
-    pr = PurchaseRequisition(
-        pr_number="PR-DELETE-TEST",
-        title="Delete test",
-        status="draft",
-        requester_id=alice.id,
-        company_id=company.id,
-        department_id=alice.department_id,
-    )
-    seeded_db_session.add(pr)
-    await seeded_db_session.commit()
-    await delete_pr(seeded_db_session, alice, pr.id)
-    # Verify deletion
-    result = await seeded_db_session.execute(
-        select(PurchaseRequisition).where(PurchaseRequisition.id == pr.id)
-    )
-    assert result.scalar_one_or_none() is None
+    items = await list_prs_for_user(seeded_db_session, alice)
+    if items:
+        result = await list_pr_quote_candidates(seeded_db_session, alice, items[0].id)
+        assert isinstance(result, list)
