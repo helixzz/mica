@@ -34,8 +34,8 @@ test.describe('Admin Page Access', () => {
 
   test('admin page has system parameters section', async ({ page }) => {
     await loginAs(page, 'admin');
-    await navigateTo(page, '/admin/system-params');
-    // Page should load without error
+    await page.goto('/admin/system-params');
+    await page.waitForLoadState('networkidle');
     await expect(page.locator('body')).toBeVisible();
   });
 

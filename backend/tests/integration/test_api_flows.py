@@ -7,7 +7,6 @@ authorization, and Alembic-seeded system parameters.
 Uses pytest-asyncio with seeded_client (uses test_walking_skeleton fixture).
 """
 
-from decimal import Decimal
 
 import pytest
 
