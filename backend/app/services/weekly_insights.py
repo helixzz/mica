@@ -7,6 +7,7 @@ from decimal import Decimal
 from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.config import get_settings
 from app.core.money import fmt_amount
 from app.models import (
     ApprovalTask,
@@ -141,6 +142,7 @@ async def _gather_weekly_metrics(db: AsyncSession, week_start, today) -> dict:
 def _build_digest_body(metrics: dict, user: User) -> str:
     locale = getattr(user, "preferred_locale", "zh-CN") or "zh-CN"
     is_zh = locale.startswith("zh")
+    base_url = get_settings().app_base_url.rstrip("/")
 
     po_amount_str = fmt_amount(metrics["po_amount"])
 
@@ -156,7 +158,7 @@ def _build_digest_body(metrics: dict, user: User) -> str:
             f"<tr><td>价格异常</td><td><strong>{metrics['new_anomalies']}</strong> 项</td></tr>",
             "</table>",
             "<br/>",
-            "<p>登录 <a href='https://mica.jqdomain.com/insights'>数据洞察</a> 查看详情。</p>",
+            "<p>登录 <a href='" + base_url + "/insights'>数据洞察</a> 查看详情。</p>",
         ]
     else:
         lines = [
@@ -170,7 +172,7 @@ def _build_digest_body(metrics: dict, user: User) -> str:
             f"<tr><td>Price Anomalies</td><td><strong>{metrics['new_anomalies']}</strong></td></tr>",
             "</table>",
             "<br/>",
-            "<p>Visit <a href='https://mica.jqdomain.com/insights'>Insights</a> for details.</p>",
+            "<p>Visit <a href='" + base_url + "/insights'>Insights</a> for details.</p>",
         ]
 
     return "\n".join(lines)

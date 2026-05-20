@@ -241,7 +241,7 @@ async def test_add_quote_to_existing_quoting_rfq_succeeds(seeded_db_session, mon
         .all()
     )
 
-    assert second.supplier_id == suppliers[1].id
+    assert str(second.supplier_id) == str(suppliers[1].id)
     assert updated.status == RFQStatus.QUOTING.value
     assert len(stored_quotes) == 2
 

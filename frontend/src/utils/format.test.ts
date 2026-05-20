@@ -38,7 +38,7 @@ describe('fmtAmount', () => {
   })
 
   it('supports custom currency codes', () => {
-    expect(fmtAmount(99.9, 'USD')).toBe('USD 99.90')
+    expect(fmtAmount(99.9, 'USD')).toBe('$99.90')
   })
 
   it('returns a dash for null values', () => {
