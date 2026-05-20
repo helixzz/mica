@@ -51,7 +51,7 @@ async def _create_rfq(
     rfq = await rfq_svc.create_rfq(db, user, data)
     # Supplier IDs are now added via _add_rfq_supplier in the API layer;
     # replicate that here for unit tests.
-    for sid in (supplier_ids or []):
+    for sid in supplier_ids or []:
         rfq_svc._add_rfq_supplier(db, rfq.id, UUID(sid))
     await db.flush()
     return rfq

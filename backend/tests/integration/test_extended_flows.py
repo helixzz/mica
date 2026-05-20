@@ -67,8 +67,20 @@ async def test_multi_supplier_pr_preview_and_convert(seeded_client):
             "business_reason": "Integration test",
             "currency": "CNY",
             "items": [
-                {"line_no": 1, "item_name": "Item from S1", "qty": "2", "unit_price": "100", "supplier_id": s1_id},
-                {"line_no": 2, "item_name": "Item from S2", "qty": "1", "unit_price": "200", "supplier_id": s2_id},
+                {
+                    "line_no": 1,
+                    "item_name": "Item from S1",
+                    "qty": "2",
+                    "unit_price": "100",
+                    "supplier_id": s1_id,
+                },
+                {
+                    "line_no": 2,
+                    "item_name": "Item from S2",
+                    "qty": "1",
+                    "unit_price": "200",
+                    "supplier_id": s2_id,
+                },
             ],
         },
         headers=auth,
@@ -114,8 +126,18 @@ async def test_bill_number_format_on_invoice_create(seeded_client):
             "invoice_number": "INV-E2E-001",
             "invoice_date": "2026-04-01",
             "lines": [
-                {"po_item_id": po.get("items", [{}])[0].get("id"), "line_type": "product", "line_no": 1, "item_name": "Test", "qty": 1, "unit_price": 10, "subtotal": 10}
-            ] if po.get("items") else [],
+                {
+                    "po_item_id": po.get("items", [{}])[0].get("id"),
+                    "line_type": "product",
+                    "line_no": 1,
+                    "item_name": "Test",
+                    "qty": 1,
+                    "unit_price": 10,
+                    "subtotal": 10,
+                }
+            ]
+            if po.get("items")
+            else [],
         },
         headers=auth,
     )
@@ -169,7 +191,9 @@ async def test_shipment_create_with_contract_link(seeded_client):
         "/api/v1/shipments",
         json={
             "po_id": po["id"],
-            "items": [{"po_item_id": po["items"][0]["id"], "qty_shipped": 1}] if po.get("items") else [],
+            "items": [{"po_item_id": po["items"][0]["id"], "qty_shipped": 1}]
+            if po.get("items")
+            else [],
             "carrier": "E2E Carrier",
             "tracking_number": "TRK-E2E-001",
         },
@@ -201,7 +225,16 @@ async def test_pr_supplier_quote_candidates_and_save(seeded_client):
             "title": "Quote test PR",
             "business_reason": "Testing quotes",
             "currency": "CNY",
-            "items": [{"line_no": 1, "item_id": item_id, "item_name": "Quote item", "qty": "3", "unit_price": "150", "supplier_id": supplier_id}],
+            "items": [
+                {
+                    "line_no": 1,
+                    "item_id": item_id,
+                    "item_name": "Quote item",
+                    "qty": "3",
+                    "unit_price": "150",
+                    "supplier_id": supplier_id,
+                }
+            ],
         },
         headers=auth,
     )

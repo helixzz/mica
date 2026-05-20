@@ -293,41 +293,23 @@ export function PRDetailPage() {
           </Card>
 
           {pr.business_reason && (
-            <Card
-              size="small"
-              title={t('field.business_reason')}
-            >
-              <Typography.Paragraph
-                style={{
-                  whiteSpace: 'pre-wrap',
-                  lineHeight: 1.8,
-                  margin: 0,
-                  fontSize: 14,
-                }}
-              >
+            <Card size="small" title={t('field.business_reason')}>
+              <Typography.Paragraph style={{ whiteSpace: 'pre-wrap', lineHeight: 1.8, margin: 0, fontSize: 14 }}>
                 {pr.business_reason}
               </Typography.Paragraph>
             </Card>
           )}
 
           {pr.decision_comment && (
-            <Card
-              size="small"
-              title={t('field.decision_comment')}
-              styles={{ header: { color: pr.status === 'approved' ? '#52c41a' : pr.status === 'rejected' ? '#ff4d4f' : undefined } }}
-            >
-              <Typography.Paragraph
-                style={{
-                  whiteSpace: 'pre-wrap',
-                  lineHeight: 1.8,
-                  margin: 0,
-                }}
-              >
+            <Card size="small" title={t('field.decision_comment')}>
+              <Typography.Paragraph style={{ whiteSpace: 'pre-wrap', lineHeight: 1.8, margin: 0 }}>
                 {pr.decision_comment}
               </Typography.Paragraph>
-              <Typography.Text type="secondary" style={{ fontSize: 12 }}>
-                {pr.decided_at ? new Date(pr.decided_at).toLocaleString() : ''}
-              </Typography.Text>
+              {pr.decided_at && (
+                <Typography.Text type="secondary" style={{ fontSize: 12 }}>
+                  {new Date(pr.decided_at).toLocaleString()}
+                </Typography.Text>
+              )}
             </Card>
           )}
 

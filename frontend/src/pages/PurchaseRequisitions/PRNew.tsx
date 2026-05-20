@@ -11,7 +11,6 @@ import {
   Row,
   Select,
   Space,
-  Table,
   Typography,
   message,
 } from 'antd'
@@ -254,117 +253,6 @@ export function PRNewPage() {
     }
   }
 
-  const columns = [
-    { title: t('field.line_no'), dataIndex: 'line_no', width: 60 },
-    {
-      title: t('field.item_name'),
-      width: 280,
-      render: (_: unknown, r: LineForm) => (
-        <Space direction="vertical" size={0} style={{ width: '100%' }}>
-          <Select
-            style={{ width: '100%' }}
-            placeholder={isRequester ? t('pr.select_item_requester') : t('placeholder.select_item')}
-            value={r.item_id ?? undefined}
-            onChange={(v) => onItemSelect(r.key, v)}
-            options={items.map((it) => ({ value: it.id, label: `${it.code} · ${it.name}` }))}
-            showSearch
-            optionFilterProp="label"
-            allowClear
-          />
-          {r.item_id && refPrices[r.item_id] && (
-            <Typography.Text type="secondary" style={{ fontSize: 11 }}>
-{t('sku.ref_latest')}: {fmtAmount(refPrices[r.item_id].latest_price, 'CNY')}
-{refPrices[r.item_id].avg_price ? ` · ${t('sku.ref_avg')}: ${fmtAmount(refPrices[r.item_id].avg_price, 'CNY')}` : ''}
-            </Typography.Text>
-          )}
-        </Space>
-      ),
-    },
-    ...(!isRequester
-      ? [
-          {
-            title: t('field.supplier'),
-            width: 220,
-            render: (_: unknown, r: LineForm) => (
-              <Select
-                style={{ width: '100%' }}
-                placeholder={t('placeholder.select_supplier')}
-                value={r.supplier_id ?? undefined}
-                onChange={(v: string) => updateLine(r.key, 'supplier_id', v)}
-                options={suppliers.map((s) => ({ value: s.id, label: s.name }))}
-                showSearch
-                optionFilterProp="label"
-                allowClear
-              />
-            ),
-          },
-        ]
-      : []),
-    {
-      title: t('field.qty'),
-      width: 110,
-      render: (_: unknown, r: LineForm) => (
-        <InputNumber
-          min={0.0001}
-          value={r.qty}
-          onChange={(v) => updateLine(r.key, 'qty', Number(v ?? 0))}
-          style={{ width: '100%' }}
-        />
-      ),
-    },
-    {
-      title: t('field.uom'),
-      width: 80,
-      render: (_: unknown, r: LineForm) => (
-        <Input
-          value={r.uom}
-          onChange={(e) => updateLine(r.key, 'uom', e.target.value)}
-        />
-      ),
-    },
-    {
-      title: isRequester ? (
-        <Space direction="vertical" size={0}>
-          <span>{t('field.unit_price')}</span>
-          <Typography.Text type="secondary" style={{ fontSize: 10, fontWeight: 'normal' }}>{t('pr.price_optional')}</Typography.Text>
-        </Space>
-      ) : (
-        t('field.unit_price')
-      ),
-      width: 160,
-      render: (_: unknown, r: LineForm) => (
-        <InputNumber
-          min={0}
-          value={r.unit_price || undefined}
-          onChange={(v) => updateLine(r.key, 'unit_price', Number(v ?? 0))}
-          style={{ width: '100%' }}
-          placeholder={isRequester ? t('pr.price_placeholder') : undefined}
-        />
-      ),
-    },
-    {
-      title: t('field.amount'),
-      width: 120,
-      align: 'right' as const,
-      render: (_: unknown, r: LineForm) => {
-        const amt = r.qty * (r.unit_price || 0)
-        return amt > 0 ? fmtAmount(amt, watchedCurrency) : '-'
-      },
-    },
-    {
-      title: '',
-      width: 50,
-      render: (_: unknown, r: LineForm) => (
-        <Button
-          type="text"
-          danger
-          icon={<DeleteOutlined />}
-          onClick={() => removeLine(r.key)}
-        />
-      ),
-    },
-  ]
-
   return (
     <Space direction="vertical" size="large" style={{ width: '100%' }}>
       <Typography.Title level={3}>
@@ -536,23 +424,89 @@ export function PRNewPage() {
         <Typography.Text type="secondary" style={{ display: 'block', marginBottom: 12 }}>
           {t('pr.line_items_help')}
         </Typography.Text>
-        <Table
-          rowKey="key"
-          dataSource={lines}
-          columns={columns}
-          pagination={false}
-          summary={() => (
-            <Table.Summary.Row>
-              <Table.Summary.Cell index={0} colSpan={6} align="right">
-                <strong>{t('field.total_amount')}</strong>
-              </Table.Summary.Cell>
-              <Table.Summary.Cell index={1} align="right">
-                <strong>{total > 0 ? fmtAmount(total, watchedCurrency) : '-'}</strong>
-              </Table.Summary.Cell>
-              <Table.Summary.Cell index={2} />
-            </Table.Summary.Row>
-          )}
-        />
+        <Space direction="vertical" size={8} style={{ width: '100%' }}>
+          {lines.map((line, idx) => (
+            <Card key={line.key} size="small">
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }}>
+                <Typography.Text strong>#{idx + 1}</Typography.Text>
+                <Button type="text" danger icon={<DeleteOutlined />} onClick={() => removeLine(line.key)} />
+              </div>
+              <Row gutter={[12, 12]}>
+                <Col xs={24} md={isRequester ? 24 : 14}>
+                  <div style={{ marginBottom: 4 }}>
+                    <Typography.Text type="secondary" style={{ fontSize: 12 }}>{t('field.item_name')}</Typography.Text>
+                  </div>
+                  <Select
+                    style={{ width: '100%' }}
+                    placeholder={isRequester ? t('pr.select_item_requester') : t('placeholder.select_item')}
+                    value={line.item_id ?? undefined}
+                    onChange={(v) => onItemSelect(line.key, v)}
+                    options={items.map((it) => ({ value: it.id, label: `${it.code} · ${it.name}` }))}
+                    showSearch
+                    optionFilterProp="label"
+                    allowClear
+                    popupMatchSelectWidth={false}
+                  />
+                  {line.item_id && refPrices[line.item_id] && (
+                    <Typography.Text type="secondary" style={{ fontSize: 11, display: 'block', marginTop: 2 }}>
+                      {t('sku.ref_latest')}: {fmtAmount(refPrices[line.item_id].latest_price, 'CNY')}
+                      {refPrices[line.item_id].avg_price ? ` · ${t('sku.ref_avg')}: ${fmtAmount(refPrices[line.item_id].avg_price, 'CNY')}` : ''}
+                    </Typography.Text>
+                  )}
+                </Col>
+                {!isRequester && (
+                  <Col xs={24} md={10}>
+                    <div style={{ marginBottom: 4 }}>
+                      <Typography.Text type="secondary" style={{ fontSize: 12 }}>{t('field.supplier')}</Typography.Text>
+                    </div>
+                    <Select
+                      style={{ width: '100%' }}
+                      placeholder={t('placeholder.select_supplier')}
+                      value={line.supplier_id ?? undefined}
+                      onChange={(v: string) => updateLine(line.key, 'supplier_id', v)}
+                      options={suppliers.map((s) => ({ value: s.id, label: s.name }))}
+                      showSearch
+                      optionFilterProp="label"
+                      allowClear
+                      popupMatchSelectWidth={false}
+                    />
+                  </Col>
+                )}
+                <Col xs={6} md={4}>
+                  <div style={{ marginBottom: 4 }}>
+                    <Typography.Text type="secondary" style={{ fontSize: 12 }}>{t('field.qty')}</Typography.Text>
+                  </div>
+                  <InputNumber min={0.0001} value={line.qty} onChange={(v) => updateLine(line.key, 'qty', Number(v ?? 0))} style={{ width: '100%' }} />
+                </Col>
+                <Col xs={4} md={3}>
+                  <div style={{ marginBottom: 4 }}>
+                    <Typography.Text type="secondary" style={{ fontSize: 12 }}>{t('field.uom')}</Typography.Text>
+                  </div>
+                  <Input value={line.uom} onChange={(e) => updateLine(line.key, 'uom', e.target.value)} />
+                </Col>
+                <Col xs={8} md={5}>
+                  <div style={{ marginBottom: 4 }}>
+                    <Typography.Text type="secondary" style={{ fontSize: 12 }}>{t('field.unit_price')}</Typography.Text>
+                  </div>
+                  <InputNumber min={0} value={line.unit_price || undefined} onChange={(v) => updateLine(line.key, 'unit_price', Number(v ?? 0))} style={{ width: '100%' }} placeholder={isRequester ? t('pr.price_placeholder') : undefined} />
+                </Col>
+                <Col xs={6} md={4}>
+                  <div style={{ marginBottom: 4 }}>
+                    <Typography.Text type="secondary" style={{ fontSize: 12 }}>{t('field.amount')}</Typography.Text>
+                  </div>
+                  <div style={{ lineHeight: '32px', fontWeight: 600, textAlign: 'right' }}>
+                    {line.qty * (line.unit_price || 0) > 0 ? fmtAmount(line.qty * (line.unit_price || 0), watchedCurrency) : '-'}
+                  </div>
+                </Col>
+              </Row>
+            </Card>
+          ))}
+        </Space>
+        <div style={{ textAlign: 'right', padding: '12px 0 0' }}>
+          <Typography.Text strong style={{ fontSize: 16 }}>
+            {t('field.total_amount')}: {total > 0 ? fmtAmount(total, watchedCurrency) : '-'}
+          </Typography.Text>
+        </div>
       </Card>
 
       <Space>

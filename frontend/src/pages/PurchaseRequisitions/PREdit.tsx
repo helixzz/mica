@@ -1,5 +1,5 @@
 import { DeleteOutlined, PlusOutlined } from '@ant-design/icons'
-import { Button, Card, Col, DatePicker, Form, Input, InputNumber, Row, Select, Space, Table, Typography, message } from 'antd'
+import { Button, Card, Col, DatePicker, Form, Input, InputNumber, Row, Select, Space, Typography, message } from 'antd'
 import dayjs from 'dayjs'
 import { useEffect, useState } from 'react'
 import { useTranslation } from 'react-i18next'
@@ -145,6 +145,7 @@ export function PREditPage() {
   }
 
   const total = lines.reduce((s, l) => s + l.qty * (l.unit_price || 0), 0)
+  const watchedCurrency = (Form.useWatch('currency', form) as string | undefined) || 'CNY'
 
   const onSave = async () => {
     try {
@@ -340,7 +341,52 @@ export function PREditPage() {
           <Typography.Text strong>{t('pr.line_items')}</Typography.Text>
           <Button icon={<PlusOutlined />} onClick={addLine}>{t('pr.add_line')}</Button>
         </div>
-        <Table dataSource={lines} columns={columns} rowKey="key" size="small" pagination={false} />
+        <Space direction="vertical" size={8} style={{ width: '100%' }}>
+          {lines.map((line, idx) => (
+            <Card key={line.key} size="small" type="inner">
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }}>
+                <Typography.Text strong>#{idx + 1}</Typography.Text>
+                <Button type="text" danger icon={<DeleteOutlined />} onClick={() => removeLine(line.key)} disabled={lines.length <= 1} />
+              </div>
+              <Row gutter={[12, 12]}>
+                <Col xs={24} md={isRequester ? 24 : 14}>
+                  <div style={{ marginBottom: 4 }}><Typography.Text type="secondary" style={{ fontSize: 12 }}>{t('field.item_name')}</Typography.Text></div>
+                  <Select style={{ width: '100%' }} placeholder={t('placeholder.select_item')} value={line.item_id ?? undefined} onChange={(v) => updateLine(line.key, 'item_id', v)} options={items.map((it) => ({ value: it.id, label: `${it.code} · ${it.name}` }))} showSearch optionFilterProp="label" allowClear popupMatchSelectWidth={false} />
+                  {line.item_id && refPrices[line.item_id] && (
+                    <Typography.Text type="secondary" style={{ fontSize: 11, display: 'block', marginTop: 2 }}>
+                      {t('sku.ref_latest')}: {fmtAmount(refPrices[line.item_id].latest_price, 'CNY')}
+                      {refPrices[line.item_id].avg_price ? ` · ${t('sku.ref_avg')}: ${fmtAmount(refPrices[line.item_id].avg_price, 'CNY')}` : ''}
+                    </Typography.Text>
+                  )}
+                </Col>
+                {!isRequester && (
+                  <Col xs={24} md={10}>
+                    <div style={{ marginBottom: 4 }}><Typography.Text type="secondary" style={{ fontSize: 12 }}>{t('field.supplier')}</Typography.Text></div>
+                    <Select style={{ width: '100%' }} value={line.supplier_id ?? undefined} onChange={(v: string) => updateLine(line.key, 'supplier_id', v)} options={suppliers.map((s) => ({ value: s.id, label: s.name }))} showSearch optionFilterProp="label" allowClear popupMatchSelectWidth={false} />
+                  </Col>
+                )}
+                <Col xs={6} md={4}>
+                  <div style={{ marginBottom: 4 }}><Typography.Text type="secondary" style={{ fontSize: 12 }}>{t('field.qty')}</Typography.Text></div>
+                  <InputNumber min={0.0001} value={line.qty} onChange={(v) => updateLine(line.key, 'qty', Number(v ?? 0))} style={{ width: '100%' }} />
+                </Col>
+                <Col xs={4} md={3}>
+                  <div style={{ marginBottom: 4 }}><Typography.Text type="secondary" style={{ fontSize: 12 }}>{t('field.uom')}</Typography.Text></div>
+                  <Input value={line.uom} onChange={(e) => updateLine(line.key, 'uom', e.target.value)} />
+                </Col>
+                <Col xs={8} md={5}>
+                  <div style={{ marginBottom: 4 }}><Typography.Text type="secondary" style={{ fontSize: 12 }}>{t('field.unit_price')}</Typography.Text></div>
+                  <InputNumber min={0} value={line.unit_price || undefined} onChange={(v) => updateLine(line.key, 'unit_price', Number(v ?? 0))} style={{ width: '100%' }} placeholder={isRequester ? t('pr.optional_label') : undefined} />
+                </Col>
+                <Col xs={6} md={4}>
+                  <div style={{ marginBottom: 4 }}><Typography.Text type="secondary" style={{ fontSize: 12 }}>{t('field.amount')}</Typography.Text></div>
+                  <div style={{ lineHeight: '32px', fontWeight: 600, textAlign: 'right' }}>
+                    {line.qty * (line.unit_price || 0) > 0 ? fmtAmount(line.qty * (line.unit_price || 0), watchedCurrency) : '-'}
+                  </div>
+                </Col>
+              </Row>
+            </Card>
+          ))}
+        </Space>
         <div style={{ textAlign: 'right', marginTop: 8 }}>
           <Typography.Text strong>{t('pr.total_label')}: {total > 0 ? fmtAmount(total) : '-'}</Typography.Text>
         </div>

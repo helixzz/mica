@@ -7,7 +7,6 @@ authorization, and Alembic-seeded system parameters.
 Uses pytest-asyncio with seeded_client (uses test_walking_skeleton fixture).
 """
 
-
 import pytest
 
 
@@ -69,9 +68,7 @@ async def test_pr_convert_single_supplier(seeded_client):
             }
         ],
     }
-    r = await seeded_client.post(
-        "/api/v1/purchase-requisitions", json=pr_payload, headers=auth
-    )
+    r = await seeded_client.post("/api/v1/purchase-requisitions", json=pr_payload, headers=auth)
     assert r.status_code == 201, f"Create PR failed: {r.text}"
     pr = r.json()
     pr_id = pr["id"]
@@ -112,9 +109,7 @@ async def test_save_invalid_company_code_rejected(seeded_client):
 @pytest.mark.asyncio
 async def test_payment_forecast_returns_monthly_data(seeded_client):
     auth = await _login_as(seeded_client, "admin")
-    r = await seeded_client.get(
-        "/api/v1/dashboard/payment-forecast?months=3", headers=auth
-    )
+    r = await seeded_client.get("/api/v1/dashboard/payment-forecast?months=3", headers=auth)
     assert r.status_code == 200
     data = r.json()
     assert "months" in data
@@ -126,9 +121,7 @@ async def test_payment_forecast_returns_monthly_data(seeded_client):
 @pytest.mark.asyncio
 async def test_invoice_forecast_returns_monthly_data(seeded_client):
     auth = await _login_as(seeded_client, "admin")
-    r = await seeded_client.get(
-        "/api/v1/dashboard/invoice-forecast?months=3", headers=auth
-    )
+    r = await seeded_client.get("/api/v1/dashboard/invoice-forecast?months=3", headers=auth)
     assert r.status_code == 200
     data = r.json()
     assert "months" in data
@@ -174,9 +167,7 @@ async def test_user_crud_with_cost_center_ids(seeded_client):
         "cost_center_ids": [],
         "department_ids": [d["id"] for d in departments[:1]] if departments else [],
     }
-    r = await seeded_client.post(
-        "/api/v1/admin/users", json=user_payload, headers=auth
-    )
+    r = await seeded_client.post("/api/v1/admin/users", json=user_payload, headers=auth)
     assert r.status_code == 201, f"Create user failed: {r.text}"
     user = r.json()
     assert "cost_center_ids" in user

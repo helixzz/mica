@@ -14,7 +14,9 @@ async def test_walking_skeleton_end_to_end(seeded_client):
     alice_headers = {"Authorization": f"Bearer {alice_token}"}
 
     # fetch masters
-    suppliers = (await seeded_client.get("/api/v1/suppliers", headers=alice_headers)).json()["items"]
+    suppliers = (await seeded_client.get("/api/v1/suppliers", headers=alice_headers)).json()[
+        "items"
+    ]
     items = (await seeded_client.get("/api/v1/items", headers=alice_headers)).json()["items"]
     assert suppliers and items
     supplier_id = suppliers[0]["id"]

@@ -7,6 +7,39 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [v1.19.0] — 2026-05-20
+
+### 改进
+- **PR 创建/编辑表单 UX 重设计**：行项目从挤压的 Table 改为响应式 Card 布局
+  - Row 1：物料 + 供应商（各占全宽，长名称不再截断）
+  - Row 2：数量 / 单位 / 单价 / 金额（紧凑数值区）
+  - 移动端单列堆叠（xs={24}），桌面双行（md+）
+  - 应用到 PRNew.tsx + PREdit.tsx
+- **PR 详情页业务说明独立区块**：`business_reason` 和 `decision_comment` 从 Descriptions 表格移出，改为独立 Card
+  - 多行长文本不再撑变形元数据表格
+  - 使用 `whiteSpace: pre-wrap` + `lineHeight: 1.8` 提升可读性
+
+### 测试
+- **Insights 模块单元测试**：新增 73 个测试覆盖 insights API 端点
+- **CI 覆盖率门槛恢复到 70%**
+
+### CI
+- `ruff check` ✅ · `ruff format` ✅ · `tsc --noEmit` ✅
+
+---
+
+## [v1.19.0] — 2026-05-20
+
+### 改进
+- **PR 行项目布局重构**：Table → 双行 Card，物料/供应商全宽显示，数值紧凑排列
+- **PR 详情页业务说明独立区块**：从 Descriptions 表格移出，独立 Card + pre-wrap
+
+### 测试
+- insights 单元测试 73 个 + scheduled tasks + daily_digest
+- CI 覆盖率门槛恢复 70%
+
+---
+
 ## [v1.18.1] — 2026-05-20
 
 ### 新增
