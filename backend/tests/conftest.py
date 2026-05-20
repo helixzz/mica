@@ -57,6 +57,7 @@ def pytest_runtest_setup(item):
 def pytest_runtest_teardown(item):
     db_module.AsyncSessionLocal = _original_async_session_local
 
+
 TEST_DB_URL = "postgresql+asyncpg://mica:mica@localhost:5432/mica_test"
 
 BACKEND_ROOT = Path(__file__).parent.parent

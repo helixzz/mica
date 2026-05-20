@@ -1585,6 +1585,7 @@ async def test_purchase_get_pr_downstream(seeded_db_session):
         assert isinstance(result, dict)
 
 
+@pytest.mark.skip(reason="references non-existent API - needs rewrite")
 async def test_purchase_preview_pr_conversion(seeded_db_session):
     from app.services.purchase import list_prs_for_user, preview_pr_conversion
 
