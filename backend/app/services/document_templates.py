@@ -16,6 +16,7 @@ from sqlalchemy.orm import selectinload
 
 from app.core.crypto import decrypt
 from app.core.litellm_helpers import resolve_litellm_model
+from app.core.money import fmt_amount
 from app.models import (
     AIFeatureRouting,
     AIModel,
@@ -149,13 +150,13 @@ def build_context(
         "po": {
             "po_number": po.po_number,
             "currency": po.currency,
-            "total_amount": str(po.total_amount),
+            "total_amount": fmt_amount(po.total_amount, po.currency),
             "status": po.status,
         },
         "contract": {
             "contract_number": contract.contract_number,
             "title": contract.title,
-            "total_amount": str(contract.total_amount),
+            "total_amount": fmt_amount(contract.total_amount, contract.currency),
             "currency": contract.currency,
             "signed_date": _as_date_str(contract.signed_date),
             "effective_date": _as_date_str(contract.effective_date),
@@ -178,12 +179,13 @@ def build_context(
             "installment_no": schedule.installment_no,
             "label": schedule.label,
             "label_with_installment": f"第 {schedule.installment_no} 期 · {schedule.label}",
-            "planned_amount": str(schedule.planned_amount),
+            "planned_amount": fmt_amount(schedule.planned_amount, po.currency),
             "planned_date": _as_date_str(schedule.planned_date),
-            "actual_amount": str(schedule.actual_amount) if schedule.actual_amount else "",
+            "actual_amount": fmt_amount(schedule.actual_amount, po.currency) if schedule.actual_amount else "",
             "actual_date": _as_date_str(schedule.actual_date),
             "status": schedule.status,
-            "effective_amount": str(amount),
+            "effective_amount": fmt_amount(amount, po.currency),
+            "effective_amount_raw": str(amount),
             "effective_date": _as_date_str(date_value),
             "trigger_type": schedule.trigger_type,
             "trigger_description": schedule.trigger_description or "",
@@ -387,7 +389,7 @@ def _enrich_with_computed(
     if current:
         return current
     if "大写" in description or "upper" in description.lower():
-        amount = context["schedule"]["effective_amount"]
+        amount = context["schedule"]["effective_amount_raw"]
         return cn_amount_upper(amount)
     if "数字" in description and ("金额" in description or "amount" in description.lower()):
         return context["schedule"]["effective_amount"]
