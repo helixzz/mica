@@ -166,6 +166,7 @@ def _sample_context():
             "actual_date": "2026-04-25",
             "status": "paid",
             "effective_amount": "5000000",
+            "effective_amount_raw": "5000000",
             "effective_date": "2026-04-25",
             "trigger_type": "fixed_date",
             "trigger_description": "",
