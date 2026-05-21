@@ -181,7 +181,9 @@ def build_context(
             "label_with_installment": f"第 {schedule.installment_no} 期 · {schedule.label}",
             "planned_amount": fmt_amount(schedule.planned_amount, po.currency),
             "planned_date": _as_date_str(schedule.planned_date),
-            "actual_amount": fmt_amount(schedule.actual_amount, po.currency) if schedule.actual_amount else "",
+            "actual_amount": fmt_amount(schedule.actual_amount, po.currency)
+            if schedule.actual_amount
+            else "",
             "actual_date": _as_date_str(schedule.actual_date),
             "status": schedule.status,
             "effective_amount": fmt_amount(amount, po.currency),
