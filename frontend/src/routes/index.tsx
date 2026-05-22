@@ -85,6 +85,7 @@ const SKUPage = lazy(() =>
 )
 const RFQListPage = lazy(() => import('@/pages/RFQList'))
 const RFQNewPage = lazy(() => import('@/pages/RFQNew'))
+const RFQEditPage = lazy(() => import('@/pages/RFQEdit').then(m => ({ default: m.RFQEditPage })))
 const RFQDetailPage = lazy(() => import('@/pages/RFQDetail'))
 const SuppliersPage = lazy(() => import('@/pages/Suppliers'))
 const SupplierDetailPage = lazy(() => import('@/pages/SupplierDetail'))
@@ -181,6 +182,7 @@ export function AppRoutes() {
             <Route path="/sku" element={<ProcurementGate><SKUPage /></ProcurementGate>} />
             <Route path="/rfqs" element={<ProcurementGate><RFQListPage /></ProcurementGate>} />
             <Route path="/rfqs/new" element={<ProcurementGate><RFQNewPage /></ProcurementGate>} />
+            <Route path="/rfqs/:id/edit" element={<ProcurementGate><RFQEditPage /></ProcurementGate>} />
             <Route path="/rfqs/:id" element={<ProcurementGate><RFQDetailPage /></ProcurementGate>} />
             <Route path="/suppliers" element={<ProcurementGate><SuppliersPage /></ProcurementGate>} />
             <Route path="/suppliers/:id" element={<ProcurementGate><SupplierDetailPage /></ProcurementGate>} />

@@ -558,6 +558,8 @@
     "system_parameter.upserted": "System Parameter Updated"
   },
   "rfq": {
+    "edit_title": "Edit RFQ",
+    "items_title": "Items",
     "title": "RFQ",
     "new": "New RFQ",
     "send": "Send RFQ",

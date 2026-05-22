@@ -570,6 +570,8 @@
     "system_parameter.upserted": "系统参数更新"
   },
   "rfq": {
+    "edit_title": "编辑询价单",
+    "items_title": "物料明细",
     "title": "询价单",
     "new": "新建询价单",
     "send": "发出询价",
