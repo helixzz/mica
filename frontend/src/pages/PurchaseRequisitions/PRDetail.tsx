@@ -99,9 +99,10 @@ export function PRDetailPage() {
 
   if (!pr) return <div>{t('message.loading')}</div>
 
-  const canSubmit = (pr.status === 'draft' || pr.status === 'returned') && user?.id === pr.requester_id
-  const canEdit = (pr.status === 'draft' || pr.status === 'returned') && user?.id === pr.requester_id
-  const canDelete = pr.status === 'draft' && user?.id === pr.requester_id
+  const isOwnerOrElevated = user?.id === pr.requester_id || user?.role === 'admin' || user?.role === 'procurement_mgr' || user?.role === 'it_buyer'
+  const canSubmit = (pr.status === 'draft' || pr.status === 'returned') && isOwnerOrElevated
+  const canEdit = (pr.status === 'draft' || pr.status === 'returned') && isOwnerOrElevated
+  const canDelete = pr.status === 'draft' && isOwnerOrElevated
   const canDecide =
     pr.status === 'submitted' && (user?.role === 'dept_manager' || user?.role === 'admin')
   const isBuyer = user?.role === 'it_buyer' || user?.role === 'procurement_mgr' || user?.role === 'admin'
