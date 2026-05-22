@@ -349,18 +349,16 @@ async def test_get_pr_raises_not_found(seeded_db_session):
     assert exc.value.detail == "pr.not_found"
 
 
-async def test_get_pr_forbids_other_buyer(seeded_db_session):
+async def test_get_pr_allows_other_buyer(seeded_db_session):
+    """IT_BUYER has full access to all PRs per permission matrix (decision 0020)."""
     db = seeded_db_session
     owner = await _get_user(db, "alice")
     other_buyer = await _create_buyer(db, "zoe", owner.company_id, owner.department_id)
     supplier = await _get_supplier(db)
     pr = await _create_pr(db, owner, supplier.id)
 
-    with pytest.raises(HTTPException) as exc:
-        await purchase_svc.get_pr(db, other_buyer, pr.id)
-
-    assert exc.value.status_code == 403
-    assert exc.value.detail == "insufficient_role"
+    loaded = await purchase_svc.get_pr(db, other_buyer, pr.id)
+    assert loaded.id == pr.id
 
 
 async def test_get_pr_allows_department_manager_for_same_department(seeded_db_session):
@@ -375,7 +373,7 @@ async def test_get_pr_allows_department_manager_for_same_department(seeded_db_se
     assert loaded.id == pr.id
 
 
-async def test_list_prs_for_buyer_returns_only_own_prs(seeded_db_session):
+async def test_list_prs_for_buyer_returns_all_prs(seeded_db_session):
     db = seeded_db_session
     alice = await _get_user(db, "alice")
     dave = await _get_user(db, "dave")
@@ -387,7 +385,7 @@ async def test_list_prs_for_buyer_returns_only_own_prs(seeded_db_session):
     pr_ids = [pr.id for pr in prs]
 
     assert alice_pr.id in pr_ids
-    assert dave_pr.id not in pr_ids
+    assert dave_pr.id in pr_ids
 
 
 async def test_list_prs_for_manager_filters_by_department(seeded_db_session):
@@ -977,7 +975,7 @@ async def _create_pr_in_context(
     return pr
 
 
-async def test_requester_with_cost_center_sees_that_cost_center_pr(seeded_db_session):
+async def test_requester_sees_only_own_prs_not_cost_center(seeded_db_session):
     db = seeded_db_session
     user = await _make_requester(db)
     other = await _get_user(db, "bob")
@@ -987,17 +985,16 @@ async def test_requester_with_cost_center_sees_that_cost_center_pr(seeded_db_ses
     await db.execute(user_cost_centers.insert().values(user_id=user.id, cost_center_id=cc.id))
     await db.flush()
 
-    in_scope_pr = await _create_pr_in_context(db, other, supplier.id, cost_center_id=cc.id)
-    other_cc = await _find_or_create_cost_center(db, "CC-OTHER")
-    out_pr = await _create_pr_in_context(db, other, supplier.id, cost_center_id=other_cc.id)
+    other_pr = await _create_pr_in_context(db, other, supplier.id, cost_center_id=cc.id)
+    own_pr = await _create_pr_in_context(db, user, supplier.id, cost_center_id=cc.id)
 
     prs = await purchase_svc.list_prs_for_user(db, user)
     ids = {p.id for p in prs}
-    assert in_scope_pr.id in ids, "requester should see PR with matching cost center"
-    assert out_pr.id not in ids, "requester should not see PR with unrelated cost center"
+    assert own_pr.id in ids, "requester should see own PR"
+    assert other_pr.id not in ids, "requester should NOT see other's PR even with matching cost center"
 
 
-async def test_requester_with_department_sees_that_department_pr(seeded_db_session):
+async def test_requester_sees_only_own_prs_not_department(seeded_db_session):
     db = seeded_db_session
     user = await _make_requester(db)
     other = await _get_user(db, "bob")
@@ -1007,17 +1004,16 @@ async def test_requester_with_department_sees_that_department_pr(seeded_db_sessi
     await db.execute(user_departments.insert().values(user_id=user.id, department_id=dept.id))
     await db.flush()
 
-    in_scope_pr = await _create_pr_in_context(db, other, supplier.id, department_id=dept.id)
-    other_dept = await _find_or_create_department(db, "DEPT-SALES")
-    out_pr = await _create_pr_in_context(db, other, supplier.id, department_id=other_dept.id)
+    other_pr = await _create_pr_in_context(db, other, supplier.id, department_id=dept.id)
+    own_pr = await _create_pr_in_context(db, user, supplier.id, department_id=dept.id)
 
     prs = await purchase_svc.list_prs_for_user(db, user)
     ids = {p.id for p in prs}
-    assert in_scope_pr.id in ids
-    assert out_pr.id not in ids
+    assert own_pr.id in ids
+    assert other_pr.id not in ids
 
 
-async def test_requester_cost_center_scoping_is_or_not_and(seeded_db_session):
+async def test_requester_only_sees_own_prs(seeded_db_session):
     db = seeded_db_session
     user = await _make_requester(db)
     other = await _get_user(db, "bob")
@@ -1031,16 +1027,13 @@ async def test_requester_cost_center_scoping_is_or_not_and(seeded_db_session):
 
     pr_cc = await _create_pr_in_context(db, other, supplier.id, cost_center_id=cc.id)
     pr_dept = await _create_pr_in_context(db, other, supplier.id, department_id=dept.id)
-    unrelated_cc = await _find_or_create_cost_center(db, "CC-UNRELATED")
-    pr_unrelated = await _create_pr_in_context(
-        db, other, supplier.id, cost_center_id=unrelated_cc.id
-    )
+    own_pr = await _create_pr_in_context(db, user, supplier.id, cost_center_id=cc.id)
 
     prs = await purchase_svc.list_prs_for_user(db, user)
     ids = {p.id for p in prs}
-    assert pr_cc.id in ids, "cost-center match should be visible"
-    assert pr_dept.id in ids, "department match should be visible"
-    assert pr_unrelated.id not in ids, "unrelated should still be hidden"
+    assert own_pr.id in ids, "requester should see own PR"
+    assert pr_cc.id not in ids, "requester should NOT see other's PR by cost center"
+    assert pr_dept.id not in ids, "requester should NOT see other's PR by department"
 
 
 async def test_admin_not_affected_by_scoping(seeded_db_session):

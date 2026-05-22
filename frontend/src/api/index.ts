@@ -110,8 +110,11 @@ export interface PurchaseRequisition {
   requester_id: string
   requester_name: string
   company_id: string
+  company_name: string
   department_id: string | null
+  department_name: string
   cost_center_id: string | null
+  cost_center_name: string
   expense_type_id: string | null
   procurement_category_id: string | null
   currency: string

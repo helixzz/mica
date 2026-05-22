@@ -1,78 +1,82 @@
+"""Row-level permission scoping — see mica-internal/decisions/0020-row-level-permissions.md."""
+
 from __future__ import annotations
 
 from typing import TYPE_CHECKING
 
-from sqlalchemy import or_, select
+from sqlalchemy import select
 
 from app.models import (
+    PurchaseOrder,
     PurchaseRequisition,
     User,
     UserRole,
-    user_cost_centers,
-    user_departments,
 )
 
 if TYPE_CHECKING:
+    from sqlalchemy.ext.asyncio import AsyncSession
     from sqlalchemy.sql.elements import ColumnElement
 
+_FULL_ACCESS_ROLES = frozenset(
+    {
+        UserRole.ADMIN.value,
+        UserRole.PROCUREMENT_MGR.value,
+        UserRole.IT_BUYER.value,
+        UserRole.FINANCE_AUDITOR.value,
+    }
+)
 
-async def _load_user_cost_center_ids(session, user: User) -> list:
-    rows = (
-        (
-            await session.execute(
-                select(user_cost_centers.c.cost_center_id).where(
-                    user_cost_centers.c.user_id == user.id
-                )
-            )
-        )
-        .scalars()
-        .all()
-    )
-    return list(rows)
-
-
-async def _load_user_department_ids(session, user: User) -> list:
-    rows = (
-        (
-            await session.execute(
-                select(user_departments.c.department_id).where(
-                    user_departments.c.user_id == user.id
-                )
-            )
-        )
-        .scalars()
-        .all()
-    )
-    ids = list(rows)
-    if user.department_id is not None and user.department_id not in ids:
-        ids.append(user.department_id)
-    return ids
+_RFQ_HIDDEN_ROLES = frozenset(
+    {
+        UserRole.DEPT_MANAGER.value,
+        UserRole.REQUESTER.value,
+    }
+)
 
 
-def is_requester_scoped(user: User) -> bool:
-    return user.role == UserRole.REQUESTER.value
+def has_full_access(user: User) -> bool:
+    """Return True if user's role grants unrestricted data access."""
+    return user.role in _FULL_ACCESS_ROLES
 
 
-async def visible_pr_filter(session, user: User) -> ColumnElement[bool] | None:
-    if not is_requester_scoped(user):
+def is_rfq_hidden(user: User) -> bool:
+    """Return True if user should not see RFQ data."""
+    return user.role in _RFQ_HIDDEN_ROLES
+
+
+async def visible_pr_filter(session: AsyncSession, user: User) -> ColumnElement[bool] | None:
+    """Return a WHERE clause restricting PR visibility, or None for full access.
+
+    - Full-access roles: None (no filter)
+    - dept_manager: PR.department_id == user.department_id
+    - requester: PR.requester_id == user.id
+    """
+    if has_full_access(user):
         return None
 
-    cost_center_ids = await _load_user_cost_center_ids(session, user)
-    department_ids = await _load_user_department_ids(session, user)
+    if user.role == UserRole.DEPT_MANAGER.value and user.department_id:
+        return PurchaseRequisition.department_id == user.department_id
 
-    or_clauses = [PurchaseRequisition.requester_id == user.id]
-    if cost_center_ids:
-        or_clauses.append(PurchaseRequisition.cost_center_id.in_(cost_center_ids))
-    if department_ids:
-        or_clauses.append(PurchaseRequisition.department_id.in_(department_ids))
-
-    return or_(*or_clauses)
+    return PurchaseRequisition.requester_id == user.id
 
 
-async def visible_pr_id_subquery(session, user: User):
-    if not is_requester_scoped(user):
-        return None
+async def visible_pr_id_subquery(session: AsyncSession, user: User):
+    """Return a subquery of PR IDs visible to user, or None for full access.
+
+    Used by downstream entity filters to scope via PO.pr_id.
+    """
     flt = await visible_pr_filter(session, user)
     if flt is None:
         return None
     return select(PurchaseRequisition.id).where(flt)
+
+
+async def visible_po_id_subquery(session: AsyncSession, user: User):
+    """Return a subquery of PO IDs visible to user, or None for full access.
+
+    PO visibility is derived from PR visibility: PO.pr_id IN (visible PRs).
+    """
+    pr_sub = await visible_pr_id_subquery(session, user)
+    if pr_sub is None:
+        return None
+    return select(PurchaseOrder.id).where(PurchaseOrder.pr_id.in_(pr_sub))

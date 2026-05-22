@@ -272,6 +272,15 @@ export function PRDetailPage() {
               <Descriptions.Item label={t('field.requester')}>
                 {pr.requester_name || '-'}
               </Descriptions.Item>
+              <Descriptions.Item label={t('field.company')}>
+                {pr.company_name || '-'}
+              </Descriptions.Item>
+              <Descriptions.Item label={t('field.department')}>
+                {pr.department_name || '-'}
+              </Descriptions.Item>
+              <Descriptions.Item label={t('field.cost_center')}>
+                {pr.cost_center_name || '-'}
+              </Descriptions.Item>
               <Descriptions.Item label={t('field.total_amount')}>
                 {fmtAmount(pr.total_amount, pr.currency)}
               </Descriptions.Item>

@@ -667,6 +667,9 @@ async def _load_pr(db: AsyncSession, pr_id: UUID) -> PurchaseRequisition | None:
         .options(
             selectinload(PurchaseRequisition.items),
             selectinload(PurchaseRequisition.requester),
+            selectinload(PurchaseRequisition.company),
+            selectinload(PurchaseRequisition.department),
+            selectinload(PurchaseRequisition.cost_center),
         )
     )
     return result.scalar_one_or_none()
@@ -684,42 +687,38 @@ async def _load_po(db: AsyncSession, po_id: UUID) -> PurchaseOrder | None:
 async def list_prs_for_user(db: AsyncSession, actor: User) -> list[PurchaseRequisition]:
     from app.core.scoping import visible_pr_filter
 
-    stmt = select(PurchaseRequisition).order_by(PurchaseRequisition.created_at.desc())
-    if actor.role in {UserRole.IT_BUYER.value}:
-        stmt = stmt.where(PurchaseRequisition.requester_id == actor.id)
-    elif actor.role == UserRole.DEPT_MANAGER.value and actor.department_id:
-        stmt = stmt.where(PurchaseRequisition.department_id == actor.department_id)
-    else:
-        scope_filter = await visible_pr_filter(db, actor)
-        if scope_filter is not None:
-            stmt = stmt.where(scope_filter)
+    stmt = (
+        select(PurchaseRequisition)
+        .order_by(PurchaseRequisition.created_at.desc())
+        .options(
+            selectinload(PurchaseRequisition.requester),
+            selectinload(PurchaseRequisition.company),
+            selectinload(PurchaseRequisition.department),
+            selectinload(PurchaseRequisition.cost_center),
+        )
+    )
+    scope_filter = await visible_pr_filter(db, actor)
+    if scope_filter is not None:
+        stmt = stmt.where(scope_filter)
     result = await db.execute(stmt)
     return list(result.scalars().all())
 
 
 async def get_pr(db: AsyncSession, actor: User, pr_id: UUID) -> PurchaseRequisition:
-    from app.core.scoping import is_requester_scoped, visible_pr_filter
+    from app.core.scoping import has_full_access, visible_pr_filter
 
     pr = await _load_pr(db, pr_id)
     if pr is None:
         raise HTTPException(404, "pr.not_found")
-    if actor.role == UserRole.IT_BUYER.value and pr.requester_id != actor.id:
-        raise HTTPException(403, "insufficient_role")
-    if (
-        actor.role == UserRole.DEPT_MANAGER.value
-        and actor.department_id
-        and pr.department_id != actor.department_id
-        and pr.requester_id != actor.id
-    ):
-        raise HTTPException(403, "insufficient_role")
-    if is_requester_scoped(actor):
-        scope_filter = await visible_pr_filter(db, actor)
-        if scope_filter is not None:
-            check = await db.execute(
-                select(PurchaseRequisition.id).where(PurchaseRequisition.id == pr_id, scope_filter)
-            )
-            if check.scalar_one_or_none() is None:
-                raise HTTPException(403, "insufficient_role")
+    if has_full_access(actor):
+        return pr
+    scope_filter = await visible_pr_filter(db, actor)
+    if scope_filter is not None:
+        check = await db.execute(
+            select(PurchaseRequisition.id).where(PurchaseRequisition.id == pr_id, scope_filter)
+        )
+        if check.scalar_one_or_none() is None:
+            raise HTTPException(403, "insufficient_role")
     return pr
 
 
@@ -826,7 +825,7 @@ async def get_pr_downstream(
 
 
 async def list_pos(db: AsyncSession, actor: User) -> list[PurchaseOrder]:
-    from app.core.scoping import visible_pr_id_subquery
+    from app.core.scoping import visible_po_id_subquery
 
     stmt = (
         select(PurchaseOrder)
@@ -836,9 +835,9 @@ async def list_pos(db: AsyncSession, actor: User) -> list[PurchaseOrder]:
         )
         .order_by(PurchaseOrder.created_at.desc())
     )
-    visible_pr_ids = await visible_pr_id_subquery(db, actor)
-    if visible_pr_ids is not None:
-        stmt = stmt.where(PurchaseOrder.pr_id.in_(visible_pr_ids))
+    visible_po_ids = await visible_po_id_subquery(db, actor)
+    if visible_po_ids is not None:
+        stmt = stmt.where(PurchaseOrder.id.in_(visible_po_ids))
     result = await db.execute(stmt)
     return list(result.scalars().all())
 
@@ -848,9 +847,9 @@ async def get_po(db: AsyncSession, po_id: UUID, actor: User | None = None) -> Pu
     if po is None:
         raise HTTPException(404, "po.not_found")
     if actor is not None:
-        from app.core.scoping import is_requester_scoped, visible_pr_filter
+        from app.core.scoping import has_full_access, visible_pr_filter
 
-        if is_requester_scoped(actor):
+        if not has_full_access(actor):
             scope_filter = await visible_pr_filter(db, actor)
             if scope_filter is not None:
                 check = await db.execute(

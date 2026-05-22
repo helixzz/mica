@@ -7,6 +7,41 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [v1.21.0] — 2026-05-22
+
+### 安全
+
+- **行级权限加固（P0）**：全面实施 [decision 0020](mica-internal/decisions/0020-row-level-permissions.md) 权限矩阵
+  - **PR 列表**：IT_BUYER 从"仅自己"修正为"全部可见"；requester 收紧为"仅自己"（移除 cost_center/department OR 逻辑）
+  - **PO / Contract / Shipment / Payment / Invoice / DeliveryPlan**：dept_manager 限制为本部门 PR 关联数据；requester 限制为仅自己 PR 关联数据
+  - **RFQ**：对 requester 和 dept_manager 完全隐藏（列表返回空、详情返回 403）
+  - 新增 `has_full_access()` / `is_rfq_hidden()` / `visible_po_id_subquery()` 统一鉴权函数
+
+### 新增
+
+- **PR 详情页增加组织字段**：公司、部门、成本中心名称展示（PROut schema + PRDetail.tsx）
+
+### 后端
+
+- 重写 `backend/app/core/scoping.py`：从 OR-based 多源过滤简化为角色直判
+- 修复 `list_prs_for_user`、`get_pr`、`list_pos`、`get_po` 的权限逻辑
+- `list_contracts`、`list_shipments`、`list_payments`、`list_invoices` 统一使用 `visible_po_id_subquery`
+- `list_delivery_plans` 新增 `actor` 参数 + 行级过滤
+- `list_rfqs` + `get_rfq` 对受限角色返回空/403
+- PROut schema 新增 `company_name`、`department_name`、`cost_center_name` 字段
+
+### 前端
+
+- PRDetail Descriptions 新增公司、部门、成本中心显示行
+- PurchaseRequisition TypeScript 接口同步新增三个 name 字段
+
+### 测试
+
+- 更新 4 个单元测试以匹配新权限矩阵（IT_BUYER 全量可见、requester 仅自己）
+- 全量 525 passed / 12 skipped / 1 xfailed
+
+---
+
 ## [v1.19.1] — 2026-05-21
 
 ### 修复

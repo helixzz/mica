@@ -242,15 +242,11 @@ async def list_contracts(
         else:
             stmt = stmt.where(Contract.po_id == po_id)
     if actor is not None:
-        from app.core.scoping import visible_pr_id_subquery
+        from app.core.scoping import visible_po_id_subquery
 
-        visible_pr_ids = await visible_pr_id_subquery(db, actor)
-        if visible_pr_ids is not None:
-            stmt = stmt.where(
-                Contract.po_id.in_(
-                    select(PurchaseOrder.id).where(PurchaseOrder.pr_id.in_(visible_pr_ids))
-                )
-            )
+        visible_po_ids = await visible_po_id_subquery(db, actor)
+        if visible_po_ids is not None:
+            stmt = stmt.where(Contract.po_id.in_(visible_po_ids))
     return list((await db.execute(stmt)).scalars().all())
 
 
@@ -405,9 +401,9 @@ async def get_contract(db: AsyncSession, contract_id: UUID, actor: User | None =
     if contract is None:
         raise HTTPException(404, "contract.not_found")
     if actor is not None:
-        from app.core.scoping import is_requester_scoped, visible_pr_filter
+        from app.core.scoping import has_full_access, visible_pr_filter
 
-        if is_requester_scoped(actor) and contract.po is not None:
+        if not has_full_access(actor) and contract.po is not None:
             scope_filter = await visible_pr_filter(db, actor)
             if scope_filter is not None:
                 check = await db.execute(
@@ -860,15 +856,11 @@ async def list_shipments(
             conditions.append(Shipment.po_id.in_(all_po_ids))
         stmt = stmt.where(or_(*conditions))
     if actor is not None:
-        from app.core.scoping import visible_pr_id_subquery
+        from app.core.scoping import visible_po_id_subquery
 
-        visible_pr_ids = await visible_pr_id_subquery(db, actor)
-        if visible_pr_ids is not None:
-            stmt = stmt.where(
-                Shipment.po_id.in_(
-                    select(PurchaseOrder.id).where(PurchaseOrder.pr_id.in_(visible_pr_ids))
-                )
-            )
+        visible_po_ids = await visible_po_id_subquery(db, actor)
+        if visible_po_ids is not None:
+            stmt = stmt.where(Shipment.po_id.in_(visible_po_ids))
     return list((await db.execute(stmt)).scalars().all())
 
 
@@ -1539,15 +1531,11 @@ async def list_payments(
     if po_id:
         stmt = stmt.where(PaymentRecord.po_id == po_id)
     if actor is not None:
-        from app.core.scoping import visible_pr_id_subquery
+        from app.core.scoping import visible_po_id_subquery
 
-        visible_pr_ids = await visible_pr_id_subquery(db, actor)
-        if visible_pr_ids is not None:
-            stmt = stmt.where(
-                PaymentRecord.po_id.in_(
-                    select(PurchaseOrder.id).where(PurchaseOrder.pr_id.in_(visible_pr_ids))
-                )
-            )
+        visible_po_ids = await visible_po_id_subquery(db, actor)
+        if visible_po_ids is not None:
+            stmt = stmt.where(PaymentRecord.po_id.in_(visible_po_ids))
     return list((await db.execute(stmt)).scalars().all())
 
 
@@ -1891,15 +1879,11 @@ async def list_invoices(
         sub = select(InvoiceLine.invoice_id).where(InvoiceLine.po_item_id.in_(po_item_ids))
         stmt = stmt.where(Invoice.id.in_(sub))
     if actor is not None:
-        from app.core.scoping import visible_pr_id_subquery
+        from app.core.scoping import visible_po_id_subquery
 
-        visible_pr_ids = await visible_pr_id_subquery(db, actor)
-        if visible_pr_ids is not None:
-            visible_po_item_ids = select(POItem.id).where(
-                POItem.po_id.in_(
-                    select(PurchaseOrder.id).where(PurchaseOrder.pr_id.in_(visible_pr_ids))
-                )
-            )
+        visible_po_ids = await visible_po_id_subquery(db, actor)
+        if visible_po_ids is not None:
+            visible_po_item_ids = select(POItem.id).where(POItem.po_id.in_(visible_po_ids))
             sub = select(InvoiceLine.invoice_id).where(
                 InvoiceLine.po_item_id.in_(visible_po_item_ids)
             )

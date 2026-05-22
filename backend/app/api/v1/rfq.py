@@ -6,7 +6,7 @@ from decimal import Decimal
 from typing import Annotated
 from uuid import UUID
 
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel, ConfigDict, Field
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -118,6 +118,10 @@ async def get_rfq(
     user: CurrentUser,
     db: Annotated[AsyncSession, Depends(get_db)],
 ):
+    from app.core.scoping import is_rfq_hidden
+
+    if is_rfq_hidden(user):
+        raise HTTPException(status_code=403, detail="insufficient_role")
     rfq = await svc.get_rfq(db, rfq_id)
     return _to_detail(rfq)
 

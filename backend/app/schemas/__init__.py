@@ -308,8 +308,11 @@ class PROut(BaseModel):
     requester_id: UUID
     requester_name: str = ""
     company_id: UUID
+    company_name: str = ""
     department_id: UUID | None
+    department_name: str = ""
     cost_center_id: UUID | None = None
+    cost_center_name: str = ""
     expense_type_id: UUID | None = None
     procurement_category_id: UUID | None = None
     currency: str
@@ -325,12 +328,28 @@ class PROut(BaseModel):
 
     @model_validator(mode="before")
     @classmethod
-    def _add_requester_name(cls, data: Any) -> Any:
-        if not isinstance(data, dict) and hasattr(data, "requester") and data.requester is not None:
+    def _populate_relation_names(cls, data: Any) -> Any:
+        if not isinstance(data, dict) and hasattr(data, "requester"):
             result: dict[str, Any] = {}
             for field_name in cls.model_fields:
                 if field_name == "requester_name":
-                    result["requester_name"] = data.requester.display_name
+                    result["requester_name"] = data.requester.display_name if data.requester else ""
+                elif field_name == "company_name":
+                    result["company_name"] = (
+                        data.company.name_zh if hasattr(data, "company") and data.company else ""
+                    )
+                elif field_name == "department_name":
+                    result["department_name"] = (
+                        data.department.name_zh
+                        if hasattr(data, "department") and data.department
+                        else ""
+                    )
+                elif field_name == "cost_center_name":
+                    result["cost_center_name"] = (
+                        data.cost_center.label_zh
+                        if hasattr(data, "cost_center") and data.cost_center
+                        else ""
+                    )
                 elif hasattr(data, field_name):
                     result[field_name] = getattr(data, field_name)
             return result

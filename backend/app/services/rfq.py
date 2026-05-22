@@ -14,6 +14,10 @@ from app.models import RFQ, RFQItem, RFQQuote, RFQStatus, RFQSupplier, User
 
 
 async def list_rfqs(db: AsyncSession, user: User) -> list[RFQ]:
+    from app.core.scoping import is_rfq_hidden
+
+    if is_rfq_hidden(user):
+        return []
     q = select(RFQ).order_by(RFQ.created_at.desc())
     return list((await db.execute(q)).scalars().all())
 

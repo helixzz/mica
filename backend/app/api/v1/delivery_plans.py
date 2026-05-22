@@ -85,7 +85,7 @@ async def list_plans(
     status_filter: str | None = Query(None, alias="status"),
 ):
     return await svc.list_delivery_plans(
-        db, po_id=po_id, contract_id=contract_id, status=status_filter
+        db, po_id=po_id, contract_id=contract_id, status=status_filter, actor=user
     )
 
 
@@ -93,7 +93,7 @@ async def list_plans(
     "/delivery-plans/overview", response_model=DeliveryPlanOverview, tags=["delivery-plans"]
 )
 async def list_all_plans_overview(user: CurrentUser, db: Annotated[AsyncSession, Depends(get_db)]):
-    plans = await svc.list_delivery_plans(db)
+    plans = await svc.list_delivery_plans(db, actor=user)
     total_planned = sum(p.planned_qty for p in plans)
     total_actual = sum(p.actual_qty for p in plans)
     return DeliveryPlanOverview(

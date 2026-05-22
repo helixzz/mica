@@ -10,7 +10,7 @@
 </p>
 
 <p align="center">
-  <a href="https://github.com/helixzz/mica/releases/tag/v1.20.0"><img src="https://img.shields.io/badge/version-1.20.0-8B5E3C?style=flat-square" alt="Version" /></a>
+  <a href="https://github.com/helixzz/mica/releases/tag/v1.21.0"><img src="https://img.shields.io/badge/version-1.21.0-8B5E3C?style=flat-square" alt="Version" /></a>
   <a href="https://github.com/helixzz/mica/actions/workflows/ci.yml"><img src="https://img.shields.io/github/actions/workflow/status/helixzz/mica/ci.yml?branch=main&style=flat-square&label=CI" alt="CI" /></a>
   <a href="LICENSE"><img src="https://img.shields.io/badge/license-Apache%202.0-blue?style=flat-square" alt="License" /></a>
   <img src="https://img.shields.io/badge/python-3.12-3776AB?style=flat-square&logo=python&logoColor=white" alt="Python" />
@@ -163,8 +163,9 @@ mica/
 | v0.8 | ✅ | 覆盖率 · SAML SSO · E2E 测试 · 表单引导 |
 | v0.9 – v1.5 | ✅ | 审批编辑器 · 合同版本 · 供应商管理 · 搜索增强 · 批量导入 |
 | v1.6 – v1.7 | ✅ | Cerbos · 付款计划 · 飞书集成 · 合同 OCR · 交货计划 · SLA · 邮件摘要 |
-| **v1.8** | ✅ | **RFQ 完整 · 通知系统 · 调度器 · 发票匹配 · SKU 预测 · 供应商门户 · Dashboard 重构** |
-| v1.9 | 🚧 | 飞书审批卡片联动 · E2E 浏览器测试增强 · 更多文档 |
+| v1.8 | ✅ | RFQ 完整 · 通知系统 · 调度器 · 发票匹配 · SKU 预测 · 供应商门户 · Dashboard 重构 |
+| v1.9 – v1.20 | ✅ | Insights 模块 · 多币种 · 代理提单 · PR UX 重构 · 飞书审批卡片 · E2E 增强 |
+| **v1.21** | ✅ | **行级权限加固 · PR 详情组织字段** |
 
 > 完整变更记录见 [CHANGELOG.md](CHANGELOG.md) · 所有 Release 见 [GitHub Releases](https://github.com/helixzz/mica/releases)
 

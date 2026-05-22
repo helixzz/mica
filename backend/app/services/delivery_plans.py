@@ -142,6 +142,7 @@ async def list_delivery_plans(
     po_id: UUID | None = None,
     contract_id: UUID | None = None,
     status: str | None = None,
+    actor=None,
 ) -> list[DeliveryPlanOut]:
     stmt = select(DeliveryPlan).options(selectinload(DeliveryPlan.item))
     if po_id is not None:
@@ -150,6 +151,13 @@ async def list_delivery_plans(
         stmt = stmt.where(DeliveryPlan.contract_id == contract_id)
     if status is not None:
         stmt = stmt.where(DeliveryPlan.status == status)
+
+    if actor is not None:
+        from app.core.scoping import visible_po_id_subquery
+
+        visible_po_ids = await visible_po_id_subquery(db, actor)
+        if visible_po_ids is not None:
+            stmt = stmt.where(DeliveryPlan.po_id.in_(visible_po_ids))
 
     result = await db.execute(stmt)
     plans = result.scalars().all()
