@@ -166,3 +166,80 @@ async def delete_rfq(db: AsyncSession, rfq_id: UUID) -> None:
     await db.delete(rfq)
     await db.flush()
     await db.commit()
+
+
+_LOCKED_STATUSES = {RFQStatus.AWARDED.value, RFQStatus.CLOSED.value, RFQStatus.CANCELLED.value}
+
+
+async def update_rfq(
+    db: AsyncSession,
+    rfq_id: UUID,
+    data: dict,
+    actor: User,
+) -> RFQ:
+    rfq = await get_rfq(db, rfq_id)
+    if rfq.status in _LOCKED_STATUSES:
+        raise HTTPException(409, "rfq.cannot_edit_finalized")
+
+    if data.get("title"):
+        rfq.title = data["title"]
+    if "deadline" in data:
+        rfq.deadline = data["deadline"]
+    if "notes" in data:
+        rfq.notes = data["notes"]
+
+    if "items" in data:
+        existing_items = {str(item.id): item for item in rfq.items}
+        incoming_ids = set()
+        for item_data in data["items"]:
+            item_id = item_data.get("id")
+            if item_id and item_id in existing_items:
+                item = existing_items[item_id]
+                item.item_name = item_data.get("item_name", item.item_name)
+                item.item_id = item_data.get("item_id", item.item_id)
+                item.specification = item_data.get("specification", item.specification)
+                item.qty = Decimal(str(item_data.get("qty", item.qty)))
+                item.uom = item_data.get("uom", item.uom)
+                incoming_ids.add(item_id)
+            else:
+                new_item = RFQItem(
+                    id=new_uuid(),
+                    rfq_id=rfq.id,
+                    item_id=item_data.get("item_id"),
+                    item_name=item_data["item_name"],
+                    specification=item_data.get("specification"),
+                    qty=Decimal(str(item_data["qty"])),
+                    uom=item_data.get("uom", "EA"),
+                )
+                db.add(new_item)
+        for eid, item in existing_items.items():
+            if eid not in incoming_ids:
+                await db.delete(item)
+
+    if "supplier_ids" in data:
+        existing_suppliers = {str(s.supplier_id): s for s in rfq.suppliers}
+        new_supplier_ids = {str(sid) for sid in data["supplier_ids"]}
+        for sid in new_supplier_ids - set(existing_suppliers.keys()):
+            _add_rfq_supplier(db, rfq.id, UUID(sid))
+        for sid, link in existing_suppliers.items():
+            if sid not in new_supplier_ids:
+                await db.delete(link)
+
+    await db.flush()
+    await db.commit()
+
+    from app.models import AuditLog
+
+    db.add(
+        AuditLog(
+            actor_id=actor.id,
+            actor_name=actor.display_name,
+            event_type="rfq.updated",
+            resource_type="rfq",
+            resource_id=str(rfq.id),
+            metadata_json={"rfq_number": rfq.rfq_number, "status": rfq.status},
+        )
+    )
+    await db.commit()
+
+    return await get_rfq(db, rfq.id)

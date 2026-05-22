@@ -190,6 +190,37 @@ async def send_rfq(
     return rfq
 
 
+class RFQUpdateIn(BaseModel):
+    title: str | None = None
+    deadline: date | None = None
+    notes: str | None = None
+    items: list[RFQItemIn] | None = None
+    supplier_ids: list[UUID] | None = None
+
+
+@router.patch("/rfqs/{rfq_id}", response_model=RFQDetailOut)
+async def update_rfq(
+    rfq_id: UUID,
+    body: RFQUpdateIn,
+    user: CurrentUser,
+    db: Annotated[AsyncSession, Depends(get_db)],
+    _role: Annotated[None, Depends(require_roles("admin"))],
+):
+    data: dict = {}
+    if body.title is not None:
+        data["title"] = body.title
+    if body.deadline is not None:
+        data["deadline"] = body.deadline
+    if body.notes is not None:
+        data["notes"] = body.notes
+    if body.items is not None:
+        data["items"] = [i.model_dump() for i in body.items]
+    if body.supplier_ids is not None:
+        data["supplier_ids"] = body.supplier_ids
+    rfq = await svc.update_rfq(db, rfq_id, data, user)
+    return _to_detail(rfq)
+
+
 @router.post("/rfqs/{rfq_id}/quotes", response_model=RFQQuoteOut, status_code=201)
 async def add_quote(
     rfq_id: UUID,

@@ -1,10 +1,11 @@
 import { useTranslation } from 'react-i18next'
-import { CheckCircleOutlined, DeleteOutlined, PlusOutlined } from '@ant-design/icons'
+import { CheckCircleOutlined, DeleteOutlined, EditOutlined, PlusOutlined } from '@ant-design/icons'
 import { Button, Card, Col, Descriptions, InputNumber, Modal, Row, Select, Space, Table, Tabs, Tag, Typography, message } from 'antd'
 import { useEffect, useState } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
 import { api, type Supplier } from '@/api'
 import { client, extractError } from '@/api/client'
+import { useAuth } from '@/auth/useAuth'
 import { fmtAmount, fmtQty, getCurrencySymbol } from '@/utils/format'
 import { ActivityTimeline } from '@/components/ActivityTimeline'
 
@@ -17,6 +18,7 @@ export default function RFQDetailPage() {
   const { id } = useParams<{ id: string }>()
   const navigate = useNavigate()
   const { t } = useTranslation()
+  const { user } = useAuth()
   const [rfq, setRfq] = useState<any>(null)
   const [suppliers, setSuppliers] = useState<Supplier[]>([])
   const [quoteModal, setQuoteModal] = useState<{ rfqItemId: string; supplierId: string } | null>(null)
@@ -47,6 +49,7 @@ export default function RFQDetailPage() {
   const canSend = rfq.status === 'draft'
   const canQuote = rfq.status === 'sent' || rfq.status === 'quoting'
   const canAward = rfq.status === 'quoting' || rfq.status === 'evaluation'
+  const canEdit = user?.role === 'admin' && !['awarded', 'closed', 'cancelled'].includes(rfq.status)
 
   const doSend = async () => {
     setSending(true)
@@ -183,6 +186,7 @@ export default function RFQDetailPage() {
         </Space>
         <Space>
           <Button onClick={() => navigate('/rfqs')}>{t('button.back')}</Button>
+          {canEdit && <Button icon={<EditOutlined />} onClick={() => navigate(`/rfqs/${id}/edit`)}>{t('button.edit')}</Button>}
           {canSend && <Button type="primary" loading={sending} onClick={doSend}>{t('rfq.send')}</Button>}
           {canSend && <Button danger icon={<DeleteOutlined />} onClick={doDelete}>{t('button.delete')}</Button>}
           {canAward && (
