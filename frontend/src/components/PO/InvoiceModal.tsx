@@ -219,7 +219,7 @@ export function InvoiceModal({ open, po, onClose, onDone, busy, setBusy }: Invoi
             </Form.Item>
           </Col>
           <Col span={8}>
-            <Form.Item label={t('field.due_date')}>
+            <Form.Item label={t('field.due_date')} help={t('invoice.due_date_hint')}>
               <DatePicker value={dueDate} onChange={setDueDate} style={{ width: '100%' }} />
             </Form.Item>
           </Col>

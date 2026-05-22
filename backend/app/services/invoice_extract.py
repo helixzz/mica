@@ -64,14 +64,18 @@ class InvoiceExtract:
 
 _VISION_PROMPT = """你是中国增值税发票信息提取专家。请从图片中提取发票字段，严格按 JSON 返回，不要输出任何其他内容。
 
-规则：
-- 金额字段只保留数字和小数点
+关键规则：
+- subtotal = 合计金额（不含税），对应发票上"金额"列合计行
+- tax_amount = 合计税额，对应发票上"税额"列合计行
+- total_amount = 价税合计（含税），对应发票上"价税合计"行（小写金额）
+- 三者必须满足：total_amount = subtotal + tax_amount（如果不满足，说明你的识别有误，请重新核对）
+- 金额字段只保留数字和小数点，不含千分位逗号或货币符号
 - 开票日期统一转为 YYYY-MM-DD
-- 不存在的字段填 null
-- confidence 为 0.0-1.0 的整体置信度
+- 不存在或无法识别的字段填 null，严禁编造
+- confidence 为 0.0-1.0，表示你对识别结果的整体确信程度。仅当所有关键字段（发票号码、金额、日期）清晰可读时才给 0.9+
 
 JSON 格式：
-{"invoice_number":"string|null","invoice_code":"string|null","invoice_date":"YYYY-MM-DD|null","seller_name":"string|null","seller_tax_id":"string|null","buyer_name":"string|null","buyer_tax_id":"string|null","subtotal":"string|null","tax_amount":"string|null","total_amount":"string|null","currency":"CNY","lines":[{"item_name":"string","spec":"string|null","qty":"string|null","unit_price":"string|null","tax_rate":"string|null","tax_amount":"string|null","subtotal":"string|null"}],"confidence":0.0}
+{"invoice_number":"string|null","invoice_code":"string|null","invoice_date":"YYYY-MM-DD|null","seller_name":"string|null","seller_tax_id":"string|null","buyer_name":"string|null","buyer_tax_id":"string|null","subtotal":"不含税合计金额|null","tax_amount":"合计税额|null","total_amount":"价税合计（含税）|null","currency":"CNY","lines":[{"item_name":"string","spec":"string|null","qty":"string|null","unit_price":"string|null","tax_rate":"string|null","tax_amount":"string|null","subtotal":"string|null"}],"confidence":0.0}
 
 直接输出 JSON，不要 markdown 代码块。"""
 
@@ -261,6 +265,8 @@ def _pdf_text(pdf_bytes: bytes) -> str:
 def _regex_extract(text: str, source: ExtractSource) -> InvoiceExtract:
     data = InvoiceExtract(raw_extract_source=source.value)
     matched = 0
+    key_fields_matched = 0
+    key_fields = {"invoice_number", "total_amount", "subtotal", "tax_amount"}
     for field_name, pattern in _REGEX_PATTERNS.items():
         m = re.search(pattern, text)
         if m:
@@ -269,7 +275,11 @@ def _regex_extract(text: str, source: ExtractSource) -> InvoiceExtract:
                 value = re.sub(r"年|-", "-", value).replace("月", "-").replace("日", "")
             setattr(data, field_name, value)
             matched += 1
-    data.confidence = matched / len(_REGEX_PATTERNS) if _REGEX_PATTERNS else 0.0
+            if field_name in key_fields:
+                key_fields_matched += 1
+    base_conf = matched / len(_REGEX_PATTERNS) if _REGEX_PATTERNS else 0.0
+    key_bonus = key_fields_matched / len(key_fields) * 0.3
+    data.confidence = min(base_conf + key_bonus, 0.99)
     return data
 
 

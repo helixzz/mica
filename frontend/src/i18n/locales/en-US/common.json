@@ -696,7 +696,7 @@
     "price_optional": "Optional · decided by buyer after quotation",
     "price_placeholder": "Fill after quotation",
     "requester_label": "Requester",
-    "requester_help": "Defaults to yourself. Authorized users can submit PRs on behalf of others.",
+    "requester_help": "Defaults to you. Select another user to submit on their behalf.",
     "requester_self": "Myself",
     "select_requester": "Select requester",
     "proxy_not_allowed": "You don't have permission to submit PRs on behalf of others",
@@ -727,9 +727,6 @@
     "select_category": "Select category",
     "at_least_one_line": "At least one line required",
     "search_label": "Search {{field}}",
-    "requester_label": "Requester",
-    "requester_help": "Defaults to you. Select another user to submit on their behalf.",
-    "select_requester": "Select requester",
     "proxy_mode_active": "Proxy submission",
     "proxy_mode_help": "You are submitting this PR on behalf of {{name}}. The approval flow will route based on that user's department and seniority.",
     "title_help": "Use a concise title that lets approvers understand what is being purchased and for which project or team.",
@@ -1253,7 +1250,8 @@
   },
   "invoice": {
     "attachments": "Invoice Attachments",
-    "download_hint": "Download token is one-time. Reopen from list if needed."
+    "download_hint": "Download token is one-time. Reopen from list if needed.",
+    "due_date_hint": "Defaults to invoice date + 30 days"
   },
   "po": {
     "ai_source": "AI Source",
