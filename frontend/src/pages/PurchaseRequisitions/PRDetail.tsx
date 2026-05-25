@@ -2,6 +2,7 @@ import {
   Button,
   Card,
   Descriptions,
+  Input,
   Modal,
   Space,
   Table,
@@ -11,7 +12,7 @@ import {
   message,
   theme,
 } from 'antd'
-import { CopyOutlined } from '@ant-design/icons'
+import { CopyOutlined, UserAddOutlined } from '@ant-design/icons'
 import { useEffect, useMemo, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { useNavigate, useParams } from 'react-router-dom'
@@ -67,6 +68,8 @@ export function PRDetailPage() {
       supplier_name: string | null
     }[]
   }>({ purchase_orders: [], contracts: [] })
+  const [collabEmail, setCollabEmail] = useState('')
+  const [allUsers, setAllUsers] = useState<{ id: string; display_name: string; email: string }[]>([])
 
   const load = async () => {
     if (!id) return
@@ -90,6 +93,9 @@ export function PRDetailPage() {
   useEffect(() => {
     load()
     void api.suppliers().then(setSuppliers)
+    void api.listProxyCandidates().then(candidates =>
+      setAllUsers(candidates.map(c => ({ id: c.id, display_name: c.display_name, email: c.email })))
+    ).catch(() => {})
   }, [id])
 
   const supplierMap = useMemo(
@@ -322,6 +328,68 @@ export function PRDetailPage() {
               )}
             </Card>
           )}
+
+          <Card
+            size="small"
+            title={t('pr.collaborators', '协作者')}
+            extra={
+              pr.requester_id === user?.id && (
+                <Space.Compact size="small">
+                  <Input
+                    placeholder={t('pr.collaborator_email_placeholder', '输入邮箱或姓名')}
+                    value={collabEmail}
+                    onChange={(e) => setCollabEmail(e.target.value)}
+                    style={{ width: 180 }}
+                  />
+                  <Button
+                    icon={<UserAddOutlined />}
+                    onClick={async () => {
+                      if (!collabEmail.trim()) return
+                      const match = allUsers.find(
+                        (u) => u.email === collabEmail.trim() || u.display_name === collabEmail.trim()
+                      )
+                      if (!match) {
+                        message.warning(t('pr.collaborator_not_found', '未找到该用户'))
+                        return
+                      }
+                      try {
+                        await api.addCollaborator(pr.id, match.id)
+                        setCollabEmail('')
+                        await load()
+                        message.success(t('pr.collaborator_added', '已添加'))
+                      } catch (e) {
+                        message.error(extractError(e).detail)
+                      }
+                    }}
+                  />
+                </Space.Compact>
+              )
+            }
+          >
+            {pr.collaborators.length > 0 ? (
+              <Space wrap>
+                {pr.collaborators.map((c) => (
+                  <Tag
+                    key={c.id}
+                    closable={pr.requester_id === user?.id}
+                    onClose={async (e) => {
+                      e.preventDefault()
+                      try {
+                        await api.removeCollaborator(pr.id, c.id)
+                        await load()
+                      } catch (err) {
+                        message.error(extractError(err).detail)
+                      }
+                    }}
+                  >
+                    {c.display_name}
+                  </Tag>
+                ))}
+              </Space>
+            ) : (
+              <Typography.Text type="secondary">{t('pr.no_collaborators', '暂无协作者')}</Typography.Text>
+            )}
+          </Card>
 
           <Card title={t('nav.purchase_requisitions')}>
             <Table

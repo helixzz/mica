@@ -322,6 +322,35 @@ user_departments = Table(
     ),
 )
 
+pr_collaborators = Table(
+    "pr_collaborators",
+    Base.metadata,
+    Column(
+        "pr_id",
+        PGUUID(as_uuid=True),
+        ForeignKey("purchase_requisitions.id", ondelete="CASCADE"),
+        primary_key=True,
+    ),
+    Column(
+        "user_id",
+        PGUUID(as_uuid=True),
+        ForeignKey("users.id", ondelete="CASCADE"),
+        primary_key=True,
+    ),
+    Column(
+        "added_by_id",
+        PGUUID(as_uuid=True),
+        ForeignKey("users.id", ondelete="SET NULL"),
+        nullable=True,
+    ),
+    Column(
+        "created_at",
+        DateTime(timezone=True),
+        nullable=False,
+        server_default=text("now()"),
+    ),
+)
+
 
 class Supplier(Base, TimestampMixin):
     __tablename__ = "suppliers"
@@ -413,6 +442,12 @@ class PurchaseRequisition(Base, TimestampMixin):
     procurement_category: Mapped[ProcurementCategory | None] = relationship()
     items: Mapped[list[PRItem]] = relationship(
         back_populates="pr", cascade="all, delete-orphan", order_by="PRItem.line_no"
+    )
+    collaborators: Mapped[list[User]] = relationship(
+        secondary="pr_collaborators",
+        primaryjoin="PurchaseRequisition.id == pr_collaborators.c.pr_id",
+        secondaryjoin="User.id == pr_collaborators.c.user_id",
+        viewonly=True,
     )
 
 

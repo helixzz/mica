@@ -4,13 +4,14 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING
 
-from sqlalchemy import select
+from sqlalchemy import or_, select
 
 from app.models import (
     PurchaseOrder,
     PurchaseRequisition,
     User,
     UserRole,
+    pr_collaborators,
 )
 
 if TYPE_CHECKING:
@@ -49,7 +50,7 @@ async def visible_pr_filter(session: AsyncSession, user: User) -> ColumnElement[
 
     - Full-access roles: None (no filter)
     - dept_manager: PR.department_id == user.department_id
-    - requester: PR.requester_id == user.id
+    - requester: OR(own PR, collaborator on PR)
     """
     if has_full_access(user):
         return None
@@ -57,7 +58,13 @@ async def visible_pr_filter(session: AsyncSession, user: User) -> ColumnElement[
     if user.role == UserRole.DEPT_MANAGER.value and user.department_id:
         return PurchaseRequisition.department_id == user.department_id
 
-    return PurchaseRequisition.requester_id == user.id
+    collaborated_pr_ids = select(pr_collaborators.c.pr_id).where(
+        pr_collaborators.c.user_id == user.id
+    )
+    return or_(
+        PurchaseRequisition.requester_id == user.id,
+        PurchaseRequisition.id.in_(collaborated_pr_ids),
+    )
 
 
 async def visible_pr_id_subquery(session: AsyncSession, user: User):

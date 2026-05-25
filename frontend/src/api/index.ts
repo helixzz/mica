@@ -127,6 +127,7 @@ export interface PurchaseRequisition {
   created_at: string
   updated_at: string
   items: PRItem[]
+  collaborators: { id: string; display_name: string }[]
 }
 
 export interface PRListItem {
@@ -1145,6 +1146,16 @@ export const api = {
         supplier_name: string | null
       }[]
     }
+  },
+  async addCollaborator(prId: string, userId: string): Promise<void> {
+    await client.post(`/purchase-requisitions/${prId}/collaborators`, { user_id: userId })
+  },
+  async removeCollaborator(prId: string, userId: string): Promise<void> {
+    await client.delete(`/purchase-requisitions/${prId}/collaborators/${userId}`)
+  },
+  async listCollaborators(prId: string): Promise<{ id: string; display_name: string; email: string }[]> {
+    const { data } = await client.get(`/purchase-requisitions/${prId}/collaborators`)
+    return data as { id: string; display_name: string; email: string }[]
   },
   async createPR(payload: {
     title: string

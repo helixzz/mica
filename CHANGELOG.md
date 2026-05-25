@@ -7,6 +7,30 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [v1.22.0] — 2026-05-25
+
+### 新增
+
+- **PR 协作者功能**：允许 PR 发起人添加其他 requester 为协作者，协作者可查看该 PR 全流程（含 PO / 合同 / 到货 / 付款）
+  - 新增 `pr_collaborators` M:N 表（Alembic 0046）
+  - API：`GET/POST /purchase-requisitions/{id}/collaborators` + `DELETE .../collaborators/{user_id}`
+  - 行级权限自动继承：协作者可见的 PR 自动扩展下游实体可见性
+  - PROut 响应新增 `collaborators` 字段（`[{id, display_name}]`）
+  - 前端 PRDetail 新增「协作者」卡片：PR 发起人可添加/移除协作者（按姓名/邮箱搜索）
+
+### 后端
+
+- `scoping.py` visible_pr_filter 增加 `OR(own, collaborated)` 条件
+- `purchase.py` 新增 `list_collaborators` / `add_collaborator` / `remove_collaborator` 服务函数
+- `_load_pr` / `list_prs_for_user` 追加 `selectinload(collaborators)`
+
+### 前端
+
+- PRDetail：协作者 Tag 列表 + 添加/移除交互
+- TypeScript 接口：`collaborators` 字段 + 3 个 API 方法
+
+---
+
 ## [v1.21.0] — 2026-05-22
 
 ### 安全

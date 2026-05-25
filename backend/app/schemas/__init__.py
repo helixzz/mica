@@ -325,6 +325,7 @@ class PROut(BaseModel):
     created_at: datetime
     updated_at: datetime
     items: list[PRItemOut]
+    collaborators: list[dict[str, Any]] = Field(default_factory=list)
 
     @model_validator(mode="before")
     @classmethod
@@ -350,6 +351,11 @@ class PROut(BaseModel):
                         if hasattr(data, "cost_center") and data.cost_center
                         else ""
                     )
+                elif field_name == "collaborators":
+                    result["collaborators"] = [
+                        {"id": str(u.id), "display_name": u.display_name}
+                        for u in (data.collaborators if hasattr(data, "collaborators") else [])
+                    ]
                 elif hasattr(data, field_name):
                     result[field_name] = getattr(data, field_name)
             return result

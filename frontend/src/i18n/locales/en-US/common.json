@@ -741,7 +741,12 @@
     "copy_button": "Copy PR",
     "copying_from": "Copying from {{title}}",
     "confirm_delete_title": "Confirm Delete PR",
-    "confirm_delete_body": "This action cannot be undone. Delete this PR?"
+    "confirm_delete_body": "This action cannot be undone. Delete this PR?",
+    "collaborators": "Collaborators",
+    "collaborator_email_placeholder": "Enter email or name",
+    "collaborator_not_found": "User not found",
+    "collaborator_added": "Collaborator added",
+    "no_collaborators": "No collaborators yet"
   },
   "admin": {
     "departments": "Departments",

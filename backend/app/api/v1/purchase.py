@@ -304,3 +304,47 @@ async def export_po_pdf(
             "Content-Length": str(len(pdf_bytes)),
         },
     )
+
+
+@router.get("/purchase-requisitions/{pr_id}/collaborators", tags=["purchase"])
+async def list_collaborators(
+    pr_id: UUID,
+    user: CurrentUser,
+    db: Annotated[AsyncSession, Depends(get_db)],
+):
+    await svc.get_pr(db, user, pr_id)
+    return await svc.list_collaborators(db, pr_id)
+
+
+class CollaboratorIn(BaseModel):
+    user_id: UUID
+
+
+@router.post(
+    "/purchase-requisitions/{pr_id}/collaborators",
+    status_code=status.HTTP_204_NO_CONTENT,
+    tags=["purchase"],
+)
+async def add_collaborator(
+    pr_id: UUID,
+    payload: CollaboratorIn,
+    user: CurrentUser,
+    db: Annotated[AsyncSession, Depends(get_db)],
+):
+    await svc.add_collaborator(db, user, pr_id, payload.user_id)
+    return Response(status_code=status.HTTP_204_NO_CONTENT)
+
+
+@router.delete(
+    "/purchase-requisitions/{pr_id}/collaborators/{user_id}",
+    status_code=status.HTTP_204_NO_CONTENT,
+    tags=["purchase"],
+)
+async def remove_collaborator(
+    pr_id: UUID,
+    user_id: UUID,
+    user: CurrentUser,
+    db: Annotated[AsyncSession, Depends(get_db)],
+):
+    await svc.remove_collaborator(db, user, pr_id, user_id)
+    return Response(status_code=status.HTTP_204_NO_CONTENT)

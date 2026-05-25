@@ -670,6 +670,7 @@ async def _load_pr(db: AsyncSession, pr_id: UUID) -> PurchaseRequisition | None:
             selectinload(PurchaseRequisition.company),
             selectinload(PurchaseRequisition.department),
             selectinload(PurchaseRequisition.cost_center),
+            selectinload(PurchaseRequisition.collaborators),
         )
     )
     return result.scalar_one_or_none()
@@ -695,6 +696,7 @@ async def list_prs_for_user(db: AsyncSession, actor: User) -> list[PurchaseRequi
             selectinload(PurchaseRequisition.company),
             selectinload(PurchaseRequisition.department),
             selectinload(PurchaseRequisition.cost_center),
+            selectinload(PurchaseRequisition.collaborators),
         )
     )
     scope_filter = await visible_pr_filter(db, actor)
@@ -1035,3 +1037,67 @@ async def save_pr_supplier_quotes(
     for row in written:
         await db.refresh(row)
     return written
+
+
+async def list_collaborators(db: AsyncSession, pr_id: UUID) -> list[dict]:
+    from app.models import pr_collaborators
+
+    stmt = (
+        select(User.id, User.display_name, User.email)
+        .join(pr_collaborators, pr_collaborators.c.user_id == User.id)
+        .where(pr_collaborators.c.pr_id == pr_id)
+    )
+    rows = (await db.execute(stmt)).all()
+    return [{"id": str(r.id), "display_name": r.display_name, "email": r.email} for r in rows]
+
+
+async def add_collaborator(db: AsyncSession, actor: User, pr_id: UUID, user_id: UUID) -> None:
+    from app.models import pr_collaborators
+
+    pr = await get_pr(db, actor, pr_id)
+    if pr.requester_id != actor.id and actor.role not in {
+        UserRole.ADMIN.value,
+        UserRole.PROCUREMENT_MGR.value,
+        UserRole.IT_BUYER.value,
+    }:
+        raise HTTPException(403, "pr.only_requester_can_add_collaborator")
+
+    target = await db.get(User, user_id)
+    if target is None:
+        raise HTTPException(404, "user.not_found")
+
+    existing = (
+        await db.execute(
+            select(pr_collaborators.c.user_id).where(
+                pr_collaborators.c.pr_id == pr_id,
+                pr_collaborators.c.user_id == user_id,
+            )
+        )
+    ).scalar_one_or_none()
+    if existing is not None:
+        return
+
+    await db.execute(
+        pr_collaborators.insert().values(pr_id=pr_id, user_id=user_id, added_by_id=actor.id)
+    )
+    await db.commit()
+
+
+async def remove_collaborator(db: AsyncSession, actor: User, pr_id: UUID, user_id: UUID) -> None:
+    from app.models import pr_collaborators
+
+    pr = await get_pr(db, actor, pr_id)
+    if pr.requester_id != actor.id and actor.role not in {
+        UserRole.ADMIN.value,
+        UserRole.PROCUREMENT_MGR.value,
+        UserRole.IT_BUYER.value,
+    }:
+        raise HTTPException(403, "pr.only_requester_can_remove_collaborator")
+
+    await db.execute(
+        pr_collaborators.delete().where(
+            pr_collaborators.c.pr_id == pr_id,
+            pr_collaborators.c.user_id == user_id,
+        )
+    )
+    await db.commit()
