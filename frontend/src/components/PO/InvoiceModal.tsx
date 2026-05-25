@@ -1,13 +1,17 @@
 import { UploadOutlined } from '@ant-design/icons'
 import {
+  Alert,
   Button,
+  Card,
   Col,
   DatePicker,
+  Descriptions,
   Form,
   Input,
   InputNumber,
   Modal,
   Row,
+  Select,
   Table,
   Tag,
   Typography,
@@ -18,9 +22,10 @@ import dayjs from 'dayjs'
 import { useEffect, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 
-import { api, type PurchaseOrder } from '@/api'
+import { api, type InvoiceExtractResult, type PurchaseOrder } from '@/api'
 import { extractError } from '@/api/client'
 import { AutosaveBanner, AutosaveUnavailableBanner } from '@/components/AutosaveBanner'
+import { fmtAmount } from '@/utils/format'
 import { useAutosave } from '@/hooks/useAutosave'
 
 interface InvoiceModalProps {
@@ -32,6 +37,15 @@ interface InvoiceModalProps {
   setBusy: (b: boolean) => void
 }
 
+interface InvoiceLine {
+  po_item_id: string | null
+  line_type: 'product'
+  item_name: string
+  qty: number
+  unit_price: number
+  tax_amount: number
+}
+
 export function InvoiceModal({ open, po, onClose, onDone, busy, setBusy }: InvoiceModalProps) {
   const { t } = useTranslation()
   const [invoiceNumber, setInvoiceNumber] = useState('')
@@ -41,16 +55,8 @@ export function InvoiceModal({ open, po, onClose, onDone, busy, setBusy }: Invoi
   const [attachments, setAttachments] = useState<{ id: string; name: string; size: number; content_type: string }[]>([])
   const [extractMsg, setExtractMsg] = useState<string>('')
   const [extracting, setExtracting] = useState(false)
-  const [lines, setLines] = useState(
-    po.items.map((i) => ({
-      po_item_id: i.id as string | null,
-      line_type: 'product' as const,
-      item_name: i.item_name,
-      qty: Math.max(0, Number(i.qty) - Number(i.qty_invoiced || 0)),
-      unit_price: Number(i.unit_price),
-      tax_amount: 0,
-    }))
-  )
+  const [ocrResult, setOcrResult] = useState<InvoiceExtractResult | null>(null)
+  const [lines, setLines] = useState<InvoiceLine[]>([])
   const autosaveInvoice = useAutosave(`po-invoice-${po.id}`)
   const [autosaveDismissedInvoice, setAutosaveDismissedInvoice] = useState(false)
 
@@ -59,14 +65,8 @@ export function InvoiceModal({ open, po, onClose, onDone, busy, setBusy }: Invoi
       setInvoiceNumber('')
       setAttachments([])
       setExtractMsg('')
-      setLines(po.items.map((i) => ({
-        po_item_id: i.id as string | null,
-        line_type: 'product' as const,
-        item_name: i.item_name,
-        qty: Math.max(0, Number(i.qty) - Number(i.qty_invoiced || 0)),
-        unit_price: Number(i.unit_price),
-        tax_amount: Number(((Number(i.qty) - Number(i.qty_invoiced || 0)) * Number(i.unit_price) * 0.13).toFixed(2)),
-      })))
+      setOcrResult(null)
+      setLines([])
     }
   }, [open, po])
 
@@ -81,6 +81,37 @@ export function InvoiceModal({ open, po, onClose, onDone, busy, setBusy }: Invoi
     })
   })
 
+  const autoMatchLines = (ocr: InvoiceExtractResult) => {
+    if (!ocr.lines || ocr.lines.length === 0) {
+      setLines(po.items.map((i) => ({
+        po_item_id: i.id as string | null,
+        line_type: 'product' as const,
+        item_name: i.item_name,
+        qty: Math.max(0, Number(i.qty) - Number(i.qty_invoiced || 0)),
+        unit_price: Number(i.unit_price),
+        tax_amount: 0,
+      })))
+      return
+    }
+
+    const matched: InvoiceLine[] = ocr.lines.map((ocrLine) => {
+      const bestMatch = po.items.find((pi) =>
+        ocrLine.item_name && pi.item_name.includes(ocrLine.item_name.slice(0, 6))
+      ) || po.items.find((pi) =>
+        ocrLine.item_name && ocrLine.item_name.includes(pi.item_name.slice(0, 6))
+      )
+      return {
+        po_item_id: bestMatch?.id ?? null,
+        line_type: 'product' as const,
+        item_name: ocrLine.item_name || bestMatch?.item_name || '',
+        qty: Number(ocrLine.qty || 0),
+        unit_price: Number(ocrLine.unit_price || 0),
+        tax_amount: Number(ocrLine.tax_amount || 0),
+      }
+    })
+    setLines(matched)
+  }
+
   const handleUpload = async (file: File) => {
     try {
       const doc = await api.uploadDocument(file, 'invoice')
@@ -90,6 +121,7 @@ export function InvoiceModal({ open, po, onClose, onDone, busy, setBusy }: Invoi
       setExtractMsg(t('message.ai_thinking'))
       try {
         const ex = await api.extractInvoice(doc.id)
+        setOcrResult(ex)
         if (ex.error) {
           setExtractMsg(`AI: ${ex.error}`)
         } else {
@@ -98,6 +130,7 @@ export function InvoiceModal({ open, po, onClose, onDone, busy, setBusy }: Invoi
             setInvoiceDate(dayjs(ex.invoice_date))
           }
           if (ex.seller_tax_id) setTaxNumber(ex.seller_tax_id)
+          autoMatchLines(ex)
           setExtractMsg(
             `${t('po.ai_source')}: ${ex.raw_extract_source} · ${t('po.confidence')} ${(ex.confidence * 100).toFixed(0)}%`
           )
@@ -124,6 +157,10 @@ export function InvoiceModal({ open, po, onClose, onDone, busy, setBusy }: Invoi
     }
     if (attachments.length === 0) {
       void message.error(t('po.invoice_file_required'))
+      return
+    }
+    if (lines.filter((l) => l.qty > 0).length === 0) {
+      void message.error(t('invoice.no_lines'))
       return
     }
     try {
@@ -153,8 +190,13 @@ export function InvoiceModal({ open, po, onClose, onDone, busy, setBusy }: Invoi
     }
   }
 
+  const poItemOptions = po.items.map((i) => ({
+    value: i.id,
+    label: `${i.item_name} (${t('field.qty')}: ${i.qty})`,
+  }))
+
   return (
-    <Modal title={t('button.record_invoice')} open={open} onCancel={onClose} onOk={submit} confirmLoading={busy} width={960}>
+    <Modal title={t('button.record_invoice')} open={open} onCancel={onClose} onOk={submit} confirmLoading={busy} width={1060}>
       {!autosaveDismissedInvoice && autosaveInvoice.hasAutosave && autosaveInvoice.savedAt && (
         <AutosaveBanner
           savedAt={autosaveInvoice.savedAt}
@@ -174,9 +216,7 @@ export function InvoiceModal({ open, po, onClose, onDone, busy, setBusy }: Invoi
         />
       )}
       {!autosaveInvoice.storageAvailable && <AutosaveUnavailableBanner />}
-      <Typography.Text type="secondary" style={{ display: 'block', marginBottom: 12 }}>
-        {t('po.invoice_help')}
-      </Typography.Text>
+
       <Form layout="vertical">
         <Row gutter={12}>
           <Col span={24}>
@@ -187,8 +227,7 @@ export function InvoiceModal({ open, po, onClose, onDone, busy, setBusy }: Invoi
                 showUploadList={false}
                 maxCount={1}
               >
-                <Button icon={<UploadOutlined />} loading={extracting}>{t('po.upload_extract')}
-                </Button>
+                <Button icon={<UploadOutlined />} loading={extracting}>{t('po.upload_extract')}</Button>
               </Upload>
               {extractMsg && (
                 <Typography.Text type="secondary" style={{ marginLeft: 12 }}>
@@ -207,6 +246,59 @@ export function InvoiceModal({ open, po, onClose, onDone, busy, setBusy }: Invoi
             </Form.Item>
           </Col>
         </Row>
+
+        {ocrResult && !ocrResult.error && (
+          <Card size="small" title={t('invoice.ocr_result')} style={{ marginBottom: 16 }}>
+            <Descriptions size="small" column={3} bordered>
+              {ocrResult.invoice_number && (
+                <Descriptions.Item label={t('field.invoice_number')}>{ocrResult.invoice_number}</Descriptions.Item>
+              )}
+              {ocrResult.invoice_date && (
+                <Descriptions.Item label={t('field.invoice_date')}>{ocrResult.invoice_date}</Descriptions.Item>
+              )}
+              {ocrResult.seller_name && (
+                <Descriptions.Item label={t('invoice.seller_name')}>{ocrResult.seller_name}</Descriptions.Item>
+              )}
+              {ocrResult.seller_tax_id && (
+                <Descriptions.Item label={t('field.tax_number')}>{ocrResult.seller_tax_id}</Descriptions.Item>
+              )}
+              {ocrResult.subtotal && (
+                <Descriptions.Item label={t('invoice.subtotal_excl_tax')}>
+                  {fmtAmount(ocrResult.subtotal, ocrResult.currency)}
+                </Descriptions.Item>
+              )}
+              {ocrResult.tax_amount && (
+                <Descriptions.Item label={t('invoice.total_tax')}>
+                  {fmtAmount(ocrResult.tax_amount, ocrResult.currency)}
+                </Descriptions.Item>
+              )}
+              {ocrResult.total_amount && (
+                <Descriptions.Item label={t('invoice.total_incl_tax')}>
+                  <Typography.Text strong>{fmtAmount(ocrResult.total_amount, ocrResult.currency)}</Typography.Text>
+                </Descriptions.Item>
+              )}
+            </Descriptions>
+            {ocrResult.lines.length > 0 && (
+              <Table
+                size="small"
+                pagination={false}
+                rowKey={(_, i) => String(i)}
+                style={{ marginTop: 8 }}
+                dataSource={ocrResult.lines}
+                columns={[
+                  { title: t('field.item_name'), dataIndex: 'item_name', ellipsis: true },
+                  { title: t('field.spec'), dataIndex: 'spec', width: 100, ellipsis: true },
+                  { title: t('field.qty'), dataIndex: 'qty', width: 70, align: 'right' },
+                  { title: t('field.unit_price'), dataIndex: 'unit_price', width: 100, align: 'right' },
+                  { title: t('invoice.tax_rate'), dataIndex: 'tax_rate', width: 70, align: 'right' },
+                  { title: t('field.tax_amount'), dataIndex: 'tax_amount', width: 100, align: 'right' },
+                  { title: t('field.subtotal'), dataIndex: 'subtotal', width: 100, align: 'right' },
+                ]}
+              />
+            )}
+          </Card>
+        )}
+
         <Row gutter={12}>
           <Col span={8}>
             <Form.Item label={t('field.invoice_number')} required>
@@ -229,56 +321,88 @@ export function InvoiceModal({ open, po, onClose, onDone, busy, setBusy }: Invoi
             </Form.Item>
           </Col>
         </Row>
-        <Table
-          rowKey="po_item_id"
-          size="small"
-          pagination={false}
-          dataSource={lines.map((l, i) => ({ ...l, __idx: i }))}
-          columns={[
-            { title: t('field.item_name'), dataIndex: 'item_name' },
-            {
-              title: t('field.qty'),
-              width: 100,
-              render: (_: unknown, r) => (
-                <InputNumber
-                  min={0}
-                  value={lines[r.__idx]?.qty}
-                  onChange={(v) => setLines((ls) => ls.map((x, i) => i === r.__idx ? { ...x, qty: Number(v ?? 0) } : x))}
-                  style={{ width: '100%' }}
-                />
-              ),
-            },
-            {
-              title: t('field.unit_price'),
-              width: 120,
-              render: (_: unknown, r) => (
-                <InputNumber
-                  min={0}
-                  value={lines[r.__idx]?.unit_price}
-                  onChange={(v) => setLines((ls) => ls.map((x, i) => i === r.__idx ? { ...x, unit_price: Number(v ?? 0) } : x))}
-                  style={{ width: '100%' }}
-                />
-              ),
-            },
-            {
-              title: t('field.subtotal'),
-              align: 'right', width: 110,
-              render: (_: unknown, r) => (lines[r.__idx]?.qty * lines[r.__idx]?.unit_price).toFixed(2),
-            },
-            {
-              title: t('field.tax_amount'),
-              width: 120,
-              render: (_: unknown, r) => (
-                <InputNumber
-                  min={0}
-                  value={lines[r.__idx]?.tax_amount}
-                  onChange={(v) => setLines((ls) => ls.map((x, i) => i === r.__idx ? { ...x, tax_amount: Number(v ?? 0) } : x))}
-                  style={{ width: '100%' }}
-                />
-              ),
-            },
-          ]}
-        />
+
+        {lines.length === 0 && !extracting && (
+          <Alert
+            type="info"
+            showIcon
+            message={t('invoice.upload_first_hint')}
+            style={{ marginBottom: 16 }}
+          />
+        )}
+
+        {lines.length > 0 && (
+          <Card size="small" title={t('invoice.match_to_po')} style={{ marginBottom: 0 }}>
+            <Table
+              rowKey={(_, i) => String(i)}
+              size="small"
+              pagination={false}
+              dataSource={lines.map((l, i) => ({ ...l, __idx: i }))}
+              columns={[
+                {
+                  title: t('invoice.match_po_item'),
+                  width: 220,
+                  render: (_: unknown, r) => (
+                    <Select
+                      size="small"
+                      allowClear
+                      style={{ width: '100%' }}
+                      value={lines[r.__idx]?.po_item_id}
+                      onChange={(v) => setLines((ls) => ls.map((x, i) => i === r.__idx ? { ...x, po_item_id: v ?? null } : x))}
+                      options={poItemOptions}
+                      placeholder={t('invoice.select_po_item')}
+                    />
+                  ),
+                },
+                { title: t('field.item_name'), dataIndex: 'item_name', ellipsis: true },
+                {
+                  title: t('field.qty'),
+                  width: 90,
+                  render: (_: unknown, r) => (
+                    <InputNumber
+                      size="small"
+                      min={0}
+                      value={lines[r.__idx]?.qty}
+                      onChange={(v) => setLines((ls) => ls.map((x, i) => i === r.__idx ? { ...x, qty: Number(v ?? 0) } : x))}
+                      style={{ width: '100%' }}
+                    />
+                  ),
+                },
+                {
+                  title: t('field.unit_price'),
+                  width: 110,
+                  render: (_: unknown, r) => (
+                    <InputNumber
+                      size="small"
+                      min={0}
+                      value={lines[r.__idx]?.unit_price}
+                      onChange={(v) => setLines((ls) => ls.map((x, i) => i === r.__idx ? { ...x, unit_price: Number(v ?? 0) } : x))}
+                      style={{ width: '100%' }}
+                    />
+                  ),
+                },
+                {
+                  title: t('field.subtotal'),
+                  align: 'right', width: 100,
+                  render: (_: unknown, r) => fmtAmount(String(lines[r.__idx]?.qty * lines[r.__idx]?.unit_price), po.currency),
+                },
+                {
+                  title: t('field.tax_amount'),
+                  width: 110,
+                  render: (_: unknown, r) => (
+                    <InputNumber
+                      size="small"
+                      min={0}
+                      value={lines[r.__idx]?.tax_amount}
+                      onChange={(v) => setLines((ls) => ls.map((x, i) => i === r.__idx ? { ...x, tax_amount: Number(v ?? 0) } : x))}
+                      style={{ width: '100%' }}
+                    />
+                  ),
+                },
+              ]}
+            />
+          </Card>
+        )}
       </Form>
     </Modal>
   )

@@ -1258,7 +1258,18 @@
   "invoice": {
     "attachments": "Invoice Attachments",
     "download_hint": "Download token is one-time. Reopen from list if needed.",
-    "due_date_hint": "Defaults to invoice date + 30 days"
+    "due_date_hint": "Defaults to invoice date + 30 days",
+    "ocr_result": "Invoice Recognition Result",
+    "seller_name": "Seller",
+    "subtotal_excl_tax": "Subtotal (excl. tax)",
+    "total_tax": "Total Tax",
+    "total_incl_tax": "Total (incl. tax)",
+    "tax_rate": "Tax Rate",
+    "match_to_po": "Match to PO Line Items",
+    "match_po_item": "Match PO Item",
+    "select_po_item": "Select PO item",
+    "upload_first_hint": "Upload an invoice file first — AI will auto-recognize and fill line items",
+    "no_lines": "At least one line with quantity is required"
   },
   "po": {
     "ai_source": "AI Source",
