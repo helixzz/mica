@@ -1083,26 +1083,27 @@ async def add_collaborator(db: AsyncSession, actor: User, pr_id: UUID, user_id: 
     )
     await db.commit()
 
+    try:
+        from app.models import NotificationCategory
+        from app.services.notifications import create_notification
 
-async def remove_collaborator(db: AsyncSession, actor: User, pr_id: UUID, user_id: UUID) -> None:
-    from app.models import pr_collaborators
-
-    pr = await get_pr(db, actor, pr_id)
-    if pr.requester_id != actor.id and actor.role not in {
-        UserRole.ADMIN.value,
-        UserRole.PROCUREMENT_MGR.value,
-        UserRole.IT_BUYER.value,
-        UserRole.DEPT_MANAGER.value,
-    }:
-        raise HTTPException(403, "pr.only_requester_can_remove_collaborator")
-
-    await db.execute(
-        pr_collaborators.delete().where(
-            pr_collaborators.c.pr_id == pr_id,
-            pr_collaborators.c.user_id == user_id,
+        await create_notification(
+            db,
+            user_id=user_id,
+            category=NotificationCategory.SYSTEM,
+            title=f"您已被添加为 {pr.pr_number} 的协作者",
+            body=(
+                f"**PR**: {pr.pr_number}\n"
+                f"**标题**: {pr.title}\n"
+                f"**添加人**: {actor.display_name}"
+            ),
+            link_url=f"/purchase-requisitions/{pr.id}",
+            biz_type="pr",
+            biz_id=pr.id,
         )
-    )
-    await db.commit()
+        await db.commit()
+    except Exception:
+        logger.warning("Failed to send collaborator notification for pr=%s", pr_id, exc_info=True)
 
 
 async def remove_collaborator(db: AsyncSession, actor: User, pr_id: UUID, user_id: UUID) -> None:

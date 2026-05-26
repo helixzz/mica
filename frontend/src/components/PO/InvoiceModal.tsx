@@ -128,7 +128,7 @@ export function InvoiceModal({ open, po, onClose, onDone, busy, setBusy }: Invoi
         item_name: line.item_name || poItem.item_name,
         unit_price: line.unit_price || Number(poItem.unit_price),
         qty: line.qty || remaining,
-        tax_amount: line.tax_amount || Number((remaining * Number(poItem.unit_price) * 0.13).toFixed(2)),
+        tax_amount: line.tax_amount,
       }
     }))
   }
