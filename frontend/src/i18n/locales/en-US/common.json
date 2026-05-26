@@ -743,7 +743,7 @@
     "confirm_delete_title": "Confirm Delete PR",
     "confirm_delete_body": "This action cannot be undone. Delete this PR?",
     "collaborators": "Collaborators",
-    "collaborator_email_placeholder": "Enter email or name",
+    "collaborator_search_placeholder": "Search name or email to add",
     "collaborator_not_found": "User not found",
     "collaborator_added": "Collaborator added",
     "no_collaborators": "No collaborators yet"

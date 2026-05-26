@@ -2,8 +2,8 @@ import {
   Button,
   Card,
   Descriptions,
-  Input,
   Modal,
+  Select,
   Space,
   Table,
   Tabs,
@@ -68,7 +68,6 @@ export function PRDetailPage() {
       supplier_name: string | null
     }[]
   }>({ purchase_orders: [], contracts: [] })
-  const [collabEmail, setCollabEmail] = useState('')
   const [allUsers, setAllUsers] = useState<{ id: string; display_name: string; email: string }[]>([])
 
   const load = async () => {
@@ -334,35 +333,31 @@ export function PRDetailPage() {
             title={t('pr.collaborators', '协作者')}
             extra={
               pr.requester_id === user?.id && (
-                <Space.Compact size="small">
-                  <Input
-                    placeholder={t('pr.collaborator_email_placeholder', '输入邮箱或姓名')}
-                    value={collabEmail}
-                    onChange={(e) => setCollabEmail(e.target.value)}
-                    style={{ width: 180 }}
-                  />
-                  <Button
-                    icon={<UserAddOutlined />}
-                    onClick={async () => {
-                      if (!collabEmail.trim()) return
-                      const match = allUsers.find(
-                        (u) => u.email === collabEmail.trim() || u.display_name === collabEmail.trim()
-                      )
-                      if (!match) {
-                        message.warning(t('pr.collaborator_not_found', '未找到该用户'))
-                        return
-                      }
-                      try {
-                        await api.addCollaborator(pr.id, match.id)
-                        setCollabEmail('')
-                        await load()
-                        message.success(t('pr.collaborator_added', '已添加'))
-                      } catch (e) {
-                        message.error(extractError(e).detail)
-                      }
-                    }}
-                  />
-                </Space.Compact>
+                <Select
+                  size="small"
+                  showSearch
+                  allowClear
+                  placeholder={t('pr.collaborator_search_placeholder', '搜索姓名或邮箱添加')}
+                  style={{ width: 200 }}
+                  optionFilterProp="label"
+                  value={undefined}
+                  options={allUsers
+                    .filter((u) => u.id !== pr.requester_id && !pr.collaborators.some((c) => c.id === u.id))
+                    .map((u) => ({ value: u.id, label: `${u.display_name} (${u.email})` }))}
+                  onSelect={async (userId) => {
+                    if (!userId) return
+                    try {
+                      await api.addCollaborator(pr.id, userId as string)
+                      await load()
+                      message.success(t('pr.collaborator_added', '已添加'))
+                    } catch (e) {
+                      message.error(extractError(e).detail)
+                    }
+                  }}
+                  suffixIcon={<UserAddOutlined />}
+                  popupMatchSelectWidth={false}
+                  notFoundContent={t('pr.collaborator_not_found', '未找到该用户')}
+                />
               )
             }
           >

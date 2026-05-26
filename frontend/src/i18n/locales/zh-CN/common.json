@@ -755,7 +755,7 @@
     "confirm_delete_title": "确认删除采购申请",
     "confirm_delete_body": "删除后将无法恢复，确认删除此采购申请？",
     "collaborators": "协作者",
-    "collaborator_email_placeholder": "输入邮箱或姓名",
+    "collaborator_search_placeholder": "搜索姓名或邮箱添加",
     "collaborator_not_found": "未找到该用户",
     "collaborator_added": "已添加协作者",
     "no_collaborators": "暂无协作者"
