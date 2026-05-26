@@ -118,6 +118,54 @@ async def _call_litellm_stream(
             yield chunk
 
 
+async def _call_litellm_vision(
+    model: AIModel,
+    prompt: str,
+    image_data_url: str,
+    temperature: float,
+    max_tokens: int,
+) -> AsyncGenerator[str, None]:
+    try:
+        from litellm import acompletion
+    except ImportError:
+        async for chunk in _mock_stream(
+            "[AI unavailable: litellm not installed. Please install litellm.] "
+        ):
+            yield chunk
+        return
+
+    api_key = decrypt(model.api_key_encrypted) if model.api_key_encrypted else None
+    kwargs: dict[str, Any] = {
+        "model": resolve_litellm_model(model.provider, model.model_string),
+        "messages": [
+            {
+                "role": "user",
+                "content": [
+                    {"type": "text", "text": prompt},
+                    {"type": "image_url", "image_url": {"url": image_data_url}},
+                ],
+            }
+        ],
+        "stream": True,
+        "temperature": temperature,
+        "max_tokens": max_tokens,
+    }
+    if api_key:
+        kwargs["api_key"] = api_key
+    if model.api_base:
+        kwargs["api_base"] = model.api_base
+
+    try:
+        response = await acompletion(**kwargs)
+        async for chunk in response:
+            delta = chunk.choices[0].delta
+            if delta and delta.content:
+                yield delta.content
+    except Exception as e:
+        async for chunk in _mock_stream(f"[AI error: {e}] "):
+            yield chunk
+
+
 def render_prompt(template_key: str, **kwargs) -> str:
     tpl = PROMPT_TEMPLATES.get(template_key)
     if tpl is None:

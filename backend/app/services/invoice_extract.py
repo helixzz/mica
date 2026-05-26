@@ -20,7 +20,7 @@ from typing import Any
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.models import AICallLog, User
-from app.services.ai import _call_litellm_stream, _get_routing
+from app.services.ai import _call_litellm_vision, _get_routing
 
 
 class ExtractSource(StrEnum):
@@ -266,7 +266,7 @@ async def _extract_pdf(db: AsyncSession, actor: User, pdf_bytes: bytes) -> Invoi
     text = _pdf_text(pdf_bytes)
     if text and len(text) > 100:
         result = _regex_extract(text, ExtractSource.PDF_TEXT)
-        if result.invoice_number or result.total_amount:
+        if result.invoice_number and result.total_amount and result.confidence >= 0.5:
             return result
 
     return await _extract_via_vision_from_pdf(db, actor, pdf_bytes)
@@ -346,11 +346,15 @@ async def _extract_via_vision(
     import json
 
     img_b64 = base64.b64encode(img_bytes).decode()
-    _ = f"data:{content_type};base64,{img_b64}"
+    image_data_url = f"data:{content_type};base64,{img_b64}"
     raw = ""
     try:
-        async for chunk in _call_litellm_stream(
-            model, _VISION_PROMPT, float(routing.temperature), int(routing.max_tokens)
+        async for chunk in _call_litellm_vision(
+            model,
+            _VISION_PROMPT,
+            image_data_url,
+            float(routing.temperature),
+            int(routing.max_tokens),
         ):
             raw += chunk
     except Exception as e:
