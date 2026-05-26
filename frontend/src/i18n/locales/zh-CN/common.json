@@ -1280,8 +1280,9 @@
     "match_to_po": "核销匹配 — 关联到 PO 明细行",
     "match_po_item": "匹配 PO 行项",
     "select_po_item": "选择 PO 物料",
-    "upload_first_hint": "请先上传发票文件，AI 将自动识别并填充明细行",
-    "no_lines": "至少需要一条有数量的发票行"
+    "upload_first_hint": "请先上传发票文件，AI 将自动识别并填充明细行。也可手动添加。",
+    "no_lines": "至少需要一条有数量的发票行",
+    "add_line": "添加行"
   },
   "po": {
     "ai_source": "AI 来源",

@@ -1268,8 +1268,9 @@
     "match_to_po": "Match to PO Line Items",
     "match_po_item": "Match PO Item",
     "select_po_item": "Select PO item",
-    "upload_first_hint": "Upload an invoice file first — AI will auto-recognize and fill line items",
-    "no_lines": "At least one line with quantity is required"
+    "upload_first_hint": "Upload an invoice file first — AI will auto-recognize and fill line items. Or add manually.",
+    "no_lines": "At least one line with quantity is required",
+    "add_line": "Add Line"
   },
   "po": {
     "ai_source": "AI Source",

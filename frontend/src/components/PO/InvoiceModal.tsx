@@ -83,14 +83,7 @@ export function InvoiceModal({ open, po, onClose, onDone, busy, setBusy }: Invoi
 
   const autoMatchLines = (ocr: InvoiceExtractResult) => {
     if (!ocr.lines || ocr.lines.length === 0) {
-      setLines(po.items.map((i) => ({
-        po_item_id: i.id as string | null,
-        line_type: 'product' as const,
-        item_name: i.item_name,
-        qty: Math.max(0, Number(i.qty) - Number(i.qty_invoiced || 0)),
-        unit_price: Number(i.unit_price),
-        tax_amount: 0,
-      })))
+      setLines([])
       return
     }
 
@@ -110,6 +103,21 @@ export function InvoiceModal({ open, po, onClose, onDone, busy, setBusy }: Invoi
       }
     })
     setLines(matched)
+  }
+
+  const addLine = () => {
+    setLines((ls) => [...ls, {
+      po_item_id: null,
+      line_type: 'product',
+      item_name: '',
+      qty: 0,
+      unit_price: 0,
+      tax_amount: 0,
+    }])
+  }
+
+  const removeLine = (idx: number) => {
+    setLines((ls) => ls.filter((_, i) => i !== idx))
   }
 
   const handleUpload = async (file: File) => {
@@ -323,16 +331,24 @@ export function InvoiceModal({ open, po, onClose, onDone, busy, setBusy }: Invoi
         </Row>
 
         {lines.length === 0 && !extracting && (
-          <Alert
-            type="info"
-            showIcon
-            message={t('invoice.upload_first_hint')}
-            style={{ marginBottom: 16 }}
-          />
+          <Card size="small" title={t('invoice.match_to_po')} style={{ marginBottom: 0 }}>
+            <Alert
+              type="info"
+              showIcon
+              message={t('invoice.upload_first_hint')}
+              style={{ marginBottom: 12 }}
+            />
+            <Button size="small" onClick={addLine}>{t('invoice.add_line')}</Button>
+          </Card>
         )}
 
         {lines.length > 0 && (
-          <Card size="small" title={t('invoice.match_to_po')} style={{ marginBottom: 0 }}>
+          <Card
+            size="small"
+            title={t('invoice.match_to_po')}
+            extra={<Button size="small" onClick={addLine}>{t('invoice.add_line')}</Button>}
+            style={{ marginBottom: 0 }}
+          >
             <Table
               rowKey={(_, i) => String(i)}
               size="small"
@@ -345,16 +361,29 @@ export function InvoiceModal({ open, po, onClose, onDone, busy, setBusy }: Invoi
                   render: (_: unknown, r) => (
                     <Select
                       size="small"
+                      showSearch
                       allowClear
+                      optionFilterProp="label"
                       style={{ width: '100%' }}
                       value={lines[r.__idx]?.po_item_id}
                       onChange={(v) => setLines((ls) => ls.map((x, i) => i === r.__idx ? { ...x, po_item_id: v ?? null } : x))}
                       options={poItemOptions}
                       placeholder={t('invoice.select_po_item')}
+                      popupMatchSelectWidth={false}
                     />
                   ),
                 },
-                { title: t('field.item_name'), dataIndex: 'item_name', ellipsis: true },
+                {
+                  title: t('field.item_name'),
+                  ellipsis: true,
+                  render: (_: unknown, r) => (
+                    <Input
+                      size="small"
+                      value={lines[r.__idx]?.item_name}
+                      onChange={(e) => setLines((ls) => ls.map((x, i) => i === r.__idx ? { ...x, item_name: e.target.value } : x))}
+                    />
+                  ),
+                },
                 {
                   title: t('field.qty'),
                   width: 90,
@@ -397,6 +426,13 @@ export function InvoiceModal({ open, po, onClose, onDone, busy, setBusy }: Invoi
                       onChange={(v) => setLines((ls) => ls.map((x, i) => i === r.__idx ? { ...x, tax_amount: Number(v ?? 0) } : x))}
                       style={{ width: '100%' }}
                     />
+                  ),
+                },
+                {
+                  title: '',
+                  width: 40,
+                  render: (_: unknown, r) => (
+                    <Button size="small" type="text" danger onClick={() => removeLine(r.__idx)}>×</Button>
                   ),
                 },
               ]}
