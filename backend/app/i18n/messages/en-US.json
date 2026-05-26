@@ -376,7 +376,8 @@
   "invoice": {
     "not_found": "Invoice not found",
     "attachment_document_not_found": "Attachment document not found",
-    "attachments_required": "Attachments required"
+    "attachments_required": "Attachments required",
+    "number_duplicate": "This supplier already has an invoice with the same number"
   },
   "user": {
     "not_found": "User not found",

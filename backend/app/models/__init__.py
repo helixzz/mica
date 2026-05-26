@@ -880,6 +880,10 @@ class Invoice(Base, TimestampMixin):
         back_populates="invoice", cascade="all, delete-orphan"
     )
 
+    __table_args__ = (
+        UniqueConstraint("supplier_id", "invoice_number", name="uq_invoices_supplier_number"),
+    )
+
 
 class Document(Base):
     __tablename__ = "documents"

@@ -376,7 +376,8 @@
   "invoice": {
     "not_found": "发票不存在",
     "attachment_document_not_found": "附件文档不存在",
-    "attachments_required": "需要上传附件"
+    "attachments_required": "需要上传附件",
+    "number_duplicate": "该供应商已有相同发票号码"
   },
   "user": {
     "not_found": "用户不存在",

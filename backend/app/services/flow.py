@@ -1568,6 +1568,17 @@ async def create_invoice(
     if supplier is None:
         raise HTTPException(404, "supplier.not_found")
 
+    existing = (
+        await db.execute(
+            select(Invoice.id).where(
+                Invoice.supplier_id == supplier_id,
+                Invoice.invoice_number == invoice_number.strip(),
+            )
+        )
+    ).scalar_one_or_none()
+    if existing is not None:
+        raise HTTPException(409, "invoice.number_duplicate")
+
     from app.services.system_params import system_params
 
     now = datetime.now(UTC)
@@ -1935,9 +1946,16 @@ async def delete_invoice(db: AsyncSession, actor: User, invoice_id: UUID) -> Non
     inv = await db.get(Invoice, invoice_id)
     if inv is None:
         raise HTTPException(404, "invoice.not_found")
-    await _audit_write(db, actor, "invoice.deleted", "invoice", str(invoice_id), {
-        "invoice_number": inv.invoice_number,
-        "total_amount": str(inv.total_amount),
-    })
+    await _audit_write(
+        db,
+        actor,
+        "invoice.deleted",
+        "invoice",
+        str(invoice_id),
+        {
+            "invoice_number": inv.invoice_number,
+            "total_amount": str(inv.total_amount),
+        },
+    )
     await db.delete(inv)
     await db.commit()

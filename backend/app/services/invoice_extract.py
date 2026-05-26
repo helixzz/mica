@@ -263,28 +263,7 @@ async def _extract_pdf(db: AsyncSession, actor: User, pdf_bytes: bytes) -> Invoi
     except Exception:
         pass
 
-    text = _pdf_text(pdf_bytes)
-    if text and len(text) > 100:
-        result = _regex_extract(text, ExtractSource.PDF_TEXT)
-        if result.invoice_number and result.total_amount and result.confidence >= 0.5:
-            return result
-
     return await _extract_via_vision_from_pdf(db, actor, pdf_bytes)
-
-
-def _pdf_text(pdf_bytes: bytes) -> str:
-    try:
-        import pdfplumber
-
-        texts: list[str] = []
-        with pdfplumber.open(io.BytesIO(pdf_bytes)) as pdf:
-            for page in pdf.pages:
-                t = page.extract_text(x_tolerance=3, y_tolerance=3)
-                if t:
-                    texts.append(t)
-        return "\n".join(texts)
-    except Exception:
-        return ""
 
 
 def _regex_extract(text: str, source: ExtractSource) -> InvoiceExtract:

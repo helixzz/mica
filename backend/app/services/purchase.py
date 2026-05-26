@@ -1093,9 +1093,7 @@ async def add_collaborator(db: AsyncSession, actor: User, pr_id: UUID, user_id: 
             category=NotificationCategory.SYSTEM,
             title=f"您已被添加为 {pr.pr_number} 的协作者",
             body=(
-                f"**PR**: {pr.pr_number}\n"
-                f"**标题**: {pr.title}\n"
-                f"**添加人**: {actor.display_name}"
+                f"**PR**: {pr.pr_number}\n**标题**: {pr.title}\n**添加人**: {actor.display_name}"
             ),
             link_url=f"/purchase-requisitions/{pr.id}",
             biz_type="pr",
