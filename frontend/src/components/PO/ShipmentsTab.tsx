@@ -1,8 +1,9 @@
-import { PlusOutlined } from '@ant-design/icons'
-import { Button, Table, Tag } from 'antd'
+import { PaperClipOutlined, PlusOutlined } from '@ant-design/icons'
+import { Button, Space, Table, Tag, Typography } from 'antd'
+import { useEffect, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 
-import { type Shipment } from '@/api'
+import { api, type Shipment } from '@/api'
 import { ShipmentActions } from '@/components/ShipmentActions'
 import { fmtAmount, fmtQty } from '@/utils/format'
 
@@ -13,8 +14,33 @@ interface ShipmentsTabProps {
   onRecordShipment: () => void
 }
 
+interface AttachmentInfo {
+  document_id: string
+  original_filename: string
+  file_size: number
+}
+
 export function ShipmentsTab({ shipments, currency, loadAll, onRecordShipment }: ShipmentsTabProps) {
   const { t } = useTranslation()
+  const [attachMap, setAttachMap] = useState<Record<string, AttachmentInfo[]>>({})
+
+  useEffect(() => {
+    const fetchAttachments = async () => {
+      const map: Record<string, AttachmentInfo[]> = {}
+      await Promise.all(
+        shipments.map(async (s) => {
+          try {
+            const docs = await api.listShipmentAttachments(s.id)
+            map[s.id] = docs as AttachmentInfo[]
+          } catch {
+            map[s.id] = []
+          }
+        })
+      )
+      setAttachMap(map)
+    }
+    if (shipments.length > 0) void fetchAttachments()
+  }, [shipments])
 
   return (
     <>
@@ -28,7 +54,34 @@ export function ShipmentsTab({ shipments, currency, loadAll, onRecordShipment }:
         dataSource={shipments}
         pagination={false}
         columns={[
-          { title: t('field.shipment_number'), dataIndex: 'shipment_number' },
+          {
+            title: t('field.shipment_number'),
+            dataIndex: 'shipment_number',
+            render: (val: string, r) => {
+              const files = attachMap[r.id] || []
+              return (
+                <div>
+                  <div>{val}</div>
+                  {files.length > 0 && (
+                    <Space size={4} wrap style={{ marginTop: 4 }}>
+                      {files.map((f) => (
+                        <Tag
+                          key={f.document_id}
+                          icon={<PaperClipOutlined />}
+                          color="default"
+                          style={{ fontSize: 11, lineHeight: '18px', margin: 0 }}
+                        >
+                          {f.original_filename.length > 20
+                            ? `${f.original_filename.slice(0, 18)}…`
+                            : f.original_filename}
+                        </Tag>
+                      ))}
+                    </Space>
+                  )}
+                </div>
+              )
+            },
+          },
           { title: t('field.status'), dataIndex: 'status',
             render: (s: string) => <Tag>{t(`status.${s}` as 'status.pending')}</Tag> },
           { title: t('field.carrier'), dataIndex: 'carrier' },

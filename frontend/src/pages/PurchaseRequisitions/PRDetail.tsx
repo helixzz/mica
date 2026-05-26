@@ -332,7 +332,7 @@ export function PRDetailPage() {
             size="small"
             title={t('pr.collaborators', '协作者')}
             extra={
-              pr.requester_id === user?.id && (
+              (pr.requester_id === user?.id || user?.role === 'admin' || user?.role === 'dept_manager') && (
                 <Select
                   size="small"
                   showSearch
@@ -366,7 +366,7 @@ export function PRDetailPage() {
                 {pr.collaborators.map((c) => (
                   <Tag
                     key={c.id}
-                    closable={pr.requester_id === user?.id}
+                    closable={pr.requester_id === user?.id || user?.role === 'admin' || user?.role === 'dept_manager'}
                     onClose={async (e) => {
                       e.preventDefault()
                       try {

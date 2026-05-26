@@ -942,6 +942,7 @@ class DownloadTokenOut(BaseModel):
 class InvoiceExtractLine(BaseModel):
     item_name: str | None = None
     spec: str | None = None
+    unit: str | None = None
     qty: str | None = None
     unit_price: str | None = None
     tax_rate: str | None = None

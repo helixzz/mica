@@ -1270,7 +1270,8 @@
     "select_po_item": "Select PO item",
     "upload_first_hint": "Upload an invoice file first — AI will auto-recognize and fill line items. Or add manually.",
     "no_lines": "At least one line with quantity is required",
-    "add_line": "Add Line"
+    "add_line": "Add Line",
+    "remaining": "Remaining"
   },
   "po": {
     "ai_source": "AI Source",

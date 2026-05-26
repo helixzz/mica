@@ -36,6 +36,7 @@ class ExtractSource(StrEnum):
 class InvoiceLineExtract:
     item_name: str | None = None
     spec: str | None = None
+    unit: str | None = None
     qty: str | None = None
     unit_price: str | None = None
     tax_rate: str | None = None
@@ -62,20 +63,44 @@ class InvoiceExtract:
     error: str | None = None
 
 
-_VISION_PROMPT = """你是中国增值税发票信息提取专家。请从图片中提取发票字段，严格按 JSON 返回，不要输出任何其他内容。
+_VISION_PROMPT = """你是中国增值税发票信息提取专家。请从图片中提取所有发票字段，严格按 JSON 返回，不要输出任何其他内容。
 
-关键规则：
-- subtotal = 合计金额（不含税），对应发票上"金额"列合计行
-- tax_amount = 合计税额，对应发票上"税额"列合计行
-- total_amount = 价税合计（含税），对应发票上"价税合计"行（小写金额）
-- 三者必须满足：total_amount = subtotal + tax_amount（如果不满足，说明你的识别有误，请重新核对）
-- 金额字段只保留数字和小数点，不含千分位逗号或货币符号
-- 开票日期统一转为 YYYY-MM-DD
-- 不存在或无法识别的字段填 null，严禁编造
-- confidence 为 0.0-1.0，表示你对识别结果的整体确信程度。仅当所有关键字段（发票号码、金额、日期）清晰可读时才给 0.9+
+## 头部字段规则
+- invoice_number: 发票号码（8-20 位数字）
+- invoice_code: 发票代码（10-12 位数字），全电发票可能无此字段
+- invoice_date: 开票日期，统一转为 YYYY-MM-DD
+- seller_name: 销售方名称
+- seller_tax_id: 销售方纳税人识别号（15-20 位）
+- buyer_name: 购买方名称
+- buyer_tax_id: 购买方纳税人识别号
+- subtotal: 合计金额（不含税），对应"金额"列合计行，只保留数字和小数点
+- tax_amount: 合计税额，对应"税额"列合计行
+- total_amount: 价税合计（含税），对应"价税合计"行小写金额
+- 校验：total_amount = subtotal + tax_amount（如不满足请重新核对）
 
-JSON 格式：
-{"invoice_number":"string|null","invoice_code":"string|null","invoice_date":"YYYY-MM-DD|null","seller_name":"string|null","seller_tax_id":"string|null","buyer_name":"string|null","buyer_tax_id":"string|null","subtotal":"不含税合计金额|null","tax_amount":"合计税额|null","total_amount":"价税合计（含税）|null","currency":"CNY","lines":[{"item_name":"string","spec":"string|null","qty":"string|null","unit_price":"string|null","tax_rate":"string|null","tax_amount":"string|null","subtotal":"string|null"}],"confidence":0.0}
+## 行项明细规则（最重要！）
+发票中间的表格区域包含货物/服务明细行。每一行包括：
+- item_name: 货物或应税劳务、服务名称（含分类简称前缀如 *电子产品*）
+- spec: 规格型号（可能为空）
+- unit: 单位（个/台/条/片/EA 等，可能为空）
+- qty: 数量（纯数字，可能为空如服务类）
+- unit_price: 单价（不含税单价，纯数字小数）
+- subtotal: 金额（该行不含税金额 = qty × unit_price）
+- tax_rate: 税率（如 13%、9%、6%，保留百分号）
+- tax_amount: 税额（该行税额 = subtotal × tax_rate）
+
+关键注意：
+1. 必须提取**所有**行项，不要遗漏。仔细查看表格区域每一行
+2. 如果某行跨多行显示（如名称很长换行了），仍算一条记录
+3. 折扣行：如果有"折扣"或负数金额行，也提取出来（subtotal 为负数）
+4. "*电子产品*""*信息技术服务*"等分类简称是 item_name 的一部分，保留
+5. 金额字段只保留数字、小数点和负号，不含逗号、¥、￥
+
+## 置信度
+confidence 为 0.0-1.0。所有关键字段（发票号、金额、行项）清晰可读给 0.9+；部分模糊给 0.6-0.8；大量不确定给 0.3-0.5
+
+## 输出格式
+{"invoice_number":"string|null","invoice_code":"string|null","invoice_date":"YYYY-MM-DD|null","seller_name":"string|null","seller_tax_id":"string|null","buyer_name":"string|null","buyer_tax_id":"string|null","subtotal":"string|null","tax_amount":"string|null","total_amount":"string|null","currency":"CNY","lines":[{"item_name":"string","spec":"string|null","unit":"string|null","qty":"string|null","unit_price":"string|null","subtotal":"string|null","tax_rate":"string|null","tax_amount":"string|null"}],"confidence":0.0}
 
 直接输出 JSON，不要 markdown 代码块。"""
 

@@ -728,6 +728,7 @@ export interface InvoiceExtractResult {
   lines: {
     item_name: string | null
     spec: string | null
+    unit: string | null
     qty: string | null
     unit_price: string | null
     tax_rate: string | null

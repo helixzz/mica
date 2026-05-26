@@ -1059,6 +1059,7 @@ async def add_collaborator(db: AsyncSession, actor: User, pr_id: UUID, user_id: 
         UserRole.ADMIN.value,
         UserRole.PROCUREMENT_MGR.value,
         UserRole.IT_BUYER.value,
+        UserRole.DEPT_MANAGER.value,
     }:
         raise HTTPException(403, "pr.only_requester_can_add_collaborator")
 
@@ -1091,6 +1092,28 @@ async def remove_collaborator(db: AsyncSession, actor: User, pr_id: UUID, user_i
         UserRole.ADMIN.value,
         UserRole.PROCUREMENT_MGR.value,
         UserRole.IT_BUYER.value,
+        UserRole.DEPT_MANAGER.value,
+    }:
+        raise HTTPException(403, "pr.only_requester_can_remove_collaborator")
+
+    await db.execute(
+        pr_collaborators.delete().where(
+            pr_collaborators.c.pr_id == pr_id,
+            pr_collaborators.c.user_id == user_id,
+        )
+    )
+    await db.commit()
+
+
+async def remove_collaborator(db: AsyncSession, actor: User, pr_id: UUID, user_id: UUID) -> None:
+    from app.models import pr_collaborators
+
+    pr = await get_pr(db, actor, pr_id)
+    if pr.requester_id != actor.id and actor.role not in {
+        UserRole.ADMIN.value,
+        UserRole.PROCUREMENT_MGR.value,
+        UserRole.IT_BUYER.value,
+        UserRole.DEPT_MANAGER.value,
     }:
         raise HTTPException(403, "pr.only_requester_can_remove_collaborator")
 

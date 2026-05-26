@@ -88,11 +88,7 @@ export function InvoiceModal({ open, po, onClose, onDone, busy, setBusy }: Invoi
     }
 
     const matched: InvoiceLine[] = ocr.lines.map((ocrLine) => {
-      const bestMatch = po.items.find((pi) =>
-        ocrLine.item_name && pi.item_name.includes(ocrLine.item_name.slice(0, 6))
-      ) || po.items.find((pi) =>
-        ocrLine.item_name && ocrLine.item_name.includes(pi.item_name.slice(0, 6))
-      )
+      const bestMatch = findBestPoMatch(ocrLine)
       return {
         po_item_id: bestMatch?.id ?? null,
         line_type: 'product' as const,
@@ -103,6 +99,38 @@ export function InvoiceModal({ open, po, onClose, onDone, busy, setBusy }: Invoi
       }
     })
     setLines(matched)
+  }
+
+  const findBestPoMatch = (ocrLine: InvoiceExtractResult['lines'][0]) => {
+    if (!ocrLine.item_name) return null
+    const name = ocrLine.item_name.replace(/^\*[^*]+\*/, '').trim()
+    const byName = po.items.find((pi) => pi.item_name.includes(name.slice(0, 6)))
+      || po.items.find((pi) => name.includes(pi.item_name.slice(0, 6)))
+    if (byName) return byName
+    if (ocrLine.unit_price) {
+      const price = Number(ocrLine.unit_price)
+      const byPrice = po.items.find((pi) => Math.abs(Number(pi.unit_price) - price) / price < 0.01)
+      if (byPrice) return byPrice
+    }
+    return null
+  }
+
+  const handlePoItemSelect = (idx: number, poItemId: string | null) => {
+    setLines((ls) => ls.map((line, i) => {
+      if (i !== idx) return line
+      if (!poItemId) return { ...line, po_item_id: null }
+      const poItem = po.items.find((pi) => pi.id === poItemId)
+      if (!poItem) return { ...line, po_item_id: poItemId }
+      const remaining = Math.max(0, Number(poItem.qty) - Number(poItem.qty_invoiced || 0))
+      return {
+        ...line,
+        po_item_id: poItemId,
+        item_name: line.item_name || poItem.item_name,
+        unit_price: line.unit_price || Number(poItem.unit_price),
+        qty: line.qty || remaining,
+        tax_amount: line.tax_amount || Number((remaining * Number(poItem.unit_price) * 0.13).toFixed(2)),
+      }
+    }))
   }
 
   const addLine = () => {
@@ -198,10 +226,13 @@ export function InvoiceModal({ open, po, onClose, onDone, busy, setBusy }: Invoi
     }
   }
 
-  const poItemOptions = po.items.map((i) => ({
-    value: i.id,
-    label: `${i.item_name} (${t('field.qty')}: ${i.qty})`,
-  }))
+  const poItemOptions = po.items.map((i) => {
+    const remaining = Math.max(0, Number(i.qty) - Number(i.qty_invoiced || 0))
+    return {
+      value: i.id,
+      label: `${i.item_name} (${t('invoice.remaining')}: ${remaining})`,
+    }
+  })
 
   return (
     <Modal title={t('button.record_invoice')} open={open} onCancel={onClose} onOk={submit} confirmLoading={busy} width={1060}>
@@ -296,11 +327,12 @@ export function InvoiceModal({ open, po, onClose, onDone, busy, setBusy }: Invoi
                 columns={[
                   { title: t('field.item_name'), dataIndex: 'item_name', ellipsis: true },
                   { title: t('field.spec'), dataIndex: 'spec', width: 100, ellipsis: true },
-                  { title: t('field.qty'), dataIndex: 'qty', width: 70, align: 'right' },
+                  { title: t('field.uom'), dataIndex: 'unit', width: 50 },
+                  { title: t('field.qty'), dataIndex: 'qty', width: 60, align: 'right' },
                   { title: t('field.unit_price'), dataIndex: 'unit_price', width: 100, align: 'right' },
-                  { title: t('invoice.tax_rate'), dataIndex: 'tax_rate', width: 70, align: 'right' },
-                  { title: t('field.tax_amount'), dataIndex: 'tax_amount', width: 100, align: 'right' },
                   { title: t('field.subtotal'), dataIndex: 'subtotal', width: 100, align: 'right' },
+                  { title: t('invoice.tax_rate'), dataIndex: 'tax_rate', width: 60, align: 'right' },
+                  { title: t('field.tax_amount'), dataIndex: 'tax_amount', width: 100, align: 'right' },
                 ]}
               />
             )}
@@ -366,7 +398,7 @@ export function InvoiceModal({ open, po, onClose, onDone, busy, setBusy }: Invoi
                       optionFilterProp="label"
                       style={{ width: '100%' }}
                       value={lines[r.__idx]?.po_item_id}
-                      onChange={(v) => setLines((ls) => ls.map((x, i) => i === r.__idx ? { ...x, po_item_id: v ?? null } : x))}
+                      onChange={(v) => handlePoItemSelect(r.__idx, v ?? null)}
                       options={poItemOptions}
                       placeholder={t('invoice.select_po_item')}
                       popupMatchSelectWidth={false}
