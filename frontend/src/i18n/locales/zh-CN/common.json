@@ -1283,7 +1283,10 @@
     "upload_first_hint": "请先上传发票文件，AI 将自动识别并填充明细行。也可手动添加。",
     "no_lines": "至少需要一条有数量的发票行",
     "add_line": "添加行",
-    "remaining": "待开票"
+    "remaining": "待开票",
+    "confirm_delete_title": "确认删除发票",
+    "confirm_delete_body": "确认删除发票 {{number}}（金额 {{amount}}）？此操作不可撤销。",
+    "deleted": "发票已删除"
   },
   "po": {
     "ai_source": "AI 来源",

@@ -114,6 +114,7 @@ children: (
             <InvoicesTab
               invoices={invoices}
               onRecordInvoice={() => setInvoiceOpen(true)}
+              onChanged={() => void loadAll()}
             />
           ),
         },

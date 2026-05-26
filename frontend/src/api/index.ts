@@ -1438,6 +1438,9 @@ export const api = {
     const { data } = await client.post<InvoiceCreateResponse>('/invoices', payload)
     return data
   },
+  async deleteInvoice(invoiceId: string): Promise<void> {
+    await client.delete(`/invoices/${invoiceId}`)
+  },
   async myPendingApprovals(): Promise<ApprovalTask[]> {
     const { data } = await client.get<ApprovalTask[]>('/approval/pending')
     return data

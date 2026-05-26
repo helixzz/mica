@@ -1,17 +1,41 @@
-import { PlusOutlined } from '@ant-design/icons'
-import { Button, Table, Tag } from 'antd'
+import { DeleteOutlined, PlusOutlined } from '@ant-design/icons'
+import { Button, Modal, Table, Tag, message } from 'antd'
 import { useTranslation } from 'react-i18next'
 
-import { type InvoiceListRow } from '@/api'
+import { api, type InvoiceListRow } from '@/api'
 import { fmtAmount } from '@/utils/format'
 
 interface InvoicesTabProps {
   invoices: InvoiceListRow[]
   onRecordInvoice: () => void
+  onChanged?: () => void
 }
 
-export function InvoicesTab({ invoices, onRecordInvoice }: InvoicesTabProps) {
+export function InvoicesTab({ invoices, onRecordInvoice, onChanged }: InvoicesTabProps) {
   const { t } = useTranslation()
+
+  const handleDelete = (inv: InvoiceListRow) => {
+    Modal.confirm({
+      title: t('invoice.confirm_delete_title', '确认删除发票'),
+      content: t('invoice.confirm_delete_body', {
+        number: inv.invoice_number,
+        amount: inv.total_amount,
+        defaultValue: `确认删除发票 ${inv.invoice_number}（金额 ${inv.total_amount}）？此操作不可撤销。`,
+      }),
+      okText: t('button.delete', '删除'),
+      okType: 'danger',
+      cancelText: t('button.cancel', '取消'),
+      onOk: async () => {
+        try {
+          await api.deleteInvoice(inv.id)
+          message.success(t('invoice.deleted', '发票已删除'))
+          onChanged?.()
+        } catch {
+          message.error(t('admin.operation_failed', '操作失败'))
+        }
+      },
+    })
+  }
 
   return (
     <>
@@ -33,6 +57,20 @@ export function InvoicesTab({ invoices, onRecordInvoice }: InvoicesTabProps) {
           { title: t('field.total_amount'), dataIndex: 'total_amount', align: 'right', render: (v: string, r: InvoiceListRow) => fmtAmount(v, r.currency) },
           { title: t('field.status'), dataIndex: 'status',
             render: (s: string) => <Tag>{t(`status.${s}` as 'status.draft')}</Tag> },
+          {
+            title: '',
+            width: 50,
+            render: (_: unknown, r: InvoiceListRow) => (
+              <Button
+                size="small"
+                type="text"
+                danger
+                icon={<DeleteOutlined />}
+                onClick={() => handleDelete(r)}
+                title={t('button.delete')}
+              />
+            ),
+          },
         ]}
       />
     </>

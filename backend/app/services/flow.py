@@ -1929,3 +1929,15 @@ async def po_progress(db: AsyncSession, po_id: UUID) -> dict:
         "pct_invoiced": pct(amount_invoiced_subtotal, po.total_amount),
         "pct_paid": pct(po.amount_paid, po.total_amount),
     }
+
+
+async def delete_invoice(db: AsyncSession, actor: User, invoice_id: UUID) -> None:
+    inv = await db.get(Invoice, invoice_id)
+    if inv is None:
+        raise HTTPException(404, "invoice.not_found")
+    await _audit_write(db, actor, "invoice.deleted", "invoice", str(invoice_id), {
+        "invoice_number": inv.invoice_number,
+        "total_amount": str(inv.total_amount),
+    })
+    await db.delete(inv)
+    await db.commit()

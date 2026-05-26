@@ -1271,7 +1271,10 @@
     "upload_first_hint": "Upload an invoice file first — AI will auto-recognize and fill line items. Or add manually.",
     "no_lines": "At least one line with quantity is required",
     "add_line": "Add Line",
-    "remaining": "Remaining"
+    "remaining": "Remaining",
+    "confirm_delete_title": "Delete Invoice",
+    "confirm_delete_body": "Delete invoice {{number}} (amount {{amount}})? This cannot be undone.",
+    "deleted": "Invoice deleted"
   },
   "po": {
     "ai_source": "AI Source",

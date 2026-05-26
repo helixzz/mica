@@ -585,6 +585,24 @@ async def get_invoice(
     return inv_dict
 
 
+@router.delete(
+    "/invoices/{invoice_id}",
+    status_code=status.HTTP_204_NO_CONTENT,
+    tags=["flow"],
+)
+async def delete_invoice(
+    invoice_id: UUID,
+    user: CurrentUser,
+    db: Annotated[AsyncSession, Depends(get_db)],
+    _role: Annotated[
+        None,
+        Depends(require_roles("admin", "it_buyer", "procurement_mgr", "finance_auditor")),
+    ],
+):
+    await flow.delete_invoice(db, user, invoice_id)
+    return Response(status_code=status.HTTP_204_NO_CONTENT)
+
+
 @router.get("/purchase-orders/{po_id}/progress", response_model=POProgressOut, tags=["flow"])
 async def get_po_progress(
     po_id: UUID,
