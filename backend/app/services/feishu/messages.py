@@ -19,11 +19,16 @@ def _action_element(actions: list[dict[str, Any]]) -> dict[str, Any]:
 
 
 def _button(text: str, url: str, button_type: str = "primary") -> dict[str, Any]:
+    full_url = url
+    if url and url.startswith("/"):
+        from app.config import get_settings
+
+        full_url = get_settings().app_base_url.rstrip("/") + url
     return {
         "tag": "button",
         "text": {"tag": "plain_text", "content": text},
         "type": button_type,
-        "url": url,
+        "url": full_url,
     }
 
 
