@@ -1217,6 +1217,7 @@ class SystemParameterCategory(StrEnum):
     EMAIL = "email"
     CURRENCY = "currency"
     NOTIFICATION = "notification"
+    SYSTEM = "system"
 
 
 class SystemParameter(Base, TimestampMixin):

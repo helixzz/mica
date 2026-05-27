@@ -234,7 +234,16 @@ async def _maybe_send_feishu_card(
 
         client = FeishuClient(session)
         try:
-            card = _build_feishu_card(notification, user)
+            from app.services.system_params import system_params
+
+            base_url = await system_params.get(session, "app.base_url", "")
+            if not base_url:
+                from app.config import get_settings
+
+                base_url = get_settings().app_base_url
+            base_url = str(base_url).rstrip("/")
+
+            card = _build_feishu_card(notification, user, base_url=base_url)
             if card is None:
                 return
 
@@ -370,6 +379,7 @@ async def _maybe_send_email(
 def _build_feishu_card(
     notification: Notification,
     user: User,
+    base_url: str = "",
 ) -> dict | None:
     """Build a Feishu card dict from notification data."""
     from app.services.feishu import messages as feishu_messages
@@ -424,22 +434,25 @@ def _build_feishu_card(
             contract_url=meta.get("contract_url", ""),
         )
 
+    link = notification.link_url or ""
+    if link.startswith("/") and base_url:
+        link = base_url + link
+
     if notification.category == NotificationCategory.SYSTEM:
         from app.services.feishu.messages import _make_generic_card
 
         return _make_generic_card(
             title=notification.title,
             body=notification.body or "",
-            link_url=notification.link_url or "",
+            link_url=link,
         )
 
-    # Generic fallback for any category without a dedicated card builder
     from app.services.feishu.messages import _make_generic_card
 
     return _make_generic_card(
         title=notification.title,
         body=notification.body or "",
-        link_url=notification.link_url or "",
+        link_url=link,
     )
 
 
