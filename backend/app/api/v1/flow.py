@@ -655,7 +655,10 @@ async def match_invoice_line(
     ],
 ):
     result = await flow.match_invoice_line(db, user, invoice_id, line_id, payload.po_item_id)
-    return {"line_id": str(result.id), "po_item_id": str(result.po_item_id) if result.po_item_id else None}
+    return {
+        "line_id": str(result.id),
+        "po_item_id": str(result.po_item_id) if result.po_item_id else None,
+    }
 
 
 @router.get("/purchase-orders/{po_id}/progress", response_model=POProgressOut, tags=["flow"])

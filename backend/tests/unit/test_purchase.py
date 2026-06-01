@@ -1046,3 +1046,51 @@ async def test_admin_not_affected_by_scoping(seeded_db_session):
 
     prs = await purchase_svc.list_prs_for_user(db, admin)
     assert len(prs) >= 1, "admin should see all PRs regardless of scoping"
+
+
+async def test_add_collaborator_makes_pr_visible(seeded_db_session):
+    db = seeded_db_session
+    alice = await _get_user(db, "alice")
+    supplier = await _get_supplier(db)
+    pr = await _create_pr(db, alice, supplier.id, title="Collab PR")
+
+    requester = await _make_requester(db)
+    prs_before = await purchase_svc.list_prs_for_user(db, requester)
+    assert pr.id not in {p.id for p in prs_before}
+
+    await purchase_svc.add_collaborator(db, alice, pr.id, requester.id)
+
+    prs_after = await purchase_svc.list_prs_for_user(db, requester)
+    assert pr.id in {p.id for p in prs_after}
+
+
+async def test_remove_collaborator_hides_pr(seeded_db_session):
+    db = seeded_db_session
+    alice = await _get_user(db, "alice")
+    supplier = await _get_supplier(db)
+    pr = await _create_pr(db, alice, supplier.id, title="Collab Remove PR")
+
+    requester = await _make_requester(db)
+    await purchase_svc.add_collaborator(db, alice, pr.id, requester.id)
+
+    prs = await purchase_svc.list_prs_for_user(db, requester)
+    assert pr.id in {p.id for p in prs}
+
+    await purchase_svc.remove_collaborator(db, alice, pr.id, requester.id)
+
+    prs_after = await purchase_svc.list_prs_for_user(db, requester)
+    assert pr.id not in {p.id for p in prs_after}
+
+
+async def test_add_collaborator_is_idempotent(seeded_db_session):
+    db = seeded_db_session
+    alice = await _get_user(db, "alice")
+    supplier = await _get_supplier(db)
+    pr = await _create_pr(db, alice, supplier.id, title="Collab Idem PR")
+
+    requester = await _make_requester(db)
+    await purchase_svc.add_collaborator(db, alice, pr.id, requester.id)
+    await purchase_svc.add_collaborator(db, alice, pr.id, requester.id)
+
+    collabs = await purchase_svc.list_collaborators(db, pr.id)
+    assert len(collabs) == 1

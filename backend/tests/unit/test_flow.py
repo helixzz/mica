@@ -1258,3 +1258,103 @@ async def test_create_invoice_raises_for_missing_supplier(seeded_db_session):
 
     assert exc.value.status_code == 404
     assert exc.value.detail == "supplier.not_found"
+
+
+async def test_match_invoice_line_updates_po_qty_invoiced(seeded_db_session):
+    db = seeded_db_session
+    user, supplier, _pr, po = await _create_confirmed_po(db)
+    document = await _create_document(db, user, "match-test")
+
+    invoice, _ = await flow_svc.create_invoice(
+        db,
+        user,
+        supplier_id=supplier.id,
+        invoice_number="INV-MATCH-001",
+        invoice_date=date(2026, 5, 1),
+        lines_in=[
+            {
+                "po_item_id": None,
+                "item_name": "Widget",
+                "qty": Decimal("3"),
+                "unit_price": Decimal("100"),
+            }
+        ],
+        attachment_document_ids=[document.id],
+    )
+
+    line = invoice.lines[0]
+    assert line.po_item_id is None
+
+    await flow_svc.match_invoice_line(db, user, invoice.id, line.id, po.items[0].id)
+
+    await db.refresh(po.items[0])
+    assert po.items[0].qty_invoiced == Decimal("3")
+
+    await db.refresh(invoice)
+    assert invoice.status == "matched"
+    assert invoice.is_fully_matched is True
+
+
+async def test_unmatch_invoice_line_decrements_qty_invoiced(seeded_db_session):
+    db = seeded_db_session
+    user, supplier, _pr, po = await _create_confirmed_po(db)
+    document = await _create_document(db, user, "unmatch-test")
+
+    invoice, _ = await flow_svc.create_invoice(
+        db,
+        user,
+        supplier_id=supplier.id,
+        invoice_number="INV-UNMATCH-001",
+        invoice_date=date(2026, 5, 2),
+        lines_in=[
+            {
+                "po_item_id": po.items[0].id,
+                "item_name": "Widget",
+                "qty": Decimal("2"),
+                "unit_price": Decimal("100"),
+            }
+        ],
+        attachment_document_ids=[document.id],
+    )
+
+    await db.refresh(po.items[0])
+    assert po.items[0].qty_invoiced == Decimal("2")
+
+    line = invoice.lines[0]
+    await flow_svc.match_invoice_line(db, user, invoice.id, line.id, None)
+
+    await db.refresh(po.items[0])
+    assert po.items[0].qty_invoiced == Decimal("0")
+
+    await db.refresh(invoice)
+    assert invoice.status == "pending_match"
+    assert invoice.is_fully_matched is False
+
+
+async def test_delete_invoice_removes_record(seeded_db_session):
+    db = seeded_db_session
+    user, supplier, _pr, po = await _create_confirmed_po(db)
+    document = await _create_document(db, user, "del-test")
+
+    invoice, _ = await flow_svc.create_invoice(
+        db,
+        user,
+        supplier_id=supplier.id,
+        invoice_number="INV-DEL-001",
+        invoice_date=date(2026, 5, 3),
+        lines_in=[
+            {
+                "po_item_id": po.items[0].id,
+                "item_name": "Widget",
+                "qty": Decimal("1"),
+                "unit_price": Decimal("100"),
+            }
+        ],
+        attachment_document_ids=[document.id],
+    )
+
+    from app.models import Invoice
+
+    await flow_svc.delete_invoice(db, user, invoice.id)
+    result = await db.get(Invoice, invoice.id)
+    assert result is None
