@@ -1,8 +1,9 @@
 from typing import Annotated
 from uuid import UUID
 
-from fastapi import APIRouter, Depends, status
+from fastapi import APIRouter, Depends, HTTPException, status
 from fastapi.responses import Response
+from pydantic import BaseModel
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -601,6 +602,60 @@ async def delete_invoice(
 ):
     await flow.delete_invoice(db, user, invoice_id)
     return Response(status_code=status.HTTP_204_NO_CONTENT)
+
+
+class InvoiceLineMatchIn(BaseModel):
+    po_item_id: UUID | None = None
+
+
+@router.get("/invoices/{invoice_id}/available-po-items", tags=["flow"])
+async def get_available_po_items_for_invoice(
+    invoice_id: UUID,
+    user: CurrentUser,
+    db: Annotated[AsyncSession, Depends(get_db)],
+):
+    from app.models import Invoice, POItem, PurchaseOrder
+
+    inv = await db.get(Invoice, invoice_id)
+    if inv is None:
+        raise HTTPException(status_code=404, detail="invoice.not_found")
+    rows = (
+        await db.execute(
+            select(POItem, PurchaseOrder.po_number)
+            .join(PurchaseOrder, PurchaseOrder.id == POItem.po_id)
+            .where(PurchaseOrder.supplier_id == inv.supplier_id)
+        )
+    ).all()
+    return [
+        {
+            "id": str(r[0].id),
+            "po_number": r[1],
+            "item_name": r[0].item_name,
+            "qty": str(r[0].qty),
+            "unit_price": str(r[0].unit_price),
+        }
+        for r in rows
+    ]
+
+
+@router.patch(
+    "/invoices/{invoice_id}/lines/{line_id}/match",
+    status_code=status.HTTP_200_OK,
+    tags=["flow"],
+)
+async def match_invoice_line(
+    invoice_id: UUID,
+    line_id: UUID,
+    payload: InvoiceLineMatchIn,
+    user: CurrentUser,
+    db: Annotated[AsyncSession, Depends(get_db)],
+    _role: Annotated[
+        None,
+        Depends(require_roles("admin", "it_buyer", "procurement_mgr", "finance_auditor")),
+    ],
+):
+    result = await flow.match_invoice_line(db, user, invoice_id, line_id, payload.po_item_id)
+    return {"line_id": str(result.id), "po_item_id": str(result.po_item_id) if result.po_item_id else None}
 
 
 @router.get("/purchase-orders/{po_id}/progress", response_model=POProgressOut, tags=["flow"])

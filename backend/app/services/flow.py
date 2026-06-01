@@ -1946,16 +1946,53 @@ async def delete_invoice(db: AsyncSession, actor: User, invoice_id: UUID) -> Non
     inv = await db.get(Invoice, invoice_id)
     if inv is None:
         raise HTTPException(404, "invoice.not_found")
-    await _audit_write(
-        db,
-        actor,
-        "invoice.deleted",
-        "invoice",
-        str(invoice_id),
-        {
-            "invoice_number": inv.invoice_number,
-            "total_amount": str(inv.total_amount),
-        },
-    )
+    await _audit_write(db, actor, "invoice.deleted", "invoice", str(invoice_id), {
+        "invoice_number": inv.invoice_number,
+        "total_amount": str(inv.total_amount),
+    })
     await db.delete(inv)
     await db.commit()
+
+
+async def match_invoice_line(
+    db: AsyncSession,
+    actor: User,
+    invoice_id: UUID,
+    line_id: UUID,
+    po_item_id: UUID | None,
+) -> InvoiceLine:
+    from sqlalchemy.orm import selectinload
+
+    inv = (
+        await db.execute(
+            select(Invoice)
+            .where(Invoice.id == invoice_id)
+            .options(selectinload(Invoice.lines))
+        )
+    ).scalar_one_or_none()
+    if inv is None:
+        raise HTTPException(404, "invoice.not_found")
+
+    line = next((ln for ln in inv.lines if ln.id == line_id), None)
+    if line is None:
+        raise HTTPException(404, "invoice.line_not_found")
+
+    if po_item_id is not None:
+        po_item = await db.get(POItem, po_item_id)
+        if po_item is None:
+            raise HTTPException(404, "po_item.not_found")
+
+    line.po_item_id = po_item_id
+    await db.flush()
+
+    all_matched = all(ln.po_item_id is not None for ln in inv.lines)
+    if all_matched and not inv.is_fully_matched:
+        inv.is_fully_matched = True
+        inv.status = "matched"
+    elif not all_matched and inv.is_fully_matched:
+        inv.is_fully_matched = False
+        inv.status = "pending_match"
+
+    await db.commit()
+    await db.refresh(line)
+    return line

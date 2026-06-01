@@ -1441,6 +1441,14 @@ export const api = {
   async deleteInvoice(invoiceId: string): Promise<void> {
     await client.delete(`/invoices/${invoiceId}`)
   },
+  async matchInvoiceLine(invoiceId: string, lineId: string, poItemId: string | null): Promise<{ line_id: string; po_item_id: string | null }> {
+    const { data } = await client.patch(`/invoices/${invoiceId}/lines/${lineId}/match`, { po_item_id: poItemId })
+    return data as { line_id: string; po_item_id: string | null }
+  },
+  async getInvoiceAvailablePoItems(invoiceId: string): Promise<{ id: string; po_number: string; item_name: string; qty: string; unit_price: string }[]> {
+    const { data } = await client.get(`/invoices/${invoiceId}/available-po-items`)
+    return data as { id: string; po_number: string; item_name: string; qty: string; unit_price: string }[]
+  },
   async myPendingApprovals(): Promise<ApprovalTask[]> {
     const { data } = await client.get<ApprovalTask[]>('/approval/pending')
     return data

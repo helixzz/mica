@@ -5,6 +5,7 @@ import {
   Col,
   Descriptions,
   Row,
+  Select,
   Space,
   Table,
   Tag,
@@ -24,10 +25,23 @@ export function InvoiceDetailPage() {
   const { id } = useParams<{ id: string }>()
   const navigate = useNavigate()
   const [inv, setInv] = useState<Invoice | null>(null)
+  const [poItems, setPoItems] = useState<{ id: string; item_name: string; qty: string; po_number: string; unit_price: string }[]>([])
+
+  const load = async () => {
+    if (!id) return
+    try {
+      const data = await api.getInvoice(id)
+      setInv(data)
+    } catch {
+      setInv(null)
+    }
+  }
 
   useEffect(() => {
-    if (!id) return
-    void api.getInvoice(id).then(setInv).catch(() => setInv(null))
+    load()
+    if (id) {
+      void api.getInvoiceAvailablePoItems(id).then(setPoItems).catch(() => {})
+    }
   }, [id])
 
   if (!inv) return <div>{t('message.loading')}</div>
@@ -48,6 +62,16 @@ export function InvoiceDetailPage() {
     }
   }
 
+  const handleMatch = async (lineId: string, poItemId: string | null) => {
+    try {
+      await api.matchInvoiceLine(inv.id, lineId, poItemId)
+      await load()
+      message.success(t('invoice.match_saved', '匹配已保存'))
+    } catch (e) {
+      message.error(extractError(e).detail)
+    }
+  }
+
   const statusColor: Record<string, string> = {
     matched: 'success',
     pending_match: 'warning',
@@ -57,6 +81,11 @@ export function InvoiceDetailPage() {
     cancelled: 'default',
     draft: 'default',
   }
+
+  const poItemOptions = poItems.map((pi) => ({
+    value: pi.id,
+    label: `[${pi.po_number}] ${pi.item_name} (×${pi.qty})`,
+  }))
 
   return (
     <Space direction="vertical" size="large" style={{ width: '100%' }}>
@@ -130,30 +159,36 @@ export function InvoiceDetailPage() {
         )}
       </Card>
 
-      <Card title={t('field.item_name')}>
+      <Card title={t('invoice.line_items', '发票明细')}>
         <Table
           rowKey="id"
           dataSource={inv.lines}
           pagination={false}
           size="small"
           columns={[
-            { title: t('field.line_no'), dataIndex: 'line_no', width: 60 },
-            {
-              title: 'Type',
-              dataIndex: 'line_type',
-              width: 100,
-              render: (v: string) => <Tag color={v === 'product' ? 'blue' : 'default'}>{v}</Tag>,
-            },
-            { title: t('field.item_name'), dataIndex: 'item_name' },
-            { title: t('field.qty'), dataIndex: 'qty', align: 'right', width: 80, render: (v: string) => fmtQty(v) },
+            { title: t('field.line_no'), dataIndex: 'line_no', width: 50 },
+            { title: t('field.item_name'), dataIndex: 'item_name', ellipsis: true },
+            { title: t('field.qty'), dataIndex: 'qty', align: 'right', width: 70, render: (v: string) => fmtQty(v) },
             { title: t('field.unit_price'), dataIndex: 'unit_price', align: 'right', width: 110, render: (v: string) => fmtAmount(v, inv.currency) },
             { title: t('field.subtotal'), dataIndex: 'subtotal', align: 'right', width: 110, render: (v: string) => fmtAmount(v, inv.currency) },
             { title: t('field.tax_amount'), dataIndex: 'tax_amount', align: 'right', width: 100, render: (v: string) => fmtAmount(v, inv.currency) },
             {
-              title: 'PO Item',
-              dataIndex: 'po_item_id',
-              width: 100,
-              render: (v: string | null) => (v ? <Tag color="green">✓</Tag> : <Tag>-</Tag>),
+              title: t('invoice.po_item_match', 'PO 匹配'),
+              width: 260,
+              render: (_: unknown, r) => (
+                <Select
+                  size="small"
+                  showSearch
+                  allowClear
+                  optionFilterProp="label"
+                  style={{ width: '100%' }}
+                  value={r.po_item_id}
+                  onChange={(v) => handleMatch(r.id, v ?? null)}
+                  options={poItemOptions}
+                  placeholder={t('invoice.select_po_item')}
+                  popupMatchSelectWidth={false}
+                />
+              ),
             },
           ]}
         />
