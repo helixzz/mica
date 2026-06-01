@@ -1946,10 +1946,17 @@ async def delete_invoice(db: AsyncSession, actor: User, invoice_id: UUID) -> Non
     inv = await db.get(Invoice, invoice_id)
     if inv is None:
         raise HTTPException(404, "invoice.not_found")
-    await _audit_write(db, actor, "invoice.deleted", "invoice", str(invoice_id), {
-        "invoice_number": inv.invoice_number,
-        "total_amount": str(inv.total_amount),
-    })
+    await _audit_write(
+        db,
+        actor,
+        "invoice.deleted",
+        "invoice",
+        str(invoice_id),
+        {
+            "invoice_number": inv.invoice_number,
+            "total_amount": str(inv.total_amount),
+        },
+    )
     await db.delete(inv)
     await db.commit()
 
@@ -1965,9 +1972,7 @@ async def match_invoice_line(
 
     inv = (
         await db.execute(
-            select(Invoice)
-            .where(Invoice.id == invoice_id)
-            .options(selectinload(Invoice.lines))
+            select(Invoice).where(Invoice.id == invoice_id).options(selectinload(Invoice.lines))
         )
     ).scalar_one_or_none()
     if inv is None:
@@ -1977,13 +1982,50 @@ async def match_invoice_line(
     if line is None:
         raise HTTPException(404, "invoice.line_not_found")
 
+    old_po_item_id = line.po_item_id
+
     if po_item_id is not None:
-        po_item = await db.get(POItem, po_item_id)
-        if po_item is None:
+        new_po_item = await db.get(POItem, po_item_id)
+        if new_po_item is None:
             raise HTTPException(404, "po_item.not_found")
+
+    if old_po_item_id and old_po_item_id != po_item_id:
+        old_po_item = await db.get(POItem, old_po_item_id)
+        if old_po_item:
+            old_po_item.qty_invoiced = max(
+                Decimal("0"), (old_po_item.qty_invoiced or Decimal("0")) - line.qty
+            )
+
+    if po_item_id and po_item_id != old_po_item_id:
+        new_po_item = await db.get(POItem, po_item_id)
+        if new_po_item:
+            new_po_item.qty_invoiced = (new_po_item.qty_invoiced or Decimal("0")) + line.qty
 
     line.po_item_id = po_item_id
     await db.flush()
+
+    touched_po_ids: set[UUID] = set()
+    if old_po_item_id:
+        old_item = await db.get(POItem, old_po_item_id)
+        if old_item:
+            touched_po_ids.add(old_item.po_id)
+    if po_item_id:
+        new_item = await db.get(POItem, po_item_id)
+        if new_item:
+            touched_po_ids.add(new_item.po_id)
+
+    for po_id in touched_po_ids:
+        po = (
+            await db.execute(
+                select(PurchaseOrder)
+                .where(PurchaseOrder.id == po_id)
+                .options(selectinload(PurchaseOrder.items))
+            )
+        ).scalar_one()
+        po.amount_invoiced = sum(
+            ((i.qty_invoiced or Decimal("0")) * i.unit_price for i in po.items),
+            start=Decimal("0"),
+        )
 
     all_matched = all(ln.po_item_id is not None for ln in inv.lines)
     if all_matched and not inv.is_fully_matched:
