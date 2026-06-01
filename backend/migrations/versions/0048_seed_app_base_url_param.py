@@ -30,7 +30,7 @@ def upgrade() -> None:
             "  min_value, max_value, unit, description_zh, description_en,"
             "  is_sensitive, created_at, updated_at)"
             " VALUES (gen_random_uuid(), 'app.base_url', 'system',"
-            "  '\"https://mica.jqdomain.com\"'::jsonb, 'string',"
+            "  '\"http://localhost:8900\"'::jsonb, 'string',"
             "  '\"http://localhost:8900\"'::jsonb,"
             "  null, null, null,"
             "  '系统访问地址（用于通知消息中的链接拼接）',"
