@@ -48,7 +48,8 @@
     "approval_not_found": "pr approval not found",
     "items_missing_supplier": "pr items missing supplier",
     "proxy_not_allowed": "您没有权限代他人提交采购申请",
-    "requester_not_found": "指定的需求方不存在或已停用"
+    "requester_not_found": "指定的需求方不存在或已停用",
+    "cannot_delete_active": "审批中或已转订单的采购申请不可删除"
   },
   "po": {
     "not_found": "po不存在"

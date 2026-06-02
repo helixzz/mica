@@ -107,7 +107,8 @@ export function PRDetailPage() {
   const isOwnerOrElevated = user?.id === pr.requester_id || user?.role === 'admin' || user?.role === 'procurement_mgr' || user?.role === 'it_buyer'
   const canSubmit = (pr.status === 'draft' || pr.status === 'returned') && isOwnerOrElevated
   const canEdit = (pr.status === 'draft' || pr.status === 'returned') && isOwnerOrElevated
-  const canDelete = pr.status === 'draft' && isOwnerOrElevated
+  const canDelete =
+    ['draft', 'returned', 'rejected', 'cancelled'].includes(pr.status) && isOwnerOrElevated
   const canDecide =
     pr.status === 'submitted' && (user?.role === 'dept_manager' || user?.role === 'admin')
   const isBuyer = user?.role === 'it_buyer' || user?.role === 'procurement_mgr' || user?.role === 'admin'

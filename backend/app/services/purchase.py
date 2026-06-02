@@ -869,8 +869,14 @@ _SUPPLIER_QUOTE_SOURCE_TYPE = "supplier_quote"
 
 async def delete_pr(db: AsyncSession, actor: User, pr_id: UUID) -> None:
     pr = await get_pr(db, actor, pr_id)
-    if pr.status != PRStatus.DRAFT.value:
-        raise HTTPException(409, "pr.cannot_delete_submitted")
+    deletable_statuses = {
+        PRStatus.DRAFT.value,
+        PRStatus.RETURNED.value,
+        PRStatus.REJECTED.value,
+        PRStatus.CANCELLED.value,
+    }
+    if pr.status not in deletable_statuses:
+        raise HTTPException(409, "pr.cannot_delete_active")
     await db.delete(pr)
     await db.commit()
 

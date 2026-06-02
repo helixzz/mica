@@ -7,6 +7,22 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [v1.24.0] — 2026-06-02
+
+### 修复
+
+- **采购申请删除范围修正**：被退回（returned）、被拒绝（rejected）、已作废（cancelled）的 PR 现在也可删除，此前仅允许删除草稿（draft）
+  - 之前被退回的 PR 卡在无法处置的状态——既不在审批流程中，又删不掉
+  - 仍禁止删除审批中（submitted）、已批准（approved）、已转订单（converted）的 PR
+  - 需求方（requester）可删除自己的非活跃 PR；admin/采购经理/采购员可删除可见范围内的 PR
+  - 错误消息更新为 `pr.cannot_delete_active`（中英文）
+
+### 测试
+
+- 新增 6 个 delete_pr 单元测试（覆盖 draft/returned/rejected 可删，submitted/approved 拒删，requester 删自己）
+
+---
+
 ## [v1.23.0] — 2026-05-25
 
 ### 修复

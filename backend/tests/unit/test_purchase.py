@@ -1094,3 +1094,89 @@ async def test_add_collaborator_is_idempotent(seeded_db_session):
 
     collabs = await purchase_svc.list_collaborators(db, pr.id)
     assert len(collabs) == 1
+
+
+async def test_delete_pr_allows_draft(seeded_db_session):
+    db = seeded_db_session
+    actor = await _get_user(db, "alice")
+    supplier = await _get_supplier(db)
+    pr = await _create_pr(db, actor, supplier.id, title="Draft PR")
+    assert pr.status == PRStatus.DRAFT.value
+
+    await purchase_svc.delete_pr(db, actor, pr.id)
+
+    with pytest.raises(HTTPException) as exc:
+        await purchase_svc.get_pr(db, actor, pr.id)
+    assert exc.value.status_code == 404
+
+
+async def test_delete_pr_allows_returned(seeded_db_session):
+    db = seeded_db_session
+    actor = await _get_user(db, "alice")
+    supplier = await _get_supplier(db)
+    pr = await _create_pr(db, actor, supplier.id, title="Returned PR")
+    pr.status = PRStatus.RETURNED.value
+    await db.commit()
+
+    await purchase_svc.delete_pr(db, actor, pr.id)
+
+    with pytest.raises(HTTPException) as exc:
+        await purchase_svc.get_pr(db, actor, pr.id)
+    assert exc.value.status_code == 404
+
+
+async def test_delete_pr_allows_rejected(seeded_db_session):
+    db = seeded_db_session
+    actor = await _get_user(db, "alice")
+    supplier = await _get_supplier(db)
+    pr = await _create_pr(db, actor, supplier.id, title="Rejected PR")
+    pr.status = PRStatus.REJECTED.value
+    await db.commit()
+
+    await purchase_svc.delete_pr(db, actor, pr.id)
+
+    with pytest.raises(HTTPException) as exc:
+        await purchase_svc.get_pr(db, actor, pr.id)
+    assert exc.value.status_code == 404
+
+
+async def test_delete_pr_rejects_submitted(seeded_db_session):
+    db = seeded_db_session
+    actor = await _get_user(db, "alice")
+    supplier = await _get_supplier(db)
+    pr = await _create_pr(db, actor, supplier.id, title="Submitted PR")
+    pr.status = PRStatus.SUBMITTED.value
+    await db.commit()
+
+    with pytest.raises(HTTPException) as exc:
+        await purchase_svc.delete_pr(db, actor, pr.id)
+    assert exc.value.status_code == 409
+    assert exc.value.detail == "pr.cannot_delete_active"
+
+
+async def test_delete_pr_rejects_approved(seeded_db_session):
+    db = seeded_db_session
+    actor = await _get_user(db, "alice")
+    supplier = await _get_supplier(db)
+    pr = await _create_pr(db, actor, supplier.id, title="Approved PR")
+    pr.status = PRStatus.APPROVED.value
+    await db.commit()
+
+    with pytest.raises(HTTPException) as exc:
+        await purchase_svc.delete_pr(db, actor, pr.id)
+    assert exc.value.status_code == 409
+
+
+async def test_delete_pr_requester_can_delete_own(seeded_db_session):
+    db = seeded_db_session
+    requester = await _make_requester(db)
+    supplier = await _get_supplier(db)
+    pr = await _create_pr(db, requester, supplier.id, title="Requester Own PR")
+    pr.status = PRStatus.RETURNED.value
+    await db.commit()
+
+    await purchase_svc.delete_pr(db, requester, pr.id)
+
+    with pytest.raises(HTTPException) as exc:
+        await purchase_svc.get_pr(db, requester, pr.id)
+    assert exc.value.status_code == 404

@@ -48,7 +48,8 @@
     "approval_not_found": "pr approval not found",
     "items_missing_supplier": "pr items missing supplier",
     "proxy_not_allowed": "You don't have permission to submit PRs on behalf of others",
-    "requester_not_found": "Specified requester not found or inactive"
+    "requester_not_found": "Specified requester not found or inactive",
+    "cannot_delete_active": "Cannot delete a requisition that is under approval or converted to a PO"
   },
   "po": {
     "not_found": "Po not found"
