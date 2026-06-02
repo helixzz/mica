@@ -1358,3 +1358,149 @@ async def test_delete_invoice_removes_record(seeded_db_session):
     await flow_svc.delete_invoice(db, user, invoice.id)
     result = await db.get(Invoice, invoice.id)
     assert result is None
+
+
+async def test_create_shipment_success(seeded_db_session):
+    db = seeded_db_session
+    user, _supplier, _pr, po = await _create_confirmed_po(db)
+
+    shipment = await flow_svc.create_shipment(
+        db,
+        user,
+        po.id,
+        items_in=[
+            {
+                "po_item_id": po.items[0].id,
+                "qty_shipped": Decimal("2"),
+                "qty_received": Decimal("1"),
+            }
+        ],
+        carrier="SF Express",
+        tracking_number="SF123",
+        expected_date=date(2026, 5, 10),
+    )
+
+    assert shipment.po_id == po.id
+    assert shipment.batch_no == 1
+    assert shipment.shipment_number == f"{po.po_number}-S01"
+    assert shipment.status == "in_transit"
+    assert shipment.carrier == "SF Express"
+    assert shipment.tracking_number == "SF123"
+    assert len(shipment.items) == 1
+    assert shipment.items[0].po_item_id == po.items[0].id
+    assert shipment.items[0].qty_shipped == Decimal("2.0000")
+    assert shipment.items[0].qty_received == Decimal("1.0000")
+    await db.refresh(po.items[0])
+    assert po.items[0].qty_received == Decimal("1.0000")
+
+
+async def test_update_shipment_changes_status_carrier_tracking(seeded_db_session):
+    db = seeded_db_session
+    user, _supplier, _pr, po = await _create_confirmed_po(db)
+    shipment = await flow_svc.create_shipment(
+        db,
+        user,
+        po.id,
+        items_in=[{"po_item_id": po.items[0].id, "qty_shipped": Decimal("2")}],
+        carrier="Old Carrier",
+        tracking_number="OLD-1",
+    )
+
+    from app.schemas import ShipmentUpdate
+
+    updated = await flow_svc.update_shipment(
+        db,
+        user,
+        shipment.id,
+        ShipmentUpdate(
+            status="arrived",
+            carrier="New Carrier",
+            tracking_number="NEW-1",
+            actual_date=date(2026, 5, 11),
+        ),
+    )
+
+    assert updated.status == "arrived"
+    assert updated.carrier == "New Carrier"
+    assert updated.tracking_number == "NEW-1"
+    assert updated.actual_date == date(2026, 5, 11)
+
+
+async def test_delete_shipment_success(seeded_db_session):
+    db = seeded_db_session
+    user, _supplier, _pr, po = await _create_confirmed_po(db)
+    shipment = await flow_svc.create_shipment(
+        db,
+        user,
+        po.id,
+        items_in=[{"po_item_id": po.items[0].id, "qty_shipped": Decimal("1")}],
+    )
+
+    await flow_svc.delete_shipment(db, user, shipment.id)
+
+    from app.models import Shipment
+
+    assert await db.get(Shipment, shipment.id) is None
+
+
+async def test_create_payment_success(seeded_db_session):
+    db = seeded_db_session
+    user, _supplier, _pr, po = await _create_confirmed_po(db)
+    contract = await flow_svc.create_contract(
+        db, user, po.id, title="Payment contract", total_amount=Decimal("1000")
+    )
+
+    payment = await flow_svc.create_payment(
+        db,
+        user,
+        po.id,
+        amount=Decimal("250"),
+        contract_id=contract.id,
+        due_date=date(2026, 5, 20),
+        payment_method="bank_transfer",
+        notes="deposit",
+    )
+
+    assert payment.po_id == po.id
+    assert payment.contract_id == contract.id
+    assert payment.installment_no == 1
+    assert payment.payment_number == f"{po.po_number}-P01"
+    assert payment.amount == Decimal("250.0000")
+    assert payment.currency == po.currency
+    assert payment.due_date == date(2026, 5, 20)
+    assert payment.payment_method == "bank_transfer"
+    assert payment.status == "pending"
+    assert payment.notes == "deposit"
+
+
+async def test_confirm_payment_changes_status(seeded_db_session):
+    db = seeded_db_session
+    user, _supplier, _pr, po = await _create_confirmed_po(db)
+    contract = await flow_svc.create_contract(
+        db, user, po.id, title="Confirm payment", total_amount=Decimal("1000")
+    )
+    payment = await flow_svc.create_payment(
+        db,
+        user,
+        po.id,
+        amount=Decimal("300"),
+        contract_id=contract.id,
+        due_date=date(2026, 5, 22),
+    )
+
+    confirmed = await flow_svc.confirm_payment(
+        db,
+        user,
+        payment.id,
+        payment_date=date(2026, 5, 23),
+        transaction_ref="TXN-123",
+    )
+
+    assert confirmed.status == "confirmed"
+    assert confirmed.payment_date == date(2026, 5, 23)
+    assert confirmed.transaction_ref == "TXN-123"
+    refreshed_payment = await db.get(PaymentRecord, payment.id)
+    assert refreshed_payment is not None
+    assert refreshed_payment.status == "confirmed"
+    await db.refresh(po)
+    assert po.amount_paid == Decimal("300.0000")

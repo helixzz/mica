@@ -4,6 +4,8 @@ from datetime import UTC, date, datetime, timedelta
 from decimal import Decimal
 from uuid import uuid4
 
+import pytest
+from fastapi import HTTPException
 from sqlalchemy import select
 
 from app.models import (
@@ -379,3 +381,167 @@ async def test_list_contract_documents_returns_documents_for_contract_in_order(s
         (first_link, first_document),
         (second_link, second_document),
     ]
+
+
+async def _bare_document(db, actor: User, filename: str = "doc.pdf") -> Document:
+    document = Document(
+        storage_key=f"contracts/{_suffix()}-{filename}",
+        storage_backend="local",
+        original_filename=filename,
+        content_type="application/pdf",
+        file_size=1024,
+        content_hash=uuid4().hex,
+        doc_category="contract",
+        is_private=True,
+        uploaded_by_id=actor.id,
+    )
+    db.add(document)
+    await db.flush()
+    return document
+
+
+async def test_attach_document_to_contract_without_ocr(seeded_db_session):
+    actor = await _user(seeded_db_session)
+    supplier = await _supplier(seeded_db_session)
+    contract = await _create_contract(
+        seeded_db_session,
+        actor=actor,
+        supplier=supplier,
+        contract_number=f"CT-{_suffix()}",
+        title="Attach Test",
+        expiry_date=date.today() + timedelta(days=30),
+    )
+    document = await _bare_document(seeded_db_session, actor)
+
+    link = await svc.attach_document_to_contract(
+        seeded_db_session, actor.id, contract.id, document.id, run_ocr=False
+    )
+
+    assert link.contract_id == contract.id
+    assert link.document_id == document.id
+    assert link.ocr_text is None
+
+
+async def test_attach_document_is_idempotent(seeded_db_session):
+    actor = await _user(seeded_db_session)
+    supplier = await _supplier(seeded_db_session)
+    contract = await _create_contract(
+        seeded_db_session,
+        actor=actor,
+        supplier=supplier,
+        contract_number=f"CT-{_suffix()}",
+        title="Idem Test",
+        expiry_date=None,
+    )
+    document = await _bare_document(seeded_db_session, actor)
+
+    link1 = await svc.attach_document_to_contract(
+        seeded_db_session, actor.id, contract.id, document.id, run_ocr=False
+    )
+    link2 = await svc.attach_document_to_contract(
+        seeded_db_session, actor.id, contract.id, document.id, run_ocr=False
+    )
+    assert link1.document_id == link2.document_id
+
+
+async def test_attach_document_contract_not_found(seeded_db_session):
+    actor = await _user(seeded_db_session)
+    document = await _bare_document(seeded_db_session, actor)
+
+    with pytest.raises(HTTPException) as exc:
+        await svc.attach_document_to_contract(
+            seeded_db_session, actor.id, uuid4(), document.id, run_ocr=False
+        )
+    assert exc.value.status_code == 404
+    assert exc.value.detail == "contract.not_found"
+
+
+async def test_attach_document_document_not_found(seeded_db_session):
+    actor = await _user(seeded_db_session)
+    supplier = await _supplier(seeded_db_session)
+    contract = await _create_contract(
+        seeded_db_session,
+        actor=actor,
+        supplier=supplier,
+        contract_number=f"CT-{_suffix()}",
+        title="Doc Missing",
+        expiry_date=None,
+    )
+
+    with pytest.raises(HTTPException) as exc:
+        await svc.attach_document_to_contract(
+            seeded_db_session, actor.id, contract.id, uuid4(), run_ocr=False
+        )
+    assert exc.value.status_code == 404
+    assert exc.value.detail == "document.not_found"
+
+
+async def test_remove_contract_document(seeded_db_session):
+    actor = await _user(seeded_db_session)
+    supplier = await _supplier(seeded_db_session)
+    contract = await _create_contract(
+        seeded_db_session,
+        actor=actor,
+        supplier=supplier,
+        contract_number=f"CT-{_suffix()}",
+        title="Remove Test",
+        expiry_date=None,
+    )
+    document = await _bare_document(seeded_db_session, actor)
+    await svc.attach_document_to_contract(
+        seeded_db_session, actor.id, contract.id, document.id, run_ocr=False
+    )
+
+    await svc.remove_contract_document(seeded_db_session, contract.id, document.id)
+
+    link = (
+        await seeded_db_session.execute(
+            select(ContractDocument).where(
+                ContractDocument.contract_id == contract.id,
+                ContractDocument.document_id == document.id,
+            )
+        )
+    ).scalar_one_or_none()
+    assert link is None
+
+
+async def test_remove_contract_document_not_found(seeded_db_session):
+    actor = await _user(seeded_db_session)
+    supplier = await _supplier(seeded_db_session)
+    contract = await _create_contract(
+        seeded_db_session,
+        actor=actor,
+        supplier=supplier,
+        contract_number=f"CT-{_suffix()}",
+        title="Remove Missing",
+        expiry_date=None,
+    )
+
+    with pytest.raises(HTTPException) as exc:
+        await svc.remove_contract_document(seeded_db_session, contract.id, uuid4())
+    assert exc.value.status_code == 404
+
+
+async def test_get_contract_version_by_number(seeded_db_session):
+    actor = await _user(seeded_db_session)
+    supplier = await _supplier(seeded_db_session)
+    contract = await _create_contract(
+        seeded_db_session,
+        actor=actor,
+        supplier=supplier,
+        contract_number=f"CT-{_suffix()}",
+        title="Version Test",
+        expiry_date=None,
+    )
+
+    version = await svc.create_contract_version(
+        seeded_db_session, contract=contract, actor=actor, change_type="created"
+    )
+    await seeded_db_session.commit()
+
+    found = await svc.get_contract_version(seeded_db_session, contract.id, version.version_number)
+    assert found is not None
+    assert found.id == version.id
+
+    missing = await svc.get_contract_version(seeded_db_session, contract.id, 9999)
+    assert missing is None

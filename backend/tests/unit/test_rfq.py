@@ -348,3 +348,79 @@ async def test_create_rfq_can_store_multiple_suppliers(seeded_db_session, monkey
 
     assert len(fetched.suppliers) == 2
     assert {row.supplier_id for row in fetched.suppliers} == {suppliers[0].id, suppliers[1].id}
+
+
+async def test_delete_rfq_draft_succeeds(seeded_db_session, monkeypatch):
+    alice = await _get_alice(seeded_db_session)
+    rfq = await _create_rfq(seeded_db_session, monkeypatch, alice, supplier_ids=[])
+    await seeded_db_session.commit()
+
+    await rfq_svc.delete_rfq(seeded_db_session, rfq.id)
+
+    with pytest.raises(HTTPException) as exc:
+        await rfq_svc.get_rfq(seeded_db_session, rfq.id)
+    assert exc.value.status_code == 404
+
+
+async def test_delete_rfq_non_draft_rejected(seeded_db_session, monkeypatch):
+    alice = await _get_alice(seeded_db_session)
+    supplier = (await _get_suppliers(seeded_db_session))[0]
+    rfq = await _create_sent_rfq(seeded_db_session, monkeypatch, alice, [str(supplier.id)])
+
+    with pytest.raises(HTTPException) as exc:
+        await rfq_svc.delete_rfq(seeded_db_session, rfq.id)
+    assert exc.value.status_code == 409
+
+
+async def test_update_rfq_changes_title_and_notes(seeded_db_session, monkeypatch):
+    alice = await _get_alice(seeded_db_session)
+    rfq = await _create_rfq(seeded_db_session, monkeypatch, alice, supplier_ids=[])
+
+    updated = await rfq_svc.update_rfq(
+        seeded_db_session,
+        rfq.id,
+        {"title": "Updated Title", "notes": "Some notes"},
+        alice,
+    )
+    assert updated.title == "Updated Title"
+    assert updated.notes == "Some notes"
+
+
+async def test_update_rfq_adds_and_updates_items(seeded_db_session, monkeypatch):
+    alice = await _get_alice(seeded_db_session)
+    rfq = await _create_rfq(
+        seeded_db_session,
+        monkeypatch,
+        alice,
+        items=[{"item_name": "Original", "qty": 5, "uom": "EA"}],
+        supplier_ids=[],
+    )
+    fetched = await rfq_svc.get_rfq(seeded_db_session, rfq.id)
+    existing_item_id = str(fetched.items[0].id)
+
+    updated = await rfq_svc.update_rfq(
+        seeded_db_session,
+        rfq.id,
+        {
+            "items": [
+                {"id": existing_item_id, "item_name": "Renamed", "qty": 8, "uom": "EA"},
+                {"item_name": "BrandNew", "qty": 3, "uom": "EA"},
+            ]
+        },
+        alice,
+    )
+    names = {item.item_name for item in updated.items}
+    assert "Renamed" in names
+    assert "Original" not in names
+
+
+async def test_update_rfq_finalized_rejected(seeded_db_session, monkeypatch):
+    alice = await _get_alice(seeded_db_session)
+    supplier = (await _get_suppliers(seeded_db_session))[0]
+    rfq = await _create_sent_rfq(seeded_db_session, monkeypatch, alice, [str(supplier.id)])
+    rfq.status = RFQStatus.AWARDED.value
+    await seeded_db_session.flush()
+
+    with pytest.raises(HTTPException) as exc:
+        await rfq_svc.update_rfq(seeded_db_session, rfq.id, {"title": "X"}, alice)
+    assert exc.value.status_code == 409
