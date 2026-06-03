@@ -1180,3 +1180,39 @@ async def test_delete_pr_requester_can_delete_own(seeded_db_session):
     with pytest.raises(HTTPException) as exc:
         await purchase_svc.get_pr(db, requester, pr.id)
     assert exc.value.status_code == 404
+
+
+async def test_pr_number_no_collision_after_delete(seeded_db_session):
+    db = seeded_db_session
+    actor = await _get_user(db, "alice")
+    supplier = await _get_supplier(db)
+
+    pr1 = await _create_pr(db, actor, supplier.id, title="PR A")
+    pr2 = await _create_pr(db, actor, supplier.id, title="PR B")
+    pr3 = await _create_pr(db, actor, supplier.id, title="PR C")
+    numbers = {pr1.pr_number, pr2.pr_number, pr3.pr_number}
+    assert len(numbers) == 3
+
+    await purchase_svc.delete_pr(db, actor, pr2.id)
+
+    pr4 = await _create_pr(db, actor, supplier.id, title="PR D")
+    assert pr4.pr_number not in {pr1.pr_number, pr3.pr_number}
+    assert pr4.pr_number > pr3.pr_number
+
+
+async def test_pr_number_uses_max_suffix_not_count(seeded_db_session):
+    db = seeded_db_session
+    actor = await _get_user(db, "alice")
+    supplier = await _get_supplier(db)
+
+    first = await _create_pr(db, actor, supplier.id, title="First")
+    second = await _create_pr(db, actor, supplier.id, title="Second")
+    third = await _create_pr(db, actor, supplier.id, title="Third")
+
+    # Delete the middle one — count drops but max suffix is unchanged
+    await purchase_svc.delete_pr(db, actor, second.id)
+
+    fourth = await _create_pr(db, actor, supplier.id, title="Fourth")
+    # COUNT+1 would have produced third's number (collision); max+1 must exceed third
+    assert int(fourth.pr_number[-4:]) == int(third.pr_number[-4:]) + 1
+    assert fourth.pr_number not in {first.pr_number, third.pr_number}

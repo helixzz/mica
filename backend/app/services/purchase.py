@@ -45,12 +45,14 @@ def _compute_line_amount(qty: Decimal, unit_price: Decimal) -> Decimal:
 async def _next_pr_number(db: AsyncSession) -> str:
     year = datetime.now(UTC).year
     prefix = f"PR-{year}-"
-    result = await db.execute(
-        select(func.count(PurchaseRequisition.id)).where(
-            PurchaseRequisition.pr_number.startswith(prefix)
+    max_suffix = (
+        await db.execute(
+            select(func.max(PurchaseRequisition.pr_number)).where(
+                PurchaseRequisition.pr_number.startswith(prefix)
+            )
         )
-    )
-    n = (result.scalar_one() or 0) + 1
+    ).scalar_one_or_none()
+    n = _next_seq_from_max(max_suffix, prefix)
     return f"{prefix}{n:04d}"
 
 
@@ -59,19 +61,37 @@ async def _next_rfq_number(db: AsyncSession) -> str:
 
     year = datetime.now(UTC).year
     prefix = f"RFQ-{year}-"
-    result = await db.execute(select(func.count(RFQ.id)).where(RFQ.rfq_number.startswith(prefix)))
-    n = (result.scalar_one() or 0) + 1
+    max_suffix = (
+        await db.execute(
+            select(func.max(RFQ.rfq_number)).where(RFQ.rfq_number.startswith(prefix))
+        )
+    ).scalar_one_or_none()
+    n = _next_seq_from_max(max_suffix, prefix)
     return f"{prefix}{n:04d}"
 
 
 async def _next_po_number(db: AsyncSession) -> str:
     year = datetime.now(UTC).year
     prefix = f"PO-{year}-"
-    result = await db.execute(
-        select(func.count(PurchaseOrder.id)).where(PurchaseOrder.po_number.startswith(prefix))
-    )
-    n = (result.scalar_one() or 0) + 1
+    max_suffix = (
+        await db.execute(
+            select(func.max(PurchaseOrder.po_number)).where(
+                PurchaseOrder.po_number.startswith(prefix)
+            )
+        )
+    ).scalar_one_or_none()
+    n = _next_seq_from_max(max_suffix, prefix)
     return f"{prefix}{n:04d}"
+
+
+def _next_seq_from_max(max_value: str | None, prefix: str) -> int:
+    if not max_value:
+        return 1
+    suffix = max_value[len(prefix) :]
+    try:
+        return int(suffix) + 1
+    except ValueError:
+        return 1
 
 
 async def _audit(

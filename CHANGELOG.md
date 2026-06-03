@@ -7,6 +7,22 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [v1.24.1] — 2026-06-02
+
+### 修复（紧急）
+
+- **PR/PO/RFQ 单号生成冲突导致提交 500**：单号生成从 `COUNT(*) + 1` 改为 `MAX(suffix) + 1`
+  - 根因：v1.24.0 启用删除 PR 后，删除任意单据会使 COUNT 减少，但 MAX 不变，导致下一个生成的单号与已有单号冲突（`uq_purchase_requisitions_pr_number` 唯一约束冲突 → HTTP 500）
+  - 生产实例 count=12 / max=PR-2026-0013，COUNT+1=13 撞上已存在的 0013
+  - 修复后基于最大后缀递增，与合同/发票单号生成逻辑保持一致
+  - 同时修复 PO（`_next_po_number`）和 RFQ（`_next_rfq_number`）的相同缺陷
+
+### 测试
+
+- 新增 3 个回归测试：删除中间单据后不冲突、基于 max 而非 count 递增
+
+---
+
 ## [v1.24.0] — 2026-06-02
 
 ### 修复
