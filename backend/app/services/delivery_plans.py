@@ -153,11 +153,20 @@ async def list_delivery_plans(
         stmt = stmt.where(DeliveryPlan.status == status)
 
     if actor is not None:
-        from app.core.scoping import visible_po_id_subquery
+        from app.core.scoping import (
+            visible_contract_id_subquery,
+            visible_po_id_subquery,
+        )
 
         visible_po_ids = await visible_po_id_subquery(db, actor)
         if visible_po_ids is not None:
-            stmt = stmt.where(DeliveryPlan.po_id.in_(visible_po_ids))
+            visible_contract_ids = await visible_contract_id_subquery(db, actor)
+            stmt = stmt.where(
+                or_(
+                    DeliveryPlan.po_id.in_(visible_po_ids),
+                    DeliveryPlan.contract_id.in_(visible_contract_ids),
+                )
+            )
 
     result = await db.execute(stmt)
     plans = result.scalars().all()

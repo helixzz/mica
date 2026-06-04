@@ -87,3 +87,20 @@ async def visible_po_id_subquery(session: AsyncSession, user: User):
     if pr_sub is None:
         return None
     return select(PurchaseOrder.id).where(PurchaseOrder.pr_id.in_(pr_sub))
+
+
+async def visible_contract_id_subquery(session: AsyncSession, user: User):
+    """Return a subquery of Contract IDs visible to user, or None for full access.
+
+    A contract is visible when its PO is visible (direct po_id link or via the
+    po_contract_links M:N table).
+    """
+    from app.models import Contract, POContractLink
+
+    po_sub = await visible_po_id_subquery(session, user)
+    if po_sub is None:
+        return None
+    linked_contract_ids = select(POContractLink.contract_id).where(POContractLink.po_id.in_(po_sub))
+    return select(Contract.id).where(
+        (Contract.po_id.in_(po_sub)) | (Contract.id.in_(linked_contract_ids))
+    )

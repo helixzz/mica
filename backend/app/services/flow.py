@@ -831,8 +831,6 @@ async def list_shipments(
     if po_id:
         stmt = stmt.where(Shipment.po_id == po_id)
     elif contract_id:
-        from sqlalchemy import or_
-
         contract = await db.get(Contract, contract_id)
         if contract is None:
             raise HTTPException(404, "contract.not_found")
@@ -856,11 +854,20 @@ async def list_shipments(
             conditions.append(Shipment.po_id.in_(all_po_ids))
         stmt = stmt.where(or_(*conditions))
     if actor is not None:
-        from app.core.scoping import visible_po_id_subquery
+        from app.core.scoping import (
+            visible_contract_id_subquery,
+            visible_po_id_subquery,
+        )
 
         visible_po_ids = await visible_po_id_subquery(db, actor)
         if visible_po_ids is not None:
-            stmt = stmt.where(Shipment.po_id.in_(visible_po_ids))
+            visible_contract_ids = await visible_contract_id_subquery(db, actor)
+            stmt = stmt.where(
+                or_(
+                    Shipment.po_id.in_(visible_po_ids),
+                    Shipment.contract_id.in_(visible_contract_ids),
+                )
+            )
     return list((await db.execute(stmt)).scalars().all())
 
 

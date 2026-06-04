@@ -188,3 +188,80 @@ async def test_list_delivery_plans_filters_by_po_id_and_actor_scope(seeded_db_se
     actor_ids = {plan.id for plan in actor_filtered}
     assert alice_plan.id in actor_ids
     assert carol_plan.id not in actor_ids
+
+
+async def test_requester_sees_contract_linked_delivery_plan(seeded_db_session):
+    """Regression: a contract-only delivery plan (po_id=NULL) must be visible
+    to the requester whose PR produced the contract's PO.
+    """
+    from decimal import Decimal
+
+    from app.services import flow as flow_svc
+
+    db = seeded_db_session
+    alice, item, _pr, po = await _create_confirmed_po(db, "alice", title="Contract DP")
+
+    contract = await flow_svc.create_contract(
+        db, alice, po.id, title="Contract for DP", total_amount=Decimal("1000")
+    )
+
+    plan = await dp_svc.create_delivery_plan(
+        db,
+        DeliveryPlanCreate(
+            contract_id=contract.id,
+            item_id=item.id,
+            plan_name="Contract-linked batch",
+            planned_qty=3,
+            planned_date=date(2026, 6, 1),
+        ),
+        alice.id,
+    )
+    assert plan.po_id is None
+    assert plan.contract_id == contract.id
+
+    alice.role = UserRole.REQUESTER.value
+    await db.flush()
+
+    # Filtered by contract_id (as the contract detail page does)
+    by_contract = await dp_svc.list_delivery_plans(
+        db, contract_id=contract.id, actor=alice
+    )
+    assert plan.id in {p.id for p in by_contract}, (
+        "requester must see contract-linked delivery plan for their own PR's contract"
+    )
+
+
+async def test_requester_cannot_see_others_contract_delivery_plan(seeded_db_session):
+    from decimal import Decimal
+
+    from app.services import flow as flow_svc
+
+    db = seeded_db_session
+    alice, _alice_item, _alice_pr, _alice_po = await _create_confirmed_po(
+        db, "alice", title="Alice DP"
+    )
+    carol, carol_item, _carol_pr, carol_po = await _create_confirmed_po(
+        db, "carol", title="Carol DP"
+    )
+    carol_contract = await flow_svc.create_contract(
+        db, carol, carol_po.id, title="Carol Contract", total_amount=Decimal("500")
+    )
+    carol_plan = await dp_svc.create_delivery_plan(
+        db,
+        DeliveryPlanCreate(
+            contract_id=carol_contract.id,
+            item_id=carol_item.id,
+            plan_name="Carol batch",
+            planned_qty=2,
+            planned_date=date(2026, 6, 2),
+        ),
+        carol.id,
+    )
+
+    alice.role = UserRole.REQUESTER.value
+    await db.flush()
+
+    visible = await dp_svc.list_delivery_plans(db, actor=alice)
+    assert carol_plan.id not in {p.id for p in visible}, (
+        "requester must NOT see another requester's contract delivery plan"
+    )

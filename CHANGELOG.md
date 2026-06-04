@@ -7,6 +7,23 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [v1.24.2] — 2026-06-03
+
+### 修复
+
+- **需求方无法看到合同的交货计划/到货记录**：需求方（requester）在合同详情页"交货计划"标签看到空内容
+  - 根因：行级权限过滤 `DeliveryPlan.po_id.in_(visible_po_ids)` 排除了仅通过 `contract_id` 关联（`po_id IS NULL`）的交货计划——`NULL IN (...)` 在 SQL 中永远为假
+  - 修复：交货计划/到货记录的可见性现在同时检查 `po_id` 和 `contract_id`（通过合同的 PO 推导可见性）
+  - 需求方现在可以只读查看自己 PR 关联的合同/订单的交货计划与到货批次，了解采购进展
+  - 新增 `visible_contract_id_subquery` 统一可见性辅助函数（支持直接 po_id 关联 + po_contract_links M:N 关联）
+  - 同时修复 `list_shipments` 的相同缺陷 + 一个 `or_` UnboundLocalError 潜在 bug
+
+### 测试
+
+- 新增 2 个回归测试：需求方可见自己合同的交货计划、不可见他人的
+
+---
+
 ## [v1.24.1] — 2026-06-02
 
 ### 修复（紧急）
