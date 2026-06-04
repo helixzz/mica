@@ -26,19 +26,53 @@ from app.schemas import (
 )
 
 
+async def _resolve_plan_po_ids(db: AsyncSession, plan: DeliveryPlan) -> set[UUID]:
+    """Return the set of PO IDs a delivery plan's shipments may belong to.
+
+    A plan may be linked directly to a PO, or to a contract. A contract maps
+    to PO(s) via its own ``po_id`` and the ``po_contract_links`` M:N table.
+    Shipments are always PO-linked, so we must resolve the contract back to
+    its PO set to match them.
+    """
+    from app.models import Contract
+
+    po_ids: set[UUID] = set()
+    if plan.po_id is not None:
+        po_ids.add(plan.po_id)
+    if plan.contract_id is not None:
+        legacy_po = (
+            await db.execute(select(Contract.po_id).where(Contract.id == plan.contract_id))
+        ).scalar_one_or_none()
+        if legacy_po is not None:
+            po_ids.add(legacy_po)
+        linked = (
+            (
+                await db.execute(
+                    select(POContractLink.po_id).where(
+                        POContractLink.contract_id == plan.contract_id
+                    )
+                )
+            )
+            .scalars()
+            .all()
+        )
+        po_ids.update(linked)
+    return po_ids
+
+
 async def _get_actual_qty_for_plan(db: AsyncSession, plan: DeliveryPlan) -> tuple[int, date | None]:
     """Compute actual shipped qty for a delivery plan by matching items through shipments."""
-    conditions = []
-    if plan.po_id is not None:
-        conditions.append(Shipment.po_id == plan.po_id)
-    if plan.contract_id is not None:
-        conditions.append(Shipment.contract_id == plan.contract_id)
+    po_ids = await _resolve_plan_po_ids(db, plan)
+    if not po_ids:
+        return 0, None
+
+    match_clause = and_(POItem.item_id == plan.item_id, Shipment.po_id.in_(po_ids))
 
     actual = await db.execute(
         select(func.coalesce(func.sum(ShipmentItem.qty_shipped), 0))
         .join(Shipment, Shipment.id == ShipmentItem.shipment_id)
         .join(POItem, POItem.id == ShipmentItem.po_item_id)
-        .where(and_(POItem.item_id == plan.item_id, or_(*conditions)))
+        .where(match_clause)
     )
     qty = actual.scalar() or 0
     actual_qty = int(qty) if isinstance(qty, (Decimal, float)) else qty
@@ -47,7 +81,7 @@ async def _get_actual_qty_for_plan(db: AsyncSession, plan: DeliveryPlan) -> tupl
         select(func.max(Shipment.actual_date))
         .join(ShipmentItem, ShipmentItem.shipment_id == Shipment.id)
         .join(POItem, POItem.id == ShipmentItem.po_item_id)
-        .where(and_(POItem.item_id == plan.item_id, or_(*conditions)))
+        .where(match_clause)
     )
     actual_date = latest_date_result.scalar()
 

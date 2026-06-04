@@ -265,3 +265,58 @@ async def test_requester_cannot_see_others_contract_delivery_plan(seeded_db_sess
     assert carol_plan.id not in {p.id for p in visible}, (
         "requester must NOT see another requester's contract delivery plan"
     )
+
+
+async def test_contract_plan_actual_qty_matches_po_linked_shipment(seeded_db_session):
+    """Regression: a contract-linked delivery plan (po_id=NULL) must count
+    actual qty from PO-linked shipments (shipment.contract_id=NULL) belonging
+    to the contract's PO. Previously actual_qty was 0 due to a po_id/contract_id
+    linkage mismatch, while PO progress showed 100%.
+    """
+    from decimal import Decimal
+
+    from app.services import flow as flow_svc
+
+    db = seeded_db_session
+    alice, item, _pr, po = await _create_confirmed_po(db, "alice", title="Contract actual qty")
+
+    contract = await flow_svc.create_contract(
+        db, alice, po.id, title="Contract w/ delivery", total_amount=Decimal("1000")
+    )
+
+    # Contract-linked delivery plan (po_id is NULL)
+    plan = await dp_svc.create_delivery_plan(
+        db,
+        DeliveryPlanCreate(
+            contract_id=contract.id,
+            item_id=item.id,
+            plan_name="一次性交货",
+            planned_qty=10,
+            planned_date=date(2026, 6, 1),
+        ),
+        alice.id,
+    )
+    assert plan.po_id is None
+
+    # PO-linked shipment (shipment.contract_id is NULL), same item, fully received
+    await flow_svc.create_shipment(
+        db,
+        alice,
+        po.id,
+        items_in=[
+            {
+                "po_item_id": po.items[0].id,
+                "qty_shipped": Decimal("10"),
+                "qty_received": Decimal("10"),
+            }
+        ],
+        carrier="SF",
+        tracking_number="SF-001",
+        expected_date=date(2026, 6, 1),
+    )
+
+    plans = await dp_svc.list_delivery_plans(db, contract_id=contract.id)
+    listed = next(p for p in plans if p.id == plan.id)
+    assert listed.actual_qty == 10, (
+        f"contract-linked plan must count PO-linked shipment qty; got {listed.actual_qty}"
+    )

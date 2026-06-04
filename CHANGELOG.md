@@ -7,6 +7,21 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [v1.24.3] — 2026-06-04
+
+### 修复
+
+- **交货计划"实际数量"始终为 0**：合同关联的交货计划（`po_id=NULL`）无法统计到 PO 关联的到货批次数量，导致"实际数量"显示 0、完成度 0%，而 PO 视图交货进度却是 100%
+  - 根因：`_get_actual_qty_for_plan` 用 `Shipment.po_id == plan.po_id OR Shipment.contract_id == plan.contract_id` 匹配。当交货计划仅关联合同（po_id 为 NULL）、而到货批次仅关联 PO（contract_id 为 NULL）时，两个条件都不成立 → 匹配不到任何到货 → 实际数量 0
+  - PO 进度 100% 是直接读 `po_items.qty_received`，绕过了这个有缺陷的 JOIN，所以两处不一致
+  - 修复：新增 `_resolve_plan_po_ids`——将交货计划解析为其底层 PO 集合（直接 po_id + 合同的 po_id + po_contract_links M:N），再按 `Shipment.po_id ∈ 该集合 AND POItem.item_id == plan.item_id` 匹配到货
+
+### 测试
+
+- 新增回归测试：合同关联交货计划正确统计 PO 关联到货批次的实际数量
+
+---
+
 ## [v1.24.2] — 2026-06-03
 
 ### 修复
