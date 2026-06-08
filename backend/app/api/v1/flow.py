@@ -129,7 +129,7 @@ async def change_contract_status(
     payload: ContractStatusIn,
     user: CurrentUser,
     db: Annotated[AsyncSession, Depends(get_db)],
-    _role: Annotated[None, Depends(require_roles("admin", "procurement_mgr"))],
+    _role: Annotated[None, Depends(require_roles("admin", "procurement_mgr", "it_buyer"))],
 ):
     c = await flow.transition_contract_status(db, user, contract_id, payload.status, payload.reason)
     c = await flow.get_contract(db, c.id)
@@ -141,7 +141,7 @@ async def delete_contract(
     contract_id: UUID,
     user: CurrentUser,
     db: Annotated[AsyncSession, Depends(get_db)],
-    _role: Annotated[None, Depends(require_roles("admin"))],
+    _role: Annotated[None, Depends(require_roles("admin", "procurement_mgr", "it_buyer"))],
 ) -> Response:
     await flow.delete_contract(db, user, contract_id)
     return Response(status_code=status.HTTP_204_NO_CONTENT)
@@ -397,7 +397,7 @@ async def update_payment(
     payload: PaymentUpdateIn,
     user: CurrentUser,
     db: Annotated[AsyncSession, Depends(get_db)],
-    _role: Annotated[None, Depends(require_roles("admin", "procurement_mgr", "finance_auditor"))],
+    _role: Annotated[None, Depends(require_roles("admin", "procurement_mgr", "finance_auditor", "it_buyer"))],
 ):
     updates = payload.model_dump(exclude_unset=True)
     p = await flow.update_payment(db, user, payment_id, updates)
@@ -409,7 +409,7 @@ async def delete_payment(
     payment_id: UUID,
     user: CurrentUser,
     db: Annotated[AsyncSession, Depends(get_db)],
-    _role: Annotated[None, Depends(require_roles("admin", "procurement_mgr", "finance_auditor"))],
+    _role: Annotated[None, Depends(require_roles("admin", "procurement_mgr", "finance_auditor", "it_buyer"))],
 ) -> Response:
     await flow.delete_payment(db, user, payment_id)
     return Response(status_code=status.HTTP_204_NO_CONTENT)

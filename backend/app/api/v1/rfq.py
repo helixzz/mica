@@ -208,7 +208,7 @@ async def update_rfq(
     body: RFQUpdateIn,
     user: CurrentUser,
     db: Annotated[AsyncSession, Depends(get_db)],
-    _role: Annotated[None, Depends(require_roles("admin"))],
+    _role: Annotated[None, Depends(require_roles("admin", "it_buyer", "procurement_mgr"))],
 ):
     data: dict = {}
     if body.title is not None:

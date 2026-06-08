@@ -233,7 +233,7 @@ async def delete_plan(
     plan_id: UUID,
     user: CurrentUser,
     db: Annotated[AsyncSession, Depends(get_db)],
-    _role: Annotated[None, Depends(require_roles("admin", "procurement_mgr"))],
+    _role: Annotated[None, Depends(require_roles("admin", "procurement_mgr", "it_buyer"))],
 ):
     await svc.delete_delivery_plan(db, plan_id)
 

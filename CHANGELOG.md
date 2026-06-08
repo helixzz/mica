@@ -7,6 +7,39 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [v1.25.1] — 2026-06-08
+
+### 修复
+
+- **IT 采购员权限补齐**：审计 82 个 `require_roles` 端点后，补齐 IT 采购员工作流中的关键权限缺口
+  - `PATCH /contracts/{id}/status` — 合同状态变更（签订/归档）
+  - `DELETE /contracts/{id}` — 合同删除（之前仅 admin）
+  - `PATCH /rfqs/{id}` — RFQ 编辑（之前仅 admin，但 it_buyer 是创建者）
+  - `DELETE /delivery-plans/{id}` — 交货计划删除（之前可建可改不可删）
+  - `PATCH /payments/{id}` + `DELETE /payments/{id}` — 付款记录修正
+  - 这些端点的"创建/列表"早已含 it_buyer，缺的是"修改/删除"环节，造成不对称
+- 已确认其余 30 个 admin/财务专属端点保持收紧（非 IT 采购员职责），符合权责分离
+
+---
+
+## [v1.25.1] — 2026-06-08
+
+### 修复
+
+- **IT 采购员权限补齐**：经全面审计，IT 采购员角色对以下端点缺失权限，与其工作职责（合同/RFQ/交货/付款全流程管理）不符，本次补齐：
+  - `PATCH /contracts/{id}/status` — 合同状态变更（签订/归档/终止）
+  - `DELETE /contracts/{id}` — 合同删除
+  - `PATCH /rfqs/{id}` — RFQ 编辑（此前可创建/发送/定标却不能编辑）
+  - `DELETE /delivery-plans/{id}` — 交货计划删除（此前可创建/编辑却不能删除）
+  - `PATCH /payments/{id}` — 付款记录修正
+  - `DELETE /payments/{id}` — 付款记录删除
+
+### 说明
+
+完整审计报告见会话记录：82 个 require_roles 调用、36 已含 it_buyer、6 处缺口已修复、30 处合理排除（admin-only / 财务专属）
+
+---
+
 ## [v1.25.0] — 2026-06-04
 
 ### 新增
