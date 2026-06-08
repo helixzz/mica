@@ -1,7 +1,7 @@
 import { Card, Modal, Space, Tabs, message } from 'antd'
 import { useEffect, useState } from 'react'
 import { useTranslation } from 'react-i18next'
-import { useParams } from 'react-router-dom'
+import { useParams, useNavigate } from 'react-router-dom'
 
 import {
   api,
@@ -25,6 +25,7 @@ import { POTabs } from '@/components/PO/POTabs'
 export function PODetailPage() {
   const { t } = useTranslation()
   const { id } = useParams<{ id: string }>()
+  const navigate = useNavigate()
   const user = useAuth((s) => s.user)
 
   const [po, setPo] = useState<PurchaseOrder | null>(null)
@@ -52,7 +53,7 @@ export function PODetailPage() {
     user && ['admin', 'procurement_mgr', 'it_buyer'].includes(user.role),
   )
   const canWriteSchedule = Boolean(
-    user && ['admin', 'procurement_mgr', 'finance_auditor'].includes(user.role),
+    user && ['admin', 'procurement_mgr', 'finance_auditor', 'it_buyer'].includes(user.role),
   )
 
   const loadAll = async () => {
@@ -113,7 +114,33 @@ export function PODetailPage() {
     }
   }
 
+  const canDeletePO = Boolean(user && user.role === 'admin')
+
+  const runDeletePO = () => {
+    if (!po) return
+    Modal.confirm({
+      title: t('po.confirm_delete_title', '确认删除采购订单'),
+      content: t('po.confirm_delete_body', {
+        number: po.po_number,
+        defaultValue: `确认删除采购订单 ${po.po_number}？此操作不可撤销。`,
+      }),
+      okText: t('button.delete', '删除'),
+      okType: 'danger',
+      cancelText: t('button.cancel', '取消'),
+      onOk: async () => {
+        try {
+          await api.deletePO(po.id)
+          void message.success(t('message.deleted', '已删除'))
+          navigate('/purchase-orders')
+        } catch (e) {
+          void message.error(extractError(e).detail)
+        }
+      },
+    })
+  }
+
   if (!po) return <div>{t('message.loading')}</div>
+
 
   return (
     <Space direction="vertical" size="large" style={{ width: '100%' }}>
@@ -121,6 +148,8 @@ export function PODetailPage() {
         po={po}
         contractsCount={contracts.length}
         canCreateContract={canCreateContract}
+        canDelete={canDeletePO}
+        onDelete={runDeletePO}
         onCreateContract={() => setContractOpen(true)}
       />
       <Tabs

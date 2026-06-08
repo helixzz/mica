@@ -52,7 +52,11 @@
     "cannot_delete_active": "审批中或已转订单的采购申请不可删除"
   },
   "po": {
-    "not_found": "po不存在"
+    "not_found": "po不存在",
+    "cannot_delete_has_shipments": "该采购订单已有到货批次，无法删除",
+    "cannot_delete_has_payments": "该采购订单已有付款记录，无法删除",
+    "cannot_delete_has_contracts": "该采购订单已关联合同，无法删除",
+    "cannot_delete_has_invoices": "该采购订单已有发票，无法删除"
   },
   "approval": {
     "task_not_found": "approval task not found",

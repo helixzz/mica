@@ -62,9 +62,7 @@ async def _next_rfq_number(db: AsyncSession) -> str:
     year = datetime.now(UTC).year
     prefix = f"RFQ-{year}-"
     max_suffix = (
-        await db.execute(
-            select(func.max(RFQ.rfq_number)).where(RFQ.rfq_number.startswith(prefix))
-        )
+        await db.execute(select(func.max(RFQ.rfq_number)).where(RFQ.rfq_number.startswith(prefix)))
     ).scalar_one_or_none()
     n = _next_seq_from_max(max_suffix, prefix)
     return f"{prefix}{n:04d}"
@@ -898,6 +896,53 @@ async def delete_pr(db: AsyncSession, actor: User, pr_id: UUID) -> None:
     if pr.status not in deletable_statuses:
         raise HTTPException(409, "pr.cannot_delete_active")
     await db.delete(pr)
+    await db.commit()
+
+
+async def delete_po(db: AsyncSession, actor: User, po_id: UUID) -> None:
+    from app.models import Contract, InvoiceLine, PaymentRecord, Shipment
+
+    po = await _load_po(db, po_id)
+    if po is None:
+        raise HTTPException(404, "po.not_found")
+
+    shipment_count = (
+        await db.execute(select(func.count(Shipment.id)).where(Shipment.po_id == po_id))
+    ).scalar_one()
+    if shipment_count:
+        raise HTTPException(409, "po.cannot_delete_has_shipments")
+
+    payment_count = (
+        await db.execute(select(func.count(PaymentRecord.id)).where(PaymentRecord.po_id == po_id))
+    ).scalar_one()
+    if payment_count:
+        raise HTTPException(409, "po.cannot_delete_has_payments")
+
+    contract_count = (
+        await db.execute(select(func.count(Contract.id)).where(Contract.po_id == po_id))
+    ).scalar_one()
+    if contract_count:
+        raise HTTPException(409, "po.cannot_delete_has_contracts")
+
+    po_item_ids = [i.id for i in po.items]
+    if po_item_ids:
+        invoice_count = (
+            await db.execute(
+                select(func.count(InvoiceLine.id)).where(InvoiceLine.po_item_id.in_(po_item_ids))
+            )
+        ).scalar_one()
+        if invoice_count:
+            raise HTTPException(409, "po.cannot_delete_has_invoices")
+
+    await _audit(
+        db,
+        actor,
+        "po.deleted",
+        "purchase_order",
+        str(po_id),
+        metadata={"po_number": po.po_number, "total_amount": str(po.total_amount)},
+    )
+    await db.delete(po)
     await db.commit()
 
 

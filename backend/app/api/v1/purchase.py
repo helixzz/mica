@@ -244,6 +244,16 @@ async def get_po(
     return POOut.model_validate(po)
 
 
+@router.delete("/purchase-orders/{po_id}", status_code=204, tags=["purchase"])
+async def delete_po(
+    po_id: UUID,
+    user: CurrentUser,
+    db: Annotated[AsyncSession, Depends(get_db)],
+    _role: Annotated[None, Depends(require_roles("admin"))],
+):
+    await svc.delete_po(db, user, po_id)
+
+
 @router.get("/purchase-orders/{po_id}/delivery-plans", tags=["purchase"])
 async def get_po_delivery_plans(
     po_id: UUID,

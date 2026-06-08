@@ -22,7 +22,7 @@ from app.services import payment_schedule as svc
 
 router = APIRouter(tags=["payment-schedule"])
 
-_SCHEDULE_WRITE_ROLES = ("admin", "procurement_mgr", "finance_auditor")
+_SCHEDULE_WRITE_ROLES = ("admin", "procurement_mgr", "finance_auditor", "it_buyer")
 
 
 @router.get(

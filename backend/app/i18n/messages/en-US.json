@@ -52,7 +52,11 @@
     "cannot_delete_active": "Cannot delete a requisition that is under approval or converted to a PO"
   },
   "po": {
-    "not_found": "Po not found"
+    "not_found": "Po not found",
+    "cannot_delete_has_shipments": "Cannot delete a PO that has shipments",
+    "cannot_delete_has_payments": "Cannot delete a PO that has payment records",
+    "cannot_delete_has_contracts": "Cannot delete a PO linked to a contract",
+    "cannot_delete_has_invoices": "Cannot delete a PO that has invoices"
   },
   "approval": {
     "task_not_found": "approval task not found",

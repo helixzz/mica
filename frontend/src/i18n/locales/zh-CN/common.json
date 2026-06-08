@@ -1292,6 +1292,8 @@
     "ai_source": "AI 来源",
     "confidence": "置信度",
     "ai_failed": "AI 失败",
+    "confirm_delete_title": "确认删除采购订单",
+    "confirm_delete_body": "确认删除采购订单 {{number}}？此操作不可撤销。",
     "invoice_file_required": "必须上传至少一份发票文件",
     "line_overage": "行 {{line}}: {{msg}} (超额 {{overage}})",
     "upload_invoice_label": "上传发票文件（PDF / OFD / XML / 图片）— 必需",

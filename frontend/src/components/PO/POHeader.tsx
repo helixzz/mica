@@ -1,4 +1,4 @@
-import { DownloadOutlined, FileTextOutlined } from '@ant-design/icons'
+import { DeleteOutlined, DownloadOutlined, FileTextOutlined } from '@ant-design/icons'
 import { Button, Space, Tag, Typography } from 'antd'
 import { useTranslation } from 'react-i18next'
 import { useNavigate } from 'react-router-dom'
@@ -11,13 +11,22 @@ interface POHeaderProps {
   contractsCount: number
   canCreateContract: boolean
   onCreateContract: () => void
+  canDelete?: boolean
+  onDelete?: () => void
 }
 
 function statusTag(s: string): string {
   return s
 }
 
-export function POHeader({ po, contractsCount, canCreateContract, onCreateContract }: POHeaderProps) {
+export function POHeader({
+  po,
+  contractsCount,
+  canCreateContract,
+  onCreateContract,
+  canDelete = false,
+  onDelete,
+}: POHeaderProps) {
   const { t } = useTranslation()
   const navigate = useNavigate()
 
@@ -65,6 +74,11 @@ export function POHeader({ po, contractsCount, canCreateContract, onCreateContra
           {t('button.export_pdf')}
         </Button>
         <Button className="no-print" onClick={() => window.print()}>{t('button.print')}</Button>
+        {canDelete && (
+          <Button danger className="no-print" icon={<DeleteOutlined />} onClick={onDelete}>
+            {t('button.delete')}
+          </Button>
+        )}
         <Button onClick={() => navigate('/purchase-orders')}>{t('button.back')}</Button>
       </Space>
     </div>

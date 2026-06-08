@@ -51,6 +51,7 @@ class PRStatus(StrEnum):
     REJECTED = "rejected"
     RETURNED = "returned"
     CANCELLED = "cancelled"
+    PARTIALLY_CONVERTED = "partially_converted"
     CONVERTED = "converted"
 
 
@@ -566,6 +567,7 @@ class POItem(Base, TimestampMixin):
     uom: Mapped[str] = mapped_column(String(16), default="EA", nullable=False)
     unit_price: Mapped[Decimal] = mapped_column(Numeric(18, 4), nullable=False)
     amount: Mapped[Decimal] = mapped_column(Numeric(18, 4), nullable=False)
+    pr_qty_contribution: Mapped[Decimal | None] = mapped_column(Numeric(18, 4), nullable=True)
 
     po: Mapped[PurchaseOrder] = relationship(back_populates="items")
 

@@ -223,9 +223,7 @@ async def test_requester_sees_contract_linked_delivery_plan(seeded_db_session):
     await db.flush()
 
     # Filtered by contract_id (as the contract detail page does)
-    by_contract = await dp_svc.list_delivery_plans(
-        db, contract_id=contract.id, actor=alice
-    )
+    by_contract = await dp_svc.list_delivery_plans(db, contract_id=contract.id, actor=alice)
     assert plan.id in {p.id for p in by_contract}, (
         "requester must see contract-linked delivery plan for their own PR's contract"
     )

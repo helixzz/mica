@@ -1181,6 +1181,9 @@ export const api = {
   async deletePR(id: string): Promise<void> {
     await client.delete(`/purchase-requisitions/${id}`)
   },
+  async deletePO(id: string): Promise<void> {
+    await client.delete(`/purchase-orders/${id}`)
+  },
   async decidePR(
     id: string,
     action: 'approve' | 'reject' | 'return',

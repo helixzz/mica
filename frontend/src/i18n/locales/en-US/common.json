@@ -1280,6 +1280,8 @@
     "ai_source": "AI Source",
     "confidence": "Confidence",
     "ai_failed": "AI Failed",
+    "confirm_delete_title": "Delete Purchase Order",
+    "confirm_delete_body": "Delete purchase order {{number}}? This cannot be undone.",
     "invoice_file_required": "At least one invoice file required",
     "line_overage": "Line {{line}}: {{msg}} (overage {{overage}})",
     "upload_invoice_label": "Upload invoice (PDF/OFD/XML/Image) — required",

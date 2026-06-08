@@ -991,7 +991,9 @@ async def test_requester_sees_only_own_prs_not_cost_center(seeded_db_session):
     prs = await purchase_svc.list_prs_for_user(db, user)
     ids = {p.id for p in prs}
     assert own_pr.id in ids, "requester should see own PR"
-    assert other_pr.id not in ids, "requester should NOT see other's PR even with matching cost center"
+    assert other_pr.id not in ids, (
+        "requester should NOT see other's PR even with matching cost center"
+    )
 
 
 async def test_requester_sees_only_own_prs_not_department(seeded_db_session):
@@ -1216,3 +1218,76 @@ async def test_pr_number_uses_max_suffix_not_count(seeded_db_session):
     # COUNT+1 would have produced third's number (collision); max+1 must exceed third
     assert int(fourth.pr_number[-4:]) == int(third.pr_number[-4:]) + 1
     assert fourth.pr_number not in {first.pr_number, third.pr_number}
+
+
+async def test_delete_po_succeeds_when_no_downstream(seeded_db_session):
+    db = seeded_db_session
+    actor = await _get_user(db, "alice")
+    supplier = await _get_supplier(db)
+    pr = await _create_pr(db, actor, supplier.id, title="PO Delete Test")
+    await _mark_pr_approved(db, pr)
+    pos = await purchase_svc.convert_pr_to_po(db, actor, pr.id)
+    po = pos[0]
+
+    await purchase_svc.delete_po(db, actor, po.id)
+
+    with pytest.raises(HTTPException) as exc:
+        await purchase_svc.get_po(db, po.id)
+    assert exc.value.status_code == 404
+
+
+async def test_delete_po_blocked_by_shipment(seeded_db_session):
+    from decimal import Decimal
+
+    from app.services import flow as flow_svc
+
+    db = seeded_db_session
+    actor = await _get_user(db, "alice")
+    supplier = await _get_supplier(db)
+    pr = await _create_pr(db, actor, supplier.id, title="PO Shipment Block")
+    await _mark_pr_approved(db, pr)
+    po = (await purchase_svc.convert_pr_to_po(db, actor, pr.id))[0]
+
+    await flow_svc.create_shipment(
+        db,
+        actor,
+        po.id,
+        items_in=[{"po_item_id": po.items[0].id, "qty_shipped": Decimal("1")}],
+    )
+
+    with pytest.raises(HTTPException) as exc:
+        await purchase_svc.delete_po(db, actor, po.id)
+    assert exc.value.status_code == 409
+    assert exc.value.detail == "po.cannot_delete_has_shipments"
+
+
+async def test_delete_po_blocked_by_contract(seeded_db_session):
+    from decimal import Decimal
+
+    from app.services import flow as flow_svc
+
+    db = seeded_db_session
+    actor = await _get_user(db, "alice")
+    supplier = await _get_supplier(db)
+    pr = await _create_pr(db, actor, supplier.id, title="PO Contract Block")
+    await _mark_pr_approved(db, pr)
+    po = (await purchase_svc.convert_pr_to_po(db, actor, pr.id))[0]
+
+    await flow_svc.create_contract(
+        db, actor, po.id, title="Blocking Contract", total_amount=Decimal("100")
+    )
+
+    with pytest.raises(HTTPException) as exc:
+        await purchase_svc.delete_po(db, actor, po.id)
+    assert exc.value.status_code == 409
+    assert exc.value.detail == "po.cannot_delete_has_contracts"
+
+
+async def test_delete_po_not_found(seeded_db_session):
+    from uuid import uuid4
+
+    db = seeded_db_session
+    actor = await _get_user(db, "alice")
+    with pytest.raises(HTTPException) as exc:
+        await purchase_svc.delete_po(db, actor, uuid4())
+    assert exc.value.status_code == 404
