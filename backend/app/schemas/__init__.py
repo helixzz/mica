@@ -418,12 +418,14 @@ class POItemOut(BaseModel):
     item_id: UUID | None
     item_name: str
     specification: str | None
+    pr_item_id: UUID | None = None
     qty: Decimal
     qty_received: Decimal
     qty_invoiced: Decimal
     uom: str
     unit_price: Decimal
     amount: Decimal
+    fulfillment_links: list[FulfillmentLinkOut] = Field(default_factory=list)
 
 
 class POOut(BaseModel):

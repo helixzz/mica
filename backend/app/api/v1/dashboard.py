@@ -18,11 +18,13 @@ from app.models import (
     Contract,
     CostCenter,
     Department,
+    FulfillmentType,
     Invoice,
     InvoiceStatus,
     PaymentRecord,
     PaymentStatus,
     POStatus,
+    PRFulfillmentLink,
     PurchaseOrder,
     PurchaseRequisition,
     Shipment,
@@ -644,3 +646,54 @@ async def get_analytics(
     ]
 
     return AnalyticsOut(trend=trend, departments=departments, suppliers=suppliers)
+
+
+class DeviationRateOut(BaseModel):
+    total_links: int
+    deviated_links: int
+    deviation_rate: float
+    window_days: int
+
+
+@router.get("/dashboard/deviation-rate", response_model=DeviationRateOut)
+async def get_deviation_rate(
+    _user: CurrentUser,
+    db: Annotated[AsyncSession, Depends(get_db)],
+    window_days: int = Query(30, ge=1, le=365),
+) -> DeviationRateOut:
+    cutoff = datetime.now(UTC) - timedelta(days=window_days)
+    fulfilling_types = (
+        FulfillmentType.EQUIVALENT.value,
+        FulfillmentType.DOWNGRADED.value,
+        FulfillmentType.SUBSTITUTE.value,
+    )
+    deviation_types = (
+        FulfillmentType.DOWNGRADED.value,
+        FulfillmentType.SUBSTITUTE.value,
+    )
+
+    total = (
+        await db.execute(
+            select(func.count(PRFulfillmentLink.id)).where(
+                PRFulfillmentLink.created_at >= cutoff,
+                PRFulfillmentLink.fulfillment_type.in_(fulfilling_types),
+            )
+        )
+    ).scalar() or 0
+
+    deviated = (
+        await db.execute(
+            select(func.count(PRFulfillmentLink.id)).where(
+                PRFulfillmentLink.created_at >= cutoff,
+                PRFulfillmentLink.fulfillment_type.in_(deviation_types),
+            )
+        )
+    ).scalar() or 0
+
+    rate = float(deviated) / float(total) if total > 0 else 0.0
+    return DeviationRateOut(
+        total_links=int(total),
+        deviated_links=int(deviated),
+        deviation_rate=round(rate, 4),
+        window_days=window_days,
+    )

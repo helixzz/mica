@@ -21,6 +21,7 @@ import { POInfoCard } from '@/components/PO/POInfoCard'
 import { POModals } from '@/components/PO/POModals'
 import { POProgressCard } from '@/components/PO/POProgressCard'
 import { POTabs } from '@/components/PO/POTabs'
+import { SupplementaryItemModal } from '@/components/PO/SupplementaryItemModal'
 
 export function PODetailPage() {
   const { t } = useTranslation()
@@ -48,6 +49,8 @@ export function PODetailPage() {
   const [editingPlan, setEditingPlan] = useState<any | undefined>(undefined)
   const [busy, setBusy] = useState(false)
   const [paymentPreFill, setPaymentPreFill] = useState<{ contractId?: string; scheduleItemId?: string; amount?: number } | null>(null)
+  const [supplementaryOpen, setSupplementaryOpen] = useState(false)
+  const [prItemsForSupplementary, setPrItemsForSupplementary] = useState<{ id: string; line_no: number; item_name: string }[]>([])
 
   const canCreateContract = Boolean(
     user && ['admin', 'procurement_mgr', 'it_buyer'].includes(user.role),
@@ -116,6 +119,29 @@ export function PODetailPage() {
 
   const canDeletePO = Boolean(user && user.role === 'admin')
 
+  const canAddSupplementary = Boolean(
+    user && ['admin', 'procurement_mgr', 'it_buyer'].includes(user.role),
+  )
+
+  const openSupplementaryModal = async () => {
+    if (!po) return
+    try {
+      const pr = await api.getPR(po.pr_id)
+      setPrItemsForSupplementary(
+        (pr.items || [])
+          .filter((it: any) => it.id)
+          .map((it: any) => ({
+            id: it.id as string,
+            line_no: it.line_no,
+            item_name: it.item_name,
+          })),
+      )
+    } catch {
+      setPrItemsForSupplementary([])
+    }
+    setSupplementaryOpen(true)
+  }
+
   const runDeletePO = () => {
     if (!po) return
     Modal.confirm({
@@ -151,6 +177,8 @@ export function PODetailPage() {
         canDelete={canDeletePO}
         onDelete={runDeletePO}
         onCreateContract={() => setContractOpen(true)}
+        canAddSupplementary={canAddSupplementary}
+        onAddSupplementary={openSupplementaryModal}
       />
       <Tabs
         items={[
@@ -225,6 +253,15 @@ export function PODetailPage() {
             children: <ActivityTimeline resourceType="purchase_order" resourceId={po.id} />,
           },
         ]}
+      />
+      <SupplementaryItemModal
+        open={supplementaryOpen}
+        po={po}
+        prItems={prItemsForSupplementary}
+        onClose={() => setSupplementaryOpen(false)}
+        onSuccess={() => {
+          void loadAll()
+        }}
       />
     </Space>
   )

@@ -670,7 +670,6 @@ async def _create_pos_for_pr_items(
                 uom=pr_item.uom,
                 unit_price=pr_item.unit_price,
                 amount=pr_item.amount,
-                pr_qty_contribution=pr_item.qty,
             )
             db.add(po_item)
             await db.flush()
@@ -810,6 +809,55 @@ _FULFILLING_TYPES: tuple[str, ...] = (
     FulfillmentType.SUBSTITUTE.value,
 )
 
+_DEVIATION_TYPES: tuple[str, ...] = (
+    FulfillmentType.DOWNGRADED.value,
+    FulfillmentType.SUBSTITUTE.value,
+)
+
+
+async def _maybe_trigger_deviation_approval(
+    db: AsyncSession,
+    actor: User,
+    link: PRFulfillmentLink,
+) -> None:
+    if link.fulfillment_type not in _DEVIATION_TYPES:
+        return
+
+    from app.services.system_params import system_params
+
+    threshold = await system_params.get_int(
+        db, "fulfillment.deviation_approval_threshold"
+    )
+    if threshold is None or threshold <= 0:
+        return
+
+    po_item = await db.get(POItem, link.po_item_id)
+    if po_item is None:
+        return
+    deviation_amount = (
+        Decimal(str(link.qty_contribution)) * Decimal(str(po_item.unit_price))
+    )
+    if deviation_amount < Decimal(str(threshold)):
+        return
+
+    pr_item = link.pr_item
+    pr_number = pr_item.pr.pr_number if pr_item.pr else "unknown"
+    title = f"Deviation review: {link.fulfillment_type} on {pr_number}/L{pr_item.line_no}"
+    try:
+        await approval_svc.create_instance_for_pr(
+            db,
+            actor,
+            biz_type="fulfillment_deviation",
+            biz_id=link.id,
+            biz_number=str(link.id)[:8],
+            title=title,
+            amount=deviation_amount,
+        )
+    except Exception:
+        logger.warning(
+            "Failed to create deviation approval for link %s", link.id, exc_info=True
+        )
+
 
 async def _load_link(db: AsyncSession, link_id: UUID) -> PRFulfillmentLink | None:
     return (
@@ -922,6 +970,11 @@ async def create_fulfillment_link(
             "deviation_note": deviation_note,
         },
     )
+
+    refreshed_link = await _load_link(db, link.id)
+    if refreshed_link is not None:
+        await _maybe_trigger_deviation_approval(db, actor, refreshed_link)
+
     await db.commit()
 
     refreshed = await _load_link(db, link.id)
@@ -981,6 +1034,10 @@ async def update_fulfillment_link(
             "deviation_note": link.deviation_note,
         },
     )
+
+    if new_type in _DEVIATION_TYPES:
+        await _maybe_trigger_deviation_approval(db, actor, link)
+
     await db.commit()
 
     refreshed = await _load_link(db, link.id)

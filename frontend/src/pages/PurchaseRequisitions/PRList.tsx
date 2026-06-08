@@ -15,10 +15,19 @@ const statusColors: Record<string, string> = {
   rejected: 'error',
   returned: 'warning',
   cancelled: 'default',
+  partially_converted: 'gold',
   converted: 'cyan',
 }
 
-const STATUS_OPTIONS = ['draft', 'submitted', 'approved', 'rejected', 'returned', 'converted']
+const STATUS_OPTIONS = [
+  'draft',
+  'submitted',
+  'approved',
+  'rejected',
+  'returned',
+  'partially_converted',
+  'converted',
+]
 
 export function PRListPage() {
   const { t } = useTranslation()

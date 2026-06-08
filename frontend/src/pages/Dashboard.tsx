@@ -43,6 +43,7 @@ import {
   type BudgetSummary,
   type ContractExpiring,
   type DashboardMetrics,
+  type DeviationRate,
   type PRListItem,
   type PurchaseOrderListItem,
   type SKUAnomaly,
@@ -113,6 +114,7 @@ export function DashboardPage() {
   const [analytics, setAnalytics] = useState<AnalyticsData | null>(null)
   const [invoiceMatch, setInvoiceMatch] = useState<InvoiceMatchSummary[]>([])
   const [paymentCalendar, setPaymentCalendar] = useState<PaymentCalendarItem[]>([])
+  const [deviationRate, setDeviationRate] = useState<DeviationRate | null>(null)
   const [currentTime, setCurrentTime] = useState(new Date())
   const [customizeVisible, setCustomizeVisible] = useState(false)
   const [showWelcome, setShowWelcome] = useState(() => !localStorage.getItem('mica.welcome_dismissed'))
@@ -200,7 +202,8 @@ export function DashboardPage() {
       api.getAnalytics().catch(() => null),
       api.getInvoiceMatchSummary().catch(() => []),
       api.getPaymentCalendar().catch(() => []),
-    ]).then(([prsData, posData, pendingData, contractsData, anomaliesData, metricsData, deliveryData, budgetData, agingData, analyticsData, invoiceMatchData, paymentCalendarData]) => {
+      api.getDeviationRate(30).catch(() => null),
+    ]).then(([prsData, posData, pendingData, contractsData, anomaliesData, metricsData, deliveryData, budgetData, agingData, analyticsData, invoiceMatchData, paymentCalendarData, deviationData]) => {
       setPrs(prsData)
       setPos(posData)
       setPending(pendingData)
@@ -213,6 +216,7 @@ export function DashboardPage() {
       setAnalytics(analyticsData)
       setInvoiceMatch(invoiceMatchData)
       setPaymentCalendar(paymentCalendarData)
+      setDeviationRate(deviationData)
       setLoading(false)
     }).catch(() => {
       setLoading(false)
@@ -362,6 +366,22 @@ export function DashboardPage() {
                     loading={loading}
                     variant="accent"
                     footer={<Link to="/delivery-plans">{t('dashboard.view_delivery')}</Link>}
+                  />
+                </Col>
+              )}
+              {deviationRate && deviationRate.total_links > 0 && (
+                <Col xs={24} sm={12} lg={8}>
+                  <StatCard
+                    label={t('fulfillment.deviation_rate_card_title')}
+                    value={`${(deviationRate.deviation_rate * 100).toFixed(1)}%`}
+                    icon={<AlertOutlined />}
+                    loading={loading}
+                    variant="accent"
+                    footer={
+                      <Text type="secondary" style={{ fontSize: 12 }}>
+                        {deviationRate.deviated_links} / {deviationRate.total_links}
+                      </Text>
+                    }
                   />
                 </Col>
               )}

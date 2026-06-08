@@ -577,7 +577,6 @@ class POItem(Base, TimestampMixin):
     uom: Mapped[str] = mapped_column(String(16), default="EA", nullable=False)
     unit_price: Mapped[Decimal] = mapped_column(Numeric(18, 4), nullable=False)
     amount: Mapped[Decimal] = mapped_column(Numeric(18, 4), nullable=False)
-    pr_qty_contribution: Mapped[Decimal | None] = mapped_column(Numeric(18, 4), nullable=True)
 
     po: Mapped[PurchaseOrder] = relationship(back_populates="items")
     fulfillment_links: Mapped[list[PRFulfillmentLink]] = relationship(
@@ -1268,6 +1267,7 @@ class SystemParameterCategory(StrEnum):
     CURRENCY = "currency"
     NOTIFICATION = "notification"
     SYSTEM = "system"
+    FULFILLMENT = "fulfillment"
 
 
 class SystemParameter(Base, TimestampMixin):

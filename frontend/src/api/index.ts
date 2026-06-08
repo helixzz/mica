@@ -99,6 +99,9 @@ export interface PRItem {
   uom: string
   unit_price: number | string
   amount?: number | string
+  fulfilled_qty?: string | null
+  is_fully_fulfilled?: boolean | null
+  fulfillment_breakdown?: Record<string, string> | null
 }
 
 export interface PurchaseRequisition {
@@ -142,18 +145,34 @@ export interface PRListItem {
   created_at: string
 }
 
+export type FulfillmentType = 'equivalent' | 'downgraded' | 'substitute' | 'supplementary'
+
+export interface FulfillmentLink {
+  id: string
+  pr_item_id: string
+  po_item_id: string
+  fulfillment_type: FulfillmentType
+  qty_contribution: string
+  deviation_note: string | null
+  created_by_id: string
+  created_at: string
+  updated_at: string
+}
+
 export interface POItem {
   id: string
   line_no: number
   item_id: string | null
   item_name: string
   specification: string | null
+  pr_item_id: string | null
   qty: string
   qty_received: string
   qty_invoiced: string
   uom: string
   unit_price: string
   amount: string
+  fulfillment_links: FulfillmentLink[]
 }
 
 export interface PurchaseOrder {
@@ -596,6 +615,13 @@ export interface DashboardMetrics {
   price_anomalies_pending: number
   invoices_pending_match: number
   invoices_mismatched: number
+}
+
+export interface DeviationRate {
+  total_links: number
+  deviated_links: number
+  deviation_rate: number
+  window_days: number
 }
 
 export interface AgingApproval {
@@ -1201,6 +1227,65 @@ export const api = {
     )
     return data
   },
+  async convertToPOPartial(id: string, prItemIds: string[]): Promise<PurchaseOrder[]> {
+    const { data } = await client.post<PurchaseOrder[]>(
+      `/purchase-requisitions/${id}/convert-to-po/partial`,
+      { pr_item_ids: prItemIds }
+    )
+    return data
+  },
+  async createFulfillmentLink(
+    poId: string,
+    poItemId: string,
+    payload: {
+      pr_item_id: string
+      fulfillment_type: FulfillmentType
+      qty_contribution: number | string
+      deviation_note?: string | null
+    }
+  ): Promise<FulfillmentLink> {
+    const { data } = await client.post<FulfillmentLink>(
+      `/purchase-orders/${poId}/items/${poItemId}/fulfillment-link`,
+      payload
+    )
+    return data
+  },
+  async updateFulfillmentLink(
+    linkId: string,
+    payload: {
+      fulfillment_type?: FulfillmentType
+      qty_contribution?: number | string
+      deviation_note?: string | null
+    }
+  ): Promise<FulfillmentLink> {
+    const { data } = await client.patch<FulfillmentLink>(
+      `/fulfillment-links/${linkId}`,
+      payload
+    )
+    return data
+  },
+  async deleteFulfillmentLink(linkId: string): Promise<void> {
+    await client.delete(`/fulfillment-links/${linkId}`)
+  },
+  async addSupplementaryPOItem(
+    poId: string,
+    payload: {
+      item_name: string
+      specification?: string | null
+      item_id?: string | null
+      qty: number | string
+      uom?: string
+      unit_price: number | string
+      supplementary_for_pr_item_id?: string | null
+      deviation_note?: string | null
+    }
+  ): Promise<POItem> {
+    const { data } = await client.post<POItem>(
+      `/purchase-orders/${poId}/supplementary-items`,
+      payload
+    )
+    return data
+  },
   async previewPRConversion(id: string): Promise<PRConversionPreviewGroup[]> {
     const { data } = await client.get<PRConversionPreviewGroup[]>(
       `/purchase-requisitions/${id}/conversion-preview`
@@ -1724,6 +1809,12 @@ export const api = {
   ): Promise<DashboardMetrics> {
     const { data } = await client.get<DashboardMetrics>('/dashboard/metrics', {
       params: { compare_to },
+    })
+    return data
+  },
+  async getDeviationRate(window_days = 30): Promise<DeviationRate> {
+    const { data } = await client.get<DeviationRate>('/dashboard/deviation-rate', {
+      params: { window_days },
     })
     return data
   },

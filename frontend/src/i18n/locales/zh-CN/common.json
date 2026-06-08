@@ -208,6 +208,7 @@
     "rejected": "已拒绝",
     "returned": "已退回",
     "cancelled": "已取消",
+    "partially_converted": "部分生成订单",
     "converted": "已生成订单",
     "confirmed": "已确认",
     "closed": "已关闭",
@@ -1522,5 +1523,37 @@
   "activity": {
     "title": "活动日志",
     "no_events": "暂无活动记录"
+  },
+  "fulfillment_type": {
+    "equivalent": "完全等价",
+    "downgraded": "降配",
+    "substitute": "替换",
+    "supplementary": "补充派生"
+  },
+  "fulfillment": {
+    "column_title": "履约关系",
+    "progress": "履约进度",
+    "breakdown_title": "履约明细",
+    "deviation_note": "偏离说明",
+    "no_links": "未关联",
+    "create_link": "标注履约关系",
+    "edit_link": "修改履约关系",
+    "delete_link": "删除履约关系",
+    "delete_confirm": "确认删除该履约关系？删除后会重新计算 PR 状态。",
+    "type_label": "履约类型",
+    "qty_contribution_label": "贡献数量",
+    "deviation_note_label": "偏离说明（可选）",
+    "deviation_note_placeholder": "例如：因 A 配件供货紧张降配；或：原型号缺货改用替代型号 X",
+    "convert_partial": "选定行转 PO",
+    "convert_partial_title": "选择要转 PO 的物料行",
+    "convert_partial_hint": "勾选要转换为采购订单的行；其余行可后续再转。",
+    "add_supplementary": "添加补充派生项",
+    "add_supplementary_title": "添加补充派生项",
+    "add_supplementary_hint": "为现有 PO 增加额外的物料行。可选挂在某个 PR 行上下文（不计入主履约数量）。",
+    "supplementary_for_pr_item": "关联 PR 行（可选）",
+    "deviation_rate_card_title": "近 30 天偏离率",
+    "deviation_rate_explainer": "偏离 link 数（降配 + 替换）/ 总履约 link 数",
+    "approval_pending": "该偏离待审批",
+    "approval_threshold_hint": "金额超过 {{amount}} 元的降配/替换将自动创建审批单"
   }
 }

@@ -208,6 +208,7 @@
     "rejected": "Rejected",
     "returned": "Returned",
     "cancelled": "Cancelled",
+    "partially_converted": "Partially converted",
     "converted": "Converted to PO",
     "confirmed": "Confirmed",
     "closed": "Closed",
@@ -1510,5 +1511,37 @@
   "activity": {
     "title": "Activity Log",
     "no_events": "No activity records"
+  },
+  "fulfillment_type": {
+    "equivalent": "Equivalent",
+    "downgraded": "Downgraded",
+    "substitute": "Substitute",
+    "supplementary": "Supplementary"
+  },
+  "fulfillment": {
+    "column_title": "Fulfillment",
+    "progress": "Progress",
+    "breakdown_title": "Breakdown",
+    "deviation_note": "Deviation note",
+    "no_links": "Not linked",
+    "create_link": "Link fulfillment",
+    "edit_link": "Edit fulfillment",
+    "delete_link": "Delete fulfillment",
+    "delete_confirm": "Delete this fulfillment link? PR status will be recomputed.",
+    "type_label": "Fulfillment type",
+    "qty_contribution_label": "Quantity contributed",
+    "deviation_note_label": "Deviation note (optional)",
+    "deviation_note_placeholder": "e.g., A part out of stock; switching to substitute model X",
+    "convert_partial": "Convert selected rows",
+    "convert_partial_title": "Select rows to convert",
+    "convert_partial_hint": "Pick which lines to convert into POs now. Others can be converted later.",
+    "add_supplementary": "Add supplementary item",
+    "add_supplementary_title": "Add supplementary item",
+    "add_supplementary_hint": "Add an extra item to this PO. Optionally attach to a PR line as supplementary (does not count toward main fulfillment).",
+    "supplementary_for_pr_item": "Attach to PR line (optional)",
+    "deviation_rate_card_title": "Deviation rate (last 30 days)",
+    "deviation_rate_explainer": "Deviated links (downgraded + substitute) / total fulfillment links",
+    "approval_pending": "Deviation pending review",
+    "approval_threshold_hint": "Downgrades or substitutes above {{amount}} trigger an approval flow"
   }
 }

@@ -1,4 +1,4 @@
-import { DeleteOutlined, DownloadOutlined, FileTextOutlined } from '@ant-design/icons'
+import { DeleteOutlined, DownloadOutlined, FileTextOutlined, PlusOutlined } from '@ant-design/icons'
 import { Button, Space, Tag, Typography } from 'antd'
 import { useTranslation } from 'react-i18next'
 import { useNavigate } from 'react-router-dom'
@@ -13,6 +13,8 @@ interface POHeaderProps {
   onCreateContract: () => void
   canDelete?: boolean
   onDelete?: () => void
+  canAddSupplementary?: boolean
+  onAddSupplementary?: () => void
 }
 
 function statusTag(s: string): string {
@@ -26,6 +28,8 @@ export function POHeader({
   onCreateContract,
   canDelete = false,
   onDelete,
+  canAddSupplementary = false,
+  onAddSupplementary,
 }: POHeaderProps) {
   const { t } = useTranslation()
   const navigate = useNavigate()
@@ -39,6 +43,16 @@ export function POHeader({
         <Tag color="success">{t(`status.${statusTag(po.status)}` as 'status.confirmed')}</Tag>
       </Space>
       <Space>
+        {canAddSupplementary && (
+          <Button
+            icon={<PlusOutlined />}
+            className="no-print"
+            onClick={onAddSupplementary}
+            disabled={po.status === 'cancelled'}
+          >
+            {t('fulfillment.add_supplementary')}
+          </Button>
+        )}
         {canCreateContract && (
           <Button
             type="primary"

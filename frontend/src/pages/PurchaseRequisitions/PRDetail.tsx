@@ -3,6 +3,8 @@ import {
   Card,
   Descriptions,
   Modal,
+  Popover,
+  Progress,
   Select,
   Space,
   Table,
@@ -69,6 +71,8 @@ export function PRDetailPage() {
     }[]
   }>({ purchase_orders: [], contracts: [] })
   const [allUsers, setAllUsers] = useState<{ id: string; display_name: string; email: string }[]>([])
+  const [partialOpen, setPartialOpen] = useState(false)
+  const [partialSelected, setPartialSelected] = useState<string[]>([])
 
   const load = async () => {
     if (!id) return
@@ -115,7 +119,9 @@ export function PRDetailPage() {
   const canSupplementQuote = pr.status === 'approved' && isBuyer
   const hasIncompleteItems = (pr.items || []).some((item: any) => !item.unit_price || Number(item.unit_price) === 0 || !item.supplier_id)
   const canConvert =
-    pr.status === 'approved' && isBuyer && !hasIncompleteItems
+    (pr.status === 'approved' || pr.status === 'partially_converted') &&
+    isBuyer &&
+    !hasIncompleteItems
 
   const runDecision = (action: 'approve' | 'reject' | 'return') => {
     Modal.confirm({
@@ -266,6 +272,42 @@ export function PRDetailPage() {
     })
   }
 
+  const unconvertedPRItems = useMemo(() => {
+    if (!pr) return []
+    return (pr.items || []).filter((item: any) => {
+      const filled = Number(item.fulfilled_qty || 0)
+      const total = Number(item.qty || 0)
+      return filled < total
+    })
+  }, [pr])
+
+  const openPartialConvertModal = () => {
+    setPartialSelected(unconvertedPRItems.map((it: any) => it.id).filter(Boolean) as string[])
+    setPartialOpen(true)
+  }
+
+  const runPartialConvert = async () => {
+    if (!pr || partialSelected.length === 0) return
+    setBusy(true)
+    try {
+      const pos = await api.convertToPOPartial(pr.id, partialSelected)
+      void message.success(
+        t('message.convert_success_multi', {
+          count: pos.length,
+          po_numbers: pos.map((p) => p.po_number).join('、'),
+        }),
+      )
+      setPartialOpen(false)
+      setPartialSelected([])
+      await load()
+    } catch (e) {
+      const err = extractError(e)
+      void message.error(err.detail || t('error.unexpected'))
+    } finally {
+      setBusy(false)
+    }
+  }
+
   const tabItems = [
     {
       key: 'details',
@@ -392,7 +434,7 @@ export function PRDetailPage() {
               rowKey="line_no"
               dataSource={pr.items}
               pagination={false}
-              scroll={{ x: 600 }}
+              scroll={{ x: 720 }}
               columns={[
                 { title: t('field.line_no'), dataIndex: 'line_no', width: 60 },
                 { title: t('field.item_name'), dataIndex: 'item_name' },
@@ -405,6 +447,57 @@ export function PRDetailPage() {
                 { title: t('field.uom'), dataIndex: 'uom', width: 80 },
                 { title: t('field.unit_price'), dataIndex: 'unit_price', align: 'right', render: (v: string) => fmtAmount(v, pr.currency) },
                 { title: t('field.amount'), dataIndex: 'amount', align: 'right', render: (v: string) => fmtAmount(v, pr.currency) },
+                {
+                  title: t('fulfillment.progress'),
+                  width: 180,
+                  render: (_: unknown, row: any) => {
+                    const total = Number(row.qty || 0)
+                    const filled = Number(row.fulfilled_qty || 0)
+                    if (total === 0) return '-'
+                    const percent = Math.min(100, Math.round((filled / total) * 100))
+                    const status = row.is_fully_fulfilled
+                      ? 'success'
+                      : filled > 0
+                        ? 'active'
+                        : 'normal'
+                    const breakdown = (row.fulfillment_breakdown ?? {}) as Record<string, string>
+                    const hasBreakdown = Object.values(breakdown).some(
+                      (v) => Number(v) > 0,
+                    )
+                    const bar = (
+                      <div>
+                        <Progress
+                          percent={percent}
+                          status={status as any}
+                          size="small"
+                          format={() => `${fmtQty(String(filled))}/${fmtQty(String(total))}`}
+                        />
+                      </div>
+                    )
+                    if (!hasBreakdown) return bar
+                    return (
+                      <Popover
+                        title={t('fulfillment.breakdown_title')}
+                        content={
+                          <Space direction="vertical" size={4}>
+                            {Object.entries(breakdown)
+                              .filter(([, v]) => Number(v) > 0)
+                              .map(([k, v]) => (
+                                <div key={k}>
+                                  <Tag>
+                                    {t(`fulfillment_type.${k}` as 'fulfillment_type.equivalent')}
+                                  </Tag>
+                                  {fmtQty(v)}
+                                </div>
+                              ))}
+                          </Space>
+                        }
+                      >
+                        <span style={{ cursor: 'help' }}>{bar}</span>
+                      </Popover>
+                    )
+                  },
+                },
               ]}
             />
           </Card>
@@ -574,9 +667,16 @@ export function PRDetailPage() {
             </>
           )}
           {canConvert && (
-            <Button type="primary" onClick={runConvert} loading={busy}>
-              {t('button.convert_to_po')}
-            </Button>
+            <>
+              <Button type="primary" onClick={runConvert} loading={busy}>
+                {t('button.convert_to_po')}
+              </Button>
+              {unconvertedPRItems.length > 1 && (
+                <Button onClick={openPartialConvertModal} loading={busy}>
+                  {t('fulfillment.convert_partial')}
+                </Button>
+              )}
+            </>
           )}
           {canSupplementQuote && hasIncompleteItems && (
             <>
@@ -624,6 +724,46 @@ export function PRDetailPage() {
           .mobile-action-bar { display: flex !important; }
         }
       `}</style>
+
+      <Modal
+        title={t('fulfillment.convert_partial_title')}
+        open={partialOpen}
+        onCancel={() => setPartialOpen(false)}
+        onOk={runPartialConvert}
+        confirmLoading={busy}
+        width={720}
+        okText={t('button.confirm')}
+        cancelText={t('button.cancel')}
+      >
+        <Typography.Paragraph type="secondary">
+          {t('fulfillment.convert_partial_hint')}
+        </Typography.Paragraph>
+        <Table
+          rowKey="id"
+          size="small"
+          pagination={false}
+          dataSource={unconvertedPRItems}
+          rowSelection={{
+            selectedRowKeys: partialSelected,
+            onChange: (keys) => setPartialSelected(keys as string[]),
+            getCheckboxProps: (row: any) => ({
+              disabled: !row.supplier_id,
+            }),
+          }}
+          columns={[
+            { title: t('field.line_no'), dataIndex: 'line_no', width: 60 },
+            { title: t('field.item_name'), dataIndex: 'item_name' },
+            {
+              title: t('field.supplier'),
+              dataIndex: 'supplier_id',
+              render: (v: string | null) =>
+                v ? supplierMap[v] ?? v : <Typography.Text type="warning">{t('pr.items_missing_supplier')}</Typography.Text>,
+            },
+            { title: t('field.qty'), dataIndex: 'qty', align: 'right', render: (v: string) => fmtQty(v) },
+            { title: t('field.uom'), dataIndex: 'uom', width: 80 },
+          ]}
+        />
+      </Modal>
     </Space>
   )
 }

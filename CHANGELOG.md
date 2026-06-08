@@ -7,6 +7,61 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [v1.28.0] — 2026-06-09
+
+PR→PO 履约偏离追踪系列收官版。前端 UI 全面落地 + 治理能力补全。
+
+### 前端
+
+- **PO 详情页**：`POItem` 行新增"履约关系"列，按类型显示 chip（绿色等价、橙色降配、深红替换、蓝色补充派生），点击/悬停显示偏离说明
+- **PR 详情页**：`PRItem` 行新增"履约进度"列，显示 `12/64` 进度条，点开 popover 显示按类型聚合的明细
+- **PR 列表**：状态筛选新增 `partially_converted` 选项，徽章用金色区分
+- **PR 详情分批转换**：`approved` 或 `partially_converted` 状态下显示"选定行转 PO"按钮，弹出 Modal 选择 PR 行子集
+- **PO 详情添加补充派生项**：Header 新增按钮，弹出 Modal 录入派生项（可选关联 PR 行）
+- **Dashboard**：新增"近 30 天偏离率"StatCard，显示降配+替换 link 占比
+
+### 后端
+
+- **偏离审批**：`downgraded` / `substitute` 类型的履约 link 创建/修改时，若金额（数量 × 单价）≥ `fulfillment.deviation_approval_threshold`（默认 10 万），自动创建 `biz_type=fulfillment_deviation` 的审批单交给采购经理。审批**不阻塞业务**——失败仅记录 warning
+- **Dashboard 端点**：`GET /dashboard/deviation-rate?window_days=30` 返回偏离率统计
+- **POItemOut 扩展**：响应包含 `pr_item_id` 与 `fulfillment_links[]`，前端无需额外请求
+- **`pr_qty_contribution` 字段移除**：v1.26 引入的临时字段，v1.27 后已被 `pr_fulfillment_links` 完全取代，本版清理
+
+### 数据库
+
+- **迁移 0052**：删除 `po_items.pr_qty_contribution` 列；新增 `system_parameters` 类别 `fulfillment` 并 seed `fulfillment.deviation_approval_threshold` 默认 100000
+- **ORM**：`SystemParameterCategory` 枚举新增 `FULFILLMENT`
+
+### i18n
+
+- 前端新增约 20 个 key（`fulfillment_type.*` / `fulfillment.*`）
+- 中英双语：zh-CN 1428 keys / en-US 1421 keys（7 个 zh-only insights 键为历史遗留）
+
+### 文档
+
+- 用户手册 IT 采购员章节新增"PR→PO 履约偏离"小节，说明 4 种类型 + 分批转换 + 偏离审批 + Dashboard 偏离率
+
+### 测试
+
+- 总用例 694（无新增，原有用例覆盖新逻辑），覆盖率 71.98%
+- 前端 type-check + build 全过
+
+### 系列收官
+
+PR→PO 履约偏离追踪自 v1.26 启动，历经三版交付完整链条：
+
+| 版本 | 主题 |
+|------|------|
+| v1.26 | 后端 schema 基础（`pr_fulfillment_links` 表 + 分批转换） |
+| v1.27 | 后端能力齐全（4 种履约类型 + link CRUD + 派生项） |
+| **v1.28** | **前端 UI + 治理可视化 + 审批 + 字段清理** |
+
+### 后续路线
+
+- v1.29+：多供应商比价改进、合同 OCR 模板系统、SAML 组映射策略编辑器、Dashboard 自定义看板等功能向迭代
+
+---
+
 ## [v1.27.0] — 2026-06-09
 
 ### 新增
