@@ -502,6 +502,10 @@ class PRSaveQuotesOut(BaseModel):
     skipped_unchanged_count: int
 
 
+class PRPartialConvertIn(BaseModel):
+    pr_item_ids: list[UUID]
+
+
 class ContractCreateIn(BaseModel):
     po_id: UUID
     title: str

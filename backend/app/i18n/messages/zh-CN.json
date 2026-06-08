@@ -47,6 +47,10 @@
     "must_be_approved_to_convert": "pr must be approved to convert",
     "approval_not_found": "pr approval not found",
     "items_missing_supplier": "pr items missing supplier",
+    "partial_no_items": "请至少选择一个物料行进行转换",
+    "partial_unknown_item": "选中的物料行不属于该采购申请",
+    "partial_already_converted": "选中的物料行已经生成过采购订单，不能重复转换",
+    "already_fully_converted": "该采购申请的所有物料行均已生成采购订单",
     "proxy_not_allowed": "您没有权限代他人提交采购申请",
     "requester_not_found": "指定的需求方不存在或已停用",
     "cannot_delete_active": "审批中或已转订单的采购申请不可删除"

@@ -7,6 +7,32 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [v1.26.0] — 2026-06-09
+
+### 新增
+
+- **PR→PO 履约关联表**：新建 `pr_fulfillment_links` 表 + `FulfillmentType` 枚举（`equivalent` / `downgraded` / `substitute` / `supplementary`），记录 POItem 与 PRItem 的多类型映射关系，为后续追踪原始需求与实际履约偏离打基础
+- **分批转 PO**：新端点 `POST /purchase-requisitions/{id}/convert-to-po/partial`，可选取部分 PR 行转 PO（按 supplier 分组），剩余行可后续再转
+- **PR 状态自动迁移**：基于 link 聚合判定，部分转换后 PR 状态变为 `partially_converted`，全部转换后变为 `converted`
+- **数据回填**：迁移 0050 自动为现有 POItem 创建 EQUIVALENT 类型的 link，旧数据无缝兼容
+
+### 修改
+
+- `convert_pr_to_po` 重构为基于"未转换 PR 行"集合，等价于 v1.25 行为但新增产出 EQUIVALENT link
+- `_load_pr` 增加 `fulfillment_links` 关系预加载，防止 N+1
+
+### 测试
+
+- 新增 7 个单元测试覆盖：全量产出 link、分批选行、分批后再全量、重复转换拒绝、未知行拒绝、空列表拒绝、二次全量拒绝
+- 总用例 683（+7），覆盖率 71.77%
+
+### 后续路线
+
+- v1.27：偏离类型录入（降配/替换/补充）+ 前端 PO 创建表单重构
+- v1.28：履约树可视化 + 大额偏离审批 + Dashboard 偏离率指标
+
+---
+
 ## [v1.25.1] — 2026-06-08
 
 ### 修复

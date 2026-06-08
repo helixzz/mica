@@ -15,10 +15,12 @@ from app.core.money import fmt_amount
 from app.models import (
     AuditLog,
     Contract,
+    FulfillmentType,
     JSONValue,
     POContractLink,
     POItem,
     POStatus,
+    PRFulfillmentLink,
     PRItem,
     PRStatus,
     PurchaseOrder,
@@ -515,16 +517,127 @@ async def preview_pr_conversion(db: AsyncSession, actor: User, pr_id: UUID) -> l
     return out
 
 
+async def _compute_pr_status_after_link_change(
+    db: AsyncSession, pr: PurchaseRequisition
+) -> str:
+    fulfilling_types = (
+        FulfillmentType.EQUIVALENT.value,
+        FulfillmentType.DOWNGRADED.value,
+        FulfillmentType.SUBSTITUTE.value,
+    )
+    fulfilled_pr_item_ids: set[UUID] = set()
+    pr_item_ids = [i.id for i in pr.items]
+    if pr_item_ids:
+        rows = (
+            await db.execute(
+                select(PRFulfillmentLink.pr_item_id)
+                .where(
+                    PRFulfillmentLink.pr_item_id.in_(pr_item_ids),
+                    PRFulfillmentLink.fulfillment_type.in_(fulfilling_types),
+                )
+            )
+        ).all()
+        fulfilled_pr_item_ids = {row[0] for row in rows}
+
+    total = len(pr.items)
+    fulfilled = sum(1 for i in pr.items if i.id in fulfilled_pr_item_ids)
+
+    if fulfilled == 0:
+        return pr.status
+    if fulfilled < total:
+        return PRStatus.PARTIALLY_CONVERTED.value
+    return PRStatus.CONVERTED.value
+
+
 async def convert_pr_to_po(db: AsyncSession, actor: User, pr_id: UUID) -> list[PurchaseOrder]:
     pr = await _load_pr(db, pr_id)
     if pr is None:
         raise HTTPException(404, "pr.not_found")
-    if pr.status != PRStatus.APPROVED.value:
+    if pr.status not in (
+        PRStatus.APPROVED.value,
+        PRStatus.PARTIALLY_CONVERTED.value,
+        PRStatus.CONVERTED.value,
+    ):
         raise HTTPException(409, "pr.must_be_approved_to_convert")
     if not pr.items:
         raise HTTPException(422, "pr.no_items")
 
-    groups = await _build_supplier_groups(pr)
+    unconverted = await _unconverted_pr_items(db, pr)
+    if not unconverted:
+        raise HTTPException(409, "pr.already_fully_converted")
+
+    return await _create_pos_for_pr_items(db, actor, pr, unconverted)
+
+
+async def convert_pr_to_po_partial(
+    db: AsyncSession, actor: User, pr_id: UUID, pr_item_ids: list[UUID]
+) -> list[PurchaseOrder]:
+    if not pr_item_ids:
+        raise HTTPException(422, "pr.partial_no_items")
+
+    pr = await _load_pr(db, pr_id)
+    if pr is None:
+        raise HTTPException(404, "pr.not_found")
+    if pr.status not in (
+        PRStatus.APPROVED.value,
+        PRStatus.PARTIALLY_CONVERTED.value,
+        PRStatus.CONVERTED.value,
+    ):
+        raise HTTPException(409, "pr.must_be_approved_to_convert")
+
+    requested_ids = set(pr_item_ids)
+    pr_items_by_id = {i.id: i for i in pr.items}
+    unknown = requested_ids - pr_items_by_id.keys()
+    if unknown:
+        raise HTTPException(422, "pr.partial_unknown_item")
+
+    existing_link_rows = (
+        await db.execute(
+            select(PRFulfillmentLink.pr_item_id).where(
+                PRFulfillmentLink.pr_item_id.in_(requested_ids)
+            )
+        )
+    ).all()
+    if existing_link_rows:
+        raise HTTPException(409, "pr.partial_already_converted")
+
+    selected = [pr_items_by_id[pid] for pid in requested_ids]
+    return await _create_pos_for_pr_items(db, actor, pr, selected)
+
+
+async def _unconverted_pr_items(
+    db: AsyncSession, pr: PurchaseRequisition
+) -> list[PRItem]:
+    if not pr.items:
+        return []
+    pr_item_ids = [i.id for i in pr.items]
+    rows = (
+        await db.execute(
+            select(PRFulfillmentLink.pr_item_id).where(
+                PRFulfillmentLink.pr_item_id.in_(pr_item_ids)
+            )
+        )
+    ).all()
+    converted_ids = {row[0] for row in rows}
+    return [i for i in pr.items if i.id not in converted_ids]
+
+
+async def _create_pos_for_pr_items(
+    db: AsyncSession,
+    actor: User,
+    pr: PurchaseRequisition,
+    pr_items: list[PRItem],
+) -> list[PurchaseOrder]:
+    if not pr_items:
+        raise HTTPException(422, "pr.no_items")
+
+    missing = [i for i in pr_items if not i.supplier_id]
+    if missing:
+        raise HTTPException(422, "pr.items_missing_supplier")
+
+    groups: dict[UUID, list[PRItem]] = {}
+    for item in pr_items:
+        groups.setdefault(item.supplier_id, []).append(item)
 
     created_pos: list[PurchaseOrder] = []
     for supplier_id, items in groups.items():
@@ -546,20 +659,32 @@ async def convert_pr_to_po(db: AsyncSession, actor: User, pr_id: UUID) -> list[P
         await db.flush()
 
         for i, pr_item in enumerate(items, start=1):
+            po_item = POItem(
+                po_id=po.id,
+                pr_item_id=pr_item.id,
+                line_no=i,
+                item_id=pr_item.item_id,
+                item_name=pr_item.item_name,
+                specification=pr_item.specification,
+                qty=pr_item.qty,
+                uom=pr_item.uom,
+                unit_price=pr_item.unit_price,
+                amount=pr_item.amount,
+                pr_qty_contribution=pr_item.qty,
+            )
+            db.add(po_item)
+            await db.flush()
+
             db.add(
-                POItem(
-                    po_id=po.id,
+                PRFulfillmentLink(
                     pr_item_id=pr_item.id,
-                    line_no=i,
-                    item_id=pr_item.item_id,
-                    item_name=pr_item.item_name,
-                    specification=pr_item.specification,
-                    qty=pr_item.qty,
-                    uom=pr_item.uom,
-                    unit_price=pr_item.unit_price,
-                    amount=pr_item.amount,
+                    po_item_id=po_item.id,
+                    qty_contribution=pr_item.qty,
+                    fulfillment_type=FulfillmentType.EQUIVALENT.value,
+                    created_by_id=actor.id,
                 )
             )
+
             if pr_item.item_id and pr_item.unit_price and pr_item.unit_price > 0:
                 db.add(
                     SKUPriceRecord(
@@ -586,11 +711,12 @@ async def convert_pr_to_po(db: AsyncSession, actor: User, pr_id: UUID) -> list[P
                 "po_number": po.po_number,
                 "supplier_id": str(supplier_id),
                 "split_count": len(groups),
+                "pr_items_in_this_po": len(items),
             },
         )
         created_pos.append(po)
 
-    pr.status = PRStatus.CONVERTED.value
+    pr.status = await _compute_pr_status_after_link_change(db, pr)
     await db.commit()
 
     refreshed: list[PurchaseOrder] = []
@@ -683,7 +809,7 @@ async def _load_pr(db: AsyncSession, pr_id: UUID) -> PurchaseRequisition | None:
         select(PurchaseRequisition)
         .where(PurchaseRequisition.id == pr_id)
         .options(
-            selectinload(PurchaseRequisition.items),
+            selectinload(PurchaseRequisition.items).selectinload(PRItem.fulfillment_links),
             selectinload(PurchaseRequisition.requester),
             selectinload(PurchaseRequisition.company),
             selectinload(PurchaseRequisition.department),

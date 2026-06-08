@@ -127,6 +127,13 @@ class InvoiceLineType(StrEnum):
     NOTE = "note"
 
 
+class FulfillmentType(StrEnum):
+    EQUIVALENT = "equivalent"
+    DOWNGRADED = "downgraded"
+    SUBSTITUTE = "substitute"
+    SUPPLEMENTARY = "supplementary"
+
+
 class ApprovalAction(StrEnum):
     APPROVE = "approve"
     REJECT = "reject"
@@ -478,6 +485,9 @@ class PRItem(Base, TimestampMixin):
     pr: Mapped[PurchaseRequisition] = relationship(back_populates="items")
     item: Mapped[Item | None] = relationship()
     supplier: Mapped[Supplier | None] = relationship()
+    fulfillment_links: Mapped[list[PRFulfillmentLink]] = relationship(
+        back_populates="pr_item", cascade="all, delete-orphan"
+    )
 
     __table_args__ = (UniqueConstraint("pr_id", "line_no"),)
 
@@ -570,8 +580,43 @@ class POItem(Base, TimestampMixin):
     pr_qty_contribution: Mapped[Decimal | None] = mapped_column(Numeric(18, 4), nullable=True)
 
     po: Mapped[PurchaseOrder] = relationship(back_populates="items")
+    fulfillment_link: Mapped[PRFulfillmentLink | None] = relationship(
+        back_populates="po_item",
+        cascade="all, delete-orphan",
+        uselist=False,
+    )
 
     __table_args__ = (UniqueConstraint("po_id", "line_no"),)
+
+
+class PRFulfillmentLink(Base, TimestampMixin):
+    __tablename__ = "pr_fulfillment_links"
+
+    id: Mapped[UUID] = mapped_column(PGUUID(as_uuid=True), primary_key=True, default=new_uuid)
+    pr_item_id: Mapped[UUID] = mapped_column(
+        PGUUID(as_uuid=True),
+        ForeignKey("pr_items.id", ondelete="CASCADE"),
+        nullable=False,
+    )
+    po_item_id: Mapped[UUID] = mapped_column(
+        PGUUID(as_uuid=True),
+        ForeignKey("po_items.id", ondelete="CASCADE"),
+        nullable=False,
+    )
+    qty_contribution: Mapped[Decimal] = mapped_column(Numeric(18, 4), nullable=False)
+    fulfillment_type: Mapped[str] = mapped_column(
+        String(32), default=FulfillmentType.EQUIVALENT.value, nullable=False
+    )
+    deviation_note: Mapped[str | None] = mapped_column(Text)
+    created_by_id: Mapped[UUID] = mapped_column(
+        PGUUID(as_uuid=True), ForeignKey("users.id"), nullable=False
+    )
+
+    pr_item: Mapped[PRItem] = relationship(back_populates="fulfillment_links")
+    po_item: Mapped[POItem] = relationship(back_populates="fulfillment_link")
+    created_by: Mapped[User] = relationship()
+
+    __table_args__ = (UniqueConstraint("po_item_id", name="uq_pr_fulfillment_po_item"),)
 
 
 class Contract(Base, TimestampMixin):

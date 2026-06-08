@@ -18,6 +18,7 @@ from app.schemas import (
     PRDecisionIn,
     PRListOut,
     PROut,
+    PRPartialConvertIn,
     PRQuoteCandidate,
     PRSaveQuotesIn,
     PRSaveQuotesOut,
@@ -183,6 +184,23 @@ async def convert_pr_to_po(
     _role: Annotated[None, Depends(require_roles("admin", "it_buyer", "procurement_mgr"))],
 ):
     pos = await svc.convert_pr_to_po(db, user, pr_id)
+    return [POOut.model_validate(po) for po in pos]
+
+
+@router.post(
+    "/purchase-requisitions/{pr_id}/convert-to-po/partial",
+    response_model=list[POOut],
+    status_code=status.HTTP_201_CREATED,
+    tags=["purchase"],
+)
+async def convert_pr_to_po_partial(
+    pr_id: UUID,
+    payload: PRPartialConvertIn,
+    user: CurrentUser,
+    db: Annotated[AsyncSession, Depends(get_db)],
+    _role: Annotated[None, Depends(require_roles("admin", "it_buyer", "procurement_mgr"))],
+):
+    pos = await svc.convert_pr_to_po_partial(db, user, pr_id, payload.pr_item_ids)
     return [POOut.model_validate(po) for po in pos]
 
 

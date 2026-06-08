@@ -47,6 +47,10 @@
     "must_be_approved_to_convert": "pr must be approved to convert",
     "approval_not_found": "pr approval not found",
     "items_missing_supplier": "pr items missing supplier",
+    "partial_no_items": "Select at least one item line to convert",
+    "partial_unknown_item": "Selected item line does not belong to this PR",
+    "partial_already_converted": "Selected item lines have already been converted to a PO",
+    "already_fully_converted": "All items in this PR are already converted to POs",
     "proxy_not_allowed": "You don't have permission to submit PRs on behalf of others",
     "requester_not_found": "Specified requester not found or inactive",
     "cannot_delete_active": "Cannot delete a requisition that is under approval or converted to a PO"

@@ -13,8 +13,10 @@ from app.models import (
     Company,
     CostCenter,
     Department,
+    FulfillmentType,
     Item,
     POStatus,
+    PRFulfillmentLink,
     PRStatus,
     PurchaseRequisition,
     Supplier,
@@ -1291,3 +1293,159 @@ async def test_delete_po_not_found(seeded_db_session):
     with pytest.raises(HTTPException) as exc:
         await purchase_svc.delete_po(db, actor, uuid4())
     assert exc.value.status_code == 404
+
+
+async def _count_links_for_pr(db, pr_id) -> list[PRFulfillmentLink]:
+    rows = (
+        await db.execute(
+            select(PRFulfillmentLink)
+            .join(PRFulfillmentLink.pr_item)
+            .where(PRFulfillmentLink.pr_item.has(pr_id=pr_id))
+        )
+    ).scalars().all()
+    return list(rows)
+
+
+async def test_convert_pr_to_po_creates_equivalent_links(seeded_db_session):
+    db = seeded_db_session
+    actor = await _get_user(db, "alice")
+    supplier = await _get_supplier(db)
+    pr = await _create_pr(db, actor, supplier.id)
+    await _mark_pr_approved(db, pr)
+
+    await purchase_svc.convert_pr_to_po(db, actor, pr.id)
+
+    links = await _count_links_for_pr(db, pr.id)
+    assert len(links) == len(pr.items)
+    assert all(link.fulfillment_type == FulfillmentType.EQUIVALENT.value for link in links)
+    assert all(link.qty_contribution > 0 for link in links)
+
+
+async def test_convert_pr_to_po_partial_creates_only_selected_items(seeded_db_session):
+    db = seeded_db_session
+    actor = await _get_user(db, "alice")
+    s1 = await _get_supplier(db, "SUP-DELL")
+    s2 = await _get_supplier(db, "SUP-LENOVO")
+    pr = await purchase_svc.create_pr(
+        db,
+        actor,
+        PRCreateIn(
+            title="Partial PR",
+            business_reason="testing partial conversion",
+            currency="CNY",
+            items=[
+                _pr_item(1, "ItemA", "1", "100", supplier_id=s1.id),
+                _pr_item(2, "ItemB", "2", "200", supplier_id=s1.id),
+                _pr_item(3, "ItemC", "1", "300", supplier_id=s2.id),
+            ],
+        ),
+    )
+    await _mark_pr_approved(db, pr)
+
+    selected = [i.id for i in pr.items if i.line_no == 1]
+    pos = await purchase_svc.convert_pr_to_po_partial(db, actor, pr.id, selected)
+
+    refreshed_pr = await purchase_svc.get_pr(db, actor, pr.id)
+    links = await _count_links_for_pr(db, pr.id)
+
+    assert len(pos) == 1
+    assert len(pos[0].items) == 1
+    assert pos[0].supplier_id == s1.id
+    assert len(links) == 1
+    assert refreshed_pr.status == PRStatus.PARTIALLY_CONVERTED.value
+
+
+async def test_convert_pr_to_po_partial_then_full_marks_converted(seeded_db_session):
+    db = seeded_db_session
+    actor = await _get_user(db, "alice")
+    s1 = await _get_supplier(db, "SUP-DELL")
+    s2 = await _get_supplier(db, "SUP-LENOVO")
+    pr = await purchase_svc.create_pr(
+        db,
+        actor,
+        PRCreateIn(
+            title="Two-step PR",
+            business_reason="partial then full",
+            currency="CNY",
+            items=[
+                _pr_item(1, "ItemA", "1", "100", supplier_id=s1.id),
+                _pr_item(2, "ItemB", "1", "200", supplier_id=s2.id),
+            ],
+        ),
+    )
+    await _mark_pr_approved(db, pr)
+
+    line1_ids = [i.id for i in pr.items if i.line_no == 1]
+    await purchase_svc.convert_pr_to_po_partial(db, actor, pr.id, line1_ids)
+    pr_after_partial = await purchase_svc.get_pr(db, actor, pr.id)
+    assert pr_after_partial.status == PRStatus.PARTIALLY_CONVERTED.value
+
+    await purchase_svc.convert_pr_to_po(db, actor, pr.id)
+    pr_after_full = await purchase_svc.get_pr(db, actor, pr.id)
+    assert pr_after_full.status == PRStatus.CONVERTED.value
+
+    links = await _count_links_for_pr(db, pr.id)
+    assert len(links) == 2
+
+
+async def test_convert_pr_to_po_partial_rejects_already_converted_item(seeded_db_session):
+    db = seeded_db_session
+    actor = await _get_user(db, "alice")
+    s1 = await _get_supplier(db, "SUP-DELL")
+    pr = await purchase_svc.create_pr(
+        db,
+        actor,
+        PRCreateIn(
+            title="Repeat PR",
+            business_reason="reject duplicate",
+            currency="CNY",
+            items=[_pr_item(1, "ItemA", "1", "100", supplier_id=s1.id)],
+        ),
+    )
+    await _mark_pr_approved(db, pr)
+    pr_item_ids = [i.id for i in pr.items]
+    await purchase_svc.convert_pr_to_po_partial(db, actor, pr.id, pr_item_ids)
+
+    with pytest.raises(HTTPException) as exc:
+        await purchase_svc.convert_pr_to_po_partial(db, actor, pr.id, pr_item_ids)
+    assert exc.value.status_code == 409
+    assert exc.value.detail == "pr.partial_already_converted"
+
+
+async def test_convert_pr_to_po_partial_rejects_unknown_item(seeded_db_session):
+    db = seeded_db_session
+    actor = await _get_user(db, "alice")
+    supplier = await _get_supplier(db)
+    pr = await _create_pr(db, actor, supplier.id)
+    await _mark_pr_approved(db, pr)
+
+    with pytest.raises(HTTPException) as exc:
+        await purchase_svc.convert_pr_to_po_partial(db, actor, pr.id, [uuid4()])
+    assert exc.value.status_code == 422
+    assert exc.value.detail == "pr.partial_unknown_item"
+
+
+async def test_convert_pr_to_po_partial_rejects_empty_list(seeded_db_session):
+    db = seeded_db_session
+    actor = await _get_user(db, "alice")
+    supplier = await _get_supplier(db)
+    pr = await _create_pr(db, actor, supplier.id)
+    await _mark_pr_approved(db, pr)
+
+    with pytest.raises(HTTPException) as exc:
+        await purchase_svc.convert_pr_to_po_partial(db, actor, pr.id, [])
+    assert exc.value.status_code == 422
+    assert exc.value.detail == "pr.partial_no_items"
+
+
+async def test_convert_pr_to_po_after_full_rejects_already_converted(seeded_db_session):
+    db = seeded_db_session
+    actor = await _get_user(db, "alice")
+    supplier = await _get_supplier(db)
+    pr = await _create_pr(db, actor, supplier.id)
+    await _mark_pr_approved(db, pr)
+    await purchase_svc.convert_pr_to_po(db, actor, pr.id)
+
+    with pytest.raises(HTTPException) as exc:
+        await purchase_svc.convert_pr_to_po(db, actor, pr.id)
+    assert exc.value.status_code == 409
