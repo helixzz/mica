@@ -580,10 +580,9 @@ class POItem(Base, TimestampMixin):
     pr_qty_contribution: Mapped[Decimal | None] = mapped_column(Numeric(18, 4), nullable=True)
 
     po: Mapped[PurchaseOrder] = relationship(back_populates="items")
-    fulfillment_link: Mapped[PRFulfillmentLink | None] = relationship(
+    fulfillment_links: Mapped[list[PRFulfillmentLink]] = relationship(
         back_populates="po_item",
         cascade="all, delete-orphan",
-        uselist=False,
     )
 
     __table_args__ = (UniqueConstraint("po_id", "line_no"),)
@@ -613,10 +612,14 @@ class PRFulfillmentLink(Base, TimestampMixin):
     )
 
     pr_item: Mapped[PRItem] = relationship(back_populates="fulfillment_links")
-    po_item: Mapped[POItem] = relationship(back_populates="fulfillment_link")
+    po_item: Mapped[POItem] = relationship(back_populates="fulfillment_links")
     created_by: Mapped[User] = relationship()
 
-    __table_args__ = (UniqueConstraint("po_item_id", name="uq_pr_fulfillment_po_item"),)
+    __table_args__ = (
+        UniqueConstraint(
+            "pr_item_id", "po_item_id", name="uq_pr_fulfillment_pr_item_po_item"
+        ),
+    )
 
 
 class Contract(Base, TimestampMixin):

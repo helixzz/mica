@@ -1449,3 +1449,280 @@ async def test_convert_pr_to_po_after_full_rejects_already_converted(seeded_db_s
     with pytest.raises(HTTPException) as exc:
         await purchase_svc.convert_pr_to_po(db, actor, pr.id)
     assert exc.value.status_code == 409
+
+
+async def test_create_fulfillment_link_for_downgrade(seeded_db_session):
+    db = seeded_db_session
+    actor = await _get_user(db, "alice")
+    supplier = await _get_supplier(db)
+    pr = await _create_pr(db, actor, supplier.id)
+    await _mark_pr_approved(db, pr)
+    pos = await purchase_svc.convert_pr_to_po(db, actor, pr.id)
+    po = pos[0]
+
+    new_po_item = await purchase_svc.add_supplementary_po_item(
+        db,
+        actor,
+        po_id=po.id,
+        item_name="Server X (missing A part)",
+        qty=Decimal("4"),
+        unit_price=Decimal("500"),
+    )
+    link = await purchase_svc.create_fulfillment_link(
+        db,
+        actor,
+        po_item_id=new_po_item.id,
+        pr_item_id=pr.items[0].id,
+        fulfillment_type="downgraded",
+        qty_contribution=Decimal("4"),
+        deviation_note="A part out of stock; sourced separately",
+    )
+
+    assert link.fulfillment_type == "downgraded"
+    assert link.qty_contribution == Decimal("4")
+    assert link.deviation_note == "A part out of stock; sourced separately"
+
+
+async def test_create_fulfillment_link_rejects_duplicate(seeded_db_session):
+    db = seeded_db_session
+    actor = await _get_user(db, "alice")
+    supplier = await _get_supplier(db)
+    pr = await _create_pr(db, actor, supplier.id)
+    await _mark_pr_approved(db, pr)
+    pos = await purchase_svc.convert_pr_to_po(db, actor, pr.id)
+    po_item = pos[0].items[0]
+
+    with pytest.raises(HTTPException) as exc:
+        await purchase_svc.create_fulfillment_link(
+            db,
+            actor,
+            po_item_id=po_item.id,
+            pr_item_id=pr.items[0].id,
+            fulfillment_type="equivalent",
+            qty_contribution=Decimal("1"),
+        )
+    assert exc.value.status_code == 409
+    assert exc.value.detail == "fulfillment.link_already_exists"
+
+
+async def test_create_fulfillment_link_rejects_invalid_type(seeded_db_session):
+    db = seeded_db_session
+    actor = await _get_user(db, "alice")
+    supplier = await _get_supplier(db)
+    pr = await _create_pr(db, actor, supplier.id)
+    await _mark_pr_approved(db, pr)
+    pos = await purchase_svc.convert_pr_to_po(db, actor, pr.id)
+    new_po_item = await purchase_svc.add_supplementary_po_item(
+        db, actor, po_id=pos[0].id, item_name="extra", qty=Decimal("1"), unit_price=Decimal("100")
+    )
+
+    with pytest.raises(HTTPException) as exc:
+        await purchase_svc.create_fulfillment_link(
+            db,
+            actor,
+            po_item_id=new_po_item.id,
+            pr_item_id=pr.items[0].id,
+            fulfillment_type="bogus_type",
+            qty_contribution=Decimal("1"),
+        )
+    assert exc.value.status_code == 422
+    assert exc.value.detail == "fulfillment.invalid_type"
+
+
+async def test_create_fulfillment_link_enforces_soft_qty_limit(seeded_db_session):
+    db = seeded_db_session
+    actor = await _get_user(db, "alice")
+    supplier = await _get_supplier(db)
+    pr = await purchase_svc.create_pr(
+        db,
+        actor,
+        PRCreateIn(
+            title="Soft limit PR",
+            business_reason="testing soft limit",
+            currency="CNY",
+            items=[_pr_item(1, "ItemA", "10", "100", supplier_id=supplier.id)],
+        ),
+    )
+    await _mark_pr_approved(db, pr)
+    pos = await purchase_svc.convert_pr_to_po(db, actor, pr.id)
+    new_po_item = await purchase_svc.add_supplementary_po_item(
+        db,
+        actor,
+        po_id=pos[0].id,
+        item_name="Overage",
+        qty=Decimal("100"),
+        unit_price=Decimal("1"),
+    )
+
+    with pytest.raises(HTTPException) as exc:
+        await purchase_svc.create_fulfillment_link(
+            db,
+            actor,
+            po_item_id=new_po_item.id,
+            pr_item_id=pr.items[0].id,
+            fulfillment_type="equivalent",
+            qty_contribution=Decimal("100"),
+        )
+    assert exc.value.status_code == 422
+    assert exc.value.detail == "fulfillment.qty_exceeds_soft_limit"
+
+
+async def test_update_fulfillment_link_changes_type_and_qty(seeded_db_session):
+    db = seeded_db_session
+    actor = await _get_user(db, "alice")
+    supplier = await _get_supplier(db)
+    pr = await _create_pr(db, actor, supplier.id)
+    await _mark_pr_approved(db, pr)
+    pos = await purchase_svc.convert_pr_to_po(db, actor, pr.id)
+    existing_link = pos[0].items[0].fulfillment_links[0]
+
+    updated = await purchase_svc.update_fulfillment_link(
+        db,
+        actor,
+        existing_link.id,
+        fulfillment_type="substitute",
+        deviation_note="model switched due to stockout",
+    )
+    assert updated.fulfillment_type == "substitute"
+    assert updated.deviation_note == "model switched due to stockout"
+
+
+async def test_delete_fulfillment_link_recomputes_pr_status(seeded_db_session):
+    db = seeded_db_session
+    actor = await _get_user(db, "alice")
+    supplier = await _get_supplier(db)
+    pr = await _create_pr(db, actor, supplier.id)
+    await _mark_pr_approved(db, pr)
+    pos = await purchase_svc.convert_pr_to_po(db, actor, pr.id)
+    pr_after_convert = await purchase_svc.get_pr(db, actor, pr.id)
+    assert pr_after_convert.status == PRStatus.CONVERTED.value
+
+    link_to_delete = pos[0].items[0].fulfillment_links[0]
+    await purchase_svc.delete_fulfillment_link(db, actor, link_to_delete.id)
+
+    pr_after_delete = await purchase_svc.get_pr(db, actor, pr.id)
+    assert pr_after_delete.status in (
+        PRStatus.PARTIALLY_CONVERTED.value,
+        PRStatus.APPROVED.value,
+    )
+
+
+async def test_add_supplementary_po_item_with_link_marks_pr_item_context(
+    seeded_db_session,
+):
+    db = seeded_db_session
+    actor = await _get_user(db, "alice")
+    supplier = await _get_supplier(db)
+    pr = await _create_pr(db, actor, supplier.id)
+    await _mark_pr_approved(db, pr)
+    pos = await purchase_svc.convert_pr_to_po(db, actor, pr.id)
+
+    pr_item_a = pr.items[0]
+    new_po_item = await purchase_svc.add_supplementary_po_item(
+        db,
+        actor,
+        po_id=pos[0].id,
+        item_name="A part",
+        qty=Decimal("4"),
+        unit_price=Decimal("50"),
+        supplementary_for_pr_item_id=pr_item_a.id,
+        deviation_note="补充服务器缺少的 A 配件",
+    )
+
+    assert new_po_item.pr_item_id is None
+    breakdown = await purchase_svc.get_pr_item_fulfillment_breakdown(db, pr_item_a.id)
+    assert breakdown["supplementary"] == Decimal("4")
+
+
+async def test_supplementary_po_item_rejects_pr_from_other_pr(seeded_db_session):
+    db = seeded_db_session
+    actor = await _get_user(db, "alice")
+    supplier = await _get_supplier(db)
+    pr1 = await _create_pr(db, actor, supplier.id)
+    await _mark_pr_approved(db, pr1)
+    pos = await purchase_svc.convert_pr_to_po(db, actor, pr1.id)
+
+    pr2 = await _create_pr(db, actor, supplier.id)
+    await _mark_pr_approved(db, pr2)
+    other_pr_item_id = pr2.items[0].id
+
+    with pytest.raises(HTTPException) as exc:
+        await purchase_svc.add_supplementary_po_item(
+            db,
+            actor,
+            po_id=pos[0].id,
+            item_name="wrong-pr",
+            qty=Decimal("1"),
+            unit_price=Decimal("100"),
+            supplementary_for_pr_item_id=other_pr_item_id,
+        )
+    assert exc.value.status_code == 422
+    assert exc.value.detail == "fulfillment.supplementary_pr_mismatch"
+
+
+async def test_pr_item_split_across_two_po_items(seeded_db_session):
+    db = seeded_db_session
+    actor = await _get_user(db, "alice")
+    supplier = await _get_supplier(db)
+    pr = await purchase_svc.create_pr(
+        db,
+        actor,
+        PRCreateIn(
+            title="Split PR",
+            business_reason="testing split",
+            currency="CNY",
+            items=[_pr_item(1, "Server", "10", "1000", supplier_id=supplier.id)],
+        ),
+    )
+    await _mark_pr_approved(db, pr)
+    pos = await purchase_svc.convert_pr_to_po(db, actor, pr.id)
+    extra_po_item = await purchase_svc.add_supplementary_po_item(
+        db,
+        actor,
+        po_id=pos[0].id,
+        item_name="Server (downgraded)",
+        qty=Decimal("3"),
+        unit_price=Decimal("800"),
+    )
+
+    breakdown_before = await purchase_svc.get_pr_item_fulfillment_breakdown(
+        db, pr.items[0].id
+    )
+    assert breakdown_before["equivalent"] == Decimal("10")
+
+    await purchase_svc.create_fulfillment_link(
+        db,
+        actor,
+        po_item_id=extra_po_item.id,
+        pr_item_id=pr.items[0].id,
+        fulfillment_type="downgraded",
+        qty_contribution=Decimal("3"),
+    )
+
+    breakdown_after = await purchase_svc.get_pr_item_fulfillment_breakdown(
+        db, pr.items[0].id
+    )
+    assert breakdown_after["equivalent"] == Decimal("10")
+    assert breakdown_after["downgraded"] == Decimal("3")
+
+
+async def test_pr_detail_response_includes_fulfillment_breakdown(seeded_db_session):
+    from app.schemas import PROut
+
+    db = seeded_db_session
+    actor = await _get_user(db, "alice")
+    supplier = await _get_supplier(db)
+    pr = await _create_pr(db, actor, supplier.id)
+    await _mark_pr_approved(db, pr)
+    await purchase_svc.convert_pr_to_po(db, actor, pr.id)
+    pr_id = pr.id
+
+    db.expire_all()
+    refreshed = await purchase_svc.get_pr(db, actor, pr_id)
+    out = PROut.model_validate(refreshed)
+
+    for item in out.items:
+        assert item.fulfilled_qty is not None
+        assert item.is_fully_fulfilled is True
+        assert item.fulfillment_breakdown is not None
+        assert item.fulfillment_breakdown.get("equivalent", Decimal("0")) > 0

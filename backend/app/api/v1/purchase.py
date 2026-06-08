@@ -11,6 +11,10 @@ from app.core.security import CurrentUser, require_roles
 from app.db import get_db
 from app.models import User, UserRole
 from app.schemas import (
+    FulfillmentLinkCreateIn,
+    FulfillmentLinkOut,
+    FulfillmentLinkUpdateIn,
+    POItemOut,
     POListOut,
     POOut,
     PRConversionPreviewGroup,
@@ -23,6 +27,7 @@ from app.schemas import (
     PRSaveQuotesIn,
     PRSaveQuotesOut,
     PRUpdateIn,
+    SupplementaryPOItemIn,
 )
 from app.services import export_pdf
 from app.services import purchase as svc
@@ -376,3 +381,99 @@ async def remove_collaborator(
 ):
     await svc.remove_collaborator(db, user, pr_id, user_id)
     return Response(status_code=status.HTTP_204_NO_CONTENT)
+
+
+@router.post(
+    "/purchase-orders/{po_id}/items/{po_item_id}/fulfillment-link",
+    response_model=FulfillmentLinkOut,
+    status_code=status.HTTP_201_CREATED,
+    tags=["purchase"],
+)
+async def create_fulfillment_link(
+    po_id: UUID,
+    po_item_id: UUID,
+    payload: FulfillmentLinkCreateIn,
+    user: CurrentUser,
+    db: Annotated[AsyncSession, Depends(get_db)],
+    _role: Annotated[None, Depends(require_roles("admin", "it_buyer", "procurement_mgr"))],
+):
+    po_item = await svc.get_po(db, po_id, user)
+    if not any(item.id == po_item_id for item in po_item.items):
+        raise HTTPException(404, "po_item.not_found")
+    link = await svc.create_fulfillment_link(
+        db,
+        user,
+        po_item_id=po_item_id,
+        pr_item_id=payload.pr_item_id,
+        fulfillment_type=payload.fulfillment_type,
+        qty_contribution=payload.qty_contribution,
+        deviation_note=payload.deviation_note,
+    )
+    return FulfillmentLinkOut.model_validate(link)
+
+
+@router.patch(
+    "/fulfillment-links/{link_id}",
+    response_model=FulfillmentLinkOut,
+    tags=["purchase"],
+)
+async def update_fulfillment_link(
+    link_id: UUID,
+    payload: FulfillmentLinkUpdateIn,
+    user: CurrentUser,
+    db: Annotated[AsyncSession, Depends(get_db)],
+    _role: Annotated[None, Depends(require_roles("admin", "it_buyer", "procurement_mgr"))],
+):
+    link = await svc.update_fulfillment_link(
+        db,
+        user,
+        link_id,
+        fulfillment_type=payload.fulfillment_type,
+        qty_contribution=payload.qty_contribution,
+        deviation_note=payload.deviation_note,
+    )
+    return FulfillmentLinkOut.model_validate(link)
+
+
+@router.delete(
+    "/fulfillment-links/{link_id}",
+    status_code=status.HTTP_204_NO_CONTENT,
+    tags=["purchase"],
+)
+async def delete_fulfillment_link(
+    link_id: UUID,
+    user: CurrentUser,
+    db: Annotated[AsyncSession, Depends(get_db)],
+    _role: Annotated[None, Depends(require_roles("admin", "it_buyer", "procurement_mgr"))],
+):
+    await svc.delete_fulfillment_link(db, user, link_id)
+    return Response(status_code=status.HTTP_204_NO_CONTENT)
+
+
+@router.post(
+    "/purchase-orders/{po_id}/supplementary-items",
+    response_model=POItemOut,
+    status_code=status.HTTP_201_CREATED,
+    tags=["purchase"],
+)
+async def add_supplementary_po_item(
+    po_id: UUID,
+    payload: SupplementaryPOItemIn,
+    user: CurrentUser,
+    db: Annotated[AsyncSession, Depends(get_db)],
+    _role: Annotated[None, Depends(require_roles("admin", "it_buyer", "procurement_mgr"))],
+):
+    po_item = await svc.add_supplementary_po_item(
+        db,
+        user,
+        po_id=po_id,
+        item_name=payload.item_name,
+        specification=payload.specification,
+        item_id=payload.item_id,
+        qty=payload.qty,
+        uom=payload.uom,
+        unit_price=payload.unit_price,
+        supplementary_for_pr_item_id=payload.supplementary_for_pr_item_id,
+        deviation_note=payload.deviation_note,
+    )
+    return POItemOut.model_validate(po_item)

@@ -264,6 +264,9 @@ class PRItemOut(PRItemIn):
     model_config = ConfigDict(from_attributes=True)
     id: UUID
     amount: Decimal
+    fulfilled_qty: Decimal | None = None
+    is_fully_fulfilled: bool | None = None
+    fulfillment_breakdown: dict[str, Decimal] | None = None
 
 
 class PRCreateIn(BaseModel):
@@ -356,6 +359,39 @@ class PROut(BaseModel):
                         {"id": str(u.id), "display_name": u.display_name}
                         for u in (data.collaborators if hasattr(data, "collaborators") else [])
                     ]
+                elif field_name == "items":
+                    items_out: list[Any] = []
+                    for it in getattr(data, "items", []) or []:
+                        fulfilling_qty = Decimal("0")
+                        breakdown: dict[str, Decimal] = {}
+                        for link in getattr(it, "fulfillment_links", []) or []:
+                            qty = Decimal(str(link.qty_contribution or 0))
+                            breakdown[link.fulfillment_type] = (
+                                breakdown.get(link.fulfillment_type, Decimal("0")) + qty
+                            )
+                            if link.fulfillment_type in (
+                                "equivalent",
+                                "downgraded",
+                                "substitute",
+                            ):
+                                fulfilling_qty += qty
+                        item_dict = {
+                            "id": it.id,
+                            "line_no": it.line_no,
+                            "item_id": it.item_id,
+                            "item_name": it.item_name,
+                            "specification": it.specification,
+                            "supplier_id": it.supplier_id,
+                            "qty": it.qty,
+                            "uom": it.uom,
+                            "unit_price": it.unit_price,
+                            "amount": it.amount,
+                            "fulfilled_qty": fulfilling_qty,
+                            "is_fully_fulfilled": fulfilling_qty >= Decimal(str(it.qty)),
+                            "fulfillment_breakdown": breakdown,
+                        }
+                        items_out.append(item_dict)
+                    result["items"] = items_out
                 elif hasattr(data, field_name):
                     result[field_name] = getattr(data, field_name)
             return result
@@ -504,6 +540,43 @@ class PRSaveQuotesOut(BaseModel):
 
 class PRPartialConvertIn(BaseModel):
     pr_item_ids: list[UUID]
+
+
+class FulfillmentLinkCreateIn(BaseModel):
+    pr_item_id: UUID
+    fulfillment_type: str
+    qty_contribution: Decimal = Field(..., gt=0)
+    deviation_note: str | None = None
+
+
+class FulfillmentLinkUpdateIn(BaseModel):
+    fulfillment_type: str | None = None
+    qty_contribution: Decimal | None = Field(default=None, gt=0)
+    deviation_note: str | None = None
+
+
+class FulfillmentLinkOut(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+    id: UUID
+    pr_item_id: UUID
+    po_item_id: UUID
+    fulfillment_type: str
+    qty_contribution: Decimal
+    deviation_note: str | None
+    created_by_id: UUID
+    created_at: datetime
+    updated_at: datetime
+
+
+class SupplementaryPOItemIn(BaseModel):
+    item_name: str = Field(..., min_length=1, max_length=255)
+    specification: str | None = None
+    item_id: UUID | None = None
+    qty: Decimal = Field(..., gt=0)
+    uom: str = "EA"
+    unit_price: Decimal = Field(..., ge=0)
+    supplementary_for_pr_item_id: UUID | None = None
+    deviation_note: str | None = None
 
 
 class ContractCreateIn(BaseModel):

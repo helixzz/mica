@@ -7,6 +7,43 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [v1.27.0] — 2026-06-09
+
+### 新增
+
+- **履约关系 CRUD**：4 个新端点支持精细化录入 PO 与 PR 的履约关系
+  - `POST /purchase-orders/{po_id}/items/{po_item_id}/fulfillment-link` 创建履约关系
+  - `PATCH /fulfillment-links/{link_id}` 修改履约类型/数量/偏离说明
+  - `DELETE /fulfillment-links/{link_id}` 删除履约关系（自动重算 PR 状态）
+  - `POST /purchase-orders/{po_id}/supplementary-items` 创建派生补充项（不绑定特定 PR 行）
+- **多类型履约**：完整启用 4 种类型 — `equivalent`（完全等价）/ `downgraded`（降配）/ `substitute`（替换型号）/ `supplementary`（派生补充）
+- **单 PR 行多 POItem 关联**：v1.26 的 1:1 限制取消，同一 PR 行可由多个 POItem 共同履约
+- **PR 详情拓展**：`PRItemOut` 新增三个字段
+  - `fulfilled_qty` 已履约数量（仅计入 fulfilling 类型，不含派生补充）
+  - `is_fully_fulfilled` 是否完全履约
+  - `fulfillment_breakdown` 按类型聚合的履约分布
+
+### 设计
+
+- **超量软上限**：单 PR 行的累计履约数量超过原需求 1.5 倍时拒绝（防误录）
+- **派生项 PR 上下文校验**：补充派生项关联的 PR 行必须与该 PO 同属一份 PR
+- **审计日志**：3 类新事件 — `fulfillment_link.created` / `.updated` / `.deleted` 及 `po_item.supplementary_added`
+
+### 数据库
+
+- 迁移 0051：移除 `pr_fulfillment_links.UNIQUE(po_item_id)`，改为 `UNIQUE(pr_item_id, po_item_id)`，支持 1 个 POItem 关联多个 PR 行
+
+### 测试
+
+- 新增 10 个单元测试覆盖：降配录入 / 重复拒绝 / 类型校验 / 软上限 / 修改 / 删除后状态回退 / 派生项创建 / PR 边界校验 / 拆分场景 / PR 响应字段
+- 总用例 693（+10），覆盖率 72.00%
+
+### 后续路线
+
+- v1.28：前端 PO 创建表单重构 + 履约树可视化 + 大额偏离审批 + Dashboard 偏离率指标 + `pr_qty_contribution` 字段移除
+
+---
+
 ## [v1.26.0] — 2026-06-09
 
 ### 新增

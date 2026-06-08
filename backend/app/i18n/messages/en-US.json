@@ -62,6 +62,22 @@
     "cannot_delete_has_contracts": "Cannot delete a PO linked to a contract",
     "cannot_delete_has_invoices": "Cannot delete a PO that has invoices"
   },
+  "po_item": {
+    "not_found": "PO item not found",
+    "qty_must_be_positive": "Quantity must be greater than zero",
+    "unit_price_negative": "Unit price cannot be negative"
+  },
+  "pr_item": {
+    "not_found": "PR item not found"
+  },
+  "fulfillment": {
+    "invalid_type": "Invalid fulfillment type. Allowed: equivalent / downgraded / substitute / supplementary",
+    "qty_must_be_positive": "Fulfillment quantity must be greater than zero",
+    "qty_exceeds_soft_limit": "Combined contribution exceeds 150% of the original PR demand. Please verify before proceeding",
+    "link_already_exists": "A fulfillment link between this PO line and PR line already exists",
+    "link_not_found": "Fulfillment link not found",
+    "supplementary_pr_mismatch": "The PR line for this supplementary item does not belong to this PO's PR"
+  },
   "approval": {
     "task_not_found": "approval task not found",
     "delegation_invalid_window": "Delegation configuration error",

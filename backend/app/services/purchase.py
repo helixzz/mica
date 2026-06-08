@@ -804,6 +804,329 @@ async def _create_pos_for_pr_items(
     return refreshed
 
 
+_FULFILLING_TYPES: tuple[str, ...] = (
+    FulfillmentType.EQUIVALENT.value,
+    FulfillmentType.DOWNGRADED.value,
+    FulfillmentType.SUBSTITUTE.value,
+)
+
+
+async def _load_link(db: AsyncSession, link_id: UUID) -> PRFulfillmentLink | None:
+    return (
+        await db.execute(
+            select(PRFulfillmentLink)
+            .where(PRFulfillmentLink.id == link_id)
+            .options(
+                selectinload(PRFulfillmentLink.pr_item).selectinload(PRItem.pr),
+                selectinload(PRFulfillmentLink.po_item),
+            )
+        )
+    ).scalar_one_or_none()
+
+
+async def _validate_fulfillment_type(value: str) -> str:
+    try:
+        return FulfillmentType(value).value
+    except ValueError as exc:
+        raise HTTPException(422, "fulfillment.invalid_type") from exc
+
+
+async def _ensure_link_qty_under_limit(
+    db: AsyncSession,
+    pr_item: PRItem,
+    additional_qty: Decimal,
+    excluding_link_id: UUID | None = None,
+) -> None:
+    stmt = select(func.coalesce(func.sum(PRFulfillmentLink.qty_contribution), 0)).where(
+        PRFulfillmentLink.pr_item_id == pr_item.id,
+        PRFulfillmentLink.fulfillment_type.in_(_FULFILLING_TYPES),
+    )
+    if excluding_link_id is not None:
+        stmt = stmt.where(PRFulfillmentLink.id != excluding_link_id)
+    current_total = (await db.execute(stmt)).scalar() or Decimal("0")
+    projected = Decimal(str(current_total)) + Decimal(str(additional_qty))
+    soft_limit = Decimal(str(pr_item.qty)) * Decimal("1.5")
+    if projected > soft_limit:
+        raise HTTPException(422, "fulfillment.qty_exceeds_soft_limit")
+
+
+async def create_fulfillment_link(
+    db: AsyncSession,
+    actor: User,
+    *,
+    po_item_id: UUID,
+    pr_item_id: UUID,
+    fulfillment_type: str,
+    qty_contribution: Decimal,
+    deviation_note: str | None = None,
+) -> PRFulfillmentLink:
+    if qty_contribution <= 0:
+        raise HTTPException(422, "fulfillment.qty_must_be_positive")
+
+    fulfillment_type = await _validate_fulfillment_type(fulfillment_type)
+
+    po_item = await db.get(POItem, po_item_id)
+    if po_item is None:
+        raise HTTPException(404, "po_item.not_found")
+
+    pr_item = (
+        await db.execute(
+            select(PRItem)
+            .where(PRItem.id == pr_item_id)
+            .options(selectinload(PRItem.pr))
+        )
+    ).scalar_one_or_none()
+    if pr_item is None:
+        raise HTTPException(404, "pr_item.not_found")
+
+    duplicate = (
+        await db.execute(
+            select(PRFulfillmentLink.id).where(
+                PRFulfillmentLink.po_item_id == po_item_id,
+                PRFulfillmentLink.pr_item_id == pr_item_id,
+            )
+        )
+    ).scalar_one_or_none()
+    if duplicate is not None:
+        raise HTTPException(409, "fulfillment.link_already_exists")
+
+    if fulfillment_type in _FULFILLING_TYPES:
+        await _ensure_link_qty_under_limit(db, pr_item, Decimal(str(qty_contribution)))
+
+    link = PRFulfillmentLink(
+        pr_item_id=pr_item_id,
+        po_item_id=po_item_id,
+        qty_contribution=qty_contribution,
+        fulfillment_type=fulfillment_type,
+        deviation_note=deviation_note,
+        created_by_id=actor.id,
+    )
+    db.add(link)
+    await db.flush()
+
+    pr = await _load_pr(db, pr_item.pr_id)
+    if pr is not None:
+        pr.status = await _compute_pr_status_after_link_change(db, pr)
+
+    await _audit(
+        db,
+        actor,
+        "fulfillment_link.created",
+        "pr_fulfillment_link",
+        str(link.id),
+        metadata={
+            "pr_item_id": str(pr_item_id),
+            "po_item_id": str(po_item_id),
+            "fulfillment_type": fulfillment_type,
+            "qty_contribution": str(qty_contribution),
+            "deviation_note": deviation_note,
+        },
+    )
+    await db.commit()
+
+    refreshed = await _load_link(db, link.id)
+    if refreshed is None:
+        raise HTTPException(404, "fulfillment.link_not_found")
+    return refreshed
+
+
+async def update_fulfillment_link(
+    db: AsyncSession,
+    actor: User,
+    link_id: UUID,
+    *,
+    fulfillment_type: str | None = None,
+    qty_contribution: Decimal | None = None,
+    deviation_note: str | None = None,
+) -> PRFulfillmentLink:
+    link = await _load_link(db, link_id)
+    if link is None:
+        raise HTTPException(404, "fulfillment.link_not_found")
+
+    new_type = link.fulfillment_type
+    if fulfillment_type is not None:
+        new_type = await _validate_fulfillment_type(fulfillment_type)
+
+    new_qty = Decimal(str(link.qty_contribution))
+    if qty_contribution is not None:
+        if qty_contribution <= 0:
+            raise HTTPException(422, "fulfillment.qty_must_be_positive")
+        new_qty = Decimal(str(qty_contribution))
+
+    if new_type in _FULFILLING_TYPES:
+        await _ensure_link_qty_under_limit(
+            db, link.pr_item, new_qty, excluding_link_id=link.id
+        )
+
+    link.fulfillment_type = new_type
+    link.qty_contribution = new_qty
+    if deviation_note is not None:
+        link.deviation_note = deviation_note
+
+    await db.flush()
+
+    pr = await _load_pr(db, link.pr_item.pr_id)
+    if pr is not None:
+        pr.status = await _compute_pr_status_after_link_change(db, pr)
+
+    await _audit(
+        db,
+        actor,
+        "fulfillment_link.updated",
+        "pr_fulfillment_link",
+        str(link.id),
+        metadata={
+            "fulfillment_type": new_type,
+            "qty_contribution": str(new_qty),
+            "deviation_note": link.deviation_note,
+        },
+    )
+    await db.commit()
+
+    refreshed = await _load_link(db, link.id)
+    if refreshed is None:
+        raise HTTPException(404, "fulfillment.link_not_found")
+    return refreshed
+
+
+async def delete_fulfillment_link(
+    db: AsyncSession, actor: User, link_id: UUID
+) -> None:
+    link = await _load_link(db, link_id)
+    if link is None:
+        raise HTTPException(404, "fulfillment.link_not_found")
+
+    pr_id = link.pr_item.pr_id
+    await db.delete(link)
+    await db.flush()
+
+    pr = await _load_pr(db, pr_id)
+    if pr is not None:
+        pr.status = await _compute_pr_status_after_link_change(db, pr)
+
+    await _audit(
+        db,
+        actor,
+        "fulfillment_link.deleted",
+        "pr_fulfillment_link",
+        str(link_id),
+        metadata={"pr_id": str(pr_id)},
+    )
+    await db.commit()
+
+
+async def add_supplementary_po_item(
+    db: AsyncSession,
+    actor: User,
+    *,
+    po_id: UUID,
+    item_name: str,
+    qty: Decimal,
+    unit_price: Decimal,
+    uom: str = "EA",
+    specification: str | None = None,
+    item_id: UUID | None = None,
+    supplementary_for_pr_item_id: UUID | None = None,
+    deviation_note: str | None = None,
+) -> POItem:
+    if qty <= 0:
+        raise HTTPException(422, "po_item.qty_must_be_positive")
+    if unit_price < 0:
+        raise HTTPException(422, "po_item.unit_price_negative")
+
+    po = await _load_po(db, po_id)
+    if po is None:
+        raise HTTPException(404, "po.not_found")
+
+    pr_item: PRItem | None = None
+    if supplementary_for_pr_item_id is not None:
+        pr_item = (
+            await db.execute(
+                select(PRItem).where(PRItem.id == supplementary_for_pr_item_id)
+            )
+        ).scalar_one_or_none()
+        if pr_item is None:
+            raise HTTPException(404, "pr_item.not_found")
+        if pr_item.pr_id != po.pr_id:
+            raise HTTPException(422, "fulfillment.supplementary_pr_mismatch")
+
+    next_line_no = (max((i.line_no for i in po.items), default=0)) + 1
+    amount = _compute_line_amount(Decimal(str(qty)), Decimal(str(unit_price)))
+
+    po_item = POItem(
+        po_id=po.id,
+        pr_item_id=None,
+        line_no=next_line_no,
+        item_id=item_id,
+        item_name=item_name,
+        specification=specification,
+        qty=qty,
+        uom=uom,
+        unit_price=unit_price,
+        amount=amount,
+    )
+    db.add(po_item)
+    await db.flush()
+
+    if pr_item is not None:
+        db.add(
+            PRFulfillmentLink(
+                pr_item_id=pr_item.id,
+                po_item_id=po_item.id,
+                qty_contribution=qty,
+                fulfillment_type=FulfillmentType.SUPPLEMENTARY.value,
+                deviation_note=deviation_note,
+                created_by_id=actor.id,
+            )
+        )
+        await db.flush()
+
+    po.total_amount = Decimal(str(po.total_amount)) + amount
+
+    await _audit(
+        db,
+        actor,
+        "po_item.supplementary_added",
+        "po_item",
+        str(po_item.id),
+        metadata={
+            "po_id": str(po.id),
+            "supplementary_for_pr_item_id": (
+                str(supplementary_for_pr_item_id)
+                if supplementary_for_pr_item_id
+                else None
+            ),
+            "qty": str(qty),
+            "amount": str(amount),
+        },
+    )
+    await db.commit()
+
+    refreshed = await db.get(POItem, po_item.id)
+    if refreshed is None:
+        raise HTTPException(404, "po_item.not_found")
+    return refreshed
+
+
+async def get_pr_item_fulfillment_breakdown(
+    db: AsyncSession, pr_item_id: UUID
+) -> dict[str, Decimal]:
+    rows = (
+        await db.execute(
+            select(
+                PRFulfillmentLink.fulfillment_type,
+                func.coalesce(func.sum(PRFulfillmentLink.qty_contribution), 0),
+            )
+            .where(PRFulfillmentLink.pr_item_id == pr_item_id)
+            .group_by(PRFulfillmentLink.fulfillment_type)
+        )
+    ).all()
+    breakdown: dict[str, Decimal] = {t.value: Decimal("0") for t in FulfillmentType}
+    for ftype, total in rows:
+        breakdown[ftype] = Decimal(str(total))
+    return breakdown
+
+
 async def _load_pr(db: AsyncSession, pr_id: UUID) -> PurchaseRequisition | None:
     result = await db.execute(
         select(PurchaseRequisition)
@@ -824,7 +1147,7 @@ async def _load_po(db: AsyncSession, po_id: UUID) -> PurchaseOrder | None:
     result = await db.execute(
         select(PurchaseOrder)
         .where(PurchaseOrder.id == po_id)
-        .options(selectinload(PurchaseOrder.items))
+        .options(selectinload(PurchaseOrder.items).selectinload(POItem.fulfillment_links))
     )
     return result.scalar_one_or_none()
 
