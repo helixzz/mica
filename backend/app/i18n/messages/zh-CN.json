@@ -65,7 +65,12 @@
   "po_item": {
     "not_found": "采购订单行不存在",
     "qty_must_be_positive": "数量必须大于零",
-    "unit_price_negative": "单价不能为负数"
+    "unit_price_negative": "单价不能为负数",
+    "item_name_required": "物料名称不能为空",
+    "qty_below_received": "新数量小于已到货数量，无法修改",
+    "cannot_edit_has_invoices": "已开发票的行不可修改数量或单价",
+    "cannot_delete_has_shipments": "已有到货记录的行不可删除",
+    "cannot_delete_has_invoices": "已有发票的行不可删除"
   },
   "pr_item": {
     "not_found": "采购申请行不存在"

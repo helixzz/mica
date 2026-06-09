@@ -7,6 +7,33 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [v1.31.0] — 2026-06-09
+
+### 新增
+
+- **POItem 编辑/删除**：PO 详情页"物料"列表新增"操作"列。可修改任意行的物料名称 / 规格 / 数量 / 单价，或删除整行
+  - **PATCH /po-items/{id}**：admin/it_buyer/procurement_mgr 可编辑。已开发票的行禁止改数量/单价；新数量不得低于已到货数量
+  - **DELETE /po-items/{id}**：admin/it_buyer/procurement_mgr 可删除。有到货 / 发票 的行禁止删除
+  - 编辑/删除后自动重算 PO 总额；同步调整该行关联的 fulfillment_link.qty_contribution；触发 PR 状态重新计算
+- **降配履约时可单独定价**：自定义拆分对话框新增"本次单价"列。降配版本通常便宜——现在可在拆分时直接输入实际成交单价，不再被 PR 原价绑死。`PRConvertSpec.unit_price` 可选；不指定则继承 PR 行原价
+  - 后端 `PRConvertSpecIn` schema 增加 `unit_price` 字段
+  - 创建的 POItem.unit_price + amount 使用拆分时输入的单价；SKU 价格记录也按实际成交价写入
+
+### 修复
+
+- **数据修复**：清理 PO-2026-0019 上 v1.30.0 hotfix 之前 3 个失败请求遗留的重复 POItem 行（每条 amount 5,160 万元，导致 PO 合计虚高 1.5 亿）。重新编号 line_no，重算 total_amount。该问题已通过 v1.30.1 hotfix 解决，本版补做数据清理 + 提供前端编辑/删除能力让用户自行处理类似情况
+
+### 测试
+
+- 6 个新单元测试：update 重算金额 / update 同步 link 数量 / update 拒绝低于已到货数量 / delete 重算 PO 总额 / delete 被到货阻挡 / 拆分用自定义单价
+- 总 706 通过，覆盖率 72.25%
+
+### i18n
+
+- ~13 个新 key（po_item 块 + pr.convert_split_unit_price），zh/en 完全同步
+
+---
+
 ## [v1.30.1] — 2026-06-09
 
 ### 修复

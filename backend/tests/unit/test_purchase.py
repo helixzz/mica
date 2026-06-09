@@ -1945,3 +1945,182 @@ async def test_convert_pr_to_po_with_specs_rejects_invalid_type(seeded_db_sessio
         )
     assert exc.value.status_code == 422
     assert exc.value.detail == "fulfillment.invalid_type"
+
+
+async def test_update_po_item_recomputes_amount_and_po_total(seeded_db_session):
+    db = seeded_db_session
+    actor = await _get_user(db, "alice")
+    supplier = await _get_supplier(db)
+    pr = await _create_pr(db, actor, supplier.id)
+    await _mark_pr_approved(db, pr)
+    pos = await purchase_svc.convert_pr_to_po(db, actor, pr.id)
+    po = pos[0]
+    po_item = po.items[0]
+    original_amount = Decimal(str(po_item.amount))
+    original_qty = Decimal(str(po_item.qty))
+    original_po_total = Decimal(str(po.total_amount))
+
+    new_unit_price = Decimal("500")
+    updated = await purchase_svc.update_po_item(
+        db, actor, po_item.id, unit_price=new_unit_price
+    )
+    assert updated.unit_price == new_unit_price
+    expected_new_amount = original_qty * new_unit_price
+    assert Decimal(str(updated.amount)) == expected_new_amount
+
+    refreshed_po = await purchase_svc.get_po(db, po.id)
+    delta = expected_new_amount - original_amount
+    assert Decimal(str(refreshed_po.total_amount)) == original_po_total + delta
+
+
+async def test_update_po_item_syncs_link_qty(seeded_db_session):
+    db = seeded_db_session
+    actor = await _get_user(db, "alice")
+    supplier = await _get_supplier(db)
+    pr = await purchase_svc.create_pr(
+        db,
+        actor,
+        PRCreateIn(
+            title="Sync link qty",
+            currency="CNY",
+            items=[_pr_item(1, "ItemA", "10", "100", supplier_id=supplier.id)],
+        ),
+    )
+    await _mark_pr_approved(db, pr)
+    pos = await purchase_svc.convert_pr_to_po(db, actor, pr.id)
+    po_item = pos[0].items[0]
+    assert po_item.fulfillment_links[0].qty_contribution == Decimal("10")
+
+    await purchase_svc.update_po_item(db, actor, po_item.id, qty=Decimal("8"))
+
+    breakdown = await purchase_svc.get_pr_item_fulfillment_breakdown(
+        db, pr.items[0].id
+    )
+    assert breakdown["equivalent"] == Decimal("8")
+
+
+async def test_update_po_item_rejects_qty_below_received(seeded_db_session):
+    from app.models import POItem
+
+    db = seeded_db_session
+    actor = await _get_user(db, "alice")
+    supplier = await _get_supplier(db)
+    pr = await _create_pr(db, actor, supplier.id)
+    await _mark_pr_approved(db, pr)
+    pos = await purchase_svc.convert_pr_to_po(db, actor, pr.id)
+    po_item = pos[0].items[0]
+
+    raw = await db.get(POItem, po_item.id)
+    assert raw is not None
+    raw.qty_received = Decimal("3")
+    await db.commit()
+
+    with pytest.raises(HTTPException) as exc:
+        await purchase_svc.update_po_item(db, actor, po_item.id, qty=Decimal("2"))
+    assert exc.value.status_code == 409
+    assert exc.value.detail == "po_item.qty_below_received"
+
+
+async def test_delete_po_item_recomputes_po_total(seeded_db_session):
+    db = seeded_db_session
+    actor = await _get_user(db, "alice")
+    supplier = await _get_supplier(db)
+    pr = await purchase_svc.create_pr(
+        db,
+        actor,
+        PRCreateIn(
+            title="Delete one line",
+            currency="CNY",
+            items=[
+                _pr_item(1, "ItemA", "1", "100", supplier_id=supplier.id),
+                _pr_item(2, "ItemB", "2", "50", supplier_id=supplier.id),
+            ],
+        ),
+    )
+    await _mark_pr_approved(db, pr)
+    pos = await purchase_svc.convert_pr_to_po(db, actor, pr.id)
+    po = pos[0]
+    po_id = po.id
+    original_total = Decimal(str(po.total_amount))
+    item_to_delete = po.items[1]
+    deleted_amount = Decimal(str(item_to_delete.amount))
+    item_to_delete_id = item_to_delete.id
+
+    await purchase_svc.delete_po_item(db, actor, item_to_delete_id)
+
+    db.expire_all()
+    refreshed_po = await purchase_svc.get_po(db, po_id)
+    assert Decimal(str(refreshed_po.total_amount)) == original_total - deleted_amount
+    assert len(refreshed_po.items) == 1
+
+
+async def test_delete_po_item_blocked_by_shipment(seeded_db_session):
+    from app.models import Shipment, ShipmentItem, ShipmentStatus
+
+    db = seeded_db_session
+    actor = await _get_user(db, "alice")
+    supplier = await _get_supplier(db)
+    pr = await _create_pr(db, actor, supplier.id)
+    await _mark_pr_approved(db, pr)
+    pos = await purchase_svc.convert_pr_to_po(db, actor, pr.id)
+    po_item = pos[0].items[0]
+
+    sh = Shipment(
+        shipment_number="SH-T-1",
+        po_id=pos[0].id,
+        status=ShipmentStatus.ARRIVED.value,
+    )
+    db.add(sh)
+    await db.flush()
+    db.add(
+        ShipmentItem(
+            shipment_id=sh.id,
+            po_item_id=po_item.id,
+            line_no=1,
+            item_name=po_item.item_name,
+            qty_shipped=Decimal("1"),
+            unit_price=po_item.unit_price,
+        )
+    )
+    await db.commit()
+
+    with pytest.raises(HTTPException) as exc:
+        await purchase_svc.delete_po_item(db, actor, po_item.id)
+    assert exc.value.status_code == 409
+    assert exc.value.detail == "po_item.cannot_delete_has_shipments"
+
+
+async def test_convert_with_specs_uses_custom_unit_price(seeded_db_session):
+    from app.services.purchase import PRConvertSpec
+
+    db = seeded_db_session
+    actor = await _get_user(db, "alice")
+    supplier = await _get_supplier(db)
+    pr = await purchase_svc.create_pr(
+        db,
+        actor,
+        PRCreateIn(
+            title="Downgrade with custom price",
+            currency="CNY",
+            items=[_pr_item(1, "Server X", "10", "1000", supplier_id=supplier.id)],
+        ),
+    )
+    await _mark_pr_approved(db, pr)
+
+    pos = await purchase_svc.convert_pr_to_po_with_specs(
+        db,
+        actor,
+        pr.id,
+        [
+            PRConvertSpec(
+                pr_item_id=pr.items[0].id,
+                qty=Decimal("10"),
+                fulfillment_type="downgraded",
+                deviation_note="missing A part",
+                unit_price=Decimal("700"),
+            )
+        ],
+    )
+    assert pos[0].items[0].unit_price == Decimal("700")
+    assert pos[0].items[0].amount == Decimal("7000.0000")
+    assert pos[0].total_amount == Decimal("7000.0000")

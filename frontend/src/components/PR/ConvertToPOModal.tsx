@@ -31,6 +31,7 @@ type SplitRow = {
   uom: string
   unit_price: number
   this_qty: number
+  this_unit_price: number
   fulfillment_type: FulfillmentType
   deviation_note: string
 }
@@ -95,6 +96,7 @@ export function ConvertToPOModal({
             uom: it.uom,
             unit_price: Number(it.unit_price || 0),
             this_qty: remaining,
+            this_unit_price: Number(it.unit_price || 0),
             fulfillment_type: 'equivalent' as FulfillmentType,
             deviation_note: '',
           }
@@ -188,6 +190,7 @@ export function ConvertToPOModal({
         enabled.map((r) => ({
           pr_item_id: r.pr_item_id,
           qty: r.this_qty,
+          unit_price: r.this_unit_price,
           fulfillment_type: r.fulfillment_type,
           deviation_note: r.deviation_note.trim() || null,
         })),
@@ -224,7 +227,7 @@ export function ConvertToPOModal({
       confirmLoading={busy}
       okText={t('pr.convert_modal_confirm')}
       cancelText={t('button.cancel')}
-      width={920}
+      width={1080}
       destroyOnClose
     >
       <Tabs
@@ -331,7 +334,7 @@ export function ConvertToPOModal({
                   rowKey="key"
                   pagination={false}
                   dataSource={splitRows}
-                  scroll={{ x: 980 }}
+                  scroll={{ x: 1140 }}
                   columns={[
                     { title: t('field.line_no'), dataIndex: 'line_no', width: 56 },
                     {
@@ -370,6 +373,23 @@ export function ConvertToPOModal({
                           onChange={(v) => updateSplitRow(row.key, { this_qty: Number(v ?? 0) })}
                           style={{ width: '100%' }}
                           disabled={!row.supplier_id}
+                        />
+                      ),
+                    },
+                    {
+                      title: t('pr.convert_split_unit_price'),
+                      key: 'this_unit_price',
+                      width: 140,
+                      render: (_: unknown, row: SplitRow) => (
+                        <InputNumber
+                          min={0}
+                          step={0.01}
+                          value={row.this_unit_price}
+                          onChange={(v) => updateSplitRow(row.key, { this_unit_price: Number(v ?? 0) })}
+                          style={{ width: '100%' }}
+                          disabled={row.this_qty <= 0}
+                          formatter={(v) => (v === undefined || v === null ? '' : `${pr.currency || 'CNY'} ${v}`)}
+                          parser={(v) => Number((v || '').toString().replace(/[^\d.]/g, '')) as 0}
                         />
                       ),
                     },

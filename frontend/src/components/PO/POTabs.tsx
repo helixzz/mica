@@ -68,7 +68,7 @@ export function POTabs({
         {
           key: 'items',
           label: `${t('nav.purchase_orders')} · ${t('field.item_name')} (${po.items.length})`,
-          children: <ItemsTab items={po.items} currency={po.currency} />,
+          children: <ItemsTab items={po.items} currency={po.currency} onChanged={loadAll} />,
         },
         {
           key: 'delivery-plan',

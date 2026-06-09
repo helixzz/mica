@@ -15,6 +15,7 @@ from app.schemas import (
     FulfillmentLinkOut,
     FulfillmentLinkUpdateIn,
     POItemOut,
+    POItemUpdateIn,
     POListOut,
     POOut,
     PRConversionPreviewGroup,
@@ -491,3 +492,42 @@ async def add_supplementary_po_item(
         deviation_note=payload.deviation_note,
     )
     return POItemOut.model_validate(po_item)
+
+
+@router.patch(
+    "/po-items/{po_item_id}",
+    response_model=POItemOut,
+    tags=["purchase"],
+)
+async def update_po_item(
+    po_item_id: UUID,
+    payload: POItemUpdateIn,
+    user: CurrentUser,
+    db: Annotated[AsyncSession, Depends(get_db)],
+    _role: Annotated[None, Depends(require_roles("admin", "it_buyer", "procurement_mgr"))],
+):
+    po_item = await svc.update_po_item(
+        db,
+        user,
+        po_item_id,
+        qty=payload.qty,
+        unit_price=payload.unit_price,
+        item_name=payload.item_name,
+        specification=payload.specification,
+    )
+    return POItemOut.model_validate(po_item)
+
+
+@router.delete(
+    "/po-items/{po_item_id}",
+    status_code=status.HTTP_204_NO_CONTENT,
+    tags=["purchase"],
+)
+async def delete_po_item(
+    po_item_id: UUID,
+    user: CurrentUser,
+    db: Annotated[AsyncSession, Depends(get_db)],
+    _role: Annotated[None, Depends(require_roles("admin", "it_buyer", "procurement_mgr"))],
+):
+    await svc.delete_po_item(db, user, po_item_id)
+    return Response(status_code=status.HTTP_204_NO_CONTENT)

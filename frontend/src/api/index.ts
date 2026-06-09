@@ -1241,6 +1241,7 @@ export const api = {
       qty: number | string
       fulfillment_type: FulfillmentType
       deviation_note?: string | null
+      unit_price?: number | string | null
     }[]
   ): Promise<PurchaseOrder[]> {
     const { data } = await client.post<PurchaseOrder[]>(
@@ -1300,6 +1301,21 @@ export const api = {
       payload
     )
     return data
+  },
+  async updatePOItem(
+    poItemId: string,
+    payload: {
+      qty?: number | string | null
+      unit_price?: number | string | null
+      item_name?: string | null
+      specification?: string | null
+    }
+  ): Promise<POItem> {
+    const { data } = await client.patch<POItem>(`/po-items/${poItemId}`, payload)
+    return data
+  },
+  async deletePOItem(poItemId: string): Promise<void> {
+    await client.delete(`/po-items/${poItemId}`)
   },
   async previewPRConversion(id: string): Promise<PRConversionPreviewGroup[]> {
     const { data } = await client.get<PRConversionPreviewGroup[]>(

@@ -690,6 +690,7 @@
     "convert_tab_split_hint_body": "For each PR item you can convert just part of the quantity and mark its relation to the original demand (equivalent / downgraded / substitute). Set quantity to 0 to skip a row this time. This submission groups by supplier; if you need separate PO groups with different fulfillment types, submit them in separate passes.",
     "convert_split_remaining": "Remaining",
     "convert_split_this_qty": "This time",
+    "convert_split_unit_price": "Unit price",
     "convert_split_warning_overflow": "This contribution plus history would exceed 150% of the PR demand",
     "items_missing_supplier": "Some line items have no supplier assigned and cannot be converted to PO",
     "sku_quote_confirm_title": "Save {{count}} item price quote(s)?",
@@ -1341,8 +1342,22 @@
     "unlink_success": "Contract unlinked",
     "primary_contract": "Primary PO",
     "invoice_help": "Record the supplier's invoice number, date, tax info, and supporting files so later matching and payment review stay traceable.",
-    "attachments_hint": "Upload packing lists, serial number sheets, signed receipts, etc.",
+    "attachments_hint": "Upload packing slip, serial list, signed receipt, etc.",
     "attachments": "Attachments"
+  },
+  "po_item": {
+    "edit_title": "Edit PO line",
+    "delete_confirm_title": "Delete this line?",
+    "delete_confirm_body": "Delete \"{{name}}\"? This cannot be undone.",
+    "qty_received_warning": "Already received: {{qty}}. New quantity cannot go below this.",
+    "not_found": "PO line not found",
+    "qty_must_be_positive": "Quantity must be greater than zero",
+    "unit_price_negative": "Unit price cannot be negative",
+    "item_name_required": "Item name cannot be empty",
+    "qty_below_received": "New quantity is less than the already-received quantity",
+    "cannot_edit_has_invoices": "Lines with invoices cannot have quantity or unit price changed",
+    "cannot_delete_has_shipments": "Cannot delete a line that has shipments",
+    "cannot_delete_has_invoices": "Cannot delete a line that has invoices"
   },
   "autosave": {
     "banner_text": "An unsaved draft from {{time}} was found.",

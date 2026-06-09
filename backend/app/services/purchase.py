@@ -628,6 +628,7 @@ class PRConvertSpec:
     qty: Decimal
     fulfillment_type: str
     deviation_note: str | None = None
+    unit_price: Decimal | None = None
 
 
 async def convert_pr_to_po_with_specs(
@@ -726,8 +727,12 @@ async def _create_pos_for_specs(
         subtotal = Decimal("0")
         for spec in group_specs:
             pr_item = pr_items_by_id[spec.pr_item_id]
-            unit_price = Decimal(str(pr_item.unit_price or 0))
-            subtotal += Decimal(str(spec.qty)) * unit_price
+            spec_unit_price = (
+                Decimal(str(spec.unit_price))
+                if spec.unit_price is not None
+                else Decimal(str(pr_item.unit_price or 0))
+            )
+            subtotal += Decimal(str(spec.qty)) * spec_unit_price
 
         po = PurchaseOrder(
             po_number=po_number,
@@ -748,9 +753,13 @@ async def _create_pos_for_specs(
         for spec in group_specs:
             line_no += 1
             pr_item = pr_items_by_id[spec.pr_item_id]
-            unit_price = Decimal(str(pr_item.unit_price or 0))
+            spec_unit_price = (
+                Decimal(str(spec.unit_price))
+                if spec.unit_price is not None
+                else Decimal(str(pr_item.unit_price or 0))
+            )
             line_qty = Decimal(str(spec.qty))
-            amount = line_qty * unit_price
+            amount = line_qty * spec_unit_price
 
             po_item = POItem(
                 po_id=po.id,
@@ -761,7 +770,7 @@ async def _create_pos_for_specs(
                 specification=pr_item.specification,
                 qty=line_qty,
                 uom=pr_item.uom,
-                unit_price=unit_price,
+                unit_price=spec_unit_price,
                 amount=amount,
             )
             db.add(po_item)
@@ -778,12 +787,12 @@ async def _create_pos_for_specs(
                 )
             )
 
-            if pr_item.item_id and unit_price > 0:
+            if pr_item.item_id and spec_unit_price > 0:
                 db.add(
                     SKUPriceRecord(
                         item_id=pr_item.item_id,
                         supplier_id=supplier_id,
-                        price=unit_price,
+                        price=spec_unit_price,
                         currency=pr.currency or "CNY",
                         quotation_date=datetime.now(UTC).date(),
                         source_type="actual_po",
@@ -1387,6 +1396,181 @@ async def add_supplementary_po_item(
     if refreshed is None:
         raise HTTPException(404, "po_item.not_found")
     return refreshed
+
+
+async def update_po_item(
+    db: AsyncSession,
+    actor: User,
+    po_item_id: UUID,
+    *,
+    qty: Decimal | None = None,
+    unit_price: Decimal | None = None,
+    item_name: str | None = None,
+    specification: str | None = None,
+    sync_link_qty: bool = True,
+) -> POItem:
+    po_item = (
+        await db.execute(
+            select(POItem)
+            .where(POItem.id == po_item_id)
+            .options(selectinload(POItem.fulfillment_links))
+        )
+    ).scalar_one_or_none()
+    if po_item is None:
+        raise HTTPException(404, "po_item.not_found")
+
+    if qty is not None and qty <= 0:
+        raise HTTPException(422, "po_item.qty_must_be_positive")
+    if unit_price is not None and unit_price < 0:
+        raise HTTPException(422, "po_item.unit_price_negative")
+    if item_name is not None and not item_name.strip():
+        raise HTTPException(422, "po_item.item_name_required")
+
+    if qty is not None and Decimal(str(qty)) < Decimal(str(po_item.qty_received or 0)):
+        raise HTTPException(409, "po_item.qty_below_received")
+
+    from app.models import InvoiceLine
+
+    if qty is not None or unit_price is not None:
+        invoice_count = (
+            await db.execute(
+                select(func.count(InvoiceLine.id)).where(
+                    InvoiceLine.po_item_id == po_item_id
+                )
+            )
+        ).scalar_one()
+        if invoice_count:
+            raise HTTPException(409, "po_item.cannot_edit_has_invoices")
+
+    old_qty = Decimal(str(po_item.qty))
+    old_unit_price = Decimal(str(po_item.unit_price))
+    old_amount = Decimal(str(po_item.amount))
+
+    new_qty = old_qty if qty is None else Decimal(str(qty))
+    new_unit_price = old_unit_price if unit_price is None else Decimal(str(unit_price))
+    new_amount = _compute_line_amount(new_qty, new_unit_price)
+
+    po_item.qty = new_qty
+    po_item.unit_price = new_unit_price
+    po_item.amount = new_amount
+    if item_name is not None:
+        po_item.item_name = item_name.strip()
+    if specification is not None:
+        po_item.specification = specification.strip() or None
+
+    if sync_link_qty and qty is not None and qty != old_qty:
+        for link in po_item.fulfillment_links:
+            current_contribution = Decimal(str(link.qty_contribution))
+            if current_contribution == old_qty:
+                link.qty_contribution = new_qty
+            elif current_contribution > new_qty:
+                link.qty_contribution = new_qty
+
+    po = await _load_po(db, po_item.po_id)
+    if po is not None:
+        delta = new_amount - old_amount
+        po.total_amount = Decimal(str(po.total_amount)) + delta
+
+    await db.flush()
+
+    if po is not None:
+        po_pr_id = po.pr_id
+    else:
+        po_pr_id = None
+
+    if po_pr_id is not None:
+        pr = await _load_pr(db, po_pr_id)
+        if pr is not None:
+            pr.status = await _compute_pr_status_after_link_change(db, pr)
+
+    await _audit(
+        db,
+        actor,
+        "po_item.updated",
+        "po_item",
+        str(po_item_id),
+        metadata={
+            "po_id": str(po_item.po_id),
+            "old_qty": str(old_qty),
+            "new_qty": str(new_qty),
+            "old_unit_price": str(old_unit_price),
+            "new_unit_price": str(new_unit_price),
+        },
+    )
+    await db.commit()
+
+    refreshed = (
+        await db.execute(
+            select(POItem)
+            .where(POItem.id == po_item_id)
+            .options(selectinload(POItem.fulfillment_links))
+        )
+    ).scalar_one_or_none()
+    if refreshed is None:
+        raise HTTPException(404, "po_item.not_found")
+    return refreshed
+
+
+async def delete_po_item(
+    db: AsyncSession,
+    actor: User,
+    po_item_id: UUID,
+) -> None:
+    from app.models import InvoiceLine, ShipmentItem
+
+    po_item = await db.get(POItem, po_item_id)
+    if po_item is None:
+        raise HTTPException(404, "po_item.not_found")
+
+    shipment_count = (
+        await db.execute(
+            select(func.count(ShipmentItem.id)).where(
+                ShipmentItem.po_item_id == po_item_id
+            )
+        )
+    ).scalar_one()
+    if shipment_count:
+        raise HTTPException(409, "po_item.cannot_delete_has_shipments")
+
+    invoice_count = (
+        await db.execute(
+            select(func.count(InvoiceLine.id)).where(
+                InvoiceLine.po_item_id == po_item_id
+            )
+        )
+    ).scalar_one()
+    if invoice_count:
+        raise HTTPException(409, "po_item.cannot_delete_has_invoices")
+
+    po_id = po_item.po_id
+    line_amount = Decimal(str(po_item.amount))
+
+    await db.delete(po_item)
+    await db.flush()
+
+    po = await _load_po(db, po_id)
+    if po is not None:
+        po.total_amount = max(
+            Decimal("0"), Decimal(str(po.total_amount)) - line_amount
+        )
+
+    if po is not None:
+        pr = await _load_pr(db, po.pr_id)
+        if pr is not None:
+            pr.status = await _compute_pr_status_after_link_change(db, pr)
+
+    await _audit(
+        db,
+        actor,
+        "po_item.deleted",
+        "po_item",
+        str(po_item_id),
+        metadata={
+            "po_id": str(po_id),
+            "amount": str(line_amount),
+        },
+    )
+    await db.commit()
 
 
 async def get_pr_item_fulfillment_breakdown(

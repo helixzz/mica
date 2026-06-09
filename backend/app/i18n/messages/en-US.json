@@ -65,7 +65,12 @@
   "po_item": {
     "not_found": "PO item not found",
     "qty_must_be_positive": "Quantity must be greater than zero",
-    "unit_price_negative": "Unit price cannot be negative"
+    "unit_price_negative": "Unit price cannot be negative",
+    "item_name_required": "Item name cannot be empty",
+    "qty_below_received": "New quantity is less than the already-received quantity",
+    "cannot_edit_has_invoices": "Lines with invoices cannot have quantity or unit price changed",
+    "cannot_delete_has_shipments": "Cannot delete a PO line that has shipments",
+    "cannot_delete_has_invoices": "Cannot delete a PO line that has invoices"
   },
   "pr_item": {
     "not_found": "PR item not found"

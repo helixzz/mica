@@ -556,6 +556,14 @@ class PRConvertSpecIn(BaseModel):
     qty: Decimal = Field(..., gt=0)
     fulfillment_type: str
     deviation_note: str | None = None
+    unit_price: Decimal | None = Field(default=None, ge=0)
+
+
+class POItemUpdateIn(BaseModel):
+    qty: Decimal | None = Field(default=None, gt=0)
+    unit_price: Decimal | None = Field(default=None, ge=0)
+    item_name: str | None = Field(default=None, min_length=1, max_length=255)
+    specification: str | None = None
 
 
 class FulfillmentLinkCreateIn(BaseModel):

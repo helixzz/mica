@@ -702,6 +702,7 @@
     "convert_tab_split_hint_body": "对每个物料行，可只转部分数量，并标记其与原始需求的关系（完全等价 / 降配 / 替换）。设置数量为 0 表示本次跳过。本次提交按供应商自动分组生成 PO；如要分多组不同类型的 PO（例如部分等价 + 部分降配），请分多次提交。",
     "convert_split_remaining": "剩余可转",
     "convert_split_this_qty": "本次数量",
+    "convert_split_unit_price": "本次单价",
     "convert_split_warning_overflow": "本次数量加上历史已履约超过 PR 行需求的 1.5 倍",
     "items_missing_supplier": "存在尚未指定供应商的明细行，无法转 PO",
     "sku_quote_confirm_title": "保存 {{count}} 条物料行情？",
@@ -1355,6 +1356,20 @@
     "invoice_help": "录入供应商发票号、日期、税务信息和附件，确保后续匹配、付款和审计链路都可追溯。",
     "attachments_hint": "上传装箱单、序列号清单、签收单等交付文档",
     "attachments": "附件"
+  },
+  "po_item": {
+    "edit_title": "编辑物料行",
+    "delete_confirm_title": "确认删除该物料行",
+    "delete_confirm_body": "确认删除「{{name}}」？此操作不可撤销。",
+    "qty_received_warning": "已到货数量：{{qty}}，新数量不得低于此值",
+    "not_found": "采购订单行不存在",
+    "qty_must_be_positive": "数量必须大于零",
+    "unit_price_negative": "单价不能为负数",
+    "item_name_required": "物料名称不能为空",
+    "qty_below_received": "新数量小于已到货数量，无法修改",
+    "cannot_edit_has_invoices": "已开发票的行不可修改数量或单价",
+    "cannot_delete_has_shipments": "已有到货记录的行不可删除",
+    "cannot_delete_has_invoices": "已有发票的行不可删除"
   },
   "autosave": {
     "banner_text": "检测到 {{time}} 的未保存草稿。",
