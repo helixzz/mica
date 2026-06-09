@@ -81,7 +81,8 @@
     "qty_exceeds_soft_limit": "本次贡献加上已有履约数量超过 PR 行需求的 1.5 倍，请确认或调整",
     "link_already_exists": "该 PO 行与 PR 行的履约关系已存在",
     "link_not_found": "履约关系不存在",
-    "supplementary_pr_mismatch": "补充派生项关联的 PR 行与该 PO 不属于同一份采购申请"
+    "supplementary_pr_mismatch": "补充派生项关联的 PR 行与该 PO 不属于同一份采购申请",
+    "supplier_mismatch_with_po": "选择追加到现有 PO 时，供应商必须与该 PO 一致"
   },
   "approval": {
     "task_not_found": "approval task not found",

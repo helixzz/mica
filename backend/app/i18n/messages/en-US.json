@@ -81,7 +81,8 @@
     "qty_exceeds_soft_limit": "Combined contribution exceeds 150% of the original PR demand. Please verify before proceeding",
     "link_already_exists": "A fulfillment link between this PO line and PR line already exists",
     "link_not_found": "Fulfillment link not found",
-    "supplementary_pr_mismatch": "The PR line for this supplementary item does not belong to this PO's PR"
+    "supplementary_pr_mismatch": "The PR line for this supplementary item does not belong to this PO's PR",
+    "supplier_mismatch_with_po": "When appending to an existing PO, the supplier must match that PO"
   },
   "approval": {
     "task_not_found": "approval task not found",

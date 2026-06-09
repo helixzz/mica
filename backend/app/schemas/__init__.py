@@ -608,6 +608,18 @@ class SupplementaryPOItemIn(BaseModel):
     deviation_note: str | None = None
 
 
+class SupplementaryForPRItemIn(BaseModel):
+    item_name: str = Field(..., min_length=1, max_length=255)
+    specification: str | None = None
+    item_id: UUID | None = None
+    qty: Decimal = Field(..., gt=0)
+    uom: str = "EA"
+    unit_price: Decimal = Field(..., ge=0)
+    supplier_id: UUID
+    target_po_id: UUID | None = None
+    deviation_note: str | None = None
+
+
 class ContractCreateIn(BaseModel):
     po_id: UUID
     title: str

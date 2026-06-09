@@ -1427,6 +1427,153 @@ async def add_supplementary_po_item(
     return refreshed
 
 
+async def add_supplementary_for_pr_item(
+    db: AsyncSession,
+    actor: User,
+    *,
+    pr_item_id: UUID,
+    item_name: str,
+    qty: Decimal,
+    unit_price: Decimal,
+    supplier_id: UUID,
+    target_po_id: UUID | None = None,
+    item_id: UUID | None = None,
+    uom: str = "EA",
+    specification: str | None = None,
+    deviation_note: str | None = None,
+) -> POItem:
+    if qty <= 0:
+        raise HTTPException(422, "po_item.qty_must_be_positive")
+    if unit_price < 0:
+        raise HTTPException(422, "po_item.unit_price_negative")
+    if not item_name or not item_name.strip():
+        raise HTTPException(422, "po_item.item_name_required")
+
+    pr_item = (
+        await db.execute(select(PRItem).where(PRItem.id == pr_item_id))
+    ).scalar_one_or_none()
+    if pr_item is None:
+        raise HTTPException(404, "pr_item.not_found")
+
+    pr = await _load_pr(db, pr_item.pr_id)
+    if pr is None:
+        raise HTTPException(404, "pr.not_found")
+    if pr.status not in (
+        PRStatus.APPROVED.value,
+        PRStatus.PARTIALLY_CONVERTED.value,
+        PRStatus.CONVERTED.value,
+    ):
+        raise HTTPException(409, "pr.must_be_approved_to_convert")
+
+    target_po: PurchaseOrder | None = None
+    if target_po_id is not None:
+        target_po = await _load_po(db, target_po_id)
+        if target_po is None:
+            raise HTTPException(404, "po.not_found")
+        if target_po.pr_id != pr.id:
+            raise HTTPException(422, "fulfillment.supplementary_pr_mismatch")
+        if target_po.supplier_id != supplier_id:
+            raise HTTPException(422, "fulfillment.supplier_mismatch_with_po")
+
+    amount = _compute_line_amount(Decimal(str(qty)), Decimal(str(unit_price)))
+
+    if target_po is None:
+        po_number = await _next_po_number(db)
+        target_po = PurchaseOrder(
+            po_number=po_number,
+            pr_id=pr.id,
+            pr_title=pr.title,
+            supplier_id=supplier_id,
+            company_id=pr.company_id,
+            status=POStatus.CONFIRMED.value,
+            currency=pr.currency,
+            total_amount=amount,
+            source_type="manual",
+            created_by_id=actor.id,
+        )
+        db.add(target_po)
+        await db.flush()
+        next_line_no = 1
+    else:
+        next_line_no = (max((i.line_no for i in target_po.items), default=0)) + 1
+        target_po.total_amount = Decimal(str(target_po.total_amount)) + amount
+
+    po_item = POItem(
+        po_id=target_po.id,
+        pr_item_id=None,
+        line_no=next_line_no,
+        item_id=item_id,
+        item_name=item_name.strip(),
+        specification=specification,
+        qty=qty,
+        uom=uom,
+        unit_price=unit_price,
+        amount=amount,
+    )
+    db.add(po_item)
+    await db.flush()
+
+    db.add(
+        PRFulfillmentLink(
+            pr_item_id=pr_item.id,
+            po_item_id=po_item.id,
+            qty_contribution=qty,
+            fulfillment_type=FulfillmentType.SUPPLEMENTARY.value,
+            deviation_note=deviation_note,
+            created_by_id=actor.id,
+        )
+    )
+    await db.flush()
+
+    if item_id and Decimal(str(unit_price)) > 0:
+        db.add(
+            SKUPriceRecord(
+                item_id=item_id,
+                supplier_id=supplier_id,
+                price=unit_price,
+                currency=pr.currency or "CNY",
+                quotation_date=datetime.now(UTC).date(),
+                source_type="actual_po",
+                source_ref=target_po.po_number,
+                entered_by_id=actor.id,
+            )
+        )
+
+    pr_after = await _load_pr(db, pr.id)
+    if pr_after is not None:
+        pr_after.status = await _compute_pr_status_after_link_change(db, pr_after)
+
+    await _audit(
+        db,
+        actor,
+        "po_item.supplementary_added_for_pr_item",
+        "po_item",
+        str(po_item.id),
+        metadata={
+            "pr_id": str(pr.id),
+            "pr_item_id": str(pr_item_id),
+            "po_id": str(target_po.id),
+            "po_number": target_po.po_number,
+            "supplier_id": str(supplier_id),
+            "qty": str(qty),
+            "amount": str(amount),
+            "opened_new_po": target_po_id is None,
+        },
+    )
+    await db.commit()
+
+    refreshed = (
+        await db.execute(
+            select(POItem)
+            .where(POItem.id == po_item.id)
+            .options(selectinload(POItem.fulfillment_links))
+        )
+    ).scalar_one_or_none()
+    if refreshed is None:
+        raise HTTPException(404, "po_item.not_found")
+    return refreshed
+
+
 async def update_po_item(
     db: AsyncSession,
     actor: User,

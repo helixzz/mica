@@ -1307,6 +1307,26 @@ export const api = {
     )
     return data
   },
+  async addSupplementaryForPRItem(
+    prItemId: string,
+    payload: {
+      item_name: string
+      specification?: string | null
+      item_id?: string | null
+      qty: number | string
+      uom?: string
+      unit_price: number | string
+      supplier_id: string
+      target_po_id?: string | null
+      deviation_note?: string | null
+    }
+  ): Promise<POItem> {
+    const { data } = await client.post<POItem>(
+      `/pr-items/${prItemId}/supplementary`,
+      payload
+    )
+    return data
+  },
   async updatePOItem(
     poItemId: string,
     payload: {

@@ -7,6 +7,36 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [v1.33.0] — 2026-06-09
+
+### 新增
+
+- **PR 详情页直接给某 PR 行加配套补充项**：每个 PRItem 行右侧（has-buyer-permission 时）多了"加配套补充项"按钮。点击后弹窗：
+  - 选 SKU（带 ItemPickerWithCreate，可现场新建）
+  - 选供应商
+  - 选模式：**为该供应商开新 PO** 或 **追加到现有 PO（同供应商）**
+  - 填数量、单价、规格、备注
+  - 后端自动判断创建新 PO 还是追加到现有 PO
+- **新后端端点 `POST /pr-items/{pr_item_id}/supplementary`**：服务函数 `add_supplementary_for_pr_item` 接受 `supplier_id`（必填）+ `target_po_id`（可选）。两种执行路径：
+  - `target_po_id` 为空 → 新开 PO（PO.supplier_id = 提供的 supplier）→ 创建 POItem(pr_item_id=NULL) + SUPPLEMENTARY link
+  - `target_po_id` 给定 → 追加到该 PO（必须 supplier 一致、必须属同 PR）
+- 创建/追加后自动重算 PR 状态、写审计日志、更新 PO 总额
+
+### 设计动机
+
+之前补充派生项只能在 PR 转 PO 流程里同时声明（v1.32），或在已有 PO 内追加（v1.27）。现实中往往是：主 PO 已下、入库后才发现配件没买够，这时候需要**直接对 PR 行**追加补充项，可能开新 PO 给完全不同的供应商。
+
+### 测试
+
+- 3 个新单元测试覆盖：开新 PO、追加到现有 PO、供应商不匹配拒绝
+- 总用例 712（+3），覆盖率 72.33%
+
+### i18n
+
+- 8 个新 key，zh/en 同步
+
+---
+
 ## [v1.32.0] — 2026-06-09
 
 ### 设计变更

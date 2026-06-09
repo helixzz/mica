@@ -27,6 +27,7 @@ import {
 import { extractError } from '@/api/client'
 import { ActivityTimeline } from '@/components/ActivityTimeline'
 import { ConvertToPOModal } from '@/components/PR/ConvertToPOModal'
+import { AddSupplementaryFromPRModal } from '@/components/PR/AddSupplementaryFromPRModal'
 import { fmtAmount, fmtQty } from '@/utils/format'
 import { useAuth } from '@/auth/useAuth'
 
@@ -72,6 +73,8 @@ export function PRDetailPage() {
   }>({ purchase_orders: [], contracts: [] })
   const [allUsers, setAllUsers] = useState<{ id: string; display_name: string; email: string }[]>([])
   const [convertOpen, setConvertOpen] = useState(false)
+  const [suppOpen, setSuppOpen] = useState(false)
+  const [suppItem, setSuppItem] = useState<{ id: string; line_no: number; item_name: string; qty: string | number; uom: string } | null>(null)
 
   const load = async () => {
     if (!id) return
@@ -391,6 +394,34 @@ export function PRDetailPage() {
                     )
                   },
                 },
+                ...(isBuyer && (pr.status === 'approved' || pr.status === 'partially_converted' || pr.status === 'converted')
+                  ? [
+                      {
+                        title: t('field.actions'),
+                        key: 'actions',
+                        width: 140,
+                        render: (_: unknown, row: any) => (
+                          <Button
+                            type="link"
+                            size="small"
+                            disabled={!row.id}
+                            onClick={() => {
+                              setSuppItem({
+                                id: row.id,
+                                line_no: row.line_no,
+                                item_name: row.item_name,
+                                qty: row.qty,
+                                uom: row.uom,
+                              })
+                              setSuppOpen(true)
+                            }}
+                          >
+                            {t('fulfillment.add_supp_for_this_row')}
+                          </Button>
+                        ),
+                      },
+                    ]
+                  : []),
               ]}
             />
           </Card>
@@ -618,6 +649,20 @@ export function PRDetailPage() {
         suppliers={suppliers}
         onClose={() => setConvertOpen(false)}
         onSuccess={handleConvertSuccess}
+      />
+      <AddSupplementaryFromPRModal
+        open={suppOpen}
+        prId={pr.id}
+        prItem={suppItem}
+        currency={pr.currency}
+        suppliers={suppliers}
+        onClose={() => {
+          setSuppOpen(false)
+          setSuppItem(null)
+        }}
+        onSuccess={() => {
+          void load()
+        }}
       />
     </Space>
   )

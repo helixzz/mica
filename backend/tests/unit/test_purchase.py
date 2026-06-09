@@ -2270,3 +2270,133 @@ async def test_convert_with_specs_main_plus_supplementary_groups_correctly(seede
     main_total = sum(Decimal(str(i.amount)) for i in main_po.items)
     assert main_total == Decimal("900")
     assert Decimal(str(supp_po.total_amount)) == Decimal("60")
+
+
+async def test_add_supplementary_for_pr_item_opens_new_po(seeded_db_session):
+    db = seeded_db_session
+    actor = await _get_user(db, "alice")
+    s_main = await _get_supplier(db, "SUP-DELL")
+    s_gpu = await _get_supplier(db, "SUP-LENOVO")
+    pr = await purchase_svc.create_pr(
+        db,
+        actor,
+        PRCreateIn(
+            title="Add supp later",
+            currency="CNY",
+            items=[_pr_item(1, "Server X", "64", "2681000", supplier_id=s_main.id)],
+        ),
+    )
+    await _mark_pr_approved(db, pr)
+    pr_item_id = pr.items[0].id
+    main_pos = await purchase_svc.convert_pr_to_po(db, actor, pr.id)
+    assert len(main_pos) == 1
+    assert main_pos[0].supplier_id == s_main.id
+
+    supp = await purchase_svc.add_supplementary_for_pr_item(
+        db,
+        actor,
+        pr_item_id=pr_item_id,
+        item_name="NVIDIA RTX PRO 6000 BSE",
+        qty=Decimal("1024"),
+        unit_price=Decimal("129000"),
+        supplier_id=s_gpu.id,
+        deviation_note="GPU bundle from secondary distributor",
+    )
+    assert supp.pr_item_id is None
+    assert supp.qty == Decimal("1024")
+    assert supp.fulfillment_links[0].fulfillment_type == "supplementary"
+
+    pr_after = await purchase_svc.get_pr(db, actor, pr.id)
+    pr_after_status = pr_after.status
+    pr_id = pr.id
+    s_gpu_id = s_gpu.id
+    main_po_id = main_pos[0].id
+    db.expire_all()
+    breakdown = await purchase_svc.get_pr_item_fulfillment_breakdown(db, pr_item_id)
+    assert breakdown["supplementary"] == Decimal("1024")
+    assert pr_after_status in (
+        PRStatus.CONVERTED.value,
+        PRStatus.PARTIALLY_CONVERTED.value,
+    )
+
+    from app.models import PurchaseOrder
+
+    new_po_rows = (
+        await db.execute(
+            select(PurchaseOrder).where(
+                PurchaseOrder.pr_id == pr_id,
+                PurchaseOrder.supplier_id == s_gpu_id,
+            )
+        )
+    ).scalars().all()
+    assert len(new_po_rows) == 1
+    assert new_po_rows[0].id != main_po_id
+
+
+async def test_add_supplementary_for_pr_item_appends_to_existing_po(seeded_db_session):
+    db = seeded_db_session
+    actor = await _get_user(db, "alice")
+    s_main = await _get_supplier(db, "SUP-DELL")
+    pr = await purchase_svc.create_pr(
+        db,
+        actor,
+        PRCreateIn(
+            title="Append supp same supplier",
+            currency="CNY",
+            items=[_pr_item(1, "Item", "10", "100", supplier_id=s_main.id)],
+        ),
+    )
+    await _mark_pr_approved(db, pr)
+    pr_item_id = pr.items[0].id
+    main_pos = await purchase_svc.convert_pr_to_po(db, actor, pr.id)
+    main_po = main_pos[0]
+    original_total = Decimal(str(main_po.total_amount))
+    main_po_id = main_po.id
+
+    supp = await purchase_svc.add_supplementary_for_pr_item(
+        db,
+        actor,
+        pr_item_id=pr_item_id,
+        item_name="Cable kit",
+        qty=Decimal("10"),
+        unit_price=Decimal("50"),
+        supplier_id=s_main.id,
+        target_po_id=main_po_id,
+    )
+    assert supp.po_id == main_po_id
+
+    db.expire_all()
+    refreshed = await purchase_svc.get_po(db, main_po_id)
+    assert Decimal(str(refreshed.total_amount)) == original_total + Decimal("500")
+
+
+async def test_add_supplementary_for_pr_item_rejects_supplier_mismatch(seeded_db_session):
+    db = seeded_db_session
+    actor = await _get_user(db, "alice")
+    s_main = await _get_supplier(db, "SUP-DELL")
+    s_other = await _get_supplier(db, "SUP-LENOVO")
+    pr = await purchase_svc.create_pr(
+        db,
+        actor,
+        PRCreateIn(
+            title="Supplier mismatch",
+            currency="CNY",
+            items=[_pr_item(1, "Item", "1", "100", supplier_id=s_main.id)],
+        ),
+    )
+    await _mark_pr_approved(db, pr)
+    main_pos = await purchase_svc.convert_pr_to_po(db, actor, pr.id)
+
+    with pytest.raises(HTTPException) as exc:
+        await purchase_svc.add_supplementary_for_pr_item(
+            db,
+            actor,
+            pr_item_id=pr.items[0].id,
+            item_name="Other",
+            qty=Decimal("1"),
+            unit_price=Decimal("10"),
+            supplier_id=s_other.id,
+            target_po_id=main_pos[0].id,
+        )
+    assert exc.value.status_code == 422
+    assert exc.value.detail == "fulfillment.supplier_mismatch_with_po"

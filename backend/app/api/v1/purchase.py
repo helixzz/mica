@@ -28,6 +28,7 @@ from app.schemas import (
     PRSaveQuotesIn,
     PRSaveQuotesOut,
     PRUpdateIn,
+    SupplementaryForPRItemIn,
     SupplementaryPOItemIn,
 )
 from app.services import export_pdf
@@ -537,3 +538,33 @@ async def delete_po_item(
 ):
     await svc.delete_po_item(db, user, po_item_id)
     return Response(status_code=status.HTTP_204_NO_CONTENT)
+
+
+@router.post(
+    "/pr-items/{pr_item_id}/supplementary",
+    response_model=POItemOut,
+    status_code=status.HTTP_201_CREATED,
+    tags=["purchase"],
+)
+async def add_supplementary_for_pr_item(
+    pr_item_id: UUID,
+    payload: SupplementaryForPRItemIn,
+    user: CurrentUser,
+    db: Annotated[AsyncSession, Depends(get_db)],
+    _role: Annotated[None, Depends(require_roles("admin", "it_buyer", "procurement_mgr"))],
+):
+    po_item = await svc.add_supplementary_for_pr_item(
+        db,
+        user,
+        pr_item_id=pr_item_id,
+        item_name=payload.item_name,
+        specification=payload.specification,
+        item_id=payload.item_id,
+        qty=payload.qty,
+        uom=payload.uom,
+        unit_price=payload.unit_price,
+        supplier_id=payload.supplier_id,
+        target_po_id=payload.target_po_id,
+        deviation_note=payload.deviation_note,
+    )
+    return POItemOut.model_validate(po_item)
