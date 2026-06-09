@@ -7,6 +7,48 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [v1.32.0] — 2026-06-09
+
+### 设计变更
+
+把"补充派生项"从一个 PO 内部的事后操作，提升为转 PO 流程中的一等公民。
+
+**底层洞察**：4 种履约类型本质平级。一个 PR 行的需求可以被任意组合履约：64 台整机；或 64 台空机（substitute）+ 1024 GPU（supplementary）；或部分整机 + 部分空机 + 部分 GPU。每个 POItem 各自挂在不同 PO 下、各自有自己的供应商，这才符合现实业务。
+
+### 后端
+
+- `PRConvertSpec` 增加 5 个可选字段：`supplier_id`、`item_id`、`item_name`、`specification`、`uom`。允许同一个 PR 行的不同拆分行指定不同供应商和不同物料
+- `convert_pr_to_po_with_specs` 接受 `supplementary` 类型（之前会拒绝）
+- `_create_pos_for_specs` 优先使用 `spec.supplier_id`，回退到 PR 行 supplier。按解析后的 supplier 自动分组创建 PO
+- 软上限 1.5x 现在**只对 equivalent/downgraded/substitute 生效**——supplementary qty 在不同 uom 下数量自由（例如 1024 片 GPU 配 64 台服务器）
+- API 端点 body 通过新 schema 字段透传
+
+### 前端
+
+- "生成采购订单 → 自定义拆分" 标签页改造：
+  - 物料名称列对 supplementary 类型变为可编辑输入框
+  - 新增 **"供应商" 列**：每行 Select 全部供应商，默认继承 PR 行
+  - 履约类型 dropdown 新增 `supplementary` 选项（4 种全开）
+  - 表格下方新增 "**+ 为某 PR 行加配套补充行**" 按钮，让采购员显式添加额外的补充行
+  - supplementary 行可单独删除（其他基础行不可）
+  - supplementary 行不再受 1.5x 上限约束
+- 提交后系统按解析后的 supplier 自动分组：64 台空机走紫光数码 PO，1024 GPU 走 NVIDIA 代理商 PO。供应商边界清晰
+
+### 弃用（保留但不推荐）
+
+- PO 详情页的 "添加补充派生项" 按钮**保留**，但语义降级为"事后补救"工具。新的标准操作流程是在 PR→PO 转换向导里就把补充行声明清楚
+
+### 测试
+
+- 3 个新单元测试：不同供应商分 PO、supplementary 跳过软上限、混合主+补复杂场景
+- 总用例 709（+3），覆盖率 72.28%
+
+### i18n
+
+- 7 个新 key（zh/en 同步）
+
+---
+
 ## [v1.31.1] — 2026-06-09
 
 ### 新增

@@ -1242,6 +1242,11 @@ export const api = {
       fulfillment_type: FulfillmentType
       deviation_note?: string | null
       unit_price?: number | string | null
+      supplier_id?: string | null
+      item_id?: string | null
+      item_name?: string | null
+      specification?: string | null
+      uom?: string | null
     }[]
   ): Promise<PurchaseOrder[]> {
     const { data } = await client.post<PurchaseOrder[]>(

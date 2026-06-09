@@ -615,6 +615,7 @@ export function PRDetailPage() {
         open={convertOpen}
         pr={pr}
         supplierMap={supplierMap}
+        suppliers={suppliers}
         onClose={() => setConvertOpen(false)}
         onSuccess={handleConvertSuccess}
       />

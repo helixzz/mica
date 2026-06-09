@@ -1939,7 +1939,7 @@ async def test_convert_pr_to_po_with_specs_rejects_invalid_type(seeded_db_sessio
                 PRConvertSpec(
                     pr_item_id=pr.items[0].id,
                     qty=Decimal("1"),
-                    fulfillment_type="supplementary",
+                    fulfillment_type="bogus_type",
                 )
             ],
         )
@@ -2124,3 +2124,149 @@ async def test_convert_with_specs_uses_custom_unit_price(seeded_db_session):
     assert pos[0].items[0].unit_price == Decimal("700")
     assert pos[0].items[0].amount == Decimal("7000.0000")
     assert pos[0].total_amount == Decimal("7000.0000")
+
+
+async def test_convert_with_specs_supplementary_separate_supplier(seeded_db_session):
+    from app.services.purchase import PRConvertSpec
+
+    db = seeded_db_session
+    actor = await _get_user(db, "alice")
+    s_main = await _get_supplier(db, "SUP-DELL")
+    s_gpu = await _get_supplier(db, "SUP-LENOVO")
+    pr = await purchase_svc.create_pr(
+        db,
+        actor,
+        PRCreateIn(
+            title="Server with GPU bundle",
+            currency="CNY",
+            items=[_pr_item(1, "Server X full-config", "64", "2681000", supplier_id=s_main.id)],
+        ),
+    )
+    await _mark_pr_approved(db, pr)
+
+    pos = await purchase_svc.convert_pr_to_po_with_specs(
+        db,
+        actor,
+        pr.id,
+        [
+            PRConvertSpec(
+                pr_item_id=pr.items[0].id,
+                qty=Decimal("64"),
+                fulfillment_type="downgraded",
+                deviation_note="missing GPU, sourced separately",
+                unit_price=Decimal("681000"),
+            ),
+            PRConvertSpec(
+                pr_item_id=pr.items[0].id,
+                qty=Decimal("1024"),
+                fulfillment_type="supplementary",
+                supplier_id=s_gpu.id,
+                item_name="NVIDIA RTX PRO 6000 BSE",
+                uom="EA",
+                unit_price=Decimal("129000"),
+                deviation_note="GPU sourced separately",
+            ),
+        ],
+    )
+
+    assert len(pos) == 2
+    by_supplier = {p.supplier_id: p for p in pos}
+    assert s_main.id in by_supplier
+    assert s_gpu.id in by_supplier
+    assert by_supplier[s_main.id].items[0].qty == Decimal("64")
+    assert by_supplier[s_main.id].items[0].unit_price == Decimal("681000")
+    assert by_supplier[s_gpu.id].items[0].qty == Decimal("1024")
+    assert by_supplier[s_gpu.id].items[0].item_name == "NVIDIA RTX PRO 6000 BSE"
+    assert by_supplier[s_gpu.id].items[0].unit_price == Decimal("129000")
+
+
+async def test_convert_with_specs_supplementary_skips_soft_limit(seeded_db_session):
+    from app.services.purchase import PRConvertSpec
+
+    db = seeded_db_session
+    actor = await _get_user(db, "alice")
+    supplier = await _get_supplier(db)
+    pr = await purchase_svc.create_pr(
+        db,
+        actor,
+        PRCreateIn(
+            title="Soft limit bypass for supplementary",
+            currency="CNY",
+            items=[_pr_item(1, "Server", "10", "1000", supplier_id=supplier.id)],
+        ),
+    )
+    await _mark_pr_approved(db, pr)
+
+    pos = await purchase_svc.convert_pr_to_po_with_specs(
+        db,
+        actor,
+        pr.id,
+        [
+            PRConvertSpec(
+                pr_item_id=pr.items[0].id,
+                qty=Decimal("160"),
+                fulfillment_type="supplementary",
+                item_name="GPU",
+                unit_price=Decimal("100"),
+            )
+        ],
+    )
+    assert len(pos) == 1
+    assert pos[0].items[0].qty == Decimal("160")
+
+
+async def test_convert_with_specs_main_plus_supplementary_groups_correctly(seeded_db_session):
+    from app.services.purchase import PRConvertSpec
+
+    db = seeded_db_session
+    actor = await _get_user(db, "alice")
+    s_main = await _get_supplier(db, "SUP-DELL")
+    s_main2 = s_main
+    s_supp = await _get_supplier(db, "SUP-LENOVO")
+    pr = await purchase_svc.create_pr(
+        db,
+        actor,
+        PRCreateIn(
+            title="Mix grouping",
+            currency="CNY",
+            items=[_pr_item(1, "Item", "10", "100", supplier_id=s_main.id)],
+        ),
+    )
+    await _mark_pr_approved(db, pr)
+    pos = await purchase_svc.convert_pr_to_po_with_specs(
+        db,
+        actor,
+        pr.id,
+        [
+            PRConvertSpec(
+                pr_item_id=pr.items[0].id,
+                qty=Decimal("5"),
+                fulfillment_type="equivalent",
+            ),
+            PRConvertSpec(
+                pr_item_id=pr.items[0].id,
+                qty=Decimal("5"),
+                fulfillment_type="downgraded",
+                supplier_id=s_main2.id,
+                deviation_note="cheaper variant from same supplier",
+                unit_price=Decimal("80"),
+            ),
+            PRConvertSpec(
+                pr_item_id=pr.items[0].id,
+                qty=Decimal("3"),
+                fulfillment_type="supplementary",
+                supplier_id=s_supp.id,
+                item_name="Accessory",
+                unit_price=Decimal("20"),
+            ),
+        ],
+    )
+    assert len(pos) == 2
+    by_supplier = {p.supplier_id: p for p in pos}
+    main_po = by_supplier[s_main.id]
+    supp_po = by_supplier[s_supp.id]
+    assert len(main_po.items) == 2
+    assert len(supp_po.items) == 1
+    main_total = sum(Decimal(str(i.amount)) for i in main_po.items)
+    assert main_total == Decimal("900")
+    assert Decimal(str(supp_po.total_amount)) == Decimal("60")

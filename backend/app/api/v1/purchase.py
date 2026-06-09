@@ -215,6 +215,12 @@ async def convert_pr_to_po_partial(
                 qty=item.qty,
                 fulfillment_type=item.fulfillment_type,
                 deviation_note=item.deviation_note,
+                unit_price=item.unit_price,
+                supplier_id=item.supplier_id,
+                item_id=item.item_id,
+                item_name=item.item_name,
+                specification=item.specification,
+                uom=item.uom,
             )
             for item in payload.items
         ]

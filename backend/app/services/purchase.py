@@ -629,6 +629,11 @@ class PRConvertSpec:
     fulfillment_type: str
     deviation_note: str | None = None
     unit_price: Decimal | None = None
+    supplier_id: UUID | None = None
+    item_id: UUID | None = None
+    item_name: str | None = None
+    specification: str | None = None
+    uom: str | None = None
 
 
 async def convert_pr_to_po_with_specs(
@@ -663,6 +668,7 @@ async def convert_pr_to_po_with_specs(
             FulfillmentType.EQUIVALENT.value,
             FulfillmentType.DOWNGRADED.value,
             FulfillmentType.SUBSTITUTE.value,
+            FulfillmentType.SUPPLEMENTARY.value,
         ):
             raise HTTPException(422, "fulfillment.invalid_type")
 
@@ -687,6 +693,8 @@ async def convert_pr_to_po_with_specs(
 
     requested_qty_per_pr_item: dict[UUID, Decimal] = {}
     for spec in specs:
+        if spec.fulfillment_type == FulfillmentType.SUPPLEMENTARY.value:
+            continue
         requested_qty_per_pr_item[spec.pr_item_id] = (
             requested_qty_per_pr_item.get(spec.pr_item_id, Decimal("0"))
             + Decimal(str(spec.qty))
@@ -710,15 +718,19 @@ async def _create_pos_for_specs(
     specs: list[PRConvertSpec],
     pr_items_by_id: dict[UUID, PRItem],
 ) -> list[PurchaseOrder]:
-    missing_supplier = [
-        s for s in specs if not pr_items_by_id[s.pr_item_id].supplier_id
-    ]
+    def _resolve_supplier(spec: PRConvertSpec) -> UUID | None:
+        if spec.supplier_id is not None:
+            return spec.supplier_id
+        return pr_items_by_id[spec.pr_item_id].supplier_id
+
+    missing_supplier = [s for s in specs if _resolve_supplier(s) is None]
     if missing_supplier:
         raise HTTPException(422, "pr.items_missing_supplier")
 
     groups: dict[UUID, list[PRConvertSpec]] = {}
     for spec in specs:
-        supplier_id = pr_items_by_id[spec.pr_item_id].supplier_id
+        supplier_id = _resolve_supplier(spec)
+        assert supplier_id is not None
         groups.setdefault(supplier_id, []).append(spec)
 
     created_pos: list[PurchaseOrder] = []
@@ -761,15 +773,32 @@ async def _create_pos_for_specs(
             line_qty = Decimal(str(spec.qty))
             amount = line_qty * spec_unit_price
 
+            resolved_item_id = spec.item_id if spec.item_id is not None else pr_item.item_id
+            resolved_item_name = (
+                spec.item_name.strip()
+                if spec.item_name and spec.item_name.strip()
+                else pr_item.item_name
+            )
+            resolved_specification = (
+                spec.specification
+                if spec.specification is not None
+                else pr_item.specification
+            )
+            resolved_uom = (
+                spec.uom.strip()
+                if spec.uom and spec.uom.strip()
+                else pr_item.uom
+            )
+
             po_item = POItem(
                 po_id=po.id,
                 pr_item_id=pr_item.id,
                 line_no=line_no,
-                item_id=pr_item.item_id,
-                item_name=pr_item.item_name,
-                specification=pr_item.specification,
+                item_id=resolved_item_id,
+                item_name=resolved_item_name,
+                specification=resolved_specification,
                 qty=line_qty,
-                uom=pr_item.uom,
+                uom=resolved_uom,
                 unit_price=spec_unit_price,
                 amount=amount,
             )
@@ -787,10 +816,10 @@ async def _create_pos_for_specs(
                 )
             )
 
-            if pr_item.item_id and spec_unit_price > 0:
+            if resolved_item_id and spec_unit_price > 0:
                 db.add(
                     SKUPriceRecord(
-                        item_id=pr_item.item_id,
+                        item_id=resolved_item_id,
                         supplier_id=supplier_id,
                         price=spec_unit_price,
                         currency=pr.currency or "CNY",

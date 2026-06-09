@@ -8,6 +8,7 @@ import {
   type PRConversionPreviewGroup,
   type PurchaseOrder,
   type PurchaseRequisition,
+  type Supplier,
 } from '@/api'
 import { extractError } from '@/api/client'
 import { fmtAmount, fmtQty } from '@/utils/format'
@@ -16,6 +17,7 @@ interface ConvertToPOModalProps {
   open: boolean
   pr: PurchaseRequisition
   supplierMap: Record<string, string>
+  suppliers: Supplier[]
   onClose: () => void
   onSuccess: (createdPOs: PurchaseOrder[]) => void
 }
@@ -26,12 +28,14 @@ type SplitRow = {
   line_no: number
   item_name: string
   supplier_id: string | null
+  picked_supplier_id: string | null
   total_qty: number
   remaining_qty: number
   uom: string
   unit_price: number
   this_qty: number
   this_unit_price: number
+  this_item_name: string
   fulfillment_type: FulfillmentType
   deviation_note: string
 }
@@ -40,12 +44,14 @@ const FULFILLMENT_TYPES: { value: FulfillmentType; labelKey: string }[] = [
   { value: 'equivalent', labelKey: 'fulfillment_type.equivalent' },
   { value: 'downgraded', labelKey: 'fulfillment_type.downgraded' },
   { value: 'substitute', labelKey: 'fulfillment_type.substitute' },
+  { value: 'supplementary', labelKey: 'fulfillment_type.supplementary' },
 ]
 
 export function ConvertToPOModal({
   open,
   pr,
   supplierMap,
+  suppliers,
   onClose,
   onSuccess,
 }: ConvertToPOModalProps) {
@@ -91,12 +97,14 @@ export function ConvertToPOModal({
             line_no: it.line_no,
             item_name: it.item_name,
             supplier_id: it.supplier_id,
+            picked_supplier_id: it.supplier_id,
             total_qty: Number(it.qty),
             remaining_qty: remaining,
             uom: it.uom,
             unit_price: Number(it.unit_price || 0),
             this_qty: remaining,
             this_unit_price: Number(it.unit_price || 0),
+            this_item_name: it.item_name,
             fulfillment_type: 'equivalent' as FulfillmentType,
             deviation_note: '',
           }
@@ -165,21 +173,32 @@ export function ConvertToPOModal({
       void message.error(t('pr.partial_no_items'))
       return
     }
-    const missingSupplier = enabled.some((r) => !r.supplier_id)
+    const missingSupplier = enabled.some((r) => !r.picked_supplier_id)
     if (missingSupplier) {
       void message.error(t('pr.items_missing_supplier'))
       return
     }
-    const exceeded = enabled.find((r) => r.this_qty > r.remaining_qty * 1.5)
+    const exceeded = enabled.find(
+      (r) => r.fulfillment_type !== 'supplementary' && r.this_qty > r.remaining_qty * 1.5,
+    )
     if (exceeded) {
       void message.error(t('fulfillment.qty_exceeds_soft_limit'))
       return
     }
     const needsNote = enabled.find(
-      (r) => r.fulfillment_type !== 'equivalent' && !r.deviation_note.trim(),
+      (r) =>
+        (r.fulfillment_type === 'downgraded' || r.fulfillment_type === 'substitute') &&
+        !r.deviation_note.trim(),
     )
     if (needsNote) {
       void message.error(t('fulfillment.deviation_note_required_for_deviation'))
+      return
+    }
+    const supplementaryWithoutName = enabled.find(
+      (r) => r.fulfillment_type === 'supplementary' && !r.this_item_name.trim(),
+    )
+    if (supplementaryWithoutName) {
+      void message.error(t('fulfillment.supplementary_name_required'))
       return
     }
 
@@ -193,6 +212,12 @@ export function ConvertToPOModal({
           unit_price: r.this_unit_price,
           fulfillment_type: r.fulfillment_type,
           deviation_note: r.deviation_note.trim() || null,
+          supplier_id:
+            r.picked_supplier_id !== r.supplier_id ? r.picked_supplier_id : null,
+          item_name:
+            r.fulfillment_type === 'supplementary' && r.this_item_name.trim() !== r.item_name
+              ? r.this_item_name.trim()
+              : null,
         })),
       )
       void message.success(
@@ -227,7 +252,7 @@ export function ConvertToPOModal({
       confirmLoading={busy}
       okText={t('pr.convert_modal_confirm')}
       cancelText={t('button.cancel')}
-      width={1080}
+      width={1280}
       destroyOnClose
     >
       <Tabs
@@ -334,23 +359,46 @@ export function ConvertToPOModal({
                   rowKey="key"
                   pagination={false}
                   dataSource={splitRows}
-                  scroll={{ x: 1140 }}
+                  scroll={{ x: 1380 }}
                   columns={[
                     { title: t('field.line_no'), dataIndex: 'line_no', width: 56 },
                     {
                       title: t('field.item_name'),
-                      dataIndex: 'item_name',
-                      render: (v: string, row: SplitRow) => (
-                        <Space direction="vertical" size={0}>
-                          <span>{v}</span>
-                          <Typography.Text type="secondary" style={{ fontSize: 11 }}>
-                            {row.supplier_id ? supplierMap[row.supplier_id] ?? row.supplier_id : (
-                              <Typography.Text type="warning">
-                                {t('pr.items_missing_supplier')}
+                      key: 'item_name',
+                      render: (_: unknown, row: SplitRow) => {
+                        if (row.fulfillment_type === 'supplementary') {
+                          return (
+                            <Space direction="vertical" size={0} style={{ width: '100%' }}>
+                              <Input
+                                value={row.this_item_name}
+                                placeholder={t('fulfillment.supplementary_name_placeholder')}
+                                onChange={(e) => updateSplitRow(row.key, { this_item_name: e.target.value })}
+                              />
+                              <Typography.Text type="secondary" style={{ fontSize: 11 }}>
+                                {t('fulfillment.supplementary_for', { name: row.item_name })}
                               </Typography.Text>
-                            )}
-                          </Typography.Text>
-                        </Space>
+                            </Space>
+                          )
+                        }
+                        return <span>{row.item_name}</span>
+                      },
+                    },
+                    {
+                      title: t('field.supplier'),
+                      key: 'supplier',
+                      width: 200,
+                      render: (_: unknown, row: SplitRow) => (
+                        <Select
+                          value={row.picked_supplier_id ?? undefined}
+                          onChange={(v) => updateSplitRow(row.key, { picked_supplier_id: v ?? null })}
+                          style={{ width: '100%' }}
+                          showSearch
+                          allowClear
+                          optionFilterProp="label"
+                          placeholder={t('placeholder.select')}
+                          options={suppliers.map((s) => ({ value: s.id, label: s.name }))}
+                          disabled={row.this_qty <= 0}
+                        />
                       ),
                     },
                     {
@@ -358,7 +406,10 @@ export function ConvertToPOModal({
                       key: 'remaining',
                       width: 110,
                       align: 'right',
-                      render: (_: unknown, row: SplitRow) => `${fmtQty(String(row.remaining_qty))} ${row.uom}`,
+                      render: (_: unknown, row: SplitRow) =>
+                        row.fulfillment_type === 'supplementary'
+                          ? '—'
+                          : `${fmtQty(String(row.remaining_qty))} ${row.uom}`,
                     },
                     {
                       title: t('pr.convert_split_this_qty'),
@@ -367,12 +418,12 @@ export function ConvertToPOModal({
                       render: (_: unknown, row: SplitRow) => (
                         <InputNumber
                           min={0}
-                          max={row.remaining_qty * 1.5}
+                          max={row.fulfillment_type === 'supplementary' ? undefined : row.remaining_qty * 1.5}
                           step={1}
                           value={row.this_qty}
                           onChange={(v) => updateSplitRow(row.key, { this_qty: Number(v ?? 0) })}
                           style={{ width: '100%' }}
-                          disabled={!row.supplier_id}
+                          disabled={!row.picked_supplier_id}
                         />
                       ),
                     },
@@ -426,8 +477,70 @@ export function ConvertToPOModal({
                         />
                       ),
                     },
+                    {
+                      title: '',
+                      key: 'actions',
+                      width: 50,
+                      fixed: 'right' as const,
+                      render: (_: unknown, row: SplitRow) => {
+                        const isExtraRow = row.key !== row.pr_item_id
+                        if (!isExtraRow) return null
+                        return (
+                          <Button
+                            type="link"
+                            danger
+                            size="small"
+                            onClick={() =>
+                              setSplitRows((prev) => prev.filter((r) => r.key !== row.key))
+                            }
+                          >
+                            {t('button.delete')}
+                          </Button>
+                        )
+                      },
+                    },
                   ]}
                 />
+                <div>
+                  <Typography.Text type="secondary" style={{ fontSize: 12 }}>
+                    {t('fulfillment.add_extra_row_hint')}
+                  </Typography.Text>
+                  <div style={{ marginTop: 8 }}>
+                    {(pr.items || [])
+                      .filter((it: any) => it.id)
+                      .map((it: any) => (
+                        <Button
+                          key={it.id}
+                          size="small"
+                          style={{ marginRight: 8, marginBottom: 4 }}
+                          onClick={() => {
+                            setSplitRows((prev) => [
+                              ...prev,
+                              {
+                                key: `${it.id}-extra-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
+                                pr_item_id: it.id,
+                                line_no: it.line_no,
+                                item_name: it.item_name,
+                                supplier_id: it.supplier_id,
+                                picked_supplier_id: it.supplier_id,
+                                total_qty: Number(it.qty),
+                                remaining_qty: Number(it.qty),
+                                uom: it.uom,
+                                unit_price: Number(it.unit_price || 0),
+                                this_qty: 1,
+                                this_unit_price: 0,
+                                this_item_name: '',
+                                fulfillment_type: 'supplementary' as FulfillmentType,
+                                deviation_note: '',
+                              },
+                            ])
+                          }}
+                        >
+                          + L{it.line_no} {t('fulfillment.add_supplementary_for', { name: it.item_name })}
+                        </Button>
+                      ))}
+                  </div>
+                </div>
               </Space>
             ),
           },

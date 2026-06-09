@@ -557,6 +557,11 @@ class PRConvertSpecIn(BaseModel):
     fulfillment_type: str
     deviation_note: str | None = None
     unit_price: Decimal | None = Field(default=None, ge=0)
+    supplier_id: UUID | None = None
+    item_id: UUID | None = None
+    item_name: str | None = Field(default=None, max_length=255)
+    specification: str | None = None
+    uom: str | None = Field(default=None, max_length=16)
 
 
 class POItemUpdateIn(BaseModel):
