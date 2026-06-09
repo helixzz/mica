@@ -543,6 +543,11 @@ async def _compute_pr_status_after_link_change(
     fulfilled = sum(1 for i in pr.items if i.id in fulfilled_pr_item_ids)
 
     if fulfilled == 0:
+        if pr.status in (
+            PRStatus.PARTIALLY_CONVERTED.value,
+            PRStatus.CONVERTED.value,
+        ):
+            return PRStatus.APPROVED.value
         return pr.status
     if fulfilled < total:
         return PRStatus.PARTIALLY_CONVERTED.value
@@ -1440,6 +1445,8 @@ async def delete_po(db: AsyncSession, actor: User, po_id: UUID) -> None:
         if invoice_count:
             raise HTTPException(409, "po.cannot_delete_has_invoices")
 
+    parent_pr_id = po.pr_id
+
     await _audit(
         db,
         actor,
@@ -1449,6 +1456,15 @@ async def delete_po(db: AsyncSession, actor: User, po_id: UUID) -> None:
         metadata={"po_number": po.po_number, "total_amount": str(po.total_amount)},
     )
     await db.delete(po)
+    await db.flush()
+
+    if parent_pr_id is not None:
+        pr = await _load_pr(db, parent_pr_id)
+        if pr is not None:
+            new_status = await _compute_pr_status_after_link_change(db, pr)
+            if pr.status != new_status:
+                pr.status = new_status
+
     await db.commit()
 
 

@@ -7,6 +7,21 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [v1.28.1] — 2026-06-09
+
+### 修复
+
+- **删除 PO 后 PR 状态未回滚（关键 bug）**：v1.26+ 删除 PO 时 fulfillment_links 通过 FK CASCADE 自动清理，但 `delete_po` 服务函数没有重新计算 PR 状态。导致 PR 留在 `converted` 状态而实际已无任何 PO 关联，"转换为 PO" 按钮被隐藏，用户无法重做
+- **`_compute_pr_status_after_link_change` 修正**：原逻辑在 fulfilled=0 时直接返回 `pr.status`，遗漏了"已转换的 PR 全部回滚"场景。现在当当前状态为 `partially_converted` 或 `converted` 而无任何履约 link 时，自动回退到 `approved`
+- **数据修复**：生产环境一条 PR（PR-2026-0017）状态从 `converted` 修正回 `approved`
+
+### 测试
+
+- 新增 2 个单元测试覆盖：删除全转 PR 的唯一 PO → 状态回到 approved；删除 2 供应商 PR 中的一个 PO → 状态变为 partially_converted
+- 总用例 696（+2），覆盖率 72.01%
+
+---
+
 ## [v1.28.0] — 2026-06-09
 
 PR→PO 履约偏离追踪系列收官版。前端 UI 全面落地 + 治理能力补全。

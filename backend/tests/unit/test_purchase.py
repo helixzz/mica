@@ -1238,6 +1238,64 @@ async def test_delete_po_succeeds_when_no_downstream(seeded_db_session):
     assert exc.value.status_code == 404
 
 
+async def test_delete_po_resets_pr_status_when_all_links_gone(seeded_db_session):
+    db = seeded_db_session
+    actor = await _get_user(db, "alice")
+    supplier = await _get_supplier(db)
+    pr = await _create_pr(db, actor, supplier.id, title="Status Reset Test")
+    await _mark_pr_approved(db, pr)
+    pos = await purchase_svc.convert_pr_to_po(db, actor, pr.id)
+
+    pr_after_convert = await purchase_svc.get_pr(db, actor, pr.id)
+    assert pr_after_convert.status == PRStatus.CONVERTED.value
+
+    pr_id = pr.id
+    await purchase_svc.delete_po(db, actor, pos[0].id)
+    db.expire_all()
+
+    pr_after_delete = await purchase_svc.get_pr(db, actor, pr_id)
+    assert pr_after_delete.status == PRStatus.APPROVED.value
+
+    links_count = (
+        await db.execute(
+            select(PRFulfillmentLink).where(
+                PRFulfillmentLink.pr_item_id.in_([i.id for i in pr_after_delete.items])
+            )
+        )
+    ).all()
+    assert len(links_count) == 0
+
+
+async def test_delete_po_partial_resets_to_partially_converted(seeded_db_session):
+    db = seeded_db_session
+    actor = await _get_user(db, "alice")
+    s1 = await _get_supplier(db, "SUP-DELL")
+    s2 = await _get_supplier(db, "SUP-LENOVO")
+    pr = await purchase_svc.create_pr(
+        db,
+        actor,
+        PRCreateIn(
+            title="Two-supplier PR",
+            business_reason="testing partial deletion",
+            currency="CNY",
+            items=[
+                _pr_item(1, "ItemA", "1", "100", supplier_id=s1.id),
+                _pr_item(2, "ItemB", "1", "200", supplier_id=s2.id),
+            ],
+        ),
+    )
+    await _mark_pr_approved(db, pr)
+    pos = await purchase_svc.convert_pr_to_po(db, actor, pr.id)
+    assert len(pos) == 2
+
+    pr_id = pr.id
+    await purchase_svc.delete_po(db, actor, pos[0].id)
+    db.expire_all()
+
+    pr_after = await purchase_svc.get_pr(db, actor, pr_id)
+    assert pr_after.status == PRStatus.PARTIALLY_CONVERTED.value
+
+
 async def test_delete_po_blocked_by_shipment(seeded_db_session):
     from decimal import Decimal
 
