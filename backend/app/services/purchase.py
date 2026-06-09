@@ -1377,7 +1377,13 @@ async def add_supplementary_po_item(
     )
     await db.commit()
 
-    refreshed = await db.get(POItem, po_item.id)
+    refreshed = (
+        await db.execute(
+            select(POItem)
+            .where(POItem.id == po_item.id)
+            .options(selectinload(POItem.fulfillment_links))
+        )
+    ).scalar_one_or_none()
     if refreshed is None:
         raise HTTPException(404, "po_item.not_found")
     return refreshed

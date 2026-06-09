@@ -1691,6 +1691,15 @@ async def test_add_supplementary_po_item_with_link_marks_pr_item_context(
     breakdown = await purchase_svc.get_pr_item_fulfillment_breakdown(db, pr_item_a.id)
     assert breakdown["supplementary"] == Decimal("4")
 
+    from app.schemas import POItemOut
+
+    serialized = POItemOut.model_validate(new_po_item)
+    assert serialized.id == new_po_item.id
+    assert serialized.item_name == "A part"
+    assert isinstance(serialized.fulfillment_links, list)
+    assert len(serialized.fulfillment_links) == 1
+    assert serialized.fulfillment_links[0].fulfillment_type == "supplementary"
+
 
 async def test_supplementary_po_item_rejects_pr_from_other_pr(seeded_db_session):
     db = seeded_db_session

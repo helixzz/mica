@@ -7,6 +7,19 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [v1.30.1] — 2026-06-09
+
+### 修复
+
+- **添加补充派生项 500 错误**：`add_supplementary_po_item` 服务在 commit 后用 `await db.get(POItem, ...)` 取刷新对象返回。生产环境 `expire_on_commit=True`，提交后实例属性被 expire，Pydantic 序列化 `POItemOut.fulfillment_links` 时触发懒加载 → 异步会话无法懒加载 → `MissingGreenlet: greenlet_spawn has not been called` → 500
+- 改为显式 SELECT + `selectinload(POItem.fulfillment_links)` 一次性查询完整对象，避免懒加载
+
+### 测试
+
+- 既有用例 `test_add_supplementary_po_item_with_link_marks_pr_item_context` 因 conftest 使用 `expire_on_commit=False` 没能捕获此 bug。增加 `POItemOut.model_validate(...)` 调用验证序列化路径，对齐生产行为
+
+---
+
 ## [v1.30.0] — 2026-06-09
 
 ### 新增
