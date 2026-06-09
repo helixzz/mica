@@ -205,7 +205,21 @@ async def convert_pr_to_po_partial(
     db: Annotated[AsyncSession, Depends(get_db)],
     _role: Annotated[None, Depends(require_roles("admin", "it_buyer", "procurement_mgr"))],
 ):
-    pos = await svc.convert_pr_to_po_partial(db, user, pr_id, payload.pr_item_ids)
+    if payload.items:
+        from app.services.purchase import PRConvertSpec
+
+        specs = [
+            PRConvertSpec(
+                pr_item_id=item.pr_item_id,
+                qty=item.qty,
+                fulfillment_type=item.fulfillment_type,
+                deviation_note=item.deviation_note,
+            )
+            for item in payload.items
+        ]
+        pos = await svc.convert_pr_to_po_with_specs(db, user, pr_id, specs)
+    else:
+        pos = await svc.convert_pr_to_po_partial(db, user, pr_id, payload.pr_item_ids or [])
     return [POOut.model_validate(po) for po in pos]
 
 

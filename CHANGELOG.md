@@ -7,6 +7,41 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [v1.29.0] — 2026-06-09
+
+### 新增
+
+- **PR→PO 三 Tab 转换向导**：替换原本只有"一键全转 / 选行整转"的两段式入口，新对话框含三个 Tab：
+  - **一键全转**：保留原有按供应商分组的预览
+  - **选行整转**：勾选哪些 PR 行整行转 PO（保留原 v1.28 能力）
+  - **自定义拆分**：每行可独立设定**本次转换数量**、**履约类型**（等价/降配/替换）、**偏离说明**。同一 PR 行可分多次转换，支持 1.5x 软上限内的灵活分配
+- **后端拆分能力**：`POST /purchase-requisitions/{id}/convert-to-po/partial` body 现在接受可选 `items: [{pr_item_id, qty, fulfillment_type, deviation_note}]` 字段。后端按 supplier 分组创建 PO，每行 POItem.qty = 用户指定数量，自动创建对应类型的 fulfillment_link
+- **PR 状态机量化升级**：`_compute_pr_status_after_link_change` 现在按数量聚合判定（之前按"是否有 link"），半量履约状态正确显示为 `partially_converted`
+- **新增 4 个单元测试**：拆分量+类型 / 两次拆分顺次完成 / 1.5x 上限拒绝 / 类型校验
+
+### 业务示例
+
+64 台服务器 X 的 PR 现在可以这样履约：
+1. 第一次提交：自定义拆分 → 32 台 equivalent → 创建 PO-A（等价 32 台）
+2. 第二次提交：自定义拆分 → 32 台 downgraded + 偏离说明"缺 A 配件" → 创建 PO-B（降配 32 台）
+3. PR 状态：partially_converted → converted（按数量聚合判定）
+
+### 内部重构
+
+- 把原本散在 `PRDetail.tsx` 里的两个 Modal（preview 确认 + 选行）合并到独立组件 `frontend/src/components/PR/ConvertToPOModal.tsx`
+- 严格遵守 React Hooks 规则（v1.28.2 教训），所有 hook 在 early return 之前
+
+### 测试
+
+- 总用例 700（+4），覆盖率 72.16%
+
+### 不在本版
+
+- 直接在 PO 详情页 chip 上点击编辑/删除 link（v1.30 计划）
+- 在已有 PO 上添加新 link（v1.30 计划，目前只能通过"添加补充派生项"按钮）
+
+---
+
 ## [v1.28.2] — 2026-06-09
 
 ### 修复

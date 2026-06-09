@@ -1234,6 +1234,21 @@ export const api = {
     )
     return data
   },
+  async convertToPOWithSpecs(
+    id: string,
+    items: {
+      pr_item_id: string
+      qty: number | string
+      fulfillment_type: FulfillmentType
+      deviation_note?: string | null
+    }[]
+  ): Promise<PurchaseOrder[]> {
+    const { data } = await client.post<PurchaseOrder[]>(
+      `/purchase-requisitions/${id}/convert-to-po/partial`,
+      { items }
+    )
+    return data
+  },
   async createFulfillmentLink(
     poId: string,
     poItemId: string,

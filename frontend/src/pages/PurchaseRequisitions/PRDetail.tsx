@@ -21,12 +21,12 @@ import { useNavigate, useParams } from 'react-router-dom'
 
 import {
   api,
-  type PRConversionPreviewGroup,
   type PurchaseRequisition,
   type Supplier,
 } from '@/api'
 import { extractError } from '@/api/client'
 import { ActivityTimeline } from '@/components/ActivityTimeline'
+import { ConvertToPOModal } from '@/components/PR/ConvertToPOModal'
 import { fmtAmount, fmtQty } from '@/utils/format'
 import { useAuth } from '@/auth/useAuth'
 
@@ -71,8 +71,7 @@ export function PRDetailPage() {
     }[]
   }>({ purchase_orders: [], contracts: [] })
   const [allUsers, setAllUsers] = useState<{ id: string; display_name: string; email: string }[]>([])
-  const [partialOpen, setPartialOpen] = useState(false)
-  const [partialSelected, setPartialSelected] = useState<string[]>([])
+  const [convertOpen, setConvertOpen] = useState(false)
 
   const load = async () => {
     if (!id) return
@@ -189,122 +188,16 @@ export function PRDetailPage() {
     })
   }
 
-  const runConvert = async () => {
-    setBusy(true)
-    let preview: PRConversionPreviewGroup[] = []
-    try {
-      preview = await api.previewPRConversion(pr.id)
-    } catch (e) {
-      const err = extractError(e)
-      void message.error(err.detail || t('error.unexpected'))
-      setBusy(false)
-      return
-    }
-
-    if (preview.length === 0) {
-      void message.error(t('error.unexpected'))
-      setBusy(false)
-      return
-    }
-
-    const totalSubtotal = preview.reduce((sum, g) => sum + Number(g.subtotal || 0), 0)
-    const itemCount = preview.reduce((sum, g) => sum + g.item_count, 0)
-
-    Modal.confirm({
-      title: t('pr.convert_preview_title', { count: preview.length }),
-      width: 640,
-      okText: t('pr.convert_preview_confirm', { count: preview.length }),
-      cancelText: t('button.cancel'),
-      icon: null,
-      content: (
-        <div>
-          <Typography.Paragraph type="secondary" style={{ marginBottom: 12 }}>
-            {t('pr.convert_preview_summary', {
-              suppliers: preview.length,
-              items: itemCount,
-              total: fmtAmount(String(totalSubtotal), pr.currency || 'CNY'),
-            })}
-          </Typography.Paragraph>
-          <Table
-            size="small"
-            rowKey="supplier_id"
-            pagination={false}
-            dataSource={preview}
-            columns={[
-              {
-                title: t('field.supplier'),
-                dataIndex: 'supplier_name',
-                render: (v: string | null, r) => v || r.supplier_code || r.supplier_id,
-              },
-              {
-                title: t('pr.convert_preview_item_count'),
-                dataIndex: 'item_count',
-                width: 80,
-                align: 'right' as const,
-              },
-              {
-                title: t('pr.convert_preview_subtotal'),
-                dataIndex: 'subtotal',
-                align: 'right' as const,
-                render: (v: string) => fmtAmount(v, pr.currency || 'CNY'),
-              },
-            ]}
-          />
-        </div>
-      ),
-      onCancel: () => {
-        setBusy(false)
-      },
-      onOk: async () => {
-        try {
-          const pos = await api.convertToPO(pr.id)
-          if (pos.length === 1) {
-            void message.success(
-              t('message.convert_success', { po_number: pos[0].po_number }),
-            )
-          } else {
-            void message.success(
-              t('message.convert_success_multi', {
-                count: pos.length,
-                po_numbers: pos.map((p) => p.po_number).join('、'),
-              }),
-            )
-          }
-          navigate(`/purchase-orders/${pos[0].id}`)
-        } catch (e) {
-          const err = extractError(e)
-          void message.error(err.detail || t('error.unexpected'))
-        } finally {
-          setBusy(false)
-        }
-      },
-    })
+  const openConvertModal = () => {
+    setConvertOpen(true)
   }
 
-  const openPartialConvertModal = () => {
-    setPartialSelected(unconvertedPRItems.map((it: any) => it.id).filter(Boolean) as string[])
-    setPartialOpen(true)
-  }
-
-  const runPartialConvert = async () => {
-    if (!pr || partialSelected.length === 0) return
-    setBusy(true)
-    try {
-      const pos = await api.convertToPOPartial(pr.id, partialSelected)
-      void message.success(
-        t('message.convert_success_multi', {
-          count: pos.length,
-          po_numbers: pos.map((p) => p.po_number).join('、'),
-        }),
-      )
-      setPartialOpen(false)
-      setPartialSelected([])
-      await load()
-    } catch (e) {
-      const err = extractError(e)
-      void message.error(err.detail || t('error.unexpected'))
-    } finally {
-      setBusy(false)
+  const handleConvertSuccess = (createdPOs: { id: string }[]) => {
+    setConvertOpen(false)
+    if (createdPOs.length > 0) {
+      navigate(`/purchase-orders/${createdPOs[0].id}`)
+    } else {
+      void load()
     }
   }
 
@@ -667,16 +560,9 @@ export function PRDetailPage() {
             </>
           )}
           {canConvert && (
-            <>
-              <Button type="primary" onClick={runConvert} loading={busy}>
-                {t('button.convert_to_po')}
-              </Button>
-              {unconvertedPRItems.length > 1 && (
-                <Button onClick={openPartialConvertModal} loading={busy}>
-                  {t('fulfillment.convert_partial')}
-                </Button>
-              )}
-            </>
+            <Button type="primary" onClick={openConvertModal} loading={busy}>
+              {t('button.convert_to_po')}
+            </Button>
           )}
           {canSupplementQuote && hasIncompleteItems && (
             <>
@@ -725,45 +611,13 @@ export function PRDetailPage() {
         }
       `}</style>
 
-      <Modal
-        title={t('fulfillment.convert_partial_title')}
-        open={partialOpen}
-        onCancel={() => setPartialOpen(false)}
-        onOk={runPartialConvert}
-        confirmLoading={busy}
-        width={720}
-        okText={t('button.confirm')}
-        cancelText={t('button.cancel')}
-      >
-        <Typography.Paragraph type="secondary">
-          {t('fulfillment.convert_partial_hint')}
-        </Typography.Paragraph>
-        <Table
-          rowKey="id"
-          size="small"
-          pagination={false}
-          dataSource={unconvertedPRItems}
-          rowSelection={{
-            selectedRowKeys: partialSelected,
-            onChange: (keys) => setPartialSelected(keys as string[]),
-            getCheckboxProps: (row: any) => ({
-              disabled: !row.supplier_id,
-            }),
-          }}
-          columns={[
-            { title: t('field.line_no'), dataIndex: 'line_no', width: 60 },
-            { title: t('field.item_name'), dataIndex: 'item_name' },
-            {
-              title: t('field.supplier'),
-              dataIndex: 'supplier_id',
-              render: (v: string | null) =>
-                v ? supplierMap[v] ?? v : <Typography.Text type="warning">{t('pr.items_missing_supplier')}</Typography.Text>,
-            },
-            { title: t('field.qty'), dataIndex: 'qty', align: 'right', render: (v: string) => fmtQty(v) },
-            { title: t('field.uom'), dataIndex: 'uom', width: 80 },
-          ]}
-        />
-      </Modal>
+      <ConvertToPOModal
+        open={convertOpen}
+        pr={pr}
+        supplierMap={supplierMap}
+        onClose={() => setConvertOpen(false)}
+        onSuccess={handleConvertSuccess}
+      />
     </Space>
   )
 }

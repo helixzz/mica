@@ -541,7 +541,21 @@ class PRSaveQuotesOut(BaseModel):
 
 
 class PRPartialConvertIn(BaseModel):
-    pr_item_ids: list[UUID]
+    pr_item_ids: list[UUID] | None = None
+    items: list[PRConvertSpecIn] | None = None
+
+    @model_validator(mode="after")
+    def _exactly_one_payload(self):
+        if not self.pr_item_ids and not self.items:
+            raise ValueError("pr.partial_no_items")
+        return self
+
+
+class PRConvertSpecIn(BaseModel):
+    pr_item_id: UUID
+    qty: Decimal = Field(..., gt=0)
+    fulfillment_type: str
+    deviation_note: str | None = None
 
 
 class FulfillmentLinkCreateIn(BaseModel):

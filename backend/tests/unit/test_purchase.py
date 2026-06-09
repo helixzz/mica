@@ -1784,3 +1784,155 @@ async def test_pr_detail_response_includes_fulfillment_breakdown(seeded_db_sessi
         assert item.is_fully_fulfilled is True
         assert item.fulfillment_breakdown is not None
         assert item.fulfillment_breakdown.get("equivalent", Decimal("0")) > 0
+
+
+async def test_convert_pr_to_po_with_specs_partial_qty_and_type(seeded_db_session):
+    from app.services.purchase import PRConvertSpec
+
+    db = seeded_db_session
+    actor = await _get_user(db, "alice")
+    supplier = await _get_supplier(db)
+    pr = await purchase_svc.create_pr(
+        db,
+        actor,
+        PRCreateIn(
+            title="Spec convert test",
+            business_reason="testing qty split + type",
+            currency="CNY",
+            items=[_pr_item(1, "Server X", "64", "1000", supplier_id=supplier.id)],
+        ),
+    )
+    await _mark_pr_approved(db, pr)
+
+    pr_item_id = pr.items[0].id
+    specs = [
+        PRConvertSpec(
+            pr_item_id=pr_item_id,
+            qty=Decimal("32"),
+            fulfillment_type="equivalent",
+        ),
+    ]
+    pos = await purchase_svc.convert_pr_to_po_with_specs(db, actor, pr.id, specs)
+
+    assert len(pos) == 1
+    po = pos[0]
+    assert len(po.items) == 1
+    assert po.items[0].qty == Decimal("32")
+    assert po.items[0].fulfillment_links[0].qty_contribution == Decimal("32")
+    assert po.items[0].fulfillment_links[0].fulfillment_type == "equivalent"
+
+    pr_after = await purchase_svc.get_pr(db, actor, pr.id)
+    assert pr_after.status == PRStatus.PARTIALLY_CONVERTED.value
+
+
+async def test_convert_pr_to_po_with_specs_then_downgrade_remainder(seeded_db_session):
+    from app.services.purchase import PRConvertSpec
+
+    db = seeded_db_session
+    actor = await _get_user(db, "alice")
+    supplier = await _get_supplier(db)
+    pr = await purchase_svc.create_pr(
+        db,
+        actor,
+        PRCreateIn(
+            title="Two-pass convert",
+            business_reason="32 equivalent + 32 downgraded",
+            currency="CNY",
+            items=[_pr_item(1, "Server X", "64", "1000", supplier_id=supplier.id)],
+        ),
+    )
+    await _mark_pr_approved(db, pr)
+    pr_item_id = pr.items[0].id
+
+    await purchase_svc.convert_pr_to_po_with_specs(
+        db,
+        actor,
+        pr.id,
+        [PRConvertSpec(pr_item_id=pr_item_id, qty=Decimal("32"), fulfillment_type="equivalent")],
+    )
+    pos2 = await purchase_svc.convert_pr_to_po_with_specs(
+        db,
+        actor,
+        pr.id,
+        [
+            PRConvertSpec(
+                pr_item_id=pr_item_id,
+                qty=Decimal("32"),
+                fulfillment_type="downgraded",
+                deviation_note="A part out of stock",
+            )
+        ],
+    )
+
+    assert len(pos2) == 1
+    assert pos2[0].items[0].qty == Decimal("32")
+    assert pos2[0].items[0].fulfillment_links[0].fulfillment_type == "downgraded"
+    assert pos2[0].items[0].fulfillment_links[0].deviation_note == "A part out of stock"
+
+    breakdown = await purchase_svc.get_pr_item_fulfillment_breakdown(db, pr_item_id)
+    assert breakdown["equivalent"] == Decimal("32")
+    assert breakdown["downgraded"] == Decimal("32")
+
+    pr_after = await purchase_svc.get_pr(db, actor, pr.id)
+    assert pr_after.status == PRStatus.CONVERTED.value
+
+
+async def test_convert_pr_to_po_with_specs_rejects_overflow(seeded_db_session):
+    from app.services.purchase import PRConvertSpec
+
+    db = seeded_db_session
+    actor = await _get_user(db, "alice")
+    supplier = await _get_supplier(db)
+    pr = await purchase_svc.create_pr(
+        db,
+        actor,
+        PRCreateIn(
+            title="Overflow test",
+            business_reason="reject 1.5x soft limit",
+            currency="CNY",
+            items=[_pr_item(1, "Server", "10", "1000", supplier_id=supplier.id)],
+        ),
+    )
+    await _mark_pr_approved(db, pr)
+
+    with pytest.raises(HTTPException) as exc:
+        await purchase_svc.convert_pr_to_po_with_specs(
+            db,
+            actor,
+            pr.id,
+            [
+                PRConvertSpec(
+                    pr_item_id=pr.items[0].id,
+                    qty=Decimal("100"),
+                    fulfillment_type="equivalent",
+                )
+            ],
+        )
+    assert exc.value.status_code == 422
+    assert exc.value.detail == "fulfillment.qty_exceeds_soft_limit"
+
+
+async def test_convert_pr_to_po_with_specs_rejects_invalid_type(seeded_db_session):
+    from app.services.purchase import PRConvertSpec
+
+    db = seeded_db_session
+    actor = await _get_user(db, "alice")
+    supplier = await _get_supplier(db)
+    pr = await _create_pr(db, actor, supplier.id)
+    await _mark_pr_approved(db, pr)
+
+    with pytest.raises(HTTPException) as exc:
+        await purchase_svc.convert_pr_to_po_with_specs(
+            db,
+            actor,
+            pr.id,
+            [
+                PRConvertSpec(
+                    pr_item_id=pr.items[0].id,
+                    qty=Decimal("1"),
+                    fulfillment_type="supplementary",
+                )
+            ],
+        )
+    assert exc.value.status_code == 422
+    assert exc.value.detail == "fulfillment.invalid_type"

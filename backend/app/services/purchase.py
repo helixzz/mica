@@ -2,6 +2,7 @@ from __future__ import annotations
 
 # pyright: reportUnknownParameterType=false, reportMissingParameterType=false, reportExplicitAny=false
 import logging
+from dataclasses import dataclass
 from datetime import UTC, datetime
 from decimal import Decimal
 from uuid import UUID
@@ -525,31 +526,42 @@ async def _compute_pr_status_after_link_change(
         FulfillmentType.DOWNGRADED.value,
         FulfillmentType.SUBSTITUTE.value,
     )
-    fulfilled_pr_item_ids: set[UUID] = set()
+    fulfilled_qty_by_pr_item: dict[UUID, Decimal] = {}
     pr_item_ids = [i.id for i in pr.items]
     if pr_item_ids:
         rows = (
             await db.execute(
-                select(PRFulfillmentLink.pr_item_id)
+                select(
+                    PRFulfillmentLink.pr_item_id,
+                    func.coalesce(func.sum(PRFulfillmentLink.qty_contribution), 0),
+                )
                 .where(
                     PRFulfillmentLink.pr_item_id.in_(pr_item_ids),
                     PRFulfillmentLink.fulfillment_type.in_(fulfilling_types),
                 )
+                .group_by(PRFulfillmentLink.pr_item_id)
             )
         ).all()
-        fulfilled_pr_item_ids = {row[0] for row in rows}
+        fulfilled_qty_by_pr_item = {row[0]: Decimal(str(row[1])) for row in rows}
 
     total = len(pr.items)
-    fulfilled = sum(1 for i in pr.items if i.id in fulfilled_pr_item_ids)
+    fully_fulfilled = 0
+    has_any_fulfillment = False
+    for pri in pr.items:
+        filled = fulfilled_qty_by_pr_item.get(pri.id, Decimal("0"))
+        if filled > 0:
+            has_any_fulfillment = True
+        if filled >= Decimal(str(pri.qty)):
+            fully_fulfilled += 1
 
-    if fulfilled == 0:
+    if not has_any_fulfillment:
         if pr.status in (
             PRStatus.PARTIALLY_CONVERTED.value,
             PRStatus.CONVERTED.value,
         ):
             return PRStatus.APPROVED.value
         return pr.status
-    if fulfilled < total:
+    if fully_fulfilled < total:
         return PRStatus.PARTIALLY_CONVERTED.value
     return PRStatus.CONVERTED.value
 
@@ -608,6 +620,207 @@ async def convert_pr_to_po_partial(
 
     selected = [pr_items_by_id[pid] for pid in requested_ids]
     return await _create_pos_for_pr_items(db, actor, pr, selected)
+
+
+@dataclass(frozen=True)
+class PRConvertSpec:
+    pr_item_id: UUID
+    qty: Decimal
+    fulfillment_type: str
+    deviation_note: str | None = None
+
+
+async def convert_pr_to_po_with_specs(
+    db: AsyncSession,
+    actor: User,
+    pr_id: UUID,
+    specs: list[PRConvertSpec],
+) -> list[PurchaseOrder]:
+    if not specs:
+        raise HTTPException(422, "pr.partial_no_items")
+
+    pr = await _load_pr(db, pr_id)
+    if pr is None:
+        raise HTTPException(404, "pr.not_found")
+    if pr.status not in (
+        PRStatus.APPROVED.value,
+        PRStatus.PARTIALLY_CONVERTED.value,
+        PRStatus.CONVERTED.value,
+    ):
+        raise HTTPException(409, "pr.must_be_approved_to_convert")
+
+    pr_items_by_id = {i.id: i for i in pr.items}
+    pr_item_ids_in_specs = {s.pr_item_id for s in specs}
+    unknown = pr_item_ids_in_specs - pr_items_by_id.keys()
+    if unknown:
+        raise HTTPException(422, "pr.partial_unknown_item")
+
+    for spec in specs:
+        if spec.qty <= 0:
+            raise HTTPException(422, "fulfillment.qty_must_be_positive")
+        if spec.fulfillment_type not in (
+            FulfillmentType.EQUIVALENT.value,
+            FulfillmentType.DOWNGRADED.value,
+            FulfillmentType.SUBSTITUTE.value,
+        ):
+            raise HTTPException(422, "fulfillment.invalid_type")
+
+    existing_links_by_pr_item: dict[UUID, Decimal] = {}
+    if pr_item_ids_in_specs:
+        rows = (
+            await db.execute(
+                select(
+                    PRFulfillmentLink.pr_item_id,
+                    func.coalesce(func.sum(PRFulfillmentLink.qty_contribution), 0),
+                )
+                .where(
+                    PRFulfillmentLink.pr_item_id.in_(pr_item_ids_in_specs),
+                    PRFulfillmentLink.fulfillment_type.in_(_FULFILLING_TYPES),
+                )
+                .group_by(PRFulfillmentLink.pr_item_id)
+            )
+        ).all()
+        existing_links_by_pr_item = {
+            row[0]: Decimal(str(row[1])) for row in rows
+        }
+
+    requested_qty_per_pr_item: dict[UUID, Decimal] = {}
+    for spec in specs:
+        requested_qty_per_pr_item[spec.pr_item_id] = (
+            requested_qty_per_pr_item.get(spec.pr_item_id, Decimal("0"))
+            + Decimal(str(spec.qty))
+        )
+
+    for pr_item_id, requested_qty in requested_qty_per_pr_item.items():
+        pr_item = pr_items_by_id[pr_item_id]
+        already = existing_links_by_pr_item.get(pr_item_id, Decimal("0"))
+        projected = already + requested_qty
+        soft_limit = Decimal(str(pr_item.qty)) * Decimal("1.5")
+        if projected > soft_limit:
+            raise HTTPException(422, "fulfillment.qty_exceeds_soft_limit")
+
+    return await _create_pos_for_specs(db, actor, pr, specs, pr_items_by_id)
+
+
+async def _create_pos_for_specs(
+    db: AsyncSession,
+    actor: User,
+    pr: PurchaseRequisition,
+    specs: list[PRConvertSpec],
+    pr_items_by_id: dict[UUID, PRItem],
+) -> list[PurchaseOrder]:
+    missing_supplier = [
+        s for s in specs if not pr_items_by_id[s.pr_item_id].supplier_id
+    ]
+    if missing_supplier:
+        raise HTTPException(422, "pr.items_missing_supplier")
+
+    groups: dict[UUID, list[PRConvertSpec]] = {}
+    for spec in specs:
+        supplier_id = pr_items_by_id[spec.pr_item_id].supplier_id
+        groups.setdefault(supplier_id, []).append(spec)
+
+    created_pos: list[PurchaseOrder] = []
+    for supplier_id, group_specs in groups.items():
+        po_number = await _next_po_number(db)
+        subtotal = Decimal("0")
+        for spec in group_specs:
+            pr_item = pr_items_by_id[spec.pr_item_id]
+            unit_price = Decimal(str(pr_item.unit_price or 0))
+            subtotal += Decimal(str(spec.qty)) * unit_price
+
+        po = PurchaseOrder(
+            po_number=po_number,
+            pr_id=pr.id,
+            pr_title=pr.title,
+            supplier_id=supplier_id,
+            company_id=pr.company_id,
+            status=POStatus.CONFIRMED.value,
+            currency=pr.currency,
+            total_amount=subtotal,
+            source_type="manual",
+            created_by_id=actor.id,
+        )
+        db.add(po)
+        await db.flush()
+
+        line_no = 0
+        for spec in group_specs:
+            line_no += 1
+            pr_item = pr_items_by_id[spec.pr_item_id]
+            unit_price = Decimal(str(pr_item.unit_price or 0))
+            line_qty = Decimal(str(spec.qty))
+            amount = line_qty * unit_price
+
+            po_item = POItem(
+                po_id=po.id,
+                pr_item_id=pr_item.id,
+                line_no=line_no,
+                item_id=pr_item.item_id,
+                item_name=pr_item.item_name,
+                specification=pr_item.specification,
+                qty=line_qty,
+                uom=pr_item.uom,
+                unit_price=unit_price,
+                amount=amount,
+            )
+            db.add(po_item)
+            await db.flush()
+
+            db.add(
+                PRFulfillmentLink(
+                    pr_item_id=pr_item.id,
+                    po_item_id=po_item.id,
+                    qty_contribution=line_qty,
+                    fulfillment_type=spec.fulfillment_type,
+                    deviation_note=spec.deviation_note,
+                    created_by_id=actor.id,
+                )
+            )
+
+            if pr_item.item_id and unit_price > 0:
+                db.add(
+                    SKUPriceRecord(
+                        item_id=pr_item.item_id,
+                        supplier_id=supplier_id,
+                        price=unit_price,
+                        currency=pr.currency or "CNY",
+                        quotation_date=datetime.now(UTC).date(),
+                        source_type="actual_po",
+                        source_ref=po_number,
+                        entered_by_id=actor.id,
+                    )
+                )
+
+        await _audit(
+            db,
+            actor,
+            "po.created_from_pr",
+            "purchase_order",
+            str(po.id),
+            metadata={
+                "pr_id": str(pr.id),
+                "pr_number": pr.pr_number,
+                "po_number": po.po_number,
+                "supplier_id": str(supplier_id),
+                "split_count": len(groups),
+                "lines_in_this_po": len(group_specs),
+                "with_specs": True,
+            },
+        )
+        created_pos.append(po)
+
+    pr.status = await _compute_pr_status_after_link_change(db, pr)
+    await db.commit()
+
+    refreshed: list[PurchaseOrder] = []
+    for po in created_pos:
+        loaded = await _load_po(db, po.id)
+        if loaded is None:
+            raise HTTPException(404, "po.not_found")
+        refreshed.append(loaded)
+    refreshed.sort(key=lambda p: p.po_number)
+    return refreshed
 
 
 async def _unconverted_pr_items(
