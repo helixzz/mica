@@ -16,6 +16,8 @@ import {
   SolutionOutlined,
   SunOutlined,
   MenuOutlined,
+  MenuFoldOutlined,
+  MenuUnfoldOutlined,
 } from '@ant-design/icons';
 import { Avatar, Dropdown, Layout, Menu, Space, Tag, Typography, theme, Button, Drawer } from 'antd';
 import { useTranslation } from 'react-i18next';
@@ -45,9 +47,27 @@ export function AppLayout() {
   const navigate = useNavigate();
   const { token } = theme.useToken();
   const { mode, setMode } = useTheme();
-  const [collapsed, setCollapsed] = useState(false)
+  const [collapsed, setCollapsed] = useState(() => {
+    try {
+      return localStorage.getItem('mica.sider_collapsed') === '1'
+    } catch {
+      return false
+    }
+  })
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
   const [isMobile, setIsMobile] = useState(window.innerWidth <= 992)
+
+  const toggleCollapsed = () => {
+    setCollapsed((prev) => {
+      const next = !prev
+      try {
+        localStorage.setItem('mica.sider_collapsed', next ? '1' : '0')
+      } catch (_e) {
+        void _e
+      }
+      return next
+    })
+  }
 
   useEffect(() => {
     const handleResize = () => setIsMobile(window.innerWidth <= 992)
@@ -114,7 +134,7 @@ export function AppLayout() {
   const roleTag = user ? t(`role.${user.role}` as 'role.admin') : '';
   const currentKey = '/' + (location.pathname.split('/')[1] || 'dashboard');
 
-  const Logo = () => (
+  const Logo = ({ collapsed: hideText = false }: { collapsed?: boolean } = {}) => (
     <Link to="/dashboard" style={{ textDecoration: 'none', display: 'flex', alignItems: 'center' }}>
       <Space size="small" style={{ display: 'flex', alignItems: 'center', cursor: 'pointer' }}>
         <img
@@ -126,17 +146,19 @@ export function AppLayout() {
           loading="lazy"
           style={{ display: 'block', borderRadius: '50%' }}
         />
-        <Text
-          className="logo-text"
-          style={{
-            fontSize: 20,
-            fontWeight: 700,
-            color: token.colorText,
-            letterSpacing: '-0.02em',
-          }}
-        >
-          Mica
-        </Text>
+        {!hideText && (
+          <Text
+            className="logo-text"
+            style={{
+              fontSize: 20,
+              fontWeight: 700,
+              color: token.colorText,
+              letterSpacing: '-0.02em',
+            }}
+          >
+            Mica
+          </Text>
+        )}
       </Space>
     </Link>
   );
@@ -157,8 +179,8 @@ export function AppLayout() {
           boxShadow: token.boxShadowTertiary,
         }}
       >
-        <div className="header-logo" style={{ display: 'flex', alignItems: 'center', width: isMobile ? 'auto' : 220, flexShrink: 0 }}>
-          {isMobile && (
+        <div className="header-logo" style={{ display: 'flex', alignItems: 'center', width: isMobile ? 'auto' : (collapsed ? 80 : 220), flexShrink: 0, transition: 'width 0.2s' }}>
+          {isMobile ? (
             <Button
               type="text"
               icon={<MenuOutlined />}
@@ -166,8 +188,16 @@ export function AppLayout() {
               style={{ marginRight: 8 }}
               title={t('layout.menu_toggle')}
             />
+          ) : (
+            <Button
+              type="text"
+              icon={collapsed ? <MenuUnfoldOutlined /> : <MenuFoldOutlined />}
+              onClick={toggleCollapsed}
+              style={{ marginRight: 8 }}
+              title={t(collapsed ? 'layout.sider_expand' : 'layout.sider_collapse')}
+            />
           )}
-          <Logo />
+          <Logo collapsed={!isMobile && collapsed} />
         </div>
 
         <div style={{ flex: 1, display: 'flex', justifyContent: 'center', maxWidth: 480, margin: '0 12px', minWidth: 0 }} className="header-search">
@@ -214,12 +244,22 @@ export function AppLayout() {
         {!isMobile && (
         <Sider
           width={220}
+          collapsible
+          collapsed={collapsed}
+          onCollapse={(value) => {
+            setCollapsed(value)
+            try {
+              localStorage.setItem('mica.sider_collapsed', value ? '1' : '0')
+            } catch (_e) {
+              void _e
+            }
+          }}
+          collapsedWidth={80}
           style={{
             background: token.colorBgContainer,
             borderRight: `1px solid ${token.colorBorderSecondary}`,
           }}
           className="desktop-sider"
-          collapsedWidth="0"
           trigger={null}
         >
           <Menu

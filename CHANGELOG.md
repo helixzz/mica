@@ -7,6 +7,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [v1.31.1] — 2026-06-09
+
+### 新增
+
+- **侧边栏可收起**：桌面端 Header 左上角新增展开/收起按钮（旁边那个汉堡图标会随状态切换为 fold/unfold 图标）。收起后侧边栏从 220px 缩到 80px，仅显示菜单图标，鼠标悬停可看到完整名称。状态写入 `localStorage.mica.sider_collapsed`，刷新后保持
+- 收起时 Logo 文字隐藏，只显示水獭头像图标，给内容区让出更多空间
+
+---
+
 ## [v1.31.0] — 2026-06-09
 
 ### 新增

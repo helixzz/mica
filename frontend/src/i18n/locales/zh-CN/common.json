@@ -324,7 +324,9 @@
     "toggle": "切换主题"
   },
   "layout": {
-    "menu_toggle": "展开/收起菜单"
+    "menu_toggle": "展开/收起菜单",
+    "sider_collapse": "收起侧边栏",
+    "sider_expand": "展开侧边栏"
   },
   "empty": {
     "default": "暂无数据"

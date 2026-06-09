@@ -324,7 +324,9 @@
     "toggle": "Toggle theme"
   },
   "layout": {
-    "menu_toggle": "Toggle menu"
+    "menu_toggle": "Toggle menu",
+    "sider_collapse": "Collapse sidebar",
+    "sider_expand": "Expand sidebar"
   },
   "empty": {
     "default": "No data yet"
