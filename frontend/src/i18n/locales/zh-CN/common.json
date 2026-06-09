@@ -185,6 +185,8 @@
     "cost_center": "成本中心",
     "expense_type": "开支类型",
     "procurement_category": "采购种类",
+    "item_code": "物料编码",
+    "requires_serial": "需要序列号",
     "deadline": "截止日期",
     "contact_name": "联系人",
     "contact_phone": "电话",
@@ -1162,7 +1164,15 @@
     "name_help": "名称要贴近需求方和采购员真实搜索习惯，不要只写内部缩写。",
     "category_help": "尽量为物料分配采购种类，便于报表统计、搜索归类和后续价格分析。",
     "uom_help": "选择用户在 PR / RFQ 中实际会填写的采购单位，例如 EA、SET、LICENSE。",
-    "spec_help": "补充能区分物料的关键信息：容量、代际、型号、授权期限或审批人需要判断的关键规格。"
+    "spec_help": "补充能区分物料的关键信息：容量、代际、型号、授权期限或审批人需要判断的关键规格。",
+    "create_inline": "创建新 SKU",
+    "create_modal_title": "新增物料 / SKU",
+    "create_modal_hint": "在这里快速新增物料，无需离开当前表单。",
+    "create_success": "已创建 {{name}}",
+    "code_tooltip": "编码会根据名称自动生成，可手动调整。仅允许大写字母、数字、连字符与下划线。",
+    "code_format_error": "编码仅允许大写字母、数字、连字符 - 与下划线 _",
+    "sku_picker_label": "选择 SKU",
+    "item_name_tooltip_after_pick": "选中 SKU 后会自动填入名称，但你仍可调整为 PO 上要写的实际描述。"
   },
   "contract": {
     "scan_archive": "合同扫描件归档",

@@ -6,6 +6,7 @@ import { useTranslation } from 'react-i18next'
 import { useNavigate, useParams } from 'react-router-dom'
 import { api, type Item, type Supplier } from '@/api'
 import { client, extractError } from '@/api/client'
+import { ItemPickerWithCreate } from '@/components/ItemPickerWithCreate'
 
 interface ItemLine {
   key: number
@@ -154,23 +155,24 @@ export function RFQEditPage() {
               <Row gutter={[12, 12]}>
                 <Col xs={24} md={14}>
                   <Typography.Text type="secondary" style={{ fontSize: 12 }}>{t('field.item_name')}</Typography.Text>
-                  <Select
-                    style={{ width: '100%' }}
+                  <ItemPickerWithCreate
                     placeholder={t('placeholder.select_item')}
                     value={line.item_id ?? undefined}
-                    onChange={(v) => {
-                      const it = items.find(i => i.id === v)
+                    onChange={(v, picked) => {
+                      if (!v) {
+                        updateLine(line.key, 'item_id', null)
+                        return
+                      }
+                      const it = picked ?? items.find(i => i.id === v)
+                      if (picked && !items.find(i => i.id === v)) {
+                        setItems(prev => [...prev, picked])
+                      }
                       if (it) {
                         updateLine(line.key, 'item_id', it.id)
                         updateLine(line.key, 'item_name', it.name)
                         updateLine(line.key, 'specification', it.specification)
                       }
                     }}
-                    options={items.map(it => ({ value: it.id, label: `${it.code} · ${it.name}` }))}
-                    showSearch
-                    optionFilterProp="label"
-                    allowClear
-                    popupMatchSelectWidth={false}
                   />
                 </Col>
                 <Col xs={6} md={4}>

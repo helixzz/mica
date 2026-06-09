@@ -2,8 +2,9 @@ import { Form, Input, InputNumber, Modal, Select, Typography, message } from 'an
 import { useState } from 'react'
 import { useTranslation } from 'react-i18next'
 
-import { api, type PurchaseOrder } from '@/api'
+import { api, type Item, type PurchaseOrder } from '@/api'
 import { extractError } from '@/api/client'
+import { ItemPickerWithCreate } from '@/components/ItemPickerWithCreate'
 
 interface SupplementaryItemModalProps {
   open: boolean
@@ -24,11 +25,25 @@ export function SupplementaryItemModal({
   const [form] = Form.useForm()
   const [busy, setBusy] = useState(false)
 
+  const handleItemPicked = (itemId: string | null, item: Item | null) => {
+    if (itemId && item) {
+      form.setFieldsValue({
+        item_id: itemId,
+        item_name: item.name,
+        uom: item.uom || 'EA',
+        specification: item.specification ?? undefined,
+      })
+    } else {
+      form.setFieldsValue({ item_id: null })
+    }
+  }
+
   const handleOk = async () => {
     try {
       const values = await form.validateFields()
       setBusy(true)
       await api.addSupplementaryPOItem(po.id, {
+        item_id: values.item_id ?? null,
         item_name: values.item_name,
         specification: values.specification ?? null,
         qty: values.qty,
@@ -62,15 +77,24 @@ export function SupplementaryItemModal({
       okText={t('button.confirm')}
       cancelText={t('button.cancel')}
       width={600}
+      destroyOnClose
     >
       <Typography.Paragraph type="secondary">
         {t('fulfillment.add_supplementary_hint')}
       </Typography.Paragraph>
       <Form form={form} layout="vertical">
+        <Form.Item label={t('item.sku_picker_label')} name="item_id">
+          <ItemPickerWithCreate
+            value={form.getFieldValue('item_id')}
+            onChange={handleItemPicked}
+            placeholder={t('placeholder.select_item')}
+          />
+        </Form.Item>
         <Form.Item
           name="item_name"
           label={t('field.item_name')}
           rules={[{ required: true }]}
+          tooltip={t('item.item_name_tooltip_after_pick')}
         >
           <Input maxLength={255} />
         </Form.Item>

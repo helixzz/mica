@@ -23,6 +23,7 @@ import { api, type ClassificationItem, flattenCategoryTree, type Item, type PRIt
 import { client, extractError } from '@/api/client'
 import { useAuth } from '@/auth/useAuth'
 import { AIStreamButton } from '@/components/AIStreamButton'
+import { ItemPickerWithCreate } from '@/components/ItemPickerWithCreate'
 import { AutosaveBanner, AutosaveUnavailableBanner } from '@/components/AutosaveBanner'
 import { PRQuoteConfirmModal } from '@/components/PRQuoteConfirmModal'
 import { MarqueeOption } from '@/components/ui/MarqueeOption'
@@ -172,12 +173,12 @@ export function PRNewPage() {
     )
   }
 
-  const onItemSelect = (key: number, itemId: string | null) => {
+  const onItemSelect = (key: number, itemId: string | null, picked?: Item | null) => {
     if (!itemId) {
       updateLine(key, 'item_id', null)
       return
     }
-    const it = items.find((i) => i.id === itemId)
+    const it = picked ?? items.find((i) => i.id === itemId)
     if (!it) return
     setLines((ls) =>
       ls.map((l) =>
@@ -436,16 +437,10 @@ export function PRNewPage() {
                   <div style={{ marginBottom: 4 }}>
                     <Typography.Text type="secondary" style={{ fontSize: 12 }}>{t('field.item_name')}</Typography.Text>
                   </div>
-                  <Select
-                    style={{ width: '100%' }}
+                  <ItemPickerWithCreate
                     placeholder={isRequester ? t('pr.select_item_requester') : t('placeholder.select_item')}
                     value={line.item_id ?? undefined}
-                    onChange={(v) => onItemSelect(line.key, v)}
-                    options={items.map((it) => ({ value: it.id, label: `${it.code} · ${it.name}` }))}
-                    showSearch
-                    optionFilterProp="label"
-                    allowClear
-                    popupMatchSelectWidth={false}
+                    onChange={(v, picked) => onItemSelect(line.key, v, picked)}
                   />
                   {line.item_id && refPrices[line.item_id] && (
                     <Typography.Text type="secondary" style={{ fontSize: 11, display: 'block', marginTop: 2 }}>

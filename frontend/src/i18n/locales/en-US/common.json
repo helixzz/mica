@@ -185,6 +185,8 @@
     "cost_center": "Cost Center",
     "expense_type": "Expense Type",
     "procurement_category": "Procurement Category",
+    "item_code": "Item code",
+    "requires_serial": "Serial required",
     "deadline": "Deadline",
     "contact_name": "Contact",
     "contact_phone": "Phone",
@@ -1150,7 +1152,15 @@
     "name_help": "Use the name buyers and requesters will actually search for, not an overly short abbreviation.",
     "category_help": "Assign a procurement category whenever possible so reporting, search, and later price analysis remain structured.",
     "uom_help": "Choose the purchasing unit users will fill in on PR and RFQ forms, such as EA, SET, or LICENSE.",
-    "spec_help": "Capture key differentiators: capacity, model, generation, term length, or any detail approvers and suppliers need to distinguish the item."
+    "spec_help": "Capture key differentiators: capacity, model, generation, term length, or any detail approvers and suppliers need to distinguish the item.",
+    "create_inline": "Create new SKU",
+    "create_modal_title": "Create item / SKU",
+    "create_modal_hint": "Quickly add a new item without leaving this form.",
+    "create_success": "Created {{name}}",
+    "code_tooltip": "Code auto-fills from the name and can be edited. Only uppercase letters, digits, hyphens, and underscores are allowed.",
+    "code_format_error": "Code only allows uppercase letters, digits, hyphens - and underscores _",
+    "sku_picker_label": "Pick SKU",
+    "item_name_tooltip_after_pick": "Picking a SKU auto-fills the name. You can still adjust it to whatever should appear on the PO."
   },
   "contract": {
     "scan_archive": "Contract Scan Archive",

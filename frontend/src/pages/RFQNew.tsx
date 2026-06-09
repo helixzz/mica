@@ -5,6 +5,7 @@ import { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { api, type Item, type Supplier } from '@/api'
 import { client, extractError } from '@/api/client'
+import { ItemPickerWithCreate } from '@/components/ItemPickerWithCreate'
 
 interface LineForm { key: number; item_id: string | null; item_name: string; specification: string; qty: number; uom: string }
 
@@ -34,6 +35,22 @@ export default function RFQNewPage() {
         if (it) { updated.item_name = it.name; updated.specification = it.specification || '' }
       }
       return updated
+    }))
+  }
+
+  const onItemPicked = (key: number, itemId: string | null, picked?: Item | null) => {
+    if (!itemId) {
+      updateLine(key, 'item_id', null)
+      return
+    }
+    if (picked && !items.find((i) => i.id === itemId)) {
+      setItems((prev) => [...prev, picked])
+    }
+    setLines((ls) => ls.map((l) => {
+      if (l.key !== key) return l
+      const it = picked ?? items.find((i) => i.id === itemId)
+      if (!it) return { ...l, item_id: itemId }
+      return { ...l, item_id: itemId, item_name: it.name, specification: it.specification || '', uom: it.uom || l.uom }
     }))
   }
 
@@ -80,10 +97,11 @@ export default function RFQNewPage() {
         {lines.map((l) => (
           <Row key={l.key} gutter={8} style={{ marginBottom: 8 }}>
             <Col span={10}>
-              <Select style={{ width: '100%' }} placeholder={t('placeholder.select_item')} value={l.item_id ?? undefined}
-                onChange={(v) => updateLine(l.key, 'item_id', v)}
-                options={items.map((it) => ({ value: it.id, label: `${it.code} · ${it.name}` }))}
-                showSearch optionFilterProp="label" allowClear />
+              <ItemPickerWithCreate
+                placeholder={t('placeholder.select_item')}
+                value={l.item_id ?? undefined}
+                onChange={(v, picked) => onItemPicked(l.key, v, picked)}
+              />
             </Col>
             <Col span={4}>
               <Input

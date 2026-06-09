@@ -8,6 +8,7 @@ import { useNavigate, useParams } from 'react-router-dom'
 import { api, type ClassificationItem, flattenCategoryTree, type Item, type Supplier, type ProxyCandidate } from '@/api'
 import { client, extractError } from '@/api/client'
 import { useAuth } from '@/auth/useAuth'
+import { ItemPickerWithCreate } from '@/components/ItemPickerWithCreate'
 import { AutosaveBanner, AutosaveUnavailableBanner } from '@/components/AutosaveBanner'
 import { PRQuoteConfirmModal } from '@/components/PRQuoteConfirmModal'
 import { useAutosave } from '@/hooks/useAutosave'
@@ -144,6 +145,40 @@ export function PREditPage() {
     )
   }
 
+  const onItemPicked = (key: number, itemId: string | null, picked?: Item | null) => {
+    if (!itemId) {
+      updateLine(key, 'item_id', null)
+      return
+    }
+    if (picked && !items.find((i) => i.id === itemId)) {
+      setItems((prev) => [...prev, picked])
+    }
+    setLines((ls) =>
+      ls.map((l) => {
+        if (l.key !== key) return l
+        const item = picked ?? items.find((i) => i.id === itemId)
+        if (!item) return { ...l, item_id: itemId }
+        return {
+          ...l,
+          item_id: itemId,
+          item_name: item.name,
+          specification: item.specification || '',
+          uom: item.uom || l.uom,
+        }
+      }),
+    )
+    void client
+      .get<Record<string, { latest_price: number | null; avg_price: number | null }>>(`/sku/reference-prices?item_ids=${itemId}`)
+      .then((r) => {
+        const price = r.data[itemId]?.latest_price
+        if (price != null) {
+          setLines((ls) => ls.map((l) => (l.key === key ? { ...l, unit_price: price } : l)))
+        }
+        setRefPrices((prev) => ({ ...prev, ...r.data }))
+      })
+      .catch(() => {})
+  }
+
   const total = lines.reduce((s, l) => s + l.qty * (l.unit_price || 0), 0)
   const watchedCurrency = (Form.useWatch('currency', form) as string | undefined) || 'CNY'
 
@@ -191,13 +226,10 @@ export function PREditPage() {
       width: 280,
       render: (_: unknown, r: LineForm) => (
         <Space direction="vertical" size={0} style={{ width: '100%' }}>
-          <Select
-            style={{ width: '100%' }}
+          <ItemPickerWithCreate
             placeholder={isRequester ? t('placeholder.select_item') : t('placeholder.select_item')}
             value={r.item_id ?? undefined}
-            onChange={(v) => updateLine(r.key, 'item_id', v)}
-            options={items.map((it) => ({ value: it.id, label: `${it.code} · ${it.name}` }))}
-            showSearch optionFilterProp="label" allowClear
+            onChange={(v, picked) => onItemPicked(r.key, v, picked)}
           />
           {r.item_id && refPrices[r.item_id] && (
             <Typography.Text type="secondary" style={{ fontSize: 11 }}>
@@ -351,7 +383,11 @@ export function PREditPage() {
               <Row gutter={[12, 12]}>
                 <Col xs={24} md={isRequester ? 24 : 14}>
                   <div style={{ marginBottom: 4 }}><Typography.Text type="secondary" style={{ fontSize: 12 }}>{t('field.item_name')}</Typography.Text></div>
-                  <Select style={{ width: '100%' }} placeholder={t('placeholder.select_item')} value={line.item_id ?? undefined} onChange={(v) => updateLine(line.key, 'item_id', v)} options={items.map((it) => ({ value: it.id, label: `${it.code} · ${it.name}` }))} showSearch optionFilterProp="label" allowClear popupMatchSelectWidth={false} />
+                  <ItemPickerWithCreate
+                    placeholder={t('placeholder.select_item')}
+                    value={line.item_id ?? undefined}
+                    onChange={(v, picked) => onItemPicked(line.key, v, picked)}
+                  />
                   {line.item_id && refPrices[line.item_id] && (
                     <Typography.Text type="secondary" style={{ fontSize: 11, display: 'block', marginTop: 2 }}>
                       {t('sku.ref_latest')}: {fmtAmount(refPrices[line.item_id].latest_price, 'CNY')}

@@ -7,6 +7,39 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [v1.30.0] — 2026-06-09
+
+### 新增
+
+- **新组件 `ItemPickerWithCreate`**：可复用的 SKU 选择器，下拉框底部带 "+ 创建新 SKU" 按钮，点击后弹出 `CreateItemModal` 现场新增物料，无需离开当前表单。新建成功后自动选中并刷新所有挂载的 picker
+- **CreateItemModal**：包含 name（必填）、code（必填，由 name 自动生成默认值，可改）、procurement_category（可选）、uom（默认 EA）、specification、requires_serial 字段。code 格式校验前端做（`[A-Z0-9_-]+`），重码错误由后端返回
+- **PO 补充派生项 SupplementaryItemModal**：原本只能手填物料名称；现在加上 SKU 选择器，可直接选已有 SKU 或现场新增。选中后自动填充名称、计量单位、规格
+
+### 修改（替换为 ItemPickerWithCreate）
+
+- `pages/PurchaseRequisitions/PRNew.tsx`：PR 创建表单的物料 Select
+- `pages/PurchaseRequisitions/PREdit.tsx`：PR 编辑表单（桌面表格 + 移动卡片两处）
+- `pages/RFQNew.tsx` / `pages/RFQEdit.tsx`：RFQ 物料行 Select
+
+### 实现细节
+
+- 模块级 `_itemsCache` Promise + `_subscribers` Set：所有 picker 共享同一份 items 列表，新建后通过 subscribers 广播刷新，避免每个 picker 独立 fetch
+- `onChange(itemId, item)`：picker 把完整 Item 快照传给父组件，父组件无需依赖本地 `items` 缓存（解决新建后下游 `items.find()` 找不到的 staleness 问题）
+- 严格遵守 React Hooks 规则：所有 hook 在 early return 前
+
+### i18n
+
+- 新增 ~12 个 key（`item.create_inline` / `create_modal_title` / `create_modal_hint` / `create_success` / `code_tooltip` / `code_format_error` / `sku_picker_label` / `item_name_tooltip_after_pick`，以及 `field.item_code` / `field.requires_serial`）
+- zh/en 完全同步
+
+### 业务效果
+
+之前：发现要的 SKU 不在系统里 → 关闭当前表单 → 跳到管理 → 物料管理 → 新增 → 回到原表单 → 刷新 → 重选
+
+现在：在任意 SKU 选择器中点 "+ 创建新 SKU" → 填写 → 新 SKU 直接被选中
+
+---
+
 ## [v1.29.0] — 2026-06-09
 
 ### 新增
