@@ -106,6 +106,15 @@ export function PRDetailPage() {
     [suppliers]
   )
 
+  const unconvertedPRItems = useMemo(() => {
+    if (!pr) return []
+    return (pr.items || []).filter((item: any) => {
+      const filled = Number(item.fulfilled_qty || 0)
+      const total = Number(item.qty || 0)
+      return filled < total
+    })
+  }, [pr])
+
   if (!pr) return <div>{t('message.loading')}</div>
 
   const isOwnerOrElevated = user?.id === pr.requester_id || user?.role === 'admin' || user?.role === 'procurement_mgr' || user?.role === 'it_buyer'
@@ -271,15 +280,6 @@ export function PRDetailPage() {
       },
     })
   }
-
-  const unconvertedPRItems = useMemo(() => {
-    if (!pr) return []
-    return (pr.items || []).filter((item: any) => {
-      const filled = Number(item.fulfilled_qty || 0)
-      const total = Number(item.qty || 0)
-      return filled < total
-    })
-  }, [pr])
 
   const openPartialConvertModal = () => {
     setPartialSelected(unconvertedPRItems.map((it: any) => it.id).filter(Boolean) as string[])

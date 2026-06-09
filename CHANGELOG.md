@@ -7,6 +7,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [v1.28.2] — 2026-06-09
+
+### 修复
+
+- **PR 详情页 React error #310（关键 bug）**：v1.28.0 引入分批转换功能时，新增的 `unconvertedPRItems = useMemo(...)` 被错误地放在 `if (!pr) return ...` early return **之后**，违反 React Hook 规则
+- **症状**：第一次渲染（pr=null）执行 1 个 hook + early return；第二次渲染（pr 有值）执行 2 个 hooks → React 抛 "Rendered more hooks than during the previous render" → ErrorBoundary 显示错误页面
+- **修复**：把 `unconvertedPRItems` useMemo 移到所有 early return 之前，memo 内部处理 null 情况
+
+---
+
 ## [v1.28.1] — 2026-06-09
 
 ### 修复
