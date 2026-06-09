@@ -521,10 +521,11 @@ async def preview_pr_conversion(db: AsyncSession, actor: User, pr_id: UUID) -> l
 async def _compute_pr_status_after_link_change(
     db: AsyncSession, pr: PurchaseRequisition
 ) -> str:
-    fulfilling_types = (
+    all_fulfilling_types = (
         FulfillmentType.EQUIVALENT.value,
         FulfillmentType.DOWNGRADED.value,
         FulfillmentType.SUBSTITUTE.value,
+        FulfillmentType.SUPPLEMENTARY.value,
     )
     fulfilled_qty_by_pr_item: dict[UUID, Decimal] = {}
     pr_item_ids = [i.id for i in pr.items]
@@ -537,7 +538,7 @@ async def _compute_pr_status_after_link_change(
                 )
                 .where(
                     PRFulfillmentLink.pr_item_id.in_(pr_item_ids),
-                    PRFulfillmentLink.fulfillment_type.in_(fulfilling_types),
+                    PRFulfillmentLink.fulfillment_type.in_(all_fulfilling_types),
                 )
                 .group_by(PRFulfillmentLink.pr_item_id)
             )
