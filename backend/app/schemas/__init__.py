@@ -373,7 +373,6 @@ class PROut(BaseModel):
                                 "equivalent",
                                 "downgraded",
                                 "substitute",
-                                "supplementary",
                             ):
                                 fulfilling_qty += qty
                         item_dict = {

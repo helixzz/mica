@@ -7,6 +7,35 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [v1.33.2] — 2026-06-10
+
+### 修复
+
+- **PR 履约进度溢出（critical）**：v1.33.1 错误地把 supplementary 计入 `fulfilled_qty`，导致 supplementary（不同 uom，例如 1024 GPU 配 64 服务器）的数量直接和 equivalent/downgraded 的数量相加，进度条显示 445/64 这种离谱数字
+  - 回滚 `_compute_pr_status_after_link_change` + `PRItemOut.fulfilled_qty` 计算：恢复为只算 equivalent / downgraded / substitute
+  - supplementary 仍可见，通过 `fulfillment_breakdown` 字典分类型展示
+  - **设计澄清**：进度条衡量"原始需求被满足程度"（按 PR 行 uom 算），supplementary 因 uom 不同不参与；breakdown popover 单独显示 supplementary 数量
+- 已手动把生产 PR-2026-0017 状态从错误的 `converted` 修正回 `partially_converted`
+
+### 新增
+
+- **拆分对话框 supplementary 行支持 ItemPicker**：自定义拆分标签页里，履约类型选为 supplementary 时，物料名称从纯文本输入升级为 `ItemPickerWithCreate`，可搜索现有 SKU + 现场创建新 SKU；选中后自动填充名称/规格/单位/item_id
+- **Requester 角色可创建 SKU**：`POST /items` 端点角色列表新增 `requester`。需求方在提交 PR 时找不到物料可以直接现场创建
+
+### 测试
+
+- 712 测试通过，72.33% 覆盖率
+
+---
+
+## [v1.33.1] — 2026-06-09
+
+### 修复（**注**：v1.33.1 引入了进度溢出 bug，已被 v1.33.2 回滚）
+
+- 起初认为 supplementary 应计入 `_compute_pr_status_after_link_change` 和 `PRItemOut.fulfilled_qty`。实际部署后发现因 uom 不一致导致进度溢出，于 v1.33.2 回滚
+
+---
+
 ## [v1.33.0] — 2026-06-09
 
 ### 新增

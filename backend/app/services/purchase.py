@@ -525,7 +525,6 @@ async def _compute_pr_status_after_link_change(
         FulfillmentType.EQUIVALENT.value,
         FulfillmentType.DOWNGRADED.value,
         FulfillmentType.SUBSTITUTE.value,
-        FulfillmentType.SUPPLEMENTARY.value,
     )
     fulfilled_qty_by_pr_item: dict[UUID, Decimal] = {}
     pr_item_ids = [i.id for i in pr.items]

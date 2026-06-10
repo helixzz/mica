@@ -185,7 +185,7 @@ async def get_item(
 )
 async def create_item(
     payload: ItemCreate,
-    user: Annotated[CurrentUser, Depends(require_roles("admin", "procurement_mgr", "it_buyer"))],
+    user: Annotated[CurrentUser, Depends(require_roles("admin", "procurement_mgr", "it_buyer", "requester"))],
     db: Annotated[AsyncSession, Depends(get_db)],
 ) -> ItemOut:
     item = await master_data_svc.create_item(db, user, payload)

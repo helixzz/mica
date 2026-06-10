@@ -5,12 +5,14 @@ import { useTranslation } from 'react-i18next'
 import {
   api,
   type FulfillmentType,
+  type Item,
   type PRConversionPreviewGroup,
   type PurchaseOrder,
   type PurchaseRequisition,
   type Supplier,
 } from '@/api'
 import { extractError } from '@/api/client'
+import { ItemPickerWithCreate } from '@/components/ItemPickerWithCreate'
 import { fmtAmount, fmtQty } from '@/utils/format'
 
 interface ConvertToPOModalProps {
@@ -36,6 +38,9 @@ type SplitRow = {
   this_qty: number
   this_unit_price: number
   this_item_name: string
+  this_item_id: string | null
+  this_specification: string | null
+  this_uom: string | null
   fulfillment_type: FulfillmentType
   deviation_note: string
 }
@@ -105,6 +110,9 @@ export function ConvertToPOModal({
             this_qty: remaining,
             this_unit_price: Number(it.unit_price || 0),
             this_item_name: it.item_name,
+            this_item_id: it.item_id ?? null,
+            this_specification: it.specification ?? null,
+            this_uom: it.uom ?? null,
             fulfillment_type: 'equivalent' as FulfillmentType,
             deviation_note: '',
           }
@@ -206,19 +214,25 @@ export function ConvertToPOModal({
     try {
       const pos = await api.convertToPOWithSpecs(
         pr.id,
-        enabled.map((r) => ({
-          pr_item_id: r.pr_item_id,
-          qty: r.this_qty,
-          unit_price: r.this_unit_price,
-          fulfillment_type: r.fulfillment_type,
-          deviation_note: r.deviation_note.trim() || null,
-          supplier_id:
-            r.picked_supplier_id !== r.supplier_id ? r.picked_supplier_id : null,
-          item_name:
-            r.fulfillment_type === 'supplementary' && r.this_item_name.trim() !== r.item_name
-              ? r.this_item_name.trim()
-              : null,
-        })),
+        enabled.map((r) => {
+          const isSupp = r.fulfillment_type === 'supplementary'
+          return {
+            pr_item_id: r.pr_item_id,
+            qty: r.this_qty,
+            unit_price: r.this_unit_price,
+            fulfillment_type: r.fulfillment_type,
+            deviation_note: r.deviation_note.trim() || null,
+            supplier_id:
+              r.picked_supplier_id !== r.supplier_id ? r.picked_supplier_id : null,
+            item_id: isSupp ? r.this_item_id ?? null : null,
+            item_name:
+              isSupp && r.this_item_name.trim() !== r.item_name
+                ? r.this_item_name.trim()
+                : null,
+            specification: isSupp ? r.this_specification ?? null : null,
+            uom: isSupp ? r.this_uom ?? null : null,
+          }
+        }),
       )
       void message.success(
         t('message.convert_success_multi', {
@@ -368,7 +382,23 @@ export function ConvertToPOModal({
                       render: (_: unknown, row: SplitRow) => {
                         if (row.fulfillment_type === 'supplementary') {
                           return (
-                            <Space direction="vertical" size={0} style={{ width: '100%' }}>
+                            <Space direction="vertical" size={4} style={{ width: '100%' }}>
+                              <ItemPickerWithCreate
+                                value={row.this_item_id ?? undefined}
+                                placeholder={t('placeholder.select_item')}
+                                onChange={(itemId, picked: Item | null) => {
+                                  if (picked) {
+                                    updateSplitRow(row.key, {
+                                      this_item_id: itemId,
+                                      this_item_name: picked.name,
+                                      this_uom: picked.uom || row.this_uom,
+                                      this_specification: picked.specification ?? row.this_specification,
+                                    })
+                                  } else {
+                                    updateSplitRow(row.key, { this_item_id: null })
+                                  }
+                                }}
+                              />
                               <Input
                                 value={row.this_item_name}
                                 placeholder={t('fulfillment.supplementary_name_placeholder')}
@@ -530,6 +560,9 @@ export function ConvertToPOModal({
                                 this_qty: 1,
                                 this_unit_price: 0,
                                 this_item_name: '',
+                                this_item_id: null,
+                                this_specification: null,
+                                this_uom: null,
                                 fulfillment_type: 'supplementary' as FulfillmentType,
                                 deviation_note: '',
                               },
