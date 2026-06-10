@@ -113,7 +113,6 @@ async def render_rfq_sheet_xlsx(
             .options(
                 selectinload(PurchaseRequisition.items),
                 selectinload(PurchaseRequisition.company),
-                selectinload(PurchaseRequisition.requester),
             )
         )
     ).scalar_one_or_none()
@@ -124,25 +123,25 @@ async def render_rfq_sheet_xlsx(
     ws = wb.active
     ws.title = "RFQ Sheet"
 
-    ws.merge_cells("A1:G1")
+    ws.merge_cells("A1:H1")
     title_cell = ws.cell(row=1, column=1)
-    title_cell.value = f"询价表 Request for Quotation — {pr.pr_number}"
+    title_cell.value = "询价表 Request for Quotation"
     title_cell.font = Font(name="Arial", bold=True, size=14)
     title_cell.alignment = Alignment(horizontal="center", vertical="center")
     ws.row_dimensions[1].height = 28
 
     info_rows = [
-        ("采购申请 PR:", pr.pr_number, "标题 Title:", pr.title),
-        ("公司 Company:", pr.company.name_zh if pr.company else "-", "申请人 Requester:", pr.requester.display_name if pr.requester else "-"),
-        ("日期 Date:", datetime.now(UTC).strftime("%Y-%m-%d"), "币种 Currency:", pr.currency),
+        ("公司 Company:", pr.company.name_zh if pr.company else "-", "日期 Date:", datetime.now(UTC).strftime("%Y-%m-%d")),
+        ("币种 Currency:", pr.currency, "", ""),
     ]
     for i, (l1, v1, l2, v2) in enumerate(info_rows, start=3):
         ws.cell(row=i, column=1, value=l1).font = Font(bold=True, size=10)
         ws.cell(row=i, column=2, value=v1)
-        ws.cell(row=i, column=4, value=l2).font = Font(bold=True, size=10)
-        ws.cell(row=i, column=5, value=v2)
+        if l2:
+            ws.cell(row=i, column=4, value=l2).font = Font(bold=True, size=10)
+            ws.cell(row=i, column=5, value=v2)
 
-    header_row = 7
+    header_row = 6
     headers = [
         "行号\nLine",
         "物料名称\nItem Name",
@@ -186,6 +185,8 @@ async def render_rfq_sheet_xlsx(
     ws.cell(row=footer_row, column=1, value="供应商签章 Supplier Stamp:").font = Font(bold=True, size=10)
     ws.cell(row=footer_row, column=6, value="日期 Date:").font = Font(bold=True, size=10)
     ws.cell(row=footer_row + 2, column=1, value='注：请在"报价单价""交期""备注"列填写后回传。如有任何疑问请联系采购负责人。')
+    ref_cell = ws.cell(row=footer_row + 4, column=1, value=f"参考编号 Ref: {pr.pr_number}")
+    ref_cell.font = Font(name="Arial", color="888888", size=9)
 
     buf = BytesIO()
     wb.save(buf)
