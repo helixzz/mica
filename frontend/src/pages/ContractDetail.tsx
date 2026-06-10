@@ -115,7 +115,7 @@ export function ContractDetailPage() {
     user && ['admin', 'procurement_mgr', 'it_buyer'].includes(user.role),
   )
   const canEditSchedule = Boolean(
-    user && ['admin', 'procurement_mgr', 'finance_auditor'].includes(user.role),
+    user && ['admin', 'procurement_mgr', 'finance_auditor', 'it_buyer'].includes(user.role),
   )
   const canDelete = Boolean(user && user.role === 'admin')
   const canTransition = Boolean(

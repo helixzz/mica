@@ -7,6 +7,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [v1.33.3] — 2026-06-10
+
+### 修复
+
+- **合同详情页 it_buyer 看不到"新建付款计划"按钮**：`ContractDetail.tsx` 的 `canEditSchedule` 判断里漏写了 `it_buyer`，但后端 `_SCHEDULE_WRITE_ROLES` 一直允许 it_buyer 写付款计划。前后端权限不一致导致 UI 提示"点击右上角'新建付款计划'开始创建"，但右上角按钮被隐藏。补齐前端角色列表
+
+### 验证
+
+- 已扫描全前端，没有其他类似前后端权限不一致的位置
+
+---
+
 ## [v1.33.2] — 2026-06-10
 
 ### 修复
