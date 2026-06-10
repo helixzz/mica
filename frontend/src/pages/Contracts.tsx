@@ -40,9 +40,9 @@ export function ContractsPage() {
   const canWrite = Boolean(
     user && ['admin', 'procurement_mgr', 'it_buyer'].includes(user.role),
   )
-  const canDelete = Boolean(user && user.role === 'admin')
+  const canDelete = Boolean(user && ['admin', 'procurement_mgr', 'it_buyer'].includes(user.role))
   const canTransition = Boolean(
-    user && ['admin', 'procurement_mgr'].includes(user.role),
+    user && ['admin', 'procurement_mgr', 'it_buyer'].includes(user.role),
   )
 
   const load = useCallback(async () => {

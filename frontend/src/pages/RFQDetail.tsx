@@ -49,7 +49,7 @@ export default function RFQDetailPage() {
   const canSend = rfq.status === 'draft'
   const canQuote = rfq.status === 'sent' || rfq.status === 'quoting'
   const canAward = rfq.status === 'quoting' || rfq.status === 'evaluation'
-  const canEdit = user?.role === 'admin' && !['awarded', 'closed', 'cancelled'].includes(rfq.status)
+  const canEdit = ['admin', 'it_buyer', 'procurement_mgr'].includes(user?.role ?? '') && !['awarded', 'closed', 'cancelled'].includes(rfq.status)
 
   const doSend = async () => {
     setSending(true)
