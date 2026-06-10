@@ -686,6 +686,7 @@
   },
   "pr": {
     "items_required": "提交审批前请至少填写一项物料",
+    "export_rfq_sheet": "导出询价表",
     "partial_no_items": "请至少选择一行进行转换",
     "already_fully_converted": "该采购申请的所有物料行均已生成采购订单",
     "convert_preview_title": "将拆分为 {{count}} 个采购订单（按供应商）",

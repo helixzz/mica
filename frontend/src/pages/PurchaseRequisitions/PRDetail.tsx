@@ -14,7 +14,7 @@ import {
   message,
   theme,
 } from 'antd'
-import { CopyOutlined, UserAddOutlined } from '@ant-design/icons'
+import { CopyOutlined, DownloadOutlined, UserAddOutlined } from '@ant-design/icons'
 import { useEffect, useMemo, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { useNavigate, useParams } from 'react-router-dom'
@@ -24,7 +24,7 @@ import {
   type PurchaseRequisition,
   type Supplier,
 } from '@/api'
-import { extractError } from '@/api/client'
+import { extractError, getToken } from '@/api/client'
 import { ActivityTimeline } from '@/components/ActivityTimeline'
 import { ConvertToPOModal } from '@/components/PR/ConvertToPOModal'
 import { AddSupplementaryFromPRModal } from '@/components/PR/AddSupplementaryFromPRModal'
@@ -593,6 +593,34 @@ export function PRDetailPage() {
           {canConvert && (
             <Button type="primary" onClick={openConvertModal} loading={busy}>
               {t('button.convert_to_po')}
+            </Button>
+          )}
+          {pr.items && pr.items.length > 0 && (
+            <Button
+              icon={<DownloadOutlined />}
+              onClick={async () => {
+                try {
+                  const resp = await fetch(`/api/v1/purchase-requisitions/${pr.id}/export/rfq-sheet`, {
+                    headers: { Authorization: `Bearer ${getToken() ?? ''}` },
+                  })
+                  if (!resp.ok) throw new Error('export failed')
+                  const blob = await resp.blob()
+                  const url = URL.createObjectURL(blob)
+                  const a = document.createElement('a')
+                  a.href = url
+                  const disposition = resp.headers.get('content-disposition') ?? ''
+                  const match = disposition.match(/filename="?([^"]+)"?/)
+                  a.download = match?.[1] ?? `RFQ-${pr.pr_number}.xlsx`
+                  document.body.appendChild(a)
+                  a.click()
+                  a.remove()
+                  URL.revokeObjectURL(url)
+                } catch {
+                  void message.error(t('error.unexpected'))
+                }
+              }}
+            >
+              {t('pr.export_rfq_sheet')}
             </Button>
           )}
           {canSupplementQuote && hasIncompleteItems && (

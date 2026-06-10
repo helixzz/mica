@@ -674,6 +674,7 @@
   },
   "pr": {
     "items_required": "Please add at least one item before submitting",
+    "export_rfq_sheet": "Export RFQ Sheet",
     "partial_no_items": "Select at least one row to convert",
     "already_fully_converted": "All items in this PR are already converted",
     "convert_preview_title": "This requisition will create {{count}} purchase orders (split by supplier)",

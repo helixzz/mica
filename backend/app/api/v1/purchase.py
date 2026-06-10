@@ -31,7 +31,7 @@ from app.schemas import (
     SupplementaryForPRItemIn,
     SupplementaryPOItemIn,
 )
-from app.services import export_pdf
+from app.services import export_excel, export_pdf
 from app.services import purchase as svc
 
 router = APIRouter()
@@ -357,6 +357,24 @@ async def export_po_pdf(
         headers={
             "Content-Disposition": f'attachment; filename="PO-{po_id}.pdf"',
             "Content-Length": str(len(pdf_bytes)),
+        },
+    )
+
+
+@router.get("/purchase-requisitions/{pr_id}/export/rfq-sheet", tags=["purchase"])
+async def export_pr_rfq_sheet(
+    pr_id: UUID,
+    user: CurrentUser,
+    db: Annotated[AsyncSession, Depends(get_db)],
+):
+    await svc.get_pr(db, user, pr_id)
+    xlsx_bytes, filename = await export_excel.render_rfq_sheet_xlsx(db, str(pr_id))
+    return Response(
+        content=xlsx_bytes,
+        media_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+        headers={
+            "Content-Disposition": f'attachment; filename="{filename}"',
+            "Content-Length": str(len(xlsx_bytes)),
         },
     )
 
