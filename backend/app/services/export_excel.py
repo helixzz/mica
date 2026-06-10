@@ -10,7 +10,7 @@ from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
-from app.models import PaymentRecord, PRItem, PurchaseOrder, PurchaseRequisition
+from app.models import PaymentRecord, PurchaseOrder, PurchaseRequisition
 
 _HEADER_FILL = PatternFill(start_color="8B5E3C", end_color="8B5E3C", fill_type="solid")
 _HEADER_FONT = Font(name="Arial", bold=True, color="FFFFFF", size=11)
@@ -111,7 +111,7 @@ async def render_rfq_sheet_xlsx(
             select(PurchaseRequisition)
             .where(PurchaseRequisition.id == pr_id)
             .options(
-                selectinload(PurchaseRequisition.items).selectinload(PRItem.supplier),
+                selectinload(PurchaseRequisition.items),
                 selectinload(PurchaseRequisition.company),
                 selectinload(PurchaseRequisition.requester),
             )
@@ -149,7 +149,6 @@ async def render_rfq_sheet_xlsx(
         "规格描述\nSpecification",
         "数量\nQty",
         "单位\nUOM",
-        "参考供应商\nRef Supplier",
         "报价单价（供应商填写）\nUnit Price",
         "交期（供应商填写）\nLead Time",
         "备注（供应商填写）\nRemarks",
@@ -163,14 +162,12 @@ async def render_rfq_sheet_xlsx(
     ws.row_dimensions[header_row].height = 36
 
     for row_idx, item in enumerate(pr.items, start=header_row + 1):
-        supplier_name = item.supplier.name if item.supplier else ""
         ws.append([
             item.line_no,
             item.item_name,
             item.specification or "",
             float(item.qty),
             item.uom,
-            supplier_name,
             "",
             "",
             "",
@@ -179,7 +176,7 @@ async def render_rfq_sheet_xlsx(
             for col_idx in range(1, len(headers) + 1):
                 ws.cell(row=row_idx, column=col_idx).fill = _ZEBRA_FILL
 
-    col_widths = [8, 36, 40, 10, 8, 24, 18, 16, 24]
+    col_widths = [8, 36, 40, 10, 8, 18, 16, 24]
     for idx, w in enumerate(col_widths, start=1):
         ws.column_dimensions[get_column_letter(idx)].width = w
 
@@ -187,7 +184,7 @@ async def render_rfq_sheet_xlsx(
 
     footer_row = header_row + len(pr.items) + 3
     ws.cell(row=footer_row, column=1, value="供应商签章 Supplier Stamp:").font = Font(bold=True, size=10)
-    ws.cell(row=footer_row, column=5, value="日期 Date:").font = Font(bold=True, size=10)
+    ws.cell(row=footer_row, column=6, value="日期 Date:").font = Font(bold=True, size=10)
     ws.cell(row=footer_row + 2, column=1, value='注：请在"报价单价""交期""备注"列填写后回传。如有任何疑问请联系采购负责人。')
 
     buf = BytesIO()
