@@ -533,11 +533,11 @@ export function DashboardPage() {
           </Space>
         )
       case 'payment_tracker':
-        return (isProcurementMgr || isFinanceAuditor || role === 'admin') ? <PaymentTracker key="payment_tracker" /> : null
+        return (isProcurementMgr || isFinanceAuditor || isItBuyer || role === 'admin') ? <PaymentTracker key="payment_tracker" /> : null
       case 'invoice_tracker':
-        return (isProcurementMgr || isFinanceAuditor || role === 'admin') ? <InvoiceTracker key="invoice_tracker" /> : null
+        return (isProcurementMgr || isFinanceAuditor || isItBuyer || role === 'admin') ? <InvoiceTracker key="invoice_tracker" /> : null
       case 'analytics':
-        return (isProcurementMgr || isFinanceAuditor || role === 'admin') && analytics ? (
+        return (isProcurementMgr || isFinanceAuditor || isItBuyer || role === 'admin') && analytics ? (
           <Section title={t('dashboard.analytics')} key="analytics">
             <Tabs
               items={[
@@ -651,7 +651,7 @@ export function DashboardPage() {
           </Section>
         ) : null
       case 'invoice_match':
-        return (isProcurementMgr || isFinanceAuditor || role === 'admin') && invoiceMatch.length > 0 ? (
+        return (isProcurementMgr || isFinanceAuditor || isItBuyer || role === 'admin') && invoiceMatch.length > 0 ? (
           <Section title={t('dashboard.invoice_match')} key="invoice_match">
             <Table
               dataSource={invoiceMatch}
@@ -678,7 +678,7 @@ export function DashboardPage() {
           </Section>
         ) : null
       case 'payment_calendar':
-        return (isProcurementMgr || isFinanceAuditor || role === 'admin') && paymentCalendar.length > 0 ? (
+        return (isProcurementMgr || isFinanceAuditor || isItBuyer || role === 'admin') && paymentCalendar.length > 0 ? (
           <Section title={t('dashboard.payment_calendar')} key="payment_calendar">
             <List
               itemLayout="horizontal"
@@ -724,7 +724,7 @@ export function DashboardPage() {
           </Section>
         ) : null
       case 'budget':
-        return (isProcurementMgr || isFinanceAuditor || role === 'admin') && budgetSummary && budgetSummary.items.length > 0 ? (
+        return (isProcurementMgr || isFinanceAuditor || isItBuyer || role === 'admin') && budgetSummary && budgetSummary.items.length > 0 ? (
           <Section title={t('dashboard.budget_overview')} key="budget">
             <Row gutter={[16, 16]}>
               <Col xs={24} sm={8}>
