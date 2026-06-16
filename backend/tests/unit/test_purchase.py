@@ -2400,3 +2400,37 @@ async def test_add_supplementary_for_pr_item_rejects_supplier_mismatch(seeded_db
         )
     assert exc.value.status_code == 422
     assert exc.value.detail == "fulfillment.supplier_mismatch_with_po"
+
+
+async def test_resource_activity_logs_visible_to_owner_requester(seeded_db_session):
+    """Activity log endpoint should return business events for resource owners."""
+    from app.api.v1.activity_logs import _check_resource_access, _ALLOWED_RESOURCE_TYPES
+    from app.models import AuditLog
+
+    db = seeded_db_session
+    actor = await _get_user(db, "alice")
+    supplier = await _get_supplier(db)
+    pr = await _create_pr(db, actor, supplier.id)
+
+    audit = AuditLog(
+        event_type="pr.submitted",
+        resource_type="purchase_requisition",
+        resource_id=str(pr.id),
+        actor_id=actor.id,
+        actor_name=actor.display_name,
+    )
+    db.add(audit)
+    await db.commit()
+
+    assert "purchase_requisition" in _ALLOWED_RESOURCE_TYPES
+    await _check_resource_access(db, actor, "purchase_requisition", str(pr.id))
+
+
+async def test_resource_activity_logs_rejects_unsupported_type(seeded_db_session):
+    from app.api.v1.activity_logs import _ALLOWED_RESOURCE_TYPES
+
+    assert "user" not in _ALLOWED_RESOURCE_TYPES
+    assert "system_parameter" not in _ALLOWED_RESOURCE_TYPES
+    assert "purchase_requisition" in _ALLOWED_RESOURCE_TYPES
+    assert "purchase_order" in _ALLOWED_RESOURCE_TYPES
+    assert "contract" in _ALLOWED_RESOURCE_TYPES

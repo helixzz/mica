@@ -60,15 +60,14 @@ export function ActivityTimeline({ resourceType, resourceId }: ActivityTimelineP
     let cancelled = false
     setLoading(true)
     api
-      .adminAuditLogs({
+      .resourceActivityLogs({
         resource_type: resourceType,
         resource_id: resourceId,
         page_size: 50,
-        include_notifications: true,
       })
-      .then((result) => {
+      .then((items) => {
         if (!cancelled) {
-          setItems((result.items as unknown as AuditLogItem[]) ?? [])
+          setItems((items as unknown as AuditLogItem[]) ?? [])
         }
       })
       .catch(() => {

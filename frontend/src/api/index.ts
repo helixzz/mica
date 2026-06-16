@@ -1765,6 +1765,14 @@ export const api = {
     const { data } = await client.get('/admin/audit-logs', { params })
     return data as { items: Record<string, unknown>[]; total: number; page: number; page_size: number }
   },
+  async resourceActivityLogs(params: {
+    resource_type: string
+    resource_id: string
+    page_size?: number
+  }): Promise<Record<string, unknown>[]> {
+    const { data } = await client.get('/resource-activity-logs', { params })
+    return data as Record<string, unknown>[]
+  },
   async adminAICallLogs(params: { since_days?: number; feature_code?: string } = {}): Promise<Record<string, unknown>[]> {
     const { data } = await client.get('/admin/ai-call-logs', { params })
     return data as Record<string, unknown>[]

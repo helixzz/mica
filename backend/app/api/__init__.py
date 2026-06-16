@@ -1,6 +1,7 @@
 from fastapi import APIRouter
 
 from app.api.v1 import (
+    activity_logs,
     admin,
     ai,
     approval,
@@ -34,6 +35,7 @@ from app.api.v1 import (
 
 api_router = APIRouter(prefix="/v1")
 api_router.include_router(admin.router)
+api_router.include_router(activity_logs.router)
 api_router.include_router(auth.router)
 api_router.include_router(saml.router)
 api_router.include_router(master_data.router)
@@ -67,6 +69,7 @@ api_router.include_router(insights.router)
 # v2 router — mirrors v1 for forward compatibility
 v2_router = APIRouter(prefix="/v2")
 v2_router.include_router(admin.router)
+v2_router.include_router(activity_logs.router)
 v2_router.include_router(auth.router)
 v2_router.include_router(saml.router)
 v2_router.include_router(master_data.router)
