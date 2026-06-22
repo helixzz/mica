@@ -203,6 +203,18 @@ class SystemParamsService:
             raise HTTPException(500, f"system_parameter.invalid_int:{key}")
         return value
 
+    async def get_bool(self, session: AsyncSession, key: str) -> bool:
+        value = await self.get(session, key, _MISSING)
+        if value is _MISSING or not isinstance(value, bool):
+            raise HTTPException(500, f"system_parameter.invalid_bool:{key}")
+        return value
+
+    async def get_bool_or(self, session: AsyncSession, key: str, default: bool) -> bool:
+        value = await self.get(session, key, default)
+        if not isinstance(value, bool):
+            return default
+        return value
+
     async def get_decimal(self, session: AsyncSession, key: str) -> Decimal:
         value = await self.get(session, key, _MISSING)
         if value is _MISSING:

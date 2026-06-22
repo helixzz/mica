@@ -137,6 +137,9 @@ cd deploy
 - 审批路由由 `approval_rules` 表配置（`biz_type + amount_min/max + stages`）
 - 新 biz_type 走审批：在 `approval_rules` 加一行 seed，调 `services/approval.create_instance_for_pr()` 式的模板
 - 审批代理人由 `approver_delegations` 自动生效，**不要**在业务代码里跳过委托检查
+- **路由上下文（v1.36.0+）**：`create_instance_for_pr` 接受可选 `requester_id` / `department_id` / `preferred_first_approver_id` 三个 kwargs。提交 PR 时务必传 `pr.department_id` 和 `pr.requester_id`——按 PR 上下文解析，不按 actor 解析（避免 IT 代业务部门提单错路由）。其他 biz_type（如 `fulfillment_deviation`）若无 PR 上下文可省略
+- **申请人指定审批人（v1.36.0+）**：`PRCreateIn.preferred_first_approver_id` 必须 ⊆ 规则解析候选集。提交流程先调 `validate_preferred_approver_or_raise` 校验，命中后第一阶 task 唯一发给该人，meta 写 `preferred_by_submitter: true`
+- **部门树回溯（v1.36.0+）**：`dept_manager` 解析在小部门没该角色用户时沿 `Department.parent_id` 往上找。系统参数 `approval.dept_manager_chain_lookup` 控制开关
 
 ### 5.6 通知
 - 业务事件 → `from app.services.notifications import create_notification`

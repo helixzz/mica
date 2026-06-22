@@ -89,7 +89,9 @@
     "delegation_invalid_window": "Delegation configuration error",
     "delegation_not_found": "Delegation configuration error",
     "rule_invalid_stage": "Approval rule configuration error",
-    "rule_not_found": "Approval rule configuration error"
+    "rule_not_found": "Approval rule configuration error",
+    "preferred_approver_not_in_candidates": "The approver you selected is not in the rule-resolved candidate set",
+    "preferred_approver_disabled": "Submitter approver hint has been disabled by the administrator"
   },
   "notification": {
     "not_found": "Notification not found",

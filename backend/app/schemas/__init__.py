@@ -280,6 +280,7 @@ class PRCreateIn(BaseModel):
     currency: str = "CNY"
     required_date: date | None = None
     requester_id: UUID | None = None
+    preferred_first_approver_id: UUID | None = None
     items: list[PRItemIn] = Field(default_factory=list)
 
 
@@ -293,6 +294,7 @@ class PRUpdateIn(BaseModel):
     procurement_category_id: UUID | None = None
     currency: str | None = None
     required_date: date | None = None
+    preferred_first_approver_id: UUID | None = None
     items: list[PRItemIn] | None = None
 
 
@@ -1005,6 +1007,39 @@ class ApproverDelegationOut(BaseModel):
     revoked_at: datetime | None
     created_at: datetime
     updated_at: datetime
+
+
+class ApprovalPreviewIn(BaseModel):
+    biz_type: str = Field(default="purchase_requisition", min_length=1, max_length=64)
+    amount: Decimal = Field(..., ge=0)
+    requester_id: UUID | None = None
+    department_id: UUID | None = None
+    cost_center_id: UUID | None = None
+
+
+class ApprovalPreviewCandidate(BaseModel):
+    user_id: UUID
+    display_name: str
+    role: str
+    via_delegation_from: UUID | None = None
+    department_id: UUID | None = None
+
+
+class ApprovalPreviewStage(BaseModel):
+    order: int
+    stage_name: str
+    approver_role: str
+    candidates: list[ApprovalPreviewCandidate]
+    fallback_to_admin: bool = False
+
+
+class ApprovalPreviewOut(BaseModel):
+    biz_type: str
+    amount: Decimal
+    matched_rule_id: UUID | None
+    matched_rule_name: str | None
+    is_legacy_fallback: bool
+    stages: list[ApprovalPreviewStage]
 
 
 class AIFeaturePromptIn(BaseModel):

@@ -89,7 +89,9 @@
     "delegation_invalid_window": "审批代理人配置错误",
     "delegation_not_found": "审批代理人配置错误",
     "rule_invalid_stage": "审批规则配置错误",
-    "rule_not_found": "审批规则配置错误"
+    "rule_not_found": "审批规则配置错误",
+    "preferred_approver_not_in_candidates": "您指定的审批人不在规则解析的候选集中",
+    "preferred_approver_disabled": "申请人指定审批人功能已被管理员关闭"
   },
   "notification": {
     "not_found": "notification不存在",

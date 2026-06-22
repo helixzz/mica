@@ -37,6 +37,17 @@
     "tagline": "觅采",
     "version": "版本"
   },
+  "approval_preview": {
+    "title": "审批链预览",
+    "no_stages": "未匹配到审批规则",
+    "no_candidates": "无可用审批人",
+    "fallback_admin": "兜底到管理员",
+    "fallback_admin_tip": "该阶段未找到指定角色的审批人，已临时分配给管理员审批",
+    "legacy_fallback": "未匹配到 approval_rules 表中的规则，使用金额阈值兜底逻辑",
+    "matched_rule": "命中规则",
+    "via_delegation": "由代理人代审",
+    "preferred_no_longer_valid": "您指定的审批人已不在第一阶候选集中，请重新选择或留空走自动分配"
+  },
   "delivery_plan": {
     "title": "交货计划",
     "overview": "概览",
@@ -686,6 +697,12 @@
   },
   "pr": {
     "items_required": "提交审批前请至少填写一项物料",
+    "acting_department_label": "代表部门",
+    "acting_department_help": "本单实际服务的部门，决定第一阶审批路由（部门负责人）。代提单时请选业务方所在部门",
+    "select_acting_department": "请选择代表部门（不选则按申请人主部门）",
+    "preferred_approver_label": "指定第一阶审批人（可选）",
+    "preferred_approver_help": "指定后该单的第一阶仅发给所选人；必须在规则候选集内，否则提交被拒",
+    "preferred_approver_auto": "自动分配（按规则）",
     "export_rfq_sheet": "导出询价表",
     "partial_no_items": "请至少选择一行进行转换",
     "already_fully_converted": "该采购申请的所有物料行均已生成采购订单",

@@ -440,9 +440,16 @@ class PurchaseRequisition(Base, TimestampMixin):
         PGUUID(as_uuid=True),
         ForeignKey("procurement_categories.id", ondelete="SET NULL"),
     )
+    preferred_first_approver_id: Mapped[UUID | None] = mapped_column(
+        PGUUID(as_uuid=True),
+        ForeignKey("users.id", ondelete="SET NULL"),
+    )
 
     requester: Mapped[User] = relationship(foreign_keys=[requester_id])
     decided_by: Mapped[User | None] = relationship(foreign_keys=[decided_by_id])
+    preferred_first_approver: Mapped[User | None] = relationship(
+        foreign_keys=[preferred_first_approver_id]
+    )
     company: Mapped[Company] = relationship()
     department: Mapped[Department | None] = relationship()
     cost_center: Mapped[CostCenter | None] = relationship()
@@ -615,9 +622,7 @@ class PRFulfillmentLink(Base, TimestampMixin):
     created_by: Mapped[User] = relationship()
 
     __table_args__ = (
-        UniqueConstraint(
-            "pr_item_id", "po_item_id", name="uq_pr_fulfillment_pr_item_po_item"
-        ),
+        UniqueConstraint("pr_item_id", "po_item_id", name="uq_pr_fulfillment_pr_item_po_item"),
     )
 
 

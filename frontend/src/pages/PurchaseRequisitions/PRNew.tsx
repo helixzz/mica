@@ -19,12 +19,13 @@ import { useEffect, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { useNavigate, useParams } from 'react-router-dom'
 
-import { api, type ClassificationItem, flattenCategoryTree, type Item, type PRItem, type Supplier, type ProxyCandidate } from '@/api'
+import { api, type ApprovalPreviewCandidate, type ClassificationItem, type Department, flattenCategoryTree, type Item, type PRItem, type Supplier, type ProxyCandidate } from '@/api'
 import { client, extractError } from '@/api/client'
 import { useAuth } from '@/auth/useAuth'
 import { AIStreamButton } from '@/components/AIStreamButton'
 import { ItemPickerWithCreate } from '@/components/ItemPickerWithCreate'
 import { AutosaveBanner, AutosaveUnavailableBanner } from '@/components/AutosaveBanner'
+import ApprovalPreview from '@/components/PR/ApprovalPreview'
 import { PRQuoteConfirmModal } from '@/components/PRQuoteConfirmModal'
 import { MarqueeOption } from '@/components/ui/MarqueeOption'
 import { useAutosave } from '@/hooks/useAutosave'
@@ -49,10 +50,12 @@ export function PRNewPage() {
   const [suppliers, setSuppliers] = useState<Supplier[]>([])
   const [items, setItems] = useState<Item[]>([])
   const [companies, setCompanies] = useState<{ id: string; name_zh: string }[]>([])
+  const [departments, setDepartments] = useState<Department[]>([])
   const [costCenters, setCostCenters] = useState<{ id: string; label_zh: string }[]>([])
   const [expenseTypes, setExpenseTypes] = useState<{ id: string; label_zh: string }[]>([])
   const [procCategories, setProcCategories] = useState<ClassificationItem[]>([])
   const [aiFeatures, setAiFeatures] = useState<Record<string, boolean>>({})
+  const [firstStageCandidates, setFirstStageCandidates] = useState<ApprovalPreviewCandidate[]>([])
   const [lines, setLines] = useState<LineForm[]>([
     { key: 1, line_no: 1, item_id: null, item_name: '', specification: '', supplier_id: null, qty: 1, uom: 'EA', unit_price: 0 },
   ])
@@ -71,6 +74,7 @@ export function PRNewPage() {
     void api.suppliers().then(setSuppliers)
     void api.items().then(setItems)
     void api.companies().then(setCompanies)
+    void api.departments().then(setDepartments).catch(() => {})
     void api.listCostCenters().then(setCostCenters)
     void api.listLookupValues('expense_type').then(setExpenseTypes)
     void api.getCategoryTree().then((tree) => setProcCategories(flattenCategoryTree(tree)))
@@ -96,9 +100,11 @@ export function PRNewPage() {
           currency: pr.currency,
           required_date: pr.required_date ? dayjs(pr.required_date) : undefined,
           company_id: pr.company_id || undefined,
+          department_id: pr.department_id || undefined,
           cost_center_id: pr.cost_center_id || undefined,
           expense_type_id: pr.expense_type_id || undefined,
           procurement_category_id: pr.procurement_category_id || undefined,
+          preferred_first_approver_id: pr.preferred_first_approver_id || undefined,
         })
         setLines(
           (pr.items || []).map((item, i) => ({
@@ -208,7 +214,15 @@ export function PRNewPage() {
   const total = lines.reduce((s, l) => s + l.qty * l.unit_price, 0)
   const watchedCurrency = Form.useWatch('currency', form) || 'CNY'
   const watchedRequesterId = Form.useWatch('requester_id', form)
+  const watchedDepartmentId = Form.useWatch('department_id', form)
+  const watchedPreferredApproverId = Form.useWatch('preferred_first_approver_id', form)
   const isProxying = canProxy && watchedRequesterId && watchedRequesterId !== user?.id
+
+  const filteredDepartments = (() => {
+    const companyId = form.getFieldValue('company_id') as string | undefined
+    if (!companyId) return departments
+    return departments.filter((d) => d.company_id === companyId)
+  })()
 
   const onFinish = async (saveOnly: boolean) => {
     try {
@@ -222,9 +236,11 @@ export function PRNewPage() {
         required_date: values.required_date ? values.required_date.format('YYYY-MM-DD') : null,
         requester_id: canProxy ? (values.requester_id || null) : null,
         company_id: values.company_id || null,
+        department_id: values.department_id || null,
         cost_center_id: values.cost_center_id || null,
         expense_type_id: values.expense_type_id || null,
         procurement_category_id: values.procurement_category_id || null,
+        preferred_first_approver_id: values.preferred_first_approver_id || null,
         items: validLines.map<PRItem>((l) => ({
           line_no: l.line_no,
           item_id: l.item_id,
@@ -395,6 +411,50 @@ export function PRNewPage() {
               </Form.Item>
             </Col>
           </Row>
+          <Row gutter={16}>
+            <Col span={12}>
+              <Form.Item
+                label={t('pr.acting_department_label')}
+                name="department_id"
+                help={t('pr.acting_department_help')}
+              >
+                <Select
+                  allowClear
+                  showSearch
+                  optionFilterProp="label"
+                  placeholder={t('pr.select_acting_department')}
+                  popupMatchSelectWidth={false}
+                  optionRender={(option) => <MarqueeOption>{option.label}</MarqueeOption>}
+                  options={filteredDepartments.map((d) => ({
+                    value: d.id,
+                    label: `${d.name_zh}${d.code ? ` (${d.code})` : ''}`,
+                  }))}
+                />
+              </Form.Item>
+            </Col>
+            <Col span={12}>
+              <Form.Item
+                label={t('pr.preferred_approver_label')}
+                name="preferred_first_approver_id"
+                help={t('pr.preferred_approver_help')}
+              >
+                <Select
+                  allowClear
+                  showSearch
+                  optionFilterProp="label"
+                  placeholder={t('pr.preferred_approver_auto')}
+                  popupMatchSelectWidth={false}
+                  optionRender={(option) => <MarqueeOption>{option.label}</MarqueeOption>}
+                  options={firstStageCandidates.map((c) => ({
+                    value: c.user_id,
+                    label: c.via_delegation_from
+                      ? `${c.display_name} · ${t('approval_preview.via_delegation')}`
+                      : c.display_name,
+                  }))}
+                />
+              </Form.Item>
+            </Col>
+          </Row>
           <Form.Item label={t('field.business_reason')} name="business_reason" help={t('pr.business_reason_help')}>
             <Input.TextArea rows={3} placeholder={t('placeholder.enter_reason')} />
           </Form.Item>
@@ -413,6 +473,26 @@ export function PRNewPage() {
           </Space>
         </Form>
       </Card>
+
+      {total > 0 && (
+        <Card title={t('approval_preview.title')} size="small">
+          <ApprovalPreview
+            amount={total}
+            requesterId={canProxy ? watchedRequesterId : null}
+            departmentId={watchedDepartmentId}
+            onCandidatesLoaded={setFirstStageCandidates}
+          />
+          {watchedPreferredApproverId &&
+            !firstStageCandidates.some((c) => c.user_id === watchedPreferredApproverId) && (
+              <Alert
+                type="warning"
+                showIcon
+                style={{ marginTop: 8 }}
+                message={t('approval_preview.preferred_no_longer_valid')}
+              />
+            )}
+        </Card>
+      )}
 
       <Card
         title={t('nav.purchase_requisitions')}

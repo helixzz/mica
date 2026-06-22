@@ -7,6 +7,69 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [v1.36.0] — 2026-06-22
+
+### 新增（审批流改进 — 路线图 A 阶段）
+
+- **申请人指定第一阶审批人**：`PRCreateIn` 新增 `preferred_first_approver_id` 字段。指定后该单的第一阶仅发给所选人；必须 ⊆ 规则解析的候选集，否则提交时返回 422 + candidates 列表，由前端展示候选人让用户重选。审批任务 meta 写入 `preferred_by_submitter: true` 标记便于审计
+- **审批链预览端点 `POST /approval/preview`**：传入 `{biz_type, amount, requester_id?, department_id?, cost_center_id?}` 返回完整审批链 + 每阶段候选人。仅登录、不限角色（与 dashboard 端点策略一致）。前端 PRNew 实时调用展示「本单将经 → 张三（部门负责人）→ 李四（采购经理）」
+- **代表部门字段升级为表单一等公民**：PRNew 表单顶部「代表部门」下拉，候选范围为全公司启用部门，IT 代业务部门提单时可显式声明本单服务的部门（解决 IT 代提到错误部门负责人的隐性 bug）
+- **部门树形回溯解析**：小团队没有 `dept_manager` 时，自动沿 `Department.parent_id` 往上找上级部门负责人，找不到才落 admin 兜底（减少 admin 被淹没）
+- **新前端组件 `ApprovalPreview.tsx`**：用 Steps 显示阶段链，每阶段候选人 Tag。代理人审批显示紫色"代审"标签，admin 兜底显示橙色"兜底到管理员"提示
+
+### 修复
+
+- **隐性路由 bug**：`_resolve_user_for_role` 之前按 `actor.department_id` 解析（提单人主部门），现在按 PR 上下文解析（`pr.department_id` 优先，回退到 `requester.department_id`）。alice (IT) 代 bob (市场) 提的单现在正确路由到市场部 manager，而不是 IT 部 manager。自提单零行为变化
+
+### 数据库
+
+- **迁移 0053**：
+  - 新增 `purchase_requisitions.preferred_first_approver_id` 列（FK users，ON DELETE SET NULL）
+  - seed 系统参数 `approval.allow_submitter_preferred_approver`（默认 true，admin 可关闭强制走规则）
+  - seed 系统参数 `approval.dept_manager_chain_lookup`（默认 true，admin 可关闭强制走平铺解析）
+- **ORM**：`PurchaseRequisition` 新增 `preferred_first_approver_id` + `preferred_first_approver` relationship
+
+### 系统参数
+
+- 新增 2 个 approval 类别参数（admin → 系统参数 自动可见）：
+  - `approval.allow_submitter_preferred_approver`：是否允许申请人指定第一阶审批人
+  - `approval.dept_manager_chain_lookup`：dept_manager 解析时是否沿部门树回溯
+
+### 测试
+
+- 6 个新单元测试覆盖：代提路由按 PR 部门、preferred 命中、preferred 不在候选集 → 422、部门树回溯、preview 端点、preview 按目标部门
+- 总用例 722（+10 含本版 +6 + 既有 +4），覆盖率维持
+
+### 后端 services 重构
+
+- `_resolve_user_for_role` 签名从 `(db, submitter, role)` 改为 `(db, company_id, target_department_id, role, chain_lookup_enabled)`，参数化路由上下文
+- 新增 `_resolve_routing_context` 私有函数：根据 `requester_id`/`department_id` 优先级解析公司/部门
+- 新增 `_resolve_dept_managers_with_fallback` 私有函数：实现部门树形回溯
+- 新增公开函数 `validate_preferred_approver_or_raise` 和 `preview_for_pr`
+- `create_instance_for_pr` 签名扩展 3 个可选 kwargs（`requester_id`/`department_id`/`preferred_first_approver_id`），全部默认 None 保持向后兼容
+- `services/system_params` 新增 `get_bool` 和 `get_bool_or` 辅助函数
+
+### i18n
+
+- 后端 +2 keys (`approval.preferred_approver_not_in_candidates`, `approval.preferred_approver_disabled`)，zh/en 同步
+- 前端 +14 keys（`pr.acting_department_*`, `pr.preferred_approver_*`, 新建 `approval_preview.*` 顶级 namespace 9 keys），zh/en 完全 parity
+
+### 设计原则（贯穿本版）
+
+1. **规则是治理边界**：申请人偏好是 hint，必须 ⊆ 规则候选集，不可绕过 admin 配的金额/角色规则
+2. **预览先行**：申请人提交前看到审批链，比"指定"更解决问题（80% 的"指定审批人"诉求其实是"想知道这单卡在谁那里"）
+3. **不卡流程**：解析失败始终兜底 admin（保留 `no_approver_found` 但触发频次降到接近零）
+4. **代理人不动**：`ApproverDelegation` 现有机制已经够用，复用
+5. **数据迁移友好**：所有新字段 nullable，老 PR 零迁移成本
+
+### 后续路线（v1.37.0 — 路线图 B 阶段）
+
+- 规则匹配维度扩展：`department_ids` / `cost_center_ids` 过滤
+- DSL v2 stage assignment：`type=cost_center_manager` / `procurement_category_owner` / `user`
+- 可视化规则编辑器升级支持新维度
+
+---
+
 ## [v1.33.3] — 2026-06-10
 
 ### 修复

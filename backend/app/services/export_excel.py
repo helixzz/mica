@@ -131,7 +131,12 @@ async def render_rfq_sheet_xlsx(
     ws.row_dimensions[1].height = 28
 
     info_rows = [
-        ("公司 Company:", pr.company.name_zh if pr.company else "-", "日期 Date:", datetime.now(UTC).strftime("%Y-%m-%d")),
+        (
+            "公司 Company:",
+            pr.company.name_zh if pr.company else "-",
+            "日期 Date:",
+            datetime.now(UTC).strftime("%Y-%m-%d"),
+        ),
         ("币种 Currency:", pr.currency, "", ""),
     ]
     for i, (l1, v1, l2, v2) in enumerate(info_rows, start=3):
@@ -161,16 +166,18 @@ async def render_rfq_sheet_xlsx(
     ws.row_dimensions[header_row].height = 36
 
     for row_idx, item in enumerate(pr.items, start=header_row + 1):
-        ws.append([
-            item.line_no,
-            item.item_name,
-            item.specification or "",
-            float(item.qty),
-            item.uom,
-            "",
-            "",
-            "",
-        ])
+        ws.append(
+            [
+                item.line_no,
+                item.item_name,
+                item.specification or "",
+                float(item.qty),
+                item.uom,
+                "",
+                "",
+                "",
+            ]
+        )
         if (row_idx - header_row) % 2 == 0:
             for col_idx in range(1, len(headers) + 1):
                 ws.cell(row=row_idx, column=col_idx).fill = _ZEBRA_FILL
@@ -182,9 +189,15 @@ async def render_rfq_sheet_xlsx(
     ws.freeze_panes = f"A{header_row + 1}"
 
     footer_row = header_row + len(pr.items) + 3
-    ws.cell(row=footer_row, column=1, value="供应商签章 Supplier Stamp:").font = Font(bold=True, size=10)
+    ws.cell(row=footer_row, column=1, value="供应商签章 Supplier Stamp:").font = Font(
+        bold=True, size=10
+    )
     ws.cell(row=footer_row, column=6, value="日期 Date:").font = Font(bold=True, size=10)
-    ws.cell(row=footer_row + 2, column=1, value='注：请在"报价单价""交期""备注"列填写后回传。如有任何疑问请联系采购负责人。')
+    ws.cell(
+        row=footer_row + 2,
+        column=1,
+        value='注：请在"报价单价""交期""备注"列填写后回传。如有任何疑问请联系采购负责人。',
+    )
     ref_cell = ws.cell(row=footer_row + 4, column=1, value=f"参考编号 Ref: {pr.pr_number}")
     ref_cell.font = Font(name="Arial", color="888888", size=9)
 

@@ -127,6 +127,7 @@ export interface PurchaseRequisition {
   decided_at: string | null
   decided_by_id: string | null
   decision_comment: string | null
+  preferred_first_approver_id: string | null
   created_at: string
   updated_at: string
   items: PRItem[]
@@ -452,6 +453,31 @@ export interface ApprovalTask {
   biz_title: string | null
   biz_amount: number | null
   submitter_name: string | null
+}
+
+export interface ApprovalPreviewCandidate {
+  user_id: string
+  display_name: string
+  role: string
+  via_delegation_from: string | null
+  department_id: string | null
+}
+
+export interface ApprovalPreviewStage {
+  order: number
+  stage_name: string
+  approver_role: string
+  candidates: ApprovalPreviewCandidate[]
+  fallback_to_admin: boolean
+}
+
+export interface ApprovalPreview {
+  biz_type: string
+  amount: string
+  matched_rule_id: string | null
+  matched_rule_name: string | null
+  is_legacy_fallback: boolean
+  stages: ApprovalPreviewStage[]
 }
 
 export interface FieldManifest {
@@ -1191,6 +1217,7 @@ export const api = {
     currency: string
     required_date?: string | null
     requester_id?: string | null
+    preferred_first_approver_id?: string | null
     items: PRItem[]
   }): Promise<PurchaseRequisition> {
     const { data } = await client.post<PurchaseRequisition>('/purchase-requisitions', payload)
@@ -1595,6 +1622,23 @@ export const api = {
   },
   async myPendingApprovals(): Promise<ApprovalTask[]> {
     const { data } = await client.get<ApprovalTask[]>('/approval/pending')
+    return data
+  },
+  async previewApproval(payload: {
+    biz_type?: string
+    amount: number | string
+    requester_id?: string | null
+    department_id?: string | null
+    cost_center_id?: string | null
+  }): Promise<ApprovalPreview> {
+    const body = {
+      biz_type: payload.biz_type ?? 'purchase_requisition',
+      amount: payload.amount,
+      requester_id: payload.requester_id ?? null,
+      department_id: payload.department_id ?? null,
+      cost_center_id: payload.cost_center_id ?? null,
+    }
+    const { data } = await client.post<ApprovalPreview>('/approval/preview', body)
     return data
   },
   async fieldManifest(resource: string): Promise<FieldManifest> {

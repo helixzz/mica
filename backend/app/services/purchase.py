@@ -147,6 +147,7 @@ async def create_pr(db: AsyncSession, actor: User, payload: PRCreateIn) -> Purch
         procurement_category_id=payload.procurement_category_id,
         currency=payload.currency,
         required_date=payload.required_date,
+        preferred_first_approver_id=payload.preferred_first_approver_id,
     )
     db.add(pr)
     await db.flush()
@@ -286,6 +287,8 @@ async def update_pr(
         pr.currency = payload.currency
     if payload.required_date is not None:
         pr.required_date = payload.required_date
+    if payload.preferred_first_approver_id is not None:
+        pr.preferred_first_approver_id = payload.preferred_first_approver_id
 
     if payload.items is not None:
         for old in list(pr.items):
@@ -397,6 +400,17 @@ async def submit_pr(db: AsyncSession, actor: User, pr_id: UUID) -> PurchaseRequi
     pr.status = PRStatus.SUBMITTED.value
     pr.submitted_at = datetime.now(UTC)
 
+    if pr.preferred_first_approver_id is not None:
+        await approval_svc.validate_preferred_approver_or_raise(
+            db,
+            submitter=actor,
+            biz_type="purchase_requisition",
+            amount=pr.total_amount,
+            preferred_first_approver_id=pr.preferred_first_approver_id,
+            requester_id=pr.requester_id,
+            department_id=pr.department_id,
+        )
+
     _ = await approval_svc.create_instance_for_pr(
         db,
         submitter=actor,
@@ -405,6 +419,9 @@ async def submit_pr(db: AsyncSession, actor: User, pr_id: UUID) -> PurchaseRequi
         biz_number=pr.pr_number,
         title=pr.title,
         amount=pr.total_amount,
+        requester_id=pr.requester_id,
+        department_id=pr.department_id,
+        preferred_first_approver_id=pr.preferred_first_approver_id,
     )
     await _audit(db, actor, "pr.submitted", "purchase_requisition", str(pr.id))
     await db.commit()
@@ -518,9 +535,7 @@ async def preview_pr_conversion(db: AsyncSession, actor: User, pr_id: UUID) -> l
     return out
 
 
-async def _compute_pr_status_after_link_change(
-    db: AsyncSession, pr: PurchaseRequisition
-) -> str:
+async def _compute_pr_status_after_link_change(db: AsyncSession, pr: PurchaseRequisition) -> str:
     all_fulfilling_types = (
         FulfillmentType.EQUIVALENT.value,
         FulfillmentType.DOWNGRADED.value,
@@ -687,18 +702,15 @@ async def convert_pr_to_po_with_specs(
                 .group_by(PRFulfillmentLink.pr_item_id)
             )
         ).all()
-        existing_links_by_pr_item = {
-            row[0]: Decimal(str(row[1])) for row in rows
-        }
+        existing_links_by_pr_item = {row[0]: Decimal(str(row[1])) for row in rows}
 
     requested_qty_per_pr_item: dict[UUID, Decimal] = {}
     for spec in specs:
         if spec.fulfillment_type == FulfillmentType.SUPPLEMENTARY.value:
             continue
-        requested_qty_per_pr_item[spec.pr_item_id] = (
-            requested_qty_per_pr_item.get(spec.pr_item_id, Decimal("0"))
-            + Decimal(str(spec.qty))
-        )
+        requested_qty_per_pr_item[spec.pr_item_id] = requested_qty_per_pr_item.get(
+            spec.pr_item_id, Decimal("0")
+        ) + Decimal(str(spec.qty))
 
     for pr_item_id, requested_qty in requested_qty_per_pr_item.items():
         pr_item = pr_items_by_id[pr_item_id]
@@ -780,15 +792,9 @@ async def _create_pos_for_specs(
                 else pr_item.item_name
             )
             resolved_specification = (
-                spec.specification
-                if spec.specification is not None
-                else pr_item.specification
+                spec.specification if spec.specification is not None else pr_item.specification
             )
-            resolved_uom = (
-                spec.uom.strip()
-                if spec.uom and spec.uom.strip()
-                else pr_item.uom
-            )
+            resolved_uom = spec.uom.strip() if spec.uom and spec.uom.strip() else pr_item.uom
 
             po_item = POItem(
                 po_id=po.id,
@@ -861,9 +867,7 @@ async def _create_pos_for_specs(
     return refreshed
 
 
-async def _unconverted_pr_items(
-    db: AsyncSession, pr: PurchaseRequisition
-) -> list[PRItem]:
+async def _unconverted_pr_items(db: AsyncSession, pr: PurchaseRequisition) -> list[PRItem]:
     if not pr.items:
         return []
     pr_item_ids = [i.id for i in pr.items]
@@ -1081,18 +1085,14 @@ async def _maybe_trigger_deviation_approval(
 
     from app.services.system_params import system_params
 
-    threshold = await system_params.get_int(
-        db, "fulfillment.deviation_approval_threshold"
-    )
+    threshold = await system_params.get_int(db, "fulfillment.deviation_approval_threshold")
     if threshold is None or threshold <= 0:
         return
 
     po_item = await db.get(POItem, link.po_item_id)
     if po_item is None:
         return
-    deviation_amount = (
-        Decimal(str(link.qty_contribution)) * Decimal(str(po_item.unit_price))
-    )
+    deviation_amount = Decimal(str(link.qty_contribution)) * Decimal(str(po_item.unit_price))
     if deviation_amount < Decimal(str(threshold)):
         return
 
@@ -1110,9 +1110,7 @@ async def _maybe_trigger_deviation_approval(
             amount=deviation_amount,
         )
     except Exception:
-        logger.warning(
-            "Failed to create deviation approval for link %s", link.id, exc_info=True
-        )
+        logger.warning("Failed to create deviation approval for link %s", link.id, exc_info=True)
 
 
 async def _load_link(db: AsyncSession, link_id: UUID) -> PRFulfillmentLink | None:
@@ -1175,9 +1173,7 @@ async def create_fulfillment_link(
 
     pr_item = (
         await db.execute(
-            select(PRItem)
-            .where(PRItem.id == pr_item_id)
-            .options(selectinload(PRItem.pr))
+            select(PRItem).where(PRItem.id == pr_item_id).options(selectinload(PRItem.pr))
         )
     ).scalar_one_or_none()
     if pr_item is None:
@@ -1263,9 +1259,7 @@ async def update_fulfillment_link(
         new_qty = Decimal(str(qty_contribution))
 
     if new_type in _FULFILLING_TYPES:
-        await _ensure_link_qty_under_limit(
-            db, link.pr_item, new_qty, excluding_link_id=link.id
-        )
+        await _ensure_link_qty_under_limit(db, link.pr_item, new_qty, excluding_link_id=link.id)
 
     link.fulfillment_type = new_type
     link.qty_contribution = new_qty
@@ -1302,9 +1296,7 @@ async def update_fulfillment_link(
     return refreshed
 
 
-async def delete_fulfillment_link(
-    db: AsyncSession, actor: User, link_id: UUID
-) -> None:
+async def delete_fulfillment_link(db: AsyncSession, actor: User, link_id: UUID) -> None:
     link = await _load_link(db, link_id)
     if link is None:
         raise HTTPException(404, "fulfillment.link_not_found")
@@ -1354,9 +1346,7 @@ async def add_supplementary_po_item(
     pr_item: PRItem | None = None
     if supplementary_for_pr_item_id is not None:
         pr_item = (
-            await db.execute(
-                select(PRItem).where(PRItem.id == supplementary_for_pr_item_id)
-            )
+            await db.execute(select(PRItem).where(PRItem.id == supplementary_for_pr_item_id))
         ).scalar_one_or_none()
         if pr_item is None:
             raise HTTPException(404, "pr_item.not_found")
@@ -1405,9 +1395,7 @@ async def add_supplementary_po_item(
         metadata={
             "po_id": str(po.id),
             "supplementary_for_pr_item_id": (
-                str(supplementary_for_pr_item_id)
-                if supplementary_for_pr_item_id
-                else None
+                str(supplementary_for_pr_item_id) if supplementary_for_pr_item_id else None
             ),
             "qty": str(qty),
             "amount": str(amount),
@@ -1449,9 +1437,7 @@ async def add_supplementary_for_pr_item(
     if not item_name or not item_name.strip():
         raise HTTPException(422, "po_item.item_name_required")
 
-    pr_item = (
-        await db.execute(select(PRItem).where(PRItem.id == pr_item_id))
-    ).scalar_one_or_none()
+    pr_item = (await db.execute(select(PRItem).where(PRItem.id == pr_item_id))).scalar_one_or_none()
     if pr_item is None:
         raise HTTPException(404, "pr_item.not_found")
 
@@ -1610,9 +1596,7 @@ async def update_po_item(
     if qty is not None or unit_price is not None:
         invoice_count = (
             await db.execute(
-                select(func.count(InvoiceLine.id)).where(
-                    InvoiceLine.po_item_id == po_item_id
-                )
+                select(func.count(InvoiceLine.id)).where(InvoiceLine.po_item_id == po_item_id)
             )
         ).scalar_one()
         if invoice_count:
@@ -1700,9 +1684,7 @@ async def delete_po_item(
 
     shipment_count = (
         await db.execute(
-            select(func.count(ShipmentItem.id)).where(
-                ShipmentItem.po_item_id == po_item_id
-            )
+            select(func.count(ShipmentItem.id)).where(ShipmentItem.po_item_id == po_item_id)
         )
     ).scalar_one()
     if shipment_count:
@@ -1710,9 +1692,7 @@ async def delete_po_item(
 
     invoice_count = (
         await db.execute(
-            select(func.count(InvoiceLine.id)).where(
-                InvoiceLine.po_item_id == po_item_id
-            )
+            select(func.count(InvoiceLine.id)).where(InvoiceLine.po_item_id == po_item_id)
         )
     ).scalar_one()
     if invoice_count:
@@ -1726,9 +1706,7 @@ async def delete_po_item(
 
     po = await _load_po(db, po_id)
     if po is not None:
-        po.total_amount = max(
-            Decimal("0"), Decimal(str(po.total_amount)) - line_amount
-        )
+        po.total_amount = max(Decimal("0"), Decimal(str(po.total_amount)) - line_amount)
 
     if po is not None:
         pr = await _load_pr(db, po.pr_id)

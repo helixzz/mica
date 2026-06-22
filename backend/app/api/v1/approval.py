@@ -7,7 +7,13 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.core.security import CurrentUser, require_roles
 from app.db import get_db
 from app.models import ApprovalTask
-from app.schemas import ApprovalInstanceOut, ApprovalTaskOut, PRDecisionIn
+from app.schemas import (
+    ApprovalInstanceOut,
+    ApprovalPreviewIn,
+    ApprovalPreviewOut,
+    ApprovalTaskOut,
+    PRDecisionIn,
+)
 from app.services import approval as svc
 
 router = APIRouter()
@@ -65,3 +71,20 @@ async def act_on_task(
     await db.commit()
     await db.refresh(instance)
     return ApprovalInstanceOut.model_validate(instance)
+
+
+@router.post("/approval/preview", response_model=ApprovalPreviewOut, tags=["approval"])
+async def preview_approval(
+    payload: ApprovalPreviewIn,
+    user: CurrentUser,
+    db: Annotated[AsyncSession, Depends(get_db)],
+) -> ApprovalPreviewOut:
+    preview = await svc.preview_for_pr(
+        db,
+        submitter=user,
+        biz_type=payload.biz_type,
+        amount=payload.amount,
+        requester_id=payload.requester_id,
+        department_id=payload.department_id,
+    )
+    return ApprovalPreviewOut.model_validate(preview)

@@ -37,6 +37,17 @@
     "tagline": "",
     "version": "Version"
   },
+  "approval_preview": {
+    "title": "Approval Chain Preview",
+    "no_stages": "No matching approval rule",
+    "no_candidates": "No approver available",
+    "fallback_admin": "Fell back to admin",
+    "fallback_admin_tip": "No approver found for the configured role; falling back to administrator",
+    "legacy_fallback": "No rule matched in approval_rules; using amount-threshold fallback logic",
+    "matched_rule": "Matched rule",
+    "via_delegation": "Acting via delegation",
+    "preferred_no_longer_valid": "The approver you selected is no longer in the first-stage candidate set. Please pick a new one or leave blank for auto-assignment"
+  },
   "delivery_plan": {
     "title": "Delivery Plans",
     "overview": "Overview",
@@ -674,6 +685,12 @@
   },
   "pr": {
     "items_required": "Please add at least one item before submitting",
+    "acting_department_label": "Acting Department",
+    "acting_department_help": "The department this PR actually serves; drives first-stage approval routing (department manager). For proxy submissions, pick the requester's business department",
+    "select_acting_department": "Select acting department (defaults to requester's primary department)",
+    "preferred_approver_label": "Preferred First-Stage Approver (optional)",
+    "preferred_approver_help": "If set, only this user receives the first-stage task. Must be in the rule-resolved candidate set, otherwise submission is rejected",
+    "preferred_approver_auto": "Auto-assign (per rule)",
     "export_rfq_sheet": "Export RFQ Sheet",
     "partial_no_items": "Select at least one row to convert",
     "already_fully_converted": "All items in this PR are already converted",

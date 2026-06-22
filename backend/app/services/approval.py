@@ -19,6 +19,7 @@ from app.models import (
     ApprovalRule,
     ApprovalTask,
     ApproverDelegation,
+    Department,
     NotificationCategory,
     PurchaseRequisition,
     User,
@@ -77,21 +78,59 @@ def _sort_stages(stages: Sequence[Mapping[str, object]]) -> list[dict[str, str |
     return normalized
 
 
+async def _resolve_dept_managers_with_fallback(
+    db: AsyncSession,
+    company_id: UUID,
+    department_id: UUID,
+    chain_lookup_enabled: bool,
+) -> list[User]:
+    visited: set[UUID] = set()
+    current_dept_id: UUID | None = department_id
+    while current_dept_id is not None and current_dept_id not in visited:
+        visited.add(current_dept_id)
+        stmt = select(User).where(
+            User.company_id == company_id,
+            User.role == UserRole.DEPT_MANAGER.value,
+            User.is_active.is_(True),
+            User.department_id == current_dept_id,
+        )
+        users = list((await db.execute(stmt)).scalars().all())
+        if users:
+            return users
+        if not chain_lookup_enabled:
+            return []
+        dept = await db.get(Department, current_dept_id)
+        if dept is None:
+            break
+        current_dept_id = dept.parent_id
+    return []
+
+
 async def _resolve_user_for_role(
     db: AsyncSession,
-    submitter: User,
+    company_id: UUID,
+    target_department_id: UUID | None,
     approver_role: str,
+    chain_lookup_enabled: bool = True,
 ) -> list[User]:
-    stmt = select(User).where(
-        User.company_id == submitter.company_id,
-        User.role == approver_role,
-        User.is_active.is_(True),
-    )
-    if approver_role == UserRole.DEPT_MANAGER.value and submitter.department_id:
-        stmt = stmt.where(User.department_id == submitter.department_id)
-    users = list((await db.execute(stmt)).scalars().all())
-    if users:
-        return users
+    if approver_role == UserRole.DEPT_MANAGER.value and target_department_id is not None:
+        users = await _resolve_dept_managers_with_fallback(
+            db,
+            company_id,
+            target_department_id,
+            chain_lookup_enabled,
+        )
+        if users:
+            return users
+    else:
+        stmt = select(User).where(
+            User.company_id == company_id,
+            User.role == approver_role,
+            User.is_active.is_(True),
+        )
+        users = list((await db.execute(stmt)).scalars().all())
+        if users:
+            return users
 
     if approver_role != UserRole.ADMIN.value:
         admin_stmt = select(User).where(
@@ -131,10 +170,18 @@ async def _resolve_active_delegation(
 
 async def _resolve_stage_assignment(
     db: AsyncSession,
-    submitter: User,
+    company_id: UUID,
+    target_department_id: UUID | None,
     approver_role: str,
+    chain_lookup_enabled: bool = True,
 ) -> list[tuple[User, dict[str, object]]]:
-    candidates = await _resolve_user_for_role(db, submitter, approver_role)
+    candidates = await _resolve_user_for_role(
+        db,
+        company_id,
+        target_department_id,
+        approver_role,
+        chain_lookup_enabled,
+    )
     assignments: list[tuple[User, dict[str, object]]] = []
     for candidate in candidates:
         delegation = await _resolve_active_delegation(db, candidate)
@@ -244,6 +291,29 @@ async def _send_assignment_notification(
         logger.warning("failed to create approval assignment notification", exc_info=True)
 
 
+async def _resolve_routing_context(
+    db: AsyncSession,
+    submitter: User,
+    requester_id: UUID | None,
+    department_id: UUID | None,
+) -> tuple[UUID, UUID | None]:
+    if department_id is not None:
+        return submitter.company_id, department_id
+    if requester_id is not None and requester_id != submitter.id:
+        requester = await db.get(User, requester_id)
+        if requester is not None:
+            return requester.company_id, requester.department_id
+    return submitter.company_id, submitter.department_id
+
+
+async def _read_chain_lookup_flag(db: AsyncSession) -> bool:
+    return await system_params.get_bool_or(db, "approval.dept_manager_chain_lookup", True)
+
+
+async def _read_allow_preferred_flag(db: AsyncSession) -> bool:
+    return await system_params.get_bool_or(db, "approval.allow_submitter_preferred_approver", True)
+
+
 async def create_instance_for_pr(
     db: AsyncSession,
     submitter: User,
@@ -252,9 +322,16 @@ async def create_instance_for_pr(
     biz_number: str,
     title: str,
     amount: Decimal,
+    requester_id: UUID | None = None,
+    department_id: UUID | None = None,
+    preferred_first_approver_id: UUID | None = None,
 ) -> ApprovalInstance:
     resolved_amount = _as_decimal(amount)
     rule = await _match_rule(db, biz_type, resolved_amount)
+    company_id, target_department_id = await _resolve_routing_context(
+        db, submitter, requester_id, department_id
+    )
+    chain_lookup_enabled = await _read_chain_lookup_flag(db)
 
     if rule is None:
         approval_threshold = await system_params.get_int(db, "approval.amount_threshold_cny")
@@ -294,10 +371,21 @@ async def create_instance_for_pr(
     db.add(instance)
     await db.flush()
 
+    allow_preferred = await _read_allow_preferred_flag(db)
+    preferred_id = preferred_first_approver_id if allow_preferred else None
+
     first_pending_tasks: list[ApprovalTask] = []
     for index, stage in enumerate(stages, start=1):
         stage_role = str(stage["approver_role"])
-        assignees = await _resolve_stage_assignment(db, submitter, stage_role)
+        assignees = await _resolve_stage_assignment(
+            db,
+            company_id,
+            target_department_id,
+            stage_role,
+            chain_lookup_enabled,
+        )
+        if index == 1 and preferred_id is not None:
+            assignees = _apply_preferred_first_approver(assignees, preferred_id)
         stage_order = stage["order"]
         for approver, delegation_meta in assignees:
             meta = {
@@ -306,6 +394,8 @@ async def create_instance_for_pr(
             }
             if matched_rule_id is not None:
                 meta["approval_rule_id"] = matched_rule_id
+            if index == 1 and preferred_id is not None and approver.id == preferred_id:
+                meta["preferred_by_submitter"] = True
             task = ApprovalTask(
                 instance_id=instance.id,
                 stage_order=stage_order,
@@ -325,9 +415,170 @@ async def create_instance_for_pr(
     return instance
 
 
-async def list_pending_tasks_for_user(
-    db: AsyncSession, user: User
-) -> list[ApprovalTask]:
+def _apply_preferred_first_approver(
+    assignees: list[tuple[User, dict[str, object]]],
+    preferred_id: UUID,
+) -> list[tuple[User, dict[str, object]]]:
+    for user, meta in assignees:
+        if user.id == preferred_id:
+            return [(user, meta)]
+    return assignees
+
+
+async def validate_preferred_approver_or_raise(
+    db: AsyncSession,
+    submitter: User,
+    biz_type: str,
+    amount: Decimal,
+    preferred_first_approver_id: UUID,
+    requester_id: UUID | None = None,
+    department_id: UUID | None = None,
+) -> None:
+    if not await _read_allow_preferred_flag(db):
+        raise HTTPException(
+            status_code=422,
+            detail={
+                "error": "approval.preferred_approver_disabled",
+                "candidates": [],
+            },
+        )
+    resolved_amount = _as_decimal(amount)
+    rule = await _match_rule(db, biz_type, resolved_amount)
+    company_id, target_department_id = await _resolve_routing_context(
+        db, submitter, requester_id, department_id
+    )
+    chain_lookup_enabled = await _read_chain_lookup_flag(db)
+
+    if rule is None:
+        approval_threshold = await system_params.get_int(db, "approval.amount_threshold_cny")
+        first_role = (
+            UserRole.PROCUREMENT_MGR.value
+            if resolved_amount >= Decimal(str(approval_threshold))
+            else UserRole.DEPT_MANAGER.value
+        )
+    else:
+        sorted_stages = _sort_stages(rule.stages)
+        first_role = str(sorted_stages[0]["approver_role"])
+
+    candidates = await _resolve_stage_assignment(
+        db,
+        company_id,
+        target_department_id,
+        first_role,
+        chain_lookup_enabled,
+    )
+    candidate_ids = {user.id for user, _meta in candidates}
+    if preferred_first_approver_id not in candidate_ids:
+        raise HTTPException(
+            status_code=422,
+            detail={
+                "error": "approval.preferred_approver_not_in_candidates",
+                "candidates": [
+                    {
+                        "user_id": str(user.id),
+                        "display_name": user.display_name,
+                        "role": user.role,
+                    }
+                    for user, _meta in candidates
+                ],
+            },
+        )
+
+
+async def preview_for_pr(
+    db: AsyncSession,
+    submitter: User,
+    biz_type: str,
+    amount: Decimal,
+    requester_id: UUID | None = None,
+    department_id: UUID | None = None,
+) -> dict[str, object]:
+    resolved_amount = _as_decimal(amount)
+    rule = await _match_rule(db, biz_type, resolved_amount)
+    company_id, target_department_id = await _resolve_routing_context(
+        db, submitter, requester_id, department_id
+    )
+    chain_lookup_enabled = await _read_chain_lookup_flag(db)
+
+    if rule is None:
+        approval_threshold = await system_params.get_int(db, "approval.amount_threshold_cny")
+        fallback_role = (
+            UserRole.PROCUREMENT_MGR.value
+            if resolved_amount >= Decimal(str(approval_threshold))
+            else UserRole.DEPT_MANAGER.value
+        )
+        stages_dsl = [
+            {
+                "order": 1,
+                "approver_role": fallback_role,
+                "stage_name": _legacy_stage_name(fallback_role),
+            }
+        ]
+        is_legacy = True
+        matched_rule_id: UUID | None = None
+        matched_rule_name: str | None = None
+    else:
+        stages_dsl = _sort_stages(rule.stages)
+        is_legacy = False
+        matched_rule_id = rule.id
+        matched_rule_name = rule.name
+
+    preview_stages: list[dict[str, object]] = []
+    for stage in stages_dsl:
+        stage_role = str(stage["approver_role"])
+        assignees = await _resolve_stage_assignment(
+            db,
+            company_id,
+            target_department_id,
+            stage_role,
+            chain_lookup_enabled,
+        )
+        fallback_to_admin = bool(
+            assignees
+            and all(user.role == UserRole.ADMIN.value for user, _ in assignees)
+            and stage_role != UserRole.ADMIN.value
+        )
+        candidates_payload: list[dict[str, object]] = []
+        for user, meta in assignees:
+            delegation_meta = meta.get("delegation") if isinstance(meta, dict) else None
+            via_delegation_from: UUID | None = None
+            if isinstance(delegation_meta, dict):
+                from_id = delegation_meta.get("from_user_id")
+                if isinstance(from_id, str):
+                    try:
+                        via_delegation_from = UUID(from_id)
+                    except ValueError:
+                        via_delegation_from = None
+            candidates_payload.append(
+                {
+                    "user_id": user.id,
+                    "display_name": user.display_name,
+                    "role": user.role,
+                    "department_id": user.department_id,
+                    "via_delegation_from": via_delegation_from,
+                }
+            )
+        preview_stages.append(
+            {
+                "order": int(stage["order"]),
+                "stage_name": str(stage["stage_name"]),
+                "approver_role": stage_role,
+                "candidates": candidates_payload,
+                "fallback_to_admin": fallback_to_admin,
+            }
+        )
+
+    return {
+        "biz_type": biz_type,
+        "amount": resolved_amount,
+        "matched_rule_id": matched_rule_id,
+        "matched_rule_name": matched_rule_name,
+        "is_legacy_fallback": is_legacy,
+        "stages": preview_stages,
+    }
+
+
+async def list_pending_tasks_for_user(db: AsyncSession, user: User) -> list[ApprovalTask]:
     if user.role == UserRole.ADMIN.value:
         stmt = (
             select(ApprovalTask)
