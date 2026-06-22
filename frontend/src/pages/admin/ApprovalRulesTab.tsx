@@ -18,7 +18,7 @@ import {
 import React, { useEffect, useState, useRef } from 'react'
 import { useTranslation } from 'react-i18next'
 
-import { api } from '@/api'
+import { api, type Department } from '@/api'
 import {
   createDefaultApprovalRuleForm,
   mapApprovalRuleFormToPayload,
@@ -28,6 +28,8 @@ import {
 export function ApprovalRulesTab() {
   const { t } = useTranslation()
   const [rules, setRules] = useState<any[]>([])
+  const [departments, setDepartments] = useState<Department[]>([])
+  const [costCenters, setCostCenters] = useState<{ id: string; label_zh: string; code?: string }[]>([])
   const [drawerOpen, setDrawerOpen] = useState(false)
   const [editingRule, setEditingRule] = useState<any | null>(null)
   const [form] = Form.useForm()
@@ -50,6 +52,8 @@ export function ApprovalRulesTab() {
 
   useEffect(() => {
     void api.adminListApprovalRules?.()?.then(setRules).catch(() => {})
+    void api.departments().then(setDepartments).catch(() => {})
+    void api.listCostCenters().then(setCostCenters).catch(() => {})
   }, [])
 
   const reloadRules = () => {
@@ -178,6 +182,40 @@ export function ApprovalRulesTab() {
           </Form.Item>
           <Form.Item name="amount_min" label={t('admin.min_amount')} help={t('admin.min_amount_help')}><InputNumber style={{ width: '100%' }} min={0} /></Form.Item>
           <Form.Item name="amount_max" label={t('admin.max_amount')} help={t('admin.max_amount_help')}><InputNumber style={{ width: '100%' }} min={0} /></Form.Item>
+          <Form.Item
+            name="department_ids"
+            label={t('admin.rule_department_filter')}
+            help={t('admin.rule_department_filter_help')}
+          >
+            <Select
+              mode="multiple"
+              allowClear
+              showSearch
+              optionFilterProp="label"
+              placeholder={t('admin.rule_department_filter_placeholder')}
+              options={departments.map((d) => ({
+                value: d.id,
+                label: `${d.name_zh}${d.code ? ` (${d.code})` : ''}`,
+              }))}
+            />
+          </Form.Item>
+          <Form.Item
+            name="cost_center_ids"
+            label={t('admin.rule_cost_center_filter')}
+            help={t('admin.rule_cost_center_filter_help')}
+          >
+            <Select
+              mode="multiple"
+              allowClear
+              showSearch
+              optionFilterProp="label"
+              placeholder={t('admin.rule_cost_center_filter_placeholder')}
+              options={costCenters.map((c) => ({
+                value: c.id,
+                label: `${c.label_zh}${c.code ? ` (${c.code})` : ''}`,
+              }))}
+            />
+          </Form.Item>
           <Form.Item name="priority" label={t('admin.priority')} help={t('admin.priority_help')} initialValue={100}><InputNumber style={{ width: '100%' }} /></Form.Item>
           <Form.Item name="is_active" label={t('admin.enabled')} valuePropName="checked" initialValue={true}>
             <Switch />

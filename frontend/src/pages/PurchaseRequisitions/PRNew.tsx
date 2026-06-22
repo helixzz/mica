@@ -215,6 +215,7 @@ export function PRNewPage() {
   const watchedCurrency = Form.useWatch('currency', form) || 'CNY'
   const watchedRequesterId = Form.useWatch('requester_id', form)
   const watchedDepartmentId = Form.useWatch('department_id', form)
+  const watchedCostCenterId = Form.useWatch('cost_center_id', form)
   const watchedPreferredApproverId = Form.useWatch('preferred_first_approver_id', form)
   const isProxying = canProxy && watchedRequesterId && watchedRequesterId !== user?.id
 
@@ -480,6 +481,7 @@ export function PRNewPage() {
             amount={total}
             requesterId={canProxy ? watchedRequesterId : null}
             departmentId={watchedDepartmentId}
+            costCenterId={watchedCostCenterId}
             onCandidatesLoaded={setFirstStageCandidates}
           />
           {watchedPreferredApproverId &&

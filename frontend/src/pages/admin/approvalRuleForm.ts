@@ -8,6 +8,8 @@ export interface ApprovalRuleFormValue {
   biz_type?: string
   amount_min?: number | null
   amount_max?: number | null
+  department_ids?: string[] | null
+  cost_center_ids?: string[] | null
   priority?: number
   is_active?: boolean
   stages?: ApprovalRuleStageFormValue[]
@@ -25,6 +27,8 @@ export interface ApprovalRuleApiValue {
   biz_type?: string
   amount_min?: number | null
   amount_max?: number | null
+  department_ids?: string[] | null
+  cost_center_ids?: string[] | null
   priority?: number
   is_active?: boolean
   stages?: ApprovalRuleApiStage[]
@@ -34,6 +38,8 @@ export function createDefaultApprovalRuleForm(defaultStageName: string): Approva
   return {
     priority: 100,
     is_active: true,
+    department_ids: null,
+    cost_center_ids: null,
     stages: [{ stage_name: defaultStageName, approver_role: 'dept_manager' }],
   }
 }
@@ -47,6 +53,8 @@ export function mapApprovalRuleToForm(
     biz_type: rule.biz_type,
     amount_min: rule.amount_min ?? null,
     amount_max: rule.amount_max ?? null,
+    department_ids: rule.department_ids ?? null,
+    cost_center_ids: rule.cost_center_ids ?? null,
     priority: rule.priority,
     is_active: rule.is_active,
     stages:
@@ -65,6 +73,10 @@ export function mapApprovalRuleToForm(
 export function mapApprovalRuleFormToPayload(values: ApprovalRuleFormValue) {
   return {
     ...values,
+    department_ids:
+      values.department_ids && values.department_ids.length > 0 ? values.department_ids : null,
+    cost_center_ids:
+      values.cost_center_ids && values.cost_center_ids.length > 0 ? values.cost_center_ids : null,
     stages: (values.stages || []).map((stage, index) => ({
       stage_name: stage.stage_name,
       approver_role: stage.approver_role,

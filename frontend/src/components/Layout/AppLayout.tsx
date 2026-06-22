@@ -227,11 +227,11 @@ export function AppLayout() {
               }}
               placement="bottomRight"
             >
-              <Space style={{ cursor: 'pointer', padding: '4px 8px', borderRadius: token.borderRadiusSM, transition: 'background 0.2s' }} className="user-dropdown">
+              <Space size="small" style={{ cursor: 'pointer', padding: '4px 8px', borderRadius: token.borderRadiusSM, transition: 'background 0.2s' }} className="user-dropdown">
                 <Avatar size="small" style={{ backgroundColor: token.colorPrimary }}>
                   {user.display_name.slice(0, 1).toUpperCase()}
                 </Avatar>
-                <span className="user-name" style={{ color: token.colorText, fontWeight: 500 }}>{user.display_name}</span>
+                <span className="user-name" style={{ color: token.colorText, fontWeight: 500, marginInlineEnd: token.marginXXS }}>{user.display_name}</span>
                 <Tag color="processing" style={{ margin: 0, border: 'none' }}>{roleTag}</Tag>
               </Space>
             </Dropdown>

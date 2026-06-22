@@ -31,6 +31,11 @@ export const StatCard: React.FC<StatCardProps> = ({
 
   const isAccent = variant === 'accent'
 
+  const labelColor = isAccent ? token.colorPrimary : token.colorTextSecondary
+  const valueColor = token.colorText
+  const iconColor = isAccent ? token.colorPrimary : token.colorTextTertiary
+  const iconBg = isAccent ? token.colorPrimaryBg : token.colorFillQuaternary
+
   const getTrendColor = () => {
     if (!trend) return token.colorTextSecondary
     switch (trend.direction) {
@@ -62,7 +67,8 @@ export const StatCard: React.FC<StatCardProps> = ({
       onMouseLeave={() => setIsHovered(false)}
       style={{
         height: '100%',
-        backgroundColor: isAccent ? token.colorPrimaryBg : token.colorBgContainer,
+        backgroundColor: token.colorBgContainer,
+        borderInlineStart: isAccent ? `3px solid ${token.colorPrimary}` : 'none',
         transition: `all ${token.motionDurationMid} ${token.motionEaseInOut}`,
         transform: isHovered ? 'translateY(-2px)' : 'none',
         boxShadow: isHovered ? token.boxShadowSecondary : token.boxShadowTertiary,
@@ -70,13 +76,28 @@ export const StatCard: React.FC<StatCardProps> = ({
       styles={{ body: { padding: token.paddingLG } }}
     >
       <Skeleton loading={loading} active paragraph={{ rows: 1 }} title={{ width: '50%' }}>
-        <div style={{ flex: 1, display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
-          <Space direction="vertical" size={token.marginXS}>
+        <div
+          style={{
+            display: 'flex',
+            justifyContent: 'space-between',
+            alignItems: 'flex-start',
+            gap: token.marginSM,
+          }}
+        >
+          <Space
+            direction="vertical"
+            size={token.marginXS}
+            style={{ minWidth: 0, flex: 1 }}
+          >
             <Text
               style={{
-                color: isAccent ? token.colorPrimaryText : token.colorTextSecondary,
+                color: labelColor,
                 fontSize: token.fontSizeSM,
                 fontWeight: 500,
+                whiteSpace: 'nowrap',
+                overflow: 'hidden',
+                textOverflow: 'ellipsis',
+                maxWidth: '100%',
               }}
             >
               {label}
@@ -85,9 +106,15 @@ export const StatCard: React.FC<StatCardProps> = ({
               level={3}
               style={{
                 margin: 0,
-                color: isAccent ? token.colorPrimaryTextHover : token.colorText,
+                color: valueColor,
                 fontWeight: 600,
+                whiteSpace: 'nowrap',
+                overflow: 'hidden',
+                textOverflow: 'ellipsis',
+                maxWidth: '100%',
+                fontVariantNumeric: 'tabular-nums',
               }}
+              title={typeof value === 'string' || typeof value === 'number' ? String(value) : undefined}
             >
               {value}
             </Title>
@@ -104,24 +131,28 @@ export const StatCard: React.FC<StatCardProps> = ({
           </Space>
           {icon && (
             <div
+              aria-hidden
               style={{
-                color: isAccent ? token.colorPrimary : token.colorTextTertiary,
+                color: iconColor,
                 fontSize: token.fontSizeHeading3,
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'center',
-                width: 48,
-                height: 48,
+                width: 40,
+                height: 40,
                 borderRadius: token.borderRadiusLG,
-                backgroundColor: isAccent ? 'rgba(255,255,255,0.6)' : token.colorFillAlter,
+                backgroundColor: iconBg,
+                flexShrink: 0,
               }}
-            />
+            >
+              {icon}
+            </div>
           )}
         </div>
         {footer && (
           <>
             <Divider style={{ margin: `${token.marginSM}px 0 0` }} />
-            <div style={{ fontSize: token.fontSizeSM, color: token.colorPrimary, textAlign: 'right' }}>
+            <div style={{ fontSize: token.fontSizeSM, color: token.colorPrimary, textAlign: 'right', paddingTop: token.marginXS }}>
               {footer}
             </div>
           </>

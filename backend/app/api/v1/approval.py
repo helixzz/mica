@@ -86,5 +86,6 @@ async def preview_approval(
         amount=payload.amount,
         requester_id=payload.requester_id,
         department_id=payload.department_id,
+        cost_center_id=payload.cost_center_id,
     )
     return ApprovalPreviewOut.model_validate(preview)

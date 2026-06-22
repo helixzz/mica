@@ -409,6 +409,7 @@ async def submit_pr(db: AsyncSession, actor: User, pr_id: UUID) -> PurchaseRequi
             preferred_first_approver_id=pr.preferred_first_approver_id,
             requester_id=pr.requester_id,
             department_id=pr.department_id,
+            cost_center_id=pr.cost_center_id,
         )
 
     _ = await approval_svc.create_instance_for_pr(
@@ -421,6 +422,7 @@ async def submit_pr(db: AsyncSession, actor: User, pr_id: UUID) -> PurchaseRequi
         amount=pr.total_amount,
         requester_id=pr.requester_id,
         department_id=pr.department_id,
+        cost_center_id=pr.cost_center_id,
         preferred_first_approver_id=pr.preferred_first_approver_id,
     )
     await _audit(db, actor, "pr.submitted", "purchase_requisition", str(pr.id))

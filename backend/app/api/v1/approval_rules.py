@@ -24,6 +24,12 @@ def _normalize_stages(payload: ApprovalRuleIn) -> list[dict[str, object]]:
     return [stage.model_dump() for stage in stages]
 
 
+def _normalize_uuid_list(values: list[UUID] | None) -> list[str] | None:
+    if values is None:
+        return None
+    return [str(v) for v in values]
+
+
 @router.get("", response_model=list[ApprovalRuleOut])
 async def list_approval_rules(
     db: Annotated[AsyncSession, Depends(get_db)],
@@ -51,6 +57,8 @@ async def create_approval_rule(
         biz_type=payload.biz_type,
         amount_min=payload.amount_min,
         amount_max=payload.amount_max,
+        department_ids=_normalize_uuid_list(payload.department_ids),
+        cost_center_ids=_normalize_uuid_list(payload.cost_center_ids),
         stages=_normalize_stages(payload),
         is_active=payload.is_active,
         priority=payload.priority,
@@ -87,6 +95,8 @@ async def update_approval_rule(
     rule.biz_type = payload.biz_type
     rule.amount_min = payload.amount_min
     rule.amount_max = payload.amount_max
+    rule.department_ids = _normalize_uuid_list(payload.department_ids)
+    rule.cost_center_ids = _normalize_uuid_list(payload.cost_center_ids)
     rule.stages = _normalize_stages(payload)
     rule.is_active = payload.is_active
     rule.priority = payload.priority

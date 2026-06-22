@@ -627,3 +627,177 @@ async def test_preview_for_pr_routes_by_target_department(seeded_db_session):
 
     first_stage_ids = {c["user_id"] for c in preview["stages"][0]["candidates"]}
     assert fin_mgr.id in first_stage_ids
+
+
+async def test_rule_with_department_filter_only_matches_listed_depts(seeded_db_session):
+    """v1.37.0 path-B: ApprovalRule.department_ids restricts which depts the rule applies to."""
+    from app.models import ApprovalRule, Department
+
+    it_dept = (
+        await seeded_db_session.execute(select(Department).where(Department.code == "IT"))
+    ).scalar_one()
+    fin_dept = (
+        await seeded_db_session.execute(select(Department).where(Department.code == "FIN"))
+    ).scalar_one()
+
+    high_priority_rule = ApprovalRule(
+        name="IT-only fast track",
+        biz_type="purchase_requisition",
+        amount_min=None,
+        amount_max=None,
+        department_ids=[str(it_dept.id)],
+        cost_center_ids=None,
+        stages=[
+            {"order": 1, "stage_name": "IT 简化审批", "approver_role": "admin"},
+        ],
+        is_active=True,
+        priority=1,
+    )
+    seeded_db_session.add(high_priority_rule)
+    await seeded_db_session.flush()
+
+    matched_for_it = await svc._match_rule(
+        seeded_db_session,
+        biz_type="purchase_requisition",
+        amount=Decimal("5000"),
+        department_id=it_dept.id,
+    )
+    assert matched_for_it is not None
+    assert matched_for_it.id == high_priority_rule.id
+
+    matched_for_fin = await svc._match_rule(
+        seeded_db_session,
+        biz_type="purchase_requisition",
+        amount=Decimal("5000"),
+        department_id=fin_dept.id,
+    )
+    assert matched_for_fin is not None
+    assert matched_for_fin.id != high_priority_rule.id
+
+
+async def test_rule_with_cost_center_filter_only_matches_listed_ccs(seeded_db_session):
+    """ApprovalRule.cost_center_ids restricts which CCs the rule applies to."""
+    from app.models import ApprovalRule, CostCenter
+
+    cc_rows = (await seeded_db_session.execute(select(CostCenter))).scalars().all()
+    if len(cc_rows) < 2:
+        pytest.skip("seed needs at least 2 cost centers")
+    cc_a, cc_b = cc_rows[0], cc_rows[1]
+
+    cc_specific_rule = ApprovalRule(
+        name="CC-A simplified",
+        biz_type="purchase_requisition",
+        amount_min=None,
+        amount_max=None,
+        department_ids=None,
+        cost_center_ids=[str(cc_a.id)],
+        stages=[{"order": 1, "stage_name": "Simplified", "approver_role": "admin"}],
+        is_active=True,
+        priority=1,
+    )
+    seeded_db_session.add(cc_specific_rule)
+    await seeded_db_session.flush()
+
+    matched_a = await svc._match_rule(
+        seeded_db_session,
+        biz_type="purchase_requisition",
+        amount=Decimal("5000"),
+        cost_center_id=cc_a.id,
+    )
+    assert matched_a is not None and matched_a.id == cc_specific_rule.id
+
+    matched_b = await svc._match_rule(
+        seeded_db_session,
+        biz_type="purchase_requisition",
+        amount=Decimal("5000"),
+        cost_center_id=cc_b.id,
+    )
+    assert matched_b is None or matched_b.id != cc_specific_rule.id
+
+
+async def test_rule_with_both_dept_and_cc_filters_requires_both_to_match(seeded_db_session):
+    """When a rule has both department_ids and cost_center_ids, both must match."""
+    from app.models import ApprovalRule, CostCenter, Department
+
+    it_dept = (
+        await seeded_db_session.execute(select(Department).where(Department.code == "IT"))
+    ).scalar_one()
+    fin_dept = (
+        await seeded_db_session.execute(select(Department).where(Department.code == "FIN"))
+    ).scalar_one()
+    cc_first = (await seeded_db_session.execute(select(CostCenter).limit(1))).scalar_one()
+
+    both_rule = ApprovalRule(
+        name="IT + cc_first only",
+        biz_type="purchase_requisition",
+        amount_min=None,
+        amount_max=None,
+        department_ids=[str(it_dept.id)],
+        cost_center_ids=[str(cc_first.id)],
+        stages=[{"order": 1, "stage_name": "Both match", "approver_role": "admin"}],
+        is_active=True,
+        priority=1,
+    )
+    seeded_db_session.add(both_rule)
+    await seeded_db_session.flush()
+
+    hit = await svc._match_rule(
+        seeded_db_session,
+        biz_type="purchase_requisition",
+        amount=Decimal("5000"),
+        department_id=it_dept.id,
+        cost_center_id=cc_first.id,
+    )
+    assert hit is not None and hit.id == both_rule.id
+
+    miss_dept = await svc._match_rule(
+        seeded_db_session,
+        biz_type="purchase_requisition",
+        amount=Decimal("5000"),
+        department_id=fin_dept.id,
+        cost_center_id=cc_first.id,
+    )
+    assert miss_dept is None or miss_dept.id != both_rule.id
+
+
+async def test_rule_filter_falls_back_to_unrestricted_rule_when_specific_misses(
+    seeded_db_session,
+):
+    """When a dept-specific rule misses, matching falls back to lower-priority unrestricted rules."""
+    from app.models import ApprovalRule, Department
+
+    fin_dept = (
+        await seeded_db_session.execute(select(Department).where(Department.code == "FIN"))
+    ).scalar_one()
+
+    it_only_rule = ApprovalRule(
+        name="IT only fast",
+        biz_type="purchase_requisition",
+        amount_min=None,
+        amount_max=None,
+        department_ids=[
+            str(
+                (
+                    await seeded_db_session.execute(
+                        select(Department).where(Department.code == "IT")
+                    )
+                ).scalar_one().id
+            )
+        ],
+        cost_center_ids=None,
+        stages=[{"order": 1, "stage_name": "IT only", "approver_role": "admin"}],
+        is_active=True,
+        priority=1,
+    )
+    seeded_db_session.add(it_only_rule)
+    await seeded_db_session.flush()
+
+    matched = await svc._match_rule(
+        seeded_db_session,
+        biz_type="purchase_requisition",
+        amount=Decimal("5000"),
+        department_id=fin_dept.id,
+    )
+    assert matched is not None
+    assert matched.id != it_only_rule.id
+    assert (matched.department_ids is None) or (str(fin_dept.id) in matched.department_ids)

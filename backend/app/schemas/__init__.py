@@ -964,6 +964,8 @@ class ApprovalRuleIn(BaseModel):
     biz_type: str = Field(..., min_length=1, max_length=64)
     amount_min: Decimal | None = None
     amount_max: Decimal | None = None
+    department_ids: list[UUID] | None = None
+    cost_center_ids: list[UUID] | None = None
     stages: list[ApprovalRuleStageIn] = Field(..., min_length=1)
     is_active: bool = True
     priority: int = 100
@@ -976,6 +978,8 @@ class ApprovalRuleOut(BaseModel):
     biz_type: str
     amount_min: Decimal | None
     amount_max: Decimal | None
+    department_ids: list[UUID] | None
+    cost_center_ids: list[UUID] | None
     stages: list[ApprovalRuleStageIn]
     is_active: bool
     priority: int

@@ -220,6 +220,8 @@ async def _match_rule(
     db: AsyncSession,
     biz_type: str,
     amount: Decimal,
+    department_id: UUID | None = None,
+    cost_center_id: UUID | None = None,
 ) -> ApprovalRule | None:
     stmt = (
         select(ApprovalRule)
@@ -231,7 +233,30 @@ async def _match_rule(
         )
         .order_by(ApprovalRule.priority.asc(), ApprovalRule.created_at.asc())
     )
-    return (await db.execute(stmt)).scalars().first()
+    candidates = list((await db.execute(stmt)).scalars().all())
+    for rule in candidates:
+        if not _rule_filter_matches(rule.department_ids, department_id):
+            continue
+        if not _rule_filter_matches(rule.cost_center_ids, cost_center_id):
+            continue
+        return rule
+    return None
+
+
+def _rule_filter_matches(allowed: object, value: UUID | None) -> bool:
+    if allowed is None:
+        return True
+    if not isinstance(allowed, list):
+        return True
+    if not allowed:
+        return True
+    if value is None:
+        return False
+    target = str(value)
+    for item in allowed:
+        if isinstance(item, str) and item == target:
+            return True
+    return False
 
 
 def _legacy_stage_name(role: str) -> str:
@@ -324,13 +349,14 @@ async def create_instance_for_pr(
     amount: Decimal,
     requester_id: UUID | None = None,
     department_id: UUID | None = None,
+    cost_center_id: UUID | None = None,
     preferred_first_approver_id: UUID | None = None,
 ) -> ApprovalInstance:
     resolved_amount = _as_decimal(amount)
-    rule = await _match_rule(db, biz_type, resolved_amount)
     company_id, target_department_id = await _resolve_routing_context(
         db, submitter, requester_id, department_id
     )
+    rule = await _match_rule(db, biz_type, resolved_amount, target_department_id, cost_center_id)
     chain_lookup_enabled = await _read_chain_lookup_flag(db)
 
     if rule is None:
@@ -433,6 +459,7 @@ async def validate_preferred_approver_or_raise(
     preferred_first_approver_id: UUID,
     requester_id: UUID | None = None,
     department_id: UUID | None = None,
+    cost_center_id: UUID | None = None,
 ) -> None:
     if not await _read_allow_preferred_flag(db):
         raise HTTPException(
@@ -443,10 +470,10 @@ async def validate_preferred_approver_or_raise(
             },
         )
     resolved_amount = _as_decimal(amount)
-    rule = await _match_rule(db, biz_type, resolved_amount)
     company_id, target_department_id = await _resolve_routing_context(
         db, submitter, requester_id, department_id
     )
+    rule = await _match_rule(db, biz_type, resolved_amount, target_department_id, cost_center_id)
     chain_lookup_enabled = await _read_chain_lookup_flag(db)
 
     if rule is None:
@@ -492,12 +519,13 @@ async def preview_for_pr(
     amount: Decimal,
     requester_id: UUID | None = None,
     department_id: UUID | None = None,
+    cost_center_id: UUID | None = None,
 ) -> dict[str, object]:
     resolved_amount = _as_decimal(amount)
-    rule = await _match_rule(db, biz_type, resolved_amount)
     company_id, target_department_id = await _resolve_routing_context(
         db, submitter, requester_id, department_id
     )
+    rule = await _match_rule(db, biz_type, resolved_amount, target_department_id, cost_center_id)
     chain_lookup_enabled = await _read_chain_lookup_flag(db)
 
     if rule is None:

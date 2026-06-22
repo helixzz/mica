@@ -7,6 +7,61 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [v1.37.0] — 2026-06-22
+
+### 新增（审批流改进 — 路线图 B 阶段：规则按部门 / 成本中心过滤）
+
+- **审批规则两个新过滤维度**：`approval_rules` 表新增 `department_ids` 和 `cost_center_ids` (JSONB 数组)。规则命中条件升级为：`biz_type ∧ amount ∈ [min,max) ∧ (PR 部门 ∈ department_ids ∨ 列表为空) ∧ (PR 成本中心 ∈ cost_center_ids ∨ 列表为空)`。`priority` 仍是 tiebreaker
+- **规则编辑器 UI 升级**：Admin → 审批规则 编辑抽屉新增「适用部门」和「适用成本中心」多选 Select，支持留空（= 适用所有，向后兼容）
+- **PRNew 预览接入 cost_center_id**：申请人选择成本中心时，审批链预览实时按规则的 cost_center 过滤维度重新解析
+
+### 修复（UI）
+
+- **StatCard 图标空白色块（critical）**：`StatCard.tsx` 第 105-119 行 `<div ... />` 是空标签，从未渲染 `{icon}` 子节点。修复后所有传 `icon=` 的 StatCard 正确显示图标
+- **StatCard accent 变体在暗色模式对比度差**：原 accent 变体把整张卡片底色染成 `colorPrimaryBg`（褐色），暗色模式下文字对比度不足。重新设计为：左侧 3px 主题色边条 + 默认卡片底色 + 主题色 label/icon。视觉重点保留，对比度达 WCAG AA
+- **StatCard 数字过长换行（如 ¥1,054,197,106.00）**：加 `whiteSpace: nowrap`、`overflow: hidden`、`textOverflow: ellipsis` 配合 `flex: 1; minWidth: 0`、`fontVariantNumeric: tabular-nums`。完整值通过 `title` HTML tooltip 在 hover 时显示
+- **AppLayout 右上角用户名贴 role badge**：`Space size="small"` + `marginInlineEnd: marginXXS` 让用户名与 role tag 之间有清晰间距
+- **StatCard 图标尺寸调小（48 → 40）**：给数字留更多水平空间
+
+### 数据库
+
+- **迁移 0054**：`approval_rules` 加 `department_ids` (JSONB nullable) + `cost_center_ids` (JSONB nullable)。NULL = 不过滤（所有现有规则零迁移成本）
+
+### API
+
+- `POST /approval-rules` 和 `PUT /approval-rules/{id}` body 新增 `department_ids: UUID[] | null` 和 `cost_center_ids: UUID[] | null` 可选字段
+- `POST /approval/preview` 已经支持 `cost_center_id` 参数（v1.36.0 留好的接口）；本版前端开始传值
+
+### 后端 services 重构
+
+- `_match_rule(db, biz_type, amount, department_id?, cost_center_id?)` 新增两个可选参数；查询所有 amount 命中的候选规则后用 Python 端 `_rule_filter_matches` 做 dept/cc 过滤（小 N 不需要 JSONB 查询）
+- `create_instance_for_pr` / `validate_preferred_approver_or_raise` / `preview_for_pr` 全部加 `cost_center_id` kwarg 透传到 `_match_rule`
+- `services/purchase.submit_pr` 提交时透传 `pr.cost_center_id`
+
+### 测试
+
+- 4 个新单元测试覆盖：dept_ids 过滤命中 / cost_center_ids 过滤命中 / dept + cc 双维度叠加 / dept-specific 不命中时回退到无过滤规则
+- 3 个新前端测试覆盖：rule form 含 dept_ids/cc_ids 字段映射 + 空数组序列化为 null
+- 总用例：后端 726（+4），前端 61（+3）
+
+### i18n
+
+- 前端 +6 keys（`admin.rule_department_filter*` / `admin.rule_cost_center_filter*`），zh + en parity
+
+### 设计要点
+
+- **空数组 ⇒ NULL**：前端 `mapApprovalRuleFormToPayload` 把空数组规范化为 NULL，后端入库 NULL 表示「不过滤」。避免空数组、null、undefined 三态语义混乱
+- **后端 Python 端过滤**：JSONB 数组的 `?` / `@>` 操作符可用但写起来啰嗦，且公司规则表 N 通常 < 100，Python 过滤简单可读
+- **向后兼容**：所有新字段 nullable，所有现存规则 `department_ids = NULL` 表示原有行为（不过滤），零回归
+
+### 后续路线（v1.38.0 候选）
+
+- DSL v2 stage assignment：`type=cost_center_manager` / `procurement_category_owner` / `user`（直接指定固定审批人）
+- `procurement_category_ids` 第三个过滤维度
+- 规则匹配的可视化调试器（admin 输入"金额=X，部门=Y，成本中心=Z"看哪条规则被命中）
+
+---
+
 ## [v1.36.0] — 2026-06-22
 
 ### 新增（审批流改进 — 路线图 A 阶段）

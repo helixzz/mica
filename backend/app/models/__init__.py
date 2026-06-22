@@ -1394,6 +1394,8 @@ class ApprovalRule(Base, TimestampMixin):
     biz_type: Mapped[str] = mapped_column(String(64), nullable=False)
     amount_min: Mapped[Decimal | None] = mapped_column(Numeric(18, 4))
     amount_max: Mapped[Decimal | None] = mapped_column(Numeric(18, 4))
+    department_ids: Mapped[list[str] | None] = mapped_column(JSONB, nullable=True)
+    cost_center_ids: Mapped[list[str] | None] = mapped_column(JSONB, nullable=True)
     stages: Mapped[list[dict[str, JSONValue]]] = mapped_column(JSONB, default=list, nullable=False)
     is_active: Mapped[bool] = mapped_column(default=True, nullable=False)
     priority: Mapped[int] = mapped_column(Integer, default=100, nullable=False)
