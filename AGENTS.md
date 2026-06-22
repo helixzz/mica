@@ -9,9 +9,10 @@
 - **Mica（觅采）** — 企业内部采购管理系统（Internal Procurement Management System）
 - **规模**：单公司 < 100 员工、月 < 300 单的 IT 部门内部使用
 - **License**：Apache 2.0
-- **状态**：v1.0.0-rc3（2026-04-28）· [CHANGELOG.md](./CHANGELOG.md) · [Release](https://github.com/helixzz/mica/releases/tag/v0.9.39)
-- **设计准则**：效率优先 > 扩展性 > 标准化管控
-- **仓库**：`git@github.com:helixzz/mica.git`（main 分支）
+- **当前版本**：见 `frontend/package.json` / `backend/pyproject.toml` / `backend/app/config.py` / `README.md` 四处版本号同步（参见 §9）· [CHANGELOG.md](./CHANGELOG.md)
+- **设计准则**：效率优先 > 扩展性 > 标准化管控（业务上"宁可让 admin 兜底，也不要让流程卡死"）
+- **仓库**：`git@github.com:helixzz/mica.git`（main 分支，无 develop / staging 分支）
+- **生产环境**：`https://mica.jqdomain.com` · `ssh ubuntu@10.8.252.64` 无密码登录可直接部署
 
 ## 2. 技术栈
 
@@ -36,41 +37,49 @@ mica/
 │   │   ├── main.py                 # FastAPI 入口
 │   │   ├── config.py               # Pydantic Settings（bootstrap defaults）
 │   │   ├── db/__init__.py          # engine / session / Base / TimestampMixin
-│   │   ├── models/__init__.py      # 所有 SQLAlchemy 模型（单文件 ~1100 行）
-│   │   ├── schemas/__init__.py     # 所有 Pydantic request/response
-│   │   ├── core/                   # security / authz / field_authz / i18n
+│   │   ├── models/__init__.py      # 所有 SQLAlchemy 模型（单文件 ~1700 行，46 个类）
+│   │   ├── schemas/__init__.py     # 所有 Pydantic request/response（~1300 行）
+│   │   ├── core/                   # security / authz / field_authz / i18n / scoping
 │   │   ├── api/
-│   │   │   ├── __init__.py         # 聚合 router
-│   │   │   └── v1/                 # 所有 REST 端点，每文件一个业务域
-│   │   ├── services/               # 业务逻辑层
-│   │   ├── i18n/messages/          # zh-CN.json / en-US.json
-│   ├── migrations/versions/        # Alembic 迁移文件（0001-0008）
+│   │   │   ├── __init__.py         # 聚合 router（v1 + v2 镜像）
+│   │   │   └── v1/                 # 30+ REST 端点文件，每文件一个业务域
+│   │   │       ├── activity_logs.py   # 资源活动日志（v1.35.0+）
+│   │   │       ├── admin.py           # 后台管理（含 audit-logs，整体 admin guard）
+│   │   │       ├── purchase.py        # PR/PO + 拆分/履约 link
+│   │   │       ├── flow.py            # 合同/付款/发票/到货
+│   │   │       ├── dashboard.py       # 仪表盘聚合（无角色 guard，纯前端 UI 取舍）
+│   │   │       └── ...
+│   │   ├── services/               # 业务逻辑层（每域一文件，purchase.py 最大 ~2300 行）
+│   │   └── i18n/messages/          # zh-CN.json / en-US.json
+│   ├── migrations/versions/        # Alembic 迁移文件（0001 - 0052+，编号严格连续）
 │   └── pyproject.toml              # 依赖 + ruff 配置
 ├── frontend/
 │   └── src/
 │       ├── theme/                  # tokens + AntD theme + ThemeProvider
 │       ├── styles/global.css       # CSS vars + print + responsive
 │       ├── components/
-│       │   ├── Layout/AppLayout.tsx  # 应用外壳（有 Search + Notification slot）
-│       │   ├── ui/                 # PageHeader / StatCard / Section / EmptyState
-│       │   ├── GlobalSearch/       # 填 AppLayout SearchSlot
-│       │   ├── NotificationBell/   # 填 AppLayout NotificationSlot
-│       │   └── PrintButton.tsx     # 通用打印触发器
-│       ├── pages/                  # 每个业务视图一个文件/目录
-│       │   ├── Dashboard.tsx       # 角色化仪表盘
-│       │   ├── SearchResults.tsx   # /search 全页
-│       │   ├── NotificationCenter.tsx
-│       │   ├── Admin.tsx           # 7 tabs（含 admin/SystemParamsTab.tsx）
-│       ├── stores/                 # Zustand stores（notification 等）
-│       ├── api/                    # axios 封装 + 业务 API wrappers
+│       │   ├── Layout/AppLayout.tsx     # 应用外壳（可收起侧边栏）
+│       │   ├── ui/                      # PageHeader / StatCard / Section / EmptyState
+│       │   ├── ActivityTimeline.tsx     # 通用资源活动日志组件
+│       │   ├── ItemPickerWithCreate.tsx # SKU 选择器（可现场创建）
+│       │   ├── PR/                      # PR 业务组件
+│       │   │   ├── ConvertToPOModal.tsx        # 3 Tab 拆分向导
+│       │   │   └── AddSupplementaryFromPRModal.tsx  # PR 行配套补充
+│       │   └── PO/                      # PO 业务组件
+│       │       ├── ItemsTab.tsx                 # POItem CRUD
+│       │       └── SupplementaryItemModal.tsx
+│       ├── pages/                  # 30+ 页面（每业务视图一个 .tsx 或目录）
+│       ├── stores/                 # Zustand stores
+│       ├── api/                    # axios 封装 + 业务 API wrappers (single file)
 │       ├── routes/index.tsx        # 路由表
-│       ├── i18n/locales/           # zh-CN / en-US common.json
+│       ├── i18n/locales/           # zh-CN / en-US common.json (~1400 keys each)
 │       ├── auth/                   # 登录态
 │       └── assets/illustrations/   # 水獭 SVG 插画
 ├── deploy/
-│   ├── docker-compose.yml          # 定义 postgres / migrate / backend / frontend / nginx
+│   ├── docker-compose.yml          # postgres / migrate / backend / frontend / nginx / cerbos / scheduler
 │   ├── .env.example
 │   ├── nginx/conf.d/mica.conf
+│   ├── cerbos-policies/            # YAML 字段级授权策略（运行时热加载）
 │   └── scripts/                    # backup / restore / upgrade / health / logs / dev-up / dev-down
 ├── docs/
 │   ├── QUICKSTART.md               # 3 分钟体验
@@ -184,6 +193,121 @@ cd deploy
 - 首次 SAML 登录支持 JIT 自动建用户；若命中已有本地邮箱账号，则自动关联为 `auth_provider="saml"`
 - 组映射可选：`auth.saml.group_mapping_enabled=true` 时，按 `auth.saml.group_mapping` JSON 顺序匹配用户组 → 本地角色/部门
 - 未开启组映射或无匹配时，自动创建用户必须回退到最低权限默认角色（当前 `requester`）
+
+### 5.15 前后端权限对齐（高频踩坑）
+
+- **每次后端改动 `require_roles(...)`，必须同步检查前端是否有对应的 `can*` 布尔判断**
+- 反过来也对：增加新前端按钮时，确认后端端点对应角色匹配
+- **典型对齐位置**：
+  - `frontend/src/pages/PurchaseOrders/PODetail.tsx` 的 `canCreateContract` / `canWriteSchedule` / `canDeletePO`
+  - `frontend/src/pages/ContractDetail.tsx` 的 `canWrite` / `canDelete` / `canTransition` / `canEditSchedule`
+  - `frontend/src/pages/Contracts.tsx` 同上
+  - `frontend/src/pages/RFQDetail.tsx` 的 `canEdit`
+  - `frontend/src/components/PO/ItemsTab.tsx` 的 `canEdit`
+- **审计命令**（在 mica/frontend/）：
+  ```bash
+  grep -rnE "\[.*'(admin|procurement_mgr|it_buyer|finance_auditor|dept_manager|requester)'.*\]\.includes\(.*role" src/
+  ```
+- **历史教训**：v1.33.3 / v1.33.4 一次性补齐了 6 处前端漏配 it_buyer 的按钮——它们都是后端早已允许、但前端 UI 一直不显示，用户报告"找不到按钮"才发现
+
+### 5.16 Async ORM 序列化（避免 MissingGreenlet）
+
+任何**返回 ORM 对象给 Pydantic `model_validate()` 序列化**的服务函数：
+
+- ❌ **错误模式**：`await db.commit()` → `return await db.get(SomeModel, id)`
+- ✅ **正确模式**：`await db.commit()` → `select(SomeModel).options(selectinload(needed_relations))` 重新查询
+
+**为什么**：生产环境 `expire_on_commit=True`，commit 后实例属性被 expire。Pydantic 访问关系字段（如 `POItem.fulfillment_links`）时触发懒加载，但 SQLAlchemy 异步 greenlet 上下文已结束 → `MissingGreenlet` → 500
+
+**测试遮蔽**：`conftest.py` 用 `expire_on_commit=False`，单测可能不重现。所以**`test_xxx_returns_obj` 必须显式调 `OutputSchema.model_validate(obj)` 来跑序列化路径**
+
+历史教训：v1.30.0 → v1.30.1 hotfix 即此问题；v1.31.0 / v1.33.0 后所有相关函数都遵守此规则。审计命令：
+```bash
+grep -rn "await db.get" backend/app/services/purchase.py
+```
+
+### 5.17 React Hooks 顺序（避免 React #310）
+
+每个 React 函数组件的所有 `useState/useEffect/useMemo/useCallback/useAuth/useToken` **必须在任何 early return 之前**：
+
+```jsx
+// ❌ 错误：early return 后再有 hook
+function PRDetail() {
+  const [pr, setPr] = useState(null)
+  if (!pr) return <Loading />       // EARLY RETURN
+  const items = useMemo(...)         // 渲染次数不一致 → React #310
+}
+
+// ✅ 正确
+function PRDetail() {
+  const [pr, setPr] = useState(null)
+  const items = useMemo(() => pr ? ... : [], [pr])  // memo 自己处理 null
+  if (!pr) return <Loading />
+}
+```
+
+历史教训：v1.28.0 → v1.28.2 即此问题，用户看到的是"500"错误页（ErrorBoundary 捕获后渲染）但实际是 React minified error。
+
+审计技巧：每次新加 hook，scroll up 确认前面没有 `if (!x) return` 类型的语句。
+
+### 5.18 i18n 双语 parity 检查
+
+每次加 i18n key 必须 zh + en 同步加。验证脚本：
+
+```bash
+# Backend
+cd backend && .venv/bin/python -c "
+import json
+zh=json.load(open('app/i18n/messages/zh-CN.json'))
+en=json.load(open('app/i18n/messages/en-US.json'))
+def w(d,p=''): return {f'{p}.{k}' if p else k for k,v in d.items() for k_ in (w(v,f'{p}.{k}' if p else k) if isinstance(v,dict) else {None})} if False else (lambda f:f(f))(lambda f: {f'{p}.{k}' if p else k for k,v in d.items() if not isinstance(v,dict)} | set().union(*(f.__wrapped__ if hasattr(f,'__wrapped__') else set() for v in d.values() if isinstance(v,dict))))
+# 实际简版：
+def walk(d, p=''):
+    out = set()
+    for k, v in d.items():
+        kk = f'{p}.{k}' if p else k
+        if isinstance(v, dict): out |= walk(v, kk)
+        else: out.add(kk)
+    return out
+print('zh-en diff:', walk(zh) - walk(en))
+print('en-zh diff:', walk(en) - walk(zh))
+"
+
+# Frontend
+cd frontend && node -e "
+const zh = require('./src/i18n/locales/zh-CN/common.json');
+const en = require('./src/i18n/locales/en-US/common.json');
+const walk = (d,p='') => Object.keys(d).flatMap(k => typeof d[k] === 'object' ? walk(d[k], p+k+'.') : [p+k]);
+console.log('zh-only:', walk(zh).filter(k => !new Set(walk(en)).has(k)).filter(k=>!k.startsWith('insights.')));
+console.log('en-only:', walk(en).filter(k => !new Set(walk(zh)).has(k)));
+"
+```
+
+前端有 7 个历史 `insights.*` 键 zh-only（pre-existing），可忽略。
+
+### 5.19 履约模型语义（PR ↔ PO 多对多）
+
+PR 需求和 PO 履约通过 `pr_fulfillment_links` 表多对多关联，每条 link 标记一个**履约类型**：
+
+| 类型 | 语义 | 计入进度条 | 受 1.5x 软上限约束 |
+|---|---|---|---|
+| `equivalent` | 完全等价 | ✅ | ✅ |
+| `downgraded` | 降配（仍计入 PR 行数量） | ✅ | ✅ |
+| `substitute` | 替换型号（不同物料、相同需求） | ✅ | ✅ |
+| `supplementary` | 配套补充（不同 uom，例如 1024 GPU 配 64 服务器） | ❌ | ❌ |
+
+**关键不变量**：
+- 进度条 `fulfilled_qty` 只算前 3 种（uom 一致）；supplementary 在 `fulfillment_breakdown` 字典里单独展示
+- PR 状态机基于前 3 种判断 `partially_converted` / `converted`
+- 修改 `_compute_pr_status_after_link_change` 时**绝不能把 supplementary 加进 fulfilling_types**（v1.33.1 → v1.33.2 即此回滚）
+- supplementary 可指向任意供应商，允许独立 PO（一个 PR 行的服务器主体走供应商 X，配件可独立 PO 走供应商 Y）
+
+### 5.20 Activity Log 范围与权限
+
+- **业务活动日志**（用于资源详情页 Activity Timeline）：`GET /v1/resource-activity-logs?resource_type=X&resource_id=Y` — 无角色 guard，访问控制通过资源本身的 visibility（`get_pr` / `get_po` 等）
+- **管理审计日志**（用于 Admin 后台）：`GET /v1/admin/audit-logs` — admin guard
+- 业务日志端点黑名单事件前缀：`auth.*`, `admin.*`, `notification.*`（保留给 admin 端点）
+- 业务日志端点白名单 resource_type：PR/PO/POItem/Contract/RFQ/Invoice/PaymentRecord/Shipment/PRFulfillmentLink
 
 ## 6. 代码质量门禁
 

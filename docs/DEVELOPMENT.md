@@ -326,3 +326,65 @@ backend ──(HTTP)──> cerbos sidecar (:3593)
 ### Graceful fallback
 
 Cerbos 不可达时（如开发环境没启动 cerbos 容器），`cerbos_client.py` 自动降级到 `FIELD_PERMISSIONS` 静态 dict。零故障风险。
+
+## PR → PO 履约偏离模型（v1.26+）
+
+业务现实：PR 申请的 64 台完整服务器，履约时可能因供货问题变成 32 台完整 + 16 台缺 A 配件 + 16 台缺 A/B 配件 + 32 套 A 配件 + 16 套 B 配件，每部分可能来自不同供应商。
+
+### 数据模型
+
+`pr_fulfillment_links` 表把 POItem 与 PRItem 多对多关联（迁移 0050 + 0051）：
+
+```
+pr_fulfillment_links
+├── pr_item_id        FK → pr_items.id (CASCADE)
+├── po_item_id        FK → po_items.id (CASCADE)
+├── qty_contribution  Numeric        — 该 POItem 顶替 PR 行的数量
+├── fulfillment_type  enum           — equivalent / downgraded / substitute / supplementary
+├── deviation_note    text           — 采购员填写偏离原因
+└── created_by_id     FK → users.id
+
+UNIQUE (pr_item_id, po_item_id)  -- 同一对组合只能有一条 link
+```
+
+### 4 种履约类型语义
+
+| 类型 | 业务含义 | 计入 fulfilled_qty 进度 | 受 1.5x 软上限约束 |
+|---|---|---|---|
+| `equivalent` | 完全等价 | ✅ | ✅ |
+| `downgraded` | 同型号缺配件，仍记入主履约数量 | ✅ | ✅ |
+| `substitute` | 替换型号，仍记入主履约数量 | ✅ | ✅ |
+| `supplementary` | 配套补充（不同 uom，例如 GPU 配服务器） | ❌ 仅 breakdown 单独显示 | ❌ |
+
+### 关键服务函数
+
+- `convert_pr_to_po(db, actor, pr_id)` — 一键全转，按 PR 行 supplier 分组创建 PO
+- `convert_pr_to_po_partial(db, actor, pr_id, pr_item_ids)` — 选行整转
+- `convert_pr_to_po_with_specs(db, actor, pr_id, specs)` — 自定义拆分；每个 spec 可指定 qty / unit_price / supplier / item_id / type / deviation_note
+- `add_supplementary_for_pr_item(db, actor, pr_item_id, ...)` — 事后给某个 PR 行加配套补充项，可开新 PO 也可追加到现有 PO
+- `update_po_item / delete_po_item` — POItem CRUD，自动同步 PO total + link.qty_contribution + PR 状态
+
+### PR 状态机
+
+`_compute_pr_status_after_link_change(db, pr)`：
+
+1. 查询所有 `fulfillment_type IN (equivalent, downgraded, substitute)` 的 link 按 pr_item 聚合 qty
+2. 对每个 PR 行：若 `summed_qty >= pr_item.qty` 则视为完全履约
+3. 全部完全履约 → `converted`；部分 → `partially_converted`；零 → `approved`（即使之前是 converted）
+
+**`SUPPLEMENTARY` 不参与状态计算**（v1.33.1 → v1.33.2 教训：不同 uom 会让数字爆掉，例如 1024 GPU + 64 服务器 = 1088/64 看起来溢出）。
+
+## 资源活动日志（v1.35.0+）
+
+业务用户的活动时间线端点：`GET /v1/resource-activity-logs?resource_type=X&resource_id=Y`
+
+- 无角色 guard
+- 通过资源 visibility（`get_pr` / `get_po` / 等）做访问控制
+- 黑名单事件：`auth.*` / `admin.*` / `notification.*` 不返回
+- 白名单 resource_type：PR / PO / POItem / Contract / RFQ / Invoice / PaymentRecord / Shipment / PRFulfillmentLink
+
+后台审计日志 `GET /v1/admin/audit-logs` 保留 admin 专用（在 admin router 整体 guard 下）。
+
+## Dashboard 端点（v1.34+）
+
+`/v1/dashboard/*` 全部端点**仅要登录、不限角色**。任何 `(isProcurementMgr || isFinanceAuditor || role === 'admin')` 类型的前端 gate 都是 UI 取舍，不是权限边界。it_buyer / requester / dept_manager 都可以调用所有 dashboard 接口。
