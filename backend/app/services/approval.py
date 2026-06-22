@@ -325,13 +325,23 @@ async def create_instance_for_pr(
     return instance
 
 
-async def list_pending_tasks_for_user(db: AsyncSession, user_id: UUID) -> list[ApprovalTask]:
-    stmt = (
-        select(ApprovalTask)
-        .where(ApprovalTask.assignee_id == user_id, ApprovalTask.status == TASK_STATUS_PENDING)
-        .options(selectinload(ApprovalTask.instance).selectinload(ApprovalInstance.submitter))
-        .order_by(ApprovalTask.assigned_at.desc())
-    )
+async def list_pending_tasks_for_user(
+    db: AsyncSession, user: User
+) -> list[ApprovalTask]:
+    if user.role == UserRole.ADMIN.value:
+        stmt = (
+            select(ApprovalTask)
+            .where(ApprovalTask.status == TASK_STATUS_PENDING)
+            .options(selectinload(ApprovalTask.instance).selectinload(ApprovalInstance.submitter))
+            .order_by(ApprovalTask.assigned_at.desc())
+        )
+    else:
+        stmt = (
+            select(ApprovalTask)
+            .where(ApprovalTask.assignee_id == user.id, ApprovalTask.status == TASK_STATUS_PENDING)
+            .options(selectinload(ApprovalTask.instance).selectinload(ApprovalInstance.submitter))
+            .order_by(ApprovalTask.assigned_at.desc())
+        )
     return list((await db.execute(stmt)).scalars().all())
 
 

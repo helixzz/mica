@@ -9,7 +9,7 @@ from uuid import UUID
 import litellm
 from fastapi import APIRouter, Depends, HTTPException, Query, status
 from pydantic import BaseModel
-from sqlalchemy import desc, func, select
+from sqlalchemy import and_, desc, func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
@@ -212,14 +212,17 @@ async def workflow_kanban(
     db: Annotated[AsyncSession, Depends(get_db)],
 ) -> KanbanOut:
     pending_approvals: list[dict] = []
+    pending_filter = ApprovalTask.status == "pending"
+    if user.role != UserRole.ADMIN.value:
+        pending_filter = and_(
+            pending_filter,
+            ApprovalTask.assignee_id == user.id,
+        )
     tasks = (
         (
             await db.execute(
                 select(ApprovalTask)
-                .where(
-                    ApprovalTask.assignee_id == user.id,
-                    ApprovalTask.status == "pending",
-                )
+                .where(pending_filter)
                 .order_by(ApprovalTask.created_at.desc())
                 .limit(20)
             )

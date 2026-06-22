@@ -325,7 +325,7 @@ async def test_list_pending_tasks_for_user(seeded_db_session):
         title="List",
         amount=Decimal("1000"),
     )
-    tasks = await svc.list_pending_tasks_for_user(seeded_db_session, bob.id)
+    tasks = await svc.list_pending_tasks_for_user(seeded_db_session, bob)
     assert len(tasks) >= 1
     assert all(t.status == "pending" for t in tasks)
 
@@ -373,3 +373,29 @@ async def test_no_matching_rule_falls_back_to_legacy_threshold(seeded_db_session
     )
     assert instance.total_stages == 1
     assert instance.current_stage == 1
+
+
+async def test_list_pending_tasks_admin_sees_all(seeded_db_session):
+    """Admin should see all pending tasks, not just their own."""
+    alice = await _alice(seeded_db_session)
+    bob = await _user_by_role(seeded_db_session, UserRole.DEPT_MANAGER)
+    admin = await _user_by_role(seeded_db_session, UserRole.ADMIN)
+
+    await svc.create_instance_for_pr(
+        seeded_db_session,
+        submitter=alice,
+        biz_type="purchase_requisition",
+        biz_id=uuid4(),
+        biz_number="PR-ADMIN-VIEW-0001",
+        title="Admin should see this",
+        amount=Decimal("1000"),
+    )
+
+    bob_tasks = await svc.list_pending_tasks_for_user(seeded_db_session, bob)
+    bob_count = len(bob_tasks)
+    assert bob_count >= 1
+
+    admin_tasks = await svc.list_pending_tasks_for_user(seeded_db_session, admin)
+    assert len(admin_tasks) >= bob_count
+    assignee_ids = {t.assignee_id for t in admin_tasks}
+    assert bob.id in assignee_ids
