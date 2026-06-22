@@ -49,4 +49,23 @@ describe('<StatCard />', () => {
     )
     expect(screen.getByText('x')).toBeInTheDocument()
   })
+
+  it('renders compact density without crashing and shows value/label', () => {
+    renderWithProviders(
+      <StatCard label="紧凑" value={42} density="compact" />,
+    )
+    expect(screen.getByText('紧凑')).toBeInTheDocument()
+    expect(screen.getByText('42')).toBeInTheDocument()
+  })
+
+  it('renders icon node inside icon container (regression for v1.37.0 empty-icon bug)', () => {
+    renderWithProviders(
+      <StatCard
+        label="带图标"
+        value={1}
+        icon={<span data-testid="stat-icon-marker">★</span>}
+      />,
+    )
+    expect(screen.getByTestId('stat-icon-marker')).toBeInTheDocument()
+  })
 })

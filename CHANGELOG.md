@@ -7,6 +7,54 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [v1.38.0] — 2026-06-22
+
+### 改进（首页布局密度优化）
+
+用户反馈：首页空间浪费严重，欢迎语区无实用价值，第二排 4 个卡片在 1920×1080 屏被挤换行。
+
+#### Dashboard 视觉精简
+
+- **删除 PageHeader 占位**：原来 ~150px 高的「你好 {name} · 管理员 · 时间」全宽 panel，替换为 ~48px 高的轻量工具条（左 `Dashboard · 当前时间`，右 `自定义` 按钮）。**首屏垂直空间释放 ~100px**
+- **顶层 Space size large → middle**：section 之间间距从 24px → 16px
+- **顶层 paddingBottom paddingXL → paddingLG**：底部留白从 32px → 24px
+- **移除问候语 `dashboard.greeting`**（i18n key 保留，仅停用）
+
+#### StatCard 紧凑模式
+
+- **新增 `density?: 'comfortable' | 'compact'` prop**（默认 comfortable，**所有现存调用零行为变化**）
+- compact 模式：
+  - padding paddingLG (24) → paddingSM (12)
+  - Title `level={3}` → `level={4}`（数字字号 24 → 20）
+  - 图标 40×40 → 32×32
+  - **trend 与 value 同行 baseline 对齐**（comfortable 是 stack）
+  - 整体高度 ~140px → ~88px（**纵向密度提升 37%**）
+- **横向间距 gutter [16,16] → [12,12]** 在两个 stats/alerts 行
+
+#### 4 卡换行 bug 修复
+
+- **alerts 排 `lg={8}` → `lg={6}`**：4 张警示卡（待办审批/到期合同/交货进度/偏离率）现在 1920px 屏一行容纳，不再 3+1 换行
+- 与第一排 stats 对齐（同样 lg=6 4 列），视觉节奏一致
+
+### 测试
+
+- StatCard 单测 6 → 8（+1 compact density、+1 icon 渲染回归防护——确保 v1.36 的"图标空白色块"bug 永远不再出现）
+- 总用例：后端 726（无变化），前端 63（+2）
+
+### 设计要点
+
+- **零回归**：`density` 是可选 prop，所有现存 26+ 处 StatCard 调用不传该参数，继续按 comfortable 渲染。compact 仅 Dashboard 8 处使用
+- **PageHeader 不动**：其他页面（Suppliers/Items/Contracts/...）继续使用 PageHeader，仅 Dashboard 用更适合"高频回访"场景的轻量 toolbar
+- **不引入新主题色**：accent 边条、color tokens 全部复用 v1.37 的 ant.design 暗色主题映射
+
+### 后续候选（v1.39.0）
+
+- 第二屏（业务列表/图表/分析）的紧凑模式扩展
+- 用户角色定制：requester 不需要"近 30 天偏离率"卡，可在 customize drawer 默认隐藏
+- StatCard 支持 mini sparkline（趋势线）
+
+---
+
 ## [v1.37.0] — 2026-06-22
 
 ### 新增（审批流改进 — 路线图 B 阶段：规则按部门 / 成本中心过滤）

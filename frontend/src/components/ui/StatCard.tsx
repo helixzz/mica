@@ -15,6 +15,7 @@ export interface StatCardProps {
   footer?: React.ReactNode
   loading?: boolean
   variant?: 'default' | 'accent'
+  density?: 'comfortable' | 'compact'
 }
 
 export const StatCard: React.FC<StatCardProps> = ({
@@ -25,16 +26,25 @@ export const StatCard: React.FC<StatCardProps> = ({
   footer,
   loading = false,
   variant = 'default',
+  density = 'comfortable',
 }) => {
   const { token } = theme.useToken()
   const [isHovered, setIsHovered] = useState(false)
 
   const isAccent = variant === 'accent'
+  const isCompact = density === 'compact'
 
   const labelColor = isAccent ? token.colorPrimary : token.colorTextSecondary
   const valueColor = token.colorText
   const iconColor = isAccent ? token.colorPrimary : token.colorTextTertiary
   const iconBg = isAccent ? token.colorPrimaryBg : token.colorFillQuaternary
+
+  const cardPadding = isCompact ? token.paddingSM : token.paddingLG
+  const titleLevel: 3 | 4 = isCompact ? 4 : 3
+  const iconSize = isCompact ? 32 : 40
+  const iconFontSize = isCompact ? token.fontSizeLG : token.fontSizeHeading3
+  const labelSize = isCompact ? token.fontSizeSM : token.fontSizeSM
+  const stackGap = isCompact ? token.marginXXS : token.marginXS
 
   const getTrendColor = () => {
     if (!trend) return token.colorTextSecondary
@@ -73,52 +83,65 @@ export const StatCard: React.FC<StatCardProps> = ({
         transform: isHovered ? 'translateY(-2px)' : 'none',
         boxShadow: isHovered ? token.boxShadowSecondary : token.boxShadowTertiary,
       }}
-      styles={{ body: { padding: token.paddingLG } }}
+      styles={{ body: { padding: cardPadding } }}
     >
       <Skeleton loading={loading} active paragraph={{ rows: 1 }} title={{ width: '50%' }}>
         <div
           style={{
             display: 'flex',
             justifyContent: 'space-between',
-            alignItems: 'flex-start',
+            alignItems: isCompact ? 'center' : 'flex-start',
             gap: token.marginSM,
           }}
         >
           <Space
             direction="vertical"
-            size={token.marginXS}
+            size={stackGap}
             style={{ minWidth: 0, flex: 1 }}
           >
             <Text
               style={{
                 color: labelColor,
-                fontSize: token.fontSizeSM,
+                fontSize: labelSize,
                 fontWeight: 500,
                 whiteSpace: 'nowrap',
                 overflow: 'hidden',
                 textOverflow: 'ellipsis',
                 maxWidth: '100%',
+                lineHeight: 1.2,
               }}
             >
               {label}
             </Text>
-            <Title
-              level={3}
-              style={{
-                margin: 0,
-                color: valueColor,
-                fontWeight: 600,
-                whiteSpace: 'nowrap',
-                overflow: 'hidden',
-                textOverflow: 'ellipsis',
-                maxWidth: '100%',
-                fontVariantNumeric: 'tabular-nums',
-              }}
-              title={typeof value === 'string' || typeof value === 'number' ? String(value) : undefined}
-            >
-              {value}
-            </Title>
-            {trend && (
+            <div style={{ display: 'flex', alignItems: 'baseline', gap: token.marginSM, minWidth: 0 }}>
+              <Title
+                level={titleLevel}
+                style={{
+                  margin: 0,
+                  color: valueColor,
+                  fontWeight: 600,
+                  whiteSpace: 'nowrap',
+                  overflow: 'hidden',
+                  textOverflow: 'ellipsis',
+                  fontVariantNumeric: 'tabular-nums',
+                  lineHeight: 1.15,
+                }}
+                title={typeof value === 'string' || typeof value === 'number' ? String(value) : undefined}
+              >
+                {value}
+              </Title>
+              {isCompact && trend && (
+                <Space size={token.marginXXS} style={{ color: getTrendColor(), fontSize: token.fontSizeSM, flexShrink: 0 }}>
+                  {getTrendIcon()}
+                  {typeof trend.delta === 'string' ? (
+                    <Text style={{ color: 'inherit', fontWeight: 500 }}>{trend.delta}</Text>
+                  ) : (
+                    trend.delta
+                  )}
+                </Space>
+              )}
+            </div>
+            {!isCompact && trend && (
               <Space size={token.marginXXS} style={{ color: getTrendColor(), fontSize: token.fontSizeSM }}>
                 {getTrendIcon()}
                 {typeof trend.delta === 'string' ? (
@@ -134,12 +157,12 @@ export const StatCard: React.FC<StatCardProps> = ({
               aria-hidden
               style={{
                 color: iconColor,
-                fontSize: token.fontSizeHeading3,
+                fontSize: iconFontSize,
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'center',
-                width: 40,
-                height: 40,
+                width: iconSize,
+                height: iconSize,
                 borderRadius: token.borderRadiusLG,
                 backgroundColor: iconBg,
                 flexShrink: 0,
@@ -151,8 +174,8 @@ export const StatCard: React.FC<StatCardProps> = ({
         </div>
         {footer && (
           <>
-            <Divider style={{ margin: `${token.marginSM}px 0 0` }} />
-            <div style={{ fontSize: token.fontSizeSM, color: token.colorPrimary, textAlign: 'right', paddingTop: token.marginXS }}>
+            <Divider style={{ margin: `${isCompact ? token.marginXS : token.marginSM}px 0 0` }} />
+            <div style={{ fontSize: token.fontSizeSM, color: token.colorPrimary, textAlign: 'right', paddingTop: token.marginXXS }}>
               {footer}
             </div>
           </>

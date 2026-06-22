@@ -52,7 +52,7 @@ import {
   type PaymentCalendarItem,
 } from '@/api'
 import { useAuth } from '@/auth/useAuth'
-import { PageHeader, StatCard, Section, EmptyState } from '@/components/ui'
+import { StatCard, Section, EmptyState } from '@/components/ui'
 import { PaymentTracker } from '@/components/PaymentForecastChart'
 import { InvoiceTracker } from '@/components/InvoiceTrackerChart'
 import { fmtAmount } from '@/utils/format'
@@ -259,13 +259,14 @@ export function DashboardPage() {
     switch (id) {
       case 'stats':
         return (
-          <Row gutter={[16, 16]} key="stats">
+          <Row gutter={[12, 12]} key="stats">
             <Col xs={24} sm={12} lg={6}>
               <StatCard
                 label={t('nav.purchase_requisitions')}
                 value={isItBuyer ? prsInProgress : prs.length}
                 icon={<FileTextOutlined />}
                 loading={loading}
+                density="compact"
                 variant={isItBuyer ? 'accent' : 'default'}
                 trend={
                   metrics && metrics.pr_count.direction !== 'flat'
@@ -283,6 +284,7 @@ export function DashboardPage() {
                 value={pos.length}
                 icon={<ShoppingCartOutlined />}
                 loading={loading}
+                density="compact"
                 trend={
                   metrics && metrics.po_count.direction !== 'flat'
                     ? {
@@ -299,6 +301,7 @@ export function DashboardPage() {
                 value={pending.length}
                 icon={<CheckCircleOutlined />}
                 loading={loading}
+                density="compact"
                 variant={isDeptManager || (pending.length > 0 && !isItBuyer) ? 'accent' : 'default'}
                 trend={
                   metrics && metrics.pending_approvals.direction !== 'flat'
@@ -316,6 +319,7 @@ export function DashboardPage() {
                 value={fmtAmount(totalAmount, 'CNY')}
                 icon={<WarningOutlined />}
                 loading={loading}
+                density="compact"
                 variant={isFinanceAuditor || isProcurementMgr ? 'accent' : 'default'}
                 trend={
                   metrics && metrics.po_total_amount.direction !== 'flat'
@@ -332,51 +336,55 @@ export function DashboardPage() {
       case 'alerts':
         return (
           <Space direction="vertical" size="middle" style={{ width: '100%' }} key="alerts">
-            <Row gutter={[16, 16]}>
+            <Row gutter={[12, 12]}>
               {pending.length > 0 && (
-                <Col xs={24} sm={12} lg={8}>
+                <Col xs={24} sm={12} lg={6}>
                   <StatCard
                     label={t('dashboard.pending_approvals')}
                     value={pending.length}
                     icon={<CheckCircleOutlined />}
                     loading={loading}
                     variant="accent"
+                    density="compact"
                     footer={<Link to="/approvals">{t('dashboard.view_approvals')}</Link>}
                   />
                 </Col>
               )}
               {contracts.length > 0 && (
-                <Col xs={24} sm={12} lg={8}>
+                <Col xs={24} sm={12} lg={6}>
                   <StatCard
                     label={t('dashboard.expiring_contracts')}
                     value={contracts.length}
                     icon={<AlertOutlined />}
                     loading={loading}
                     variant="accent"
+                    density="compact"
                     footer={<Link to="/contracts">{t('dashboard.view_contracts')}</Link>}
                   />
                 </Col>
               )}
               {deliveryOverview && deliveryOverview.total_planned > 0 && (
-                <Col xs={24} sm={12} lg={8}>
+                <Col xs={24} sm={12} lg={6}>
                   <StatCard
                     label={t('dashboard.delivery_progress')}
                     value={`${Math.round(deliveryOverview.completion_pct)}%`}
                     icon={<CarOutlined />}
                     loading={loading}
                     variant="accent"
+                    density="compact"
                     footer={<Link to="/delivery-plans">{t('dashboard.view_delivery')}</Link>}
                   />
                 </Col>
               )}
               {deviationRate && deviationRate.total_links > 0 && (
-                <Col xs={24} sm={12} lg={8}>
+                <Col xs={24} sm={12} lg={6}>
                   <StatCard
                     label={t('fulfillment.deviation_rate_card_title')}
                     value={`${(deviationRate.deviation_rate * 100).toFixed(1)}%`}
                     icon={<AlertOutlined />}
                     loading={loading}
                     variant="accent"
+                    density="compact"
                     footer={
                       <Text type="secondary" style={{ fontSize: 12 }}>
                         {deviationRate.deviated_links} / {deviationRate.total_links}
@@ -386,7 +394,7 @@ export function DashboardPage() {
                 </Col>
               )}
             </Row>
-            <Row gutter={[16, 16]}>
+            <Row gutter={[12, 12]}>
               <Col xs={24} lg={12}>
                 <Section
                   title={t('dashboard.pending_approvals')}
@@ -952,24 +960,30 @@ export function DashboardPage() {
   }
 
   return (
-    <Space direction="vertical" size="large" style={{ width: '100%', paddingBottom: token.paddingXL }}>
-      <PageHeader
-        title={t('dashboard.greeting', { name: user?.display_name ?? '' })}
-        subtitle={
-          <Space>
-            <Tag color="blue">{t(`role.${role}`)}</Tag>
-            <Text type="secondary">
-              <ClockCircleOutlined style={{ marginRight: 4 }} />
-              {currentTime.toLocaleString()}
-            </Text>
-          </Space>
-        }
-        actions={
-          <Button icon={<SettingOutlined />} onClick={() => setCustomizeVisible(true)}>
-            {t('dashboard.customize', 'Customize')}
-          </Button>
-        }
-      />
+    <Space direction="vertical" size="middle" style={{ width: '100%', paddingBottom: token.paddingLG }}>
+      <div
+        style={{
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'space-between',
+          gap: token.marginSM,
+          flexWrap: 'wrap',
+          paddingBlock: token.paddingXS,
+        }}
+      >
+        <Space size="small" wrap>
+          <Typography.Title level={4} style={{ margin: 0, fontWeight: 600 }}>
+            {t('nav.dashboard')}
+          </Typography.Title>
+          <Text type="secondary" style={{ fontSize: token.fontSizeSM }}>
+            <ClockCircleOutlined style={{ marginRight: 4 }} />
+            {currentTime.toLocaleString()}
+          </Text>
+        </Space>
+        <Button size="small" icon={<SettingOutlined />} onClick={() => setCustomizeVisible(true)}>
+          {t('dashboard.customize', 'Customize')}
+        </Button>
+      </div>
 
       {layout.map((item) => renderSection(item.id))}
 
