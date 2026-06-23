@@ -4,7 +4,7 @@ import { useEffect, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 
 import { api, type PRQuoteCandidate } from '@/api'
-import { fmtAmount } from '@/utils/format'
+import { fmtAmount, fmtAmountNode } from '@/utils/format'
 
 interface Props {
   prId: string
@@ -100,7 +100,7 @@ export function PRQuoteConfirmModal({ prId, open, onClose }: Props) {
       title: t('field.unit_price'),
       dataIndex: 'unit_price',
       align: 'right',
-      render: (v: string, r) => fmtAmount(v, r.currency),
+      render: (v: string, r) => fmtAmountNode(v, r.currency),
     },
     {
       title: t('pr.sku_quote_state_col'),

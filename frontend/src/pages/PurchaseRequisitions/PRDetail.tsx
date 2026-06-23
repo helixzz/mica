@@ -28,7 +28,8 @@ import { extractError, getToken } from '@/api/client'
 import { ActivityTimeline } from '@/components/ActivityTimeline'
 import { ConvertToPOModal } from '@/components/PR/ConvertToPOModal'
 import { AddSupplementaryFromPRModal } from '@/components/PR/AddSupplementaryFromPRModal'
-import { fmtAmount, fmtQty } from '@/utils/format'
+import { fmtAmount, fmtAmountNode, fmtQty, fmtQtyNode } from '@/utils/format'
+import { MonoId } from '@/components/ui/Mono'
 import { useAuth } from '@/auth/useAuth'
 
 const statusColors: Record<string, string> = {
@@ -339,10 +340,10 @@ export function PRDetailPage() {
                   dataIndex: 'supplier_id',
                   render: (v: string | null) => (v ? supplierMap[v] ?? v : '-'),
                 },
-                { title: t('field.qty'), dataIndex: 'qty', align: 'right', render: (v: string) => fmtQty(v) },
+                { title: t('field.qty'), dataIndex: 'qty', align: 'right', render: (v: string) => fmtQtyNode(v) },
                 { title: t('field.uom'), dataIndex: 'uom', width: 80 },
-                { title: t('field.unit_price'), dataIndex: 'unit_price', align: 'right', render: (v: string) => fmtAmount(v, pr.currency) },
-                { title: t('field.amount'), dataIndex: 'amount', align: 'right', render: (v: string) => fmtAmount(v, pr.currency) },
+                { title: t('field.unit_price'), dataIndex: 'unit_price', align: 'right', render: (v: string) => fmtAmountNode(v, pr.currency) },
+                { title: t('field.amount'), dataIndex: 'amount', align: 'right', render: (v: string) => fmtAmountNode(v, pr.currency) },
                 {
                   title: t('fulfillment.progress'),
                   width: 180,
@@ -443,7 +444,7 @@ export function PRDetailPage() {
                           title: t('field.po_number'),
                           dataIndex: 'po_number',
                           render: (v: string, r) => (
-                            <a onClick={() => navigate(`/purchase-orders/${r.id}`)}>{v}</a>
+                            <a onClick={() => navigate(`/purchase-orders/${r.id}`)}><MonoId>{v}</MonoId></a>
                           ),
                         },
                         {
@@ -462,7 +463,7 @@ export function PRDetailPage() {
                           title: t('field.total_amount'),
                           dataIndex: 'total_amount',
                           align: 'right',
-                          render: (v: string, r) => fmtAmount(v, r.currency),
+                          render: (v: string, r) => fmtAmountNode(v, r.currency),
                         },
                         {
                           title: '',
@@ -496,7 +497,7 @@ export function PRDetailPage() {
                           title: t('field.contract_number'),
                           dataIndex: 'contract_number',
                           render: (v: string, r) => (
-                            <a onClick={() => navigate(`/contracts/${r.id}`)}>{v}</a>
+                            <a onClick={() => navigate(`/contracts/${r.id}`)}><MonoId>{v}</MonoId></a>
                           ),
                         },
                         { title: t('field.title'), dataIndex: 'title' },
@@ -516,7 +517,7 @@ export function PRDetailPage() {
                           title: t('field.total_amount'),
                           dataIndex: 'total_amount',
                           align: 'right',
-                          render: (v: string, r) => fmtAmount(v, r.currency),
+                          render: (v: string, r) => fmtAmountNode(v, r.currency),
                         },
                         {
                           title: '',
@@ -553,7 +554,7 @@ export function PRDetailPage() {
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
         <Space align="center">
           <Typography.Title level={3} style={{ margin: 0 }}>
-            {pr.pr_number}
+            <MonoId>{pr.pr_number}</MonoId>
           </Typography.Title>
           <Tag color={statusColors[pr.status]}>{t(`status.${pr.status}` as 'status.draft')}</Tag>
         </Space>

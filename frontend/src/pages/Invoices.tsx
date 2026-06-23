@@ -7,7 +7,8 @@ import { Link } from 'react-router-dom'
 
 import { api, type InvoiceListRow } from '@/api'
 import { downloadCSV } from '@/utils/export'
-import { fmtAmount } from '@/utils/format'
+import { fmtAmount, fmtAmountNode } from '@/utils/format'
+import { MonoId } from '@/components/ui/Mono'
 
 export function InvoicesPage() {
   const { t } = useTranslation()
@@ -37,11 +38,11 @@ export function InvoicesPage() {
       dataIndex: 'internal_number',
       render: (v, r) => <Link to={`/invoices/${r.id}`}>{v}</Link>,
     },
-    { title: t('field.invoice_number'), dataIndex: 'invoice_number' },
+    { title: t('field.invoice_number'), dataIndex: 'invoice_number', render: (v: string) => <MonoId>{v}</MonoId> },
     { title: t('field.invoice_date'), dataIndex: 'invoice_date' },
-    { title: t('field.subtotal'), dataIndex: 'subtotal', align: 'right', render: (v: string, r) => fmtAmount(v, r.currency) },
-    { title: t('field.tax_amount'), dataIndex: 'tax_amount', align: 'right', render: (v: string, r) => fmtAmount(v, r.currency) },
-    { title: t('field.total_amount'), dataIndex: 'total_amount', align: 'right', render: (v: string, r) => fmtAmount(v, r.currency) },
+    { title: t('field.subtotal'), dataIndex: 'subtotal', align: 'right', render: (v: string, r) => fmtAmountNode(v, r.currency) },
+    { title: t('field.tax_amount'), dataIndex: 'tax_amount', align: 'right', render: (v: string, r) => fmtAmountNode(v, r.currency) },
+    { title: t('field.total_amount'), dataIndex: 'total_amount', align: 'right', render: (v: string, r) => fmtAmountNode(v, r.currency) },
     {
       title: 'Match',
       dataIndex: 'is_fully_matched',

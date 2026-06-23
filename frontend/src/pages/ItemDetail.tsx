@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { useNavigate, useParams } from 'react-router-dom'
 import { api, type Item, type SKUForecast } from '@/api'
+import { MonoId } from '@/components/ui/Mono'
 
 export default function ItemDetailPage() {
   const { t } = useTranslation()
@@ -71,7 +72,7 @@ export default function ItemDetailPage() {
       </div>
       <Card>
         <Descriptions bordered size="small" column={2}>
-          <Descriptions.Item label={t('item.code')}>{item.code}</Descriptions.Item>
+          <Descriptions.Item label={t('item.code')}><MonoId>{item.code}</MonoId></Descriptions.Item>
           <Descriptions.Item label={t('field.item_name')}>{item.name}</Descriptions.Item>
           <Descriptions.Item label={t('item.category_label')}>{item.category || '-'}</Descriptions.Item>
           <Descriptions.Item label={t('field.uom')}>{item.uom}</Descriptions.Item>

@@ -25,7 +25,7 @@ import { useTranslation } from 'react-i18next'
 import { api, type InvoiceExtractResult, type PurchaseOrder } from '@/api'
 import { extractError } from '@/api/client'
 import { AutosaveBanner, AutosaveUnavailableBanner } from '@/components/AutosaveBanner'
-import { fmtAmount } from '@/utils/format'
+import { fmtAmount, fmtAmountNode } from '@/utils/format'
 import { useAutosave } from '@/hooks/useAutosave'
 
 interface InvoiceModalProps {
@@ -445,7 +445,7 @@ export function InvoiceModal({ open, po, onClose, onDone, busy, setBusy }: Invoi
                 {
                   title: t('field.subtotal'),
                   align: 'right', width: 100,
-                  render: (_: unknown, r) => fmtAmount(String(lines[r.__idx]?.qty * lines[r.__idx]?.unit_price), po.currency),
+                  render: (_: unknown, r) => fmtAmountNode(String(lines[r.__idx]?.qty * lines[r.__idx]?.unit_price), po.currency),
                 },
                 {
                   title: t('field.tax_amount'),

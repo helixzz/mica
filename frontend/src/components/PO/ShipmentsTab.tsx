@@ -5,7 +5,8 @@ import { useTranslation } from 'react-i18next'
 
 import { api, type Shipment } from '@/api'
 import { ShipmentActions } from '@/components/ShipmentActions'
-import { fmtAmount, fmtQty } from '@/utils/format'
+import { fmtAmount, fmtAmountNode, fmtQty, fmtQtyNode } from '@/utils/format'
+import { MonoId } from '@/components/ui/Mono'
 
 interface ShipmentsTabProps {
   shipments: Shipment[]
@@ -61,7 +62,7 @@ export function ShipmentsTab({ shipments, currency, loadAll, onRecordShipment }:
               const files = attachMap[r.id] || []
               return (
                 <div>
-                  <div>{val}</div>
+                  <div><MonoId>{val}</MonoId></div>
                   {files.length > 0 && (
                     <Space size={4} wrap style={{ marginTop: 4 }}>
                       {files.map((f) => (
@@ -85,7 +86,7 @@ export function ShipmentsTab({ shipments, currency, loadAll, onRecordShipment }:
           { title: t('field.status'), dataIndex: 'status',
             render: (s: string) => <Tag>{t(`status.${s}` as 'status.pending')}</Tag> },
           { title: t('field.carrier'), dataIndex: 'carrier' },
-          { title: t('field.tracking_number'), dataIndex: 'tracking_number' },
+          { title: t('field.tracking_number'), dataIndex: 'tracking_number', render: (v: string | null) => v ? <MonoId>{v}</MonoId> : '-' },
           { title: t('field.expected_date'), dataIndex: 'expected_date' },
           { title: t('field.actual_date'), dataIndex: 'actual_date' },
           {
@@ -106,9 +107,9 @@ export function ShipmentsTab({ shipments, currency, loadAll, onRecordShipment }:
               columns={[
                 { title: t('field.line_no'), dataIndex: 'line_no', width: 60 },
                 { title: t('field.item_name'), dataIndex: 'item_name' },
-                 { title: t('field.qty_shipped'), dataIndex: 'qty_shipped', align: 'right', render: (v: string) => fmtQty(v) },
-                 { title: t('field.qty_received'), dataIndex: 'qty_received', align: 'right', render: (v: string) => fmtQty(v) },
-                 { title: t('field.unit_price'), dataIndex: 'unit_price', align: 'right', render: (v: string) => fmtAmount(v, currency) },
+                 { title: t('field.qty_shipped'), dataIndex: 'qty_shipped', align: 'right', render: (v: string) => fmtQtyNode(v) },
+                 { title: t('field.qty_received'), dataIndex: 'qty_received', align: 'right', render: (v: string) => fmtQtyNode(v) },
+                 { title: t('field.unit_price'), dataIndex: 'unit_price', align: 'right', render: (v: string) => fmtAmountNode(v, currency) },
               ]}
             />
           ),

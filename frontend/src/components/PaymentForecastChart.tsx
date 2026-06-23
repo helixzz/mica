@@ -5,7 +5,7 @@ import { useCallback, useEffect, useMemo, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 
 import { api, type PaymentForecast, type PaymentForecastMonth } from '@/api'
-import { fmtAmount } from '@/utils/format'
+import { fmtAmount, fmtAmountNode } from '@/utils/format'
 
 const PLANNED_COLOR = '#B48A6A'
 const PAID_COLOR = '#52c41a'
@@ -110,7 +110,7 @@ export function PaymentTracker({ title }: PaymentTrackerProps) {
       title: t('dashboard.forecast_remaining_col'),
       dataIndex: 'remaining',
       align: 'right',
-      render: (v: string) => fmtAmount(v, 'CNY'),
+      render: (v: string) => fmtAmountNode(v, 'CNY'),
     },
   ]
 
@@ -182,7 +182,7 @@ export function PaymentTracker({ title }: PaymentTrackerProps) {
                 value={Math.max(0, Number(data.grand_planned) - Number(data.grand_paid))}
                 prefix="¥"
                 precision={2}
-                valueStyle={{ color: '#8B5E3C' }}
+                valueStyle={{ color: 'var(--color-primary-500)' }}
               />
             </Col>
             <Col xs={12} md={6}>
@@ -415,7 +415,7 @@ function BarChart({ months, maxValue, todayMonth }: BarChartProps) {
               y={padTop + innerH + 18}
               fontSize={11}
               textAnchor="middle"
-              fill={isToday ? '#8B5E3C' : '#6F6861'}
+              fill={isToday ? 'var(--color-viz-primary)' : 'var(--color-viz-baseline)'}
               fontWeight={isToday ? 600 : 400}
             >
               {m.month}

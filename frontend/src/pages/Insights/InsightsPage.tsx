@@ -128,7 +128,7 @@ export default function InsightsPage() {
               <Button icon={<CloseOutlined />} onClick={handleCancel}>
                 {t('insights.cancel_edit')}
               </Button>
-              <Button type="primary" icon={<SaveOutlined />} onClick={handleSave} style={{ backgroundColor: '#8B5E3C' }}>
+              <Button type="primary" icon={<SaveOutlined />} onClick={handleSave}>
                 {t('insights.save_layout')}
               </Button>
             </>
@@ -165,7 +165,7 @@ export default function InsightsPage() {
           description={t('insights.no_panels')}
         >
           {!isEditMode && (
-            <Button type="primary" onClick={() => setIsEditMode(true)} style={{ backgroundColor: '#8B5E3C' }}>
+            <Button type="primary" onClick={() => setIsEditMode(true)}>
               {t('insights.edit_mode')}
             </Button>
           )}

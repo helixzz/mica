@@ -6,6 +6,7 @@ import { useTranslation } from 'react-i18next'
 import { api, type ClassificationItem, flattenCategoryTree, type Item } from '@/api'
 import { downloadCSV } from '@/utils/export'
 import { showUndoToast } from '@/utils/undo'
+import { MonoId } from '@/components/ui/Mono'
 
 export default function ItemsPage() {
   const { t } = useTranslation()
@@ -169,7 +170,7 @@ export default function ItemsPage() {
                 onChange: (p, ps) => { setPage(p); setPageSize(ps) },
               }}
               columns={[
-                { title: t('item.code'), dataIndex: 'code', width: 140, sorter: (a, b) => a.code.localeCompare(b.code) },
+                { title: t('item.code'), dataIndex: 'code', width: 140, sorter: (a, b) => a.code.localeCompare(b.code), render: (v: string) => <MonoId>{v}</MonoId> },
                 { title: t('field.item_name'), dataIndex: 'name', sorter: (a, b) => a.name.localeCompare(b.name) },
                 {
                   title: t('item.category_label'), dataIndex: 'category_id',

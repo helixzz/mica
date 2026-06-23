@@ -2,23 +2,27 @@ import React from 'react';
 import { theme, Typography, Space, Breadcrumb } from 'antd';
 import { Link, useLocation } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
+import { MonoId } from './Mono';
 
 const { Title, Text } = Typography;
 
 export interface PageHeaderProps {
   title: React.ReactNode;
+  /**
+   * Optional business identifier (e.g. PR-2026-0017, PO-2026-0019).
+   * When provided, renders next to the title in JetBrains Mono.
+   * See docs/DESIGN.md §4.2 / §7.8.
+   */
+  number?: string | null;
   subtitle?: React.ReactNode;
   breadcrumbs?: Array<{ title: React.ReactNode; href?: string }>;
   autoBreadcrumbs?: boolean;
   actions?: React.ReactNode;
 }
 
-/**
- * PageHeader component for consistent page titles, breadcrumbs, and actions.
- * Uses AntD tokens for styling to support theme switching.
- */
 export const PageHeader: React.FC<PageHeaderProps> = ({
   title,
+  number,
   subtitle,
   breadcrumbs,
   autoBreadcrumbs,
@@ -67,10 +71,25 @@ export const PageHeader: React.FC<PageHeaderProps> = ({
           gap: token.marginMD,
         }}
       >
-        <Space direction="vertical" size={0}>
-          <Title level={2} style={{ margin: 0, fontWeight: 600 }}>
-            {title}
-          </Title>
+        <Space direction="vertical" size={0} style={{ minWidth: 0 }}>
+          <Space size={token.marginSM} align="baseline" wrap>
+            <Title
+              level={2}
+              style={{
+                margin: 0,
+                fontWeight: 600,
+                letterSpacing: 'var(--tracking-heading)',
+                lineHeight: 1.2,
+              }}
+            >
+              {title}
+            </Title>
+            {number && (
+              <MonoId style={{ fontSize: token.fontSizeLG, color: token.colorTextSecondary }}>
+                {number}
+              </MonoId>
+            )}
+          </Space>
           {subtitle && (
             <Text type="secondary" style={{ fontSize: token.fontSize }}>
               {subtitle}

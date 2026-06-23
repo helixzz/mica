@@ -33,6 +33,7 @@ export const StatCard: React.FC<StatCardProps> = ({
 
   const isAccent = variant === 'accent'
   const isCompact = density === 'compact'
+  const isPrimitive = typeof value === 'string' || typeof value === 'number'
 
   const labelColor = isAccent ? token.colorPrimary : token.colorTextSecondary
   const valueColor = token.colorText
@@ -123,10 +124,13 @@ export const StatCard: React.FC<StatCardProps> = ({
                   whiteSpace: 'nowrap',
                   overflow: 'hidden',
                   textOverflow: 'ellipsis',
+                  fontFamily: isPrimitive ? 'var(--font-mono)' : undefined,
                   fontVariantNumeric: 'tabular-nums',
-                  lineHeight: 1.15,
+                  fontFeatureSettings: '"tnum" 1, "zero" 1',
+                  lineHeight: isCompact ? 1.2 : 1.15,
+                  letterSpacing: isCompact ? 'var(--tracking-heading)' : 'var(--tracking-display)',
                 }}
-                title={typeof value === 'string' || typeof value === 'number' ? String(value) : undefined}
+                title={isPrimitive ? String(value) : undefined}
               >
                 {value}
               </Title>

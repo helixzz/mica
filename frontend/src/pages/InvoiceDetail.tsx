@@ -18,7 +18,8 @@ import { useNavigate, useParams } from 'react-router-dom'
 
 import { api, type Invoice } from '@/api'
 import { extractError } from '@/api/client'
-import { fmtAmount, fmtQty } from '@/utils/format'
+import { fmtAmount, fmtAmountNode, fmtQty, fmtQtyNode } from '@/utils/format'
+import { MonoId } from '@/components/ui/Mono'
 
 export function InvoiceDetailPage() {
   const { t } = useTranslation()
@@ -92,7 +93,7 @@ export function InvoiceDetailPage() {
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
         <Space align="center">
           <Typography.Title level={3} style={{ margin: 0 }}>
-            {inv.internal_number} · {inv.invoice_number}
+            <MonoId>{inv.internal_number}</MonoId> · <MonoId>{inv.invoice_number}</MonoId>
           </Typography.Title>
           <Tag color={statusColor[inv.status] || 'default'}>
             {t(`status.${inv.status}` as 'status.draft')}
@@ -168,10 +169,10 @@ export function InvoiceDetailPage() {
           columns={[
             { title: t('field.line_no'), dataIndex: 'line_no', width: 50 },
             { title: t('field.item_name'), dataIndex: 'item_name', ellipsis: true },
-            { title: t('field.qty'), dataIndex: 'qty', align: 'right', width: 70, render: (v: string) => fmtQty(v) },
-            { title: t('field.unit_price'), dataIndex: 'unit_price', align: 'right', width: 110, render: (v: string) => fmtAmount(v, inv.currency) },
-            { title: t('field.subtotal'), dataIndex: 'subtotal', align: 'right', width: 110, render: (v: string) => fmtAmount(v, inv.currency) },
-            { title: t('field.tax_amount'), dataIndex: 'tax_amount', align: 'right', width: 100, render: (v: string) => fmtAmount(v, inv.currency) },
+            { title: t('field.qty'), dataIndex: 'qty', align: 'right', width: 70, render: (v: string) => fmtQtyNode(v) },
+            { title: t('field.unit_price'), dataIndex: 'unit_price', align: 'right', width: 110, render: (v: string) => fmtAmountNode(v, inv.currency) },
+            { title: t('field.subtotal'), dataIndex: 'subtotal', align: 'right', width: 110, render: (v: string) => fmtAmountNode(v, inv.currency) },
+            { title: t('field.tax_amount'), dataIndex: 'tax_amount', align: 'right', width: 100, render: (v: string) => fmtAmountNode(v, inv.currency) },
             {
               title: t('invoice.po_item_match', 'PO 匹配'),
               width: 260,

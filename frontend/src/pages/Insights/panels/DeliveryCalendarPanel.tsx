@@ -5,6 +5,7 @@ import { useTranslation } from 'react-i18next';
 import { useNavigate } from 'react-router-dom';
 import dayjs from 'dayjs';
 import { PanelProps } from '../PanelRegistry';
+import { MonoId } from '@/components/ui/Mono'
 
 const { Text } = Typography;
 const { useBreakpoint } = Grid;
@@ -156,7 +157,7 @@ export default function DeliveryCalendarPanel({ maxItems = 20, width, height }: 
       dataIndex: ['pr', 'pr_number'],
       key: 'pr_number',
       render: (text: string, record: AggregatedDelivery) => (
-        <a onClick={() => navigate(`/purchase-requisitions/${record.pr.id}`)}>{text}</a>
+        <a onClick={() => navigate(`/purchase-requisitions/${record.pr.id}`)}><MonoId>{text}</MonoId></a>
       )
     },
     {
@@ -179,7 +180,7 @@ export default function DeliveryCalendarPanel({ maxItems = 20, width, height }: 
       key: 'po_number',
       render: (_: any, record: AggregatedDelivery) => (
         record.po ? (
-          <a onClick={() => navigate(`/purchase-orders/${record.po!.id}`)}>{record.po.po_number}</a>
+          <a onClick={() => navigate(`/purchase-orders/${record.po!.id}`)}><MonoId>{record.po.po_number}</MonoId></a>
         ) : <Text type="secondary">-</Text>
       )
     },

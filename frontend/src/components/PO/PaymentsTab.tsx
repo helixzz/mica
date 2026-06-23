@@ -6,7 +6,8 @@ import { useNavigate } from 'react-router-dom'
 
 import { api, type PaymentRecord } from '@/api'
 import { extractError } from '@/api/client'
-import { fmtAmount } from '@/utils/format'
+import { fmtAmount, fmtAmountNode } from '@/utils/format'
+import { MonoId } from '@/components/ui/Mono'
 
 interface PaymentsTabProps {
   payments: PaymentRecord[]
@@ -32,13 +33,13 @@ export function PaymentsTab({ payments, currency, loadAll, onRecordPayment, onEd
         dataSource={payments}
         pagination={false}
         columns={[
-          { title: t('field.payment_number'), dataIndex: 'payment_number' },
+          { title: t('field.payment_number'), dataIndex: 'payment_number', render: (v: string) => <MonoId>{v}</MonoId> },
           {
             title: t('field.contract_number'),
             dataIndex: 'contract_number',
             render: (v: string | null, r: PaymentRecord) =>
               v && r.contract_id ? (
-                <a onClick={() => navigate(`/contracts/${r.contract_id}`)}>{v}</a>
+                <a onClick={() => navigate(`/contracts/${r.contract_id}`)}><MonoId>{v}</MonoId></a>
               ) : (
                 <Typography.Text type="secondary">-</Typography.Text>
               ),
@@ -48,7 +49,7 @@ export function PaymentsTab({ payments, currency, loadAll, onRecordPayment, onEd
             title: t('field.amount'),
             dataIndex: 'amount',
             align: 'right',
-            render: (v: string, r: PaymentRecord) => fmtAmount(v, r.currency),
+            render: (v: string, r: PaymentRecord) => fmtAmountNode(v, r.currency),
           },
           { title: t('field.due_date'), dataIndex: 'due_date' },
           { title: t('field.payment_date'), dataIndex: 'payment_date' },

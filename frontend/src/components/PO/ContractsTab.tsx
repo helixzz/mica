@@ -5,6 +5,7 @@ import { useNavigate } from 'react-router-dom'
 
 import { type Contract, type PurchaseOrder } from '@/api'
 import { fmtAmount } from '@/utils/format'
+import { MonoId } from '@/components/ui/Mono'
 
 interface ContractsTabProps {
   contracts: Contract[]
@@ -66,7 +67,7 @@ export function ContractsTab({
               title: t('field.contract_number'),
               dataIndex: 'contract_number',
               render: (v: string, r: Contract) => (
-                <a onClick={() => navigate(`/contracts/${r.id}`)}>{v}</a>
+                <a onClick={() => navigate(`/contracts/${r.id}`)}><MonoId>{v}</MonoId></a>
               ),
             },
             { title: t('field.title'), dataIndex: 'title' },

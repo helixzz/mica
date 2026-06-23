@@ -7,7 +7,8 @@ import { Link } from 'react-router-dom'
 import { ColumnSettings, type ColumnOption } from '@/components/ColumnSettings'
 import { usePersistedColumns } from '@/hooks/usePersistedColumns'
 import { api, type PurchaseOrderListItem } from '@/api'
-import { fmtAmount, fmtQty } from '@/utils/format'
+import { fmtAmount, fmtAmountNode, fmtQty, fmtQtyNode } from '@/utils/format'
+import { MonoId } from '@/components/ui/Mono'
 
 const PO_STATUSES = ['draft', 'confirmed', 'partially_received', 'fully_received', 'closed']
 
@@ -52,7 +53,7 @@ export function POListPage() {
         key: COLUMN_KEYS.poNumber,
         title: t('field.po_number'),
         dataIndex: 'po_number',
-        render: (v, r) => <Link to={`/purchase-orders/${r.id}`}>{v}</Link>,
+        render: (v, r) => <Link to={`/purchase-orders/${r.id}`}><MonoId>{v}</MonoId></Link>,
         fixed: 'left' as const,
       },
       {
@@ -60,7 +61,7 @@ export function POListPage() {
         title: t('field.pr_number'),
         dataIndex: 'pr_number',
         render: (v: string | null, r) =>
-          v ? <Link to={`/purchase-requisitions/${r.pr_id}`}>{v}</Link> : '-',
+          v ? <Link to={`/purchase-requisitions/${r.pr_id}`}><MonoId>{v}</MonoId></Link> : '-',
       },
       {
         key: COLUMN_KEYS.prTitle,
@@ -100,28 +101,28 @@ export function POListPage() {
       {
         key: COLUMN_KEYS.totalAmount,
         title: t('field.total_amount'),
-        render: (_, r) => fmtAmount(r.total_amount, r.currency),
+        render: (_, r) => fmtAmountNode(r.total_amount, r.currency),
         align: 'right' as const,
         sorter: (a, b) => Number(a.total_amount) - Number(b.total_amount),
       },
       {
         key: COLUMN_KEYS.amountPaid,
         title: t('field.amount_paid'),
-        render: (_, r) => fmtAmount(r.amount_paid ?? '0', r.currency),
+        render: (_, r) => fmtAmountNode(r.amount_paid ?? '0', r.currency),
         align: 'right' as const,
         sorter: (a, b) => Number(a.amount_paid ?? 0) - Number(b.amount_paid ?? 0),
       },
       {
         key: COLUMN_KEYS.amountInvoiced,
         title: t('field.amount_invoiced'),
-        render: (_, r) => fmtAmount(r.amount_invoiced ?? '0', r.currency),
+        render: (_, r) => fmtAmountNode(r.amount_invoiced ?? '0', r.currency),
         align: 'right' as const,
         sorter: (a, b) => Number(a.amount_invoiced ?? 0) - Number(b.amount_invoiced ?? 0),
       },
       {
         key: COLUMN_KEYS.qtyReceived,
         title: t('field.qty_received'),
-        render: (_, r) => fmtQty(r.qty_received ?? '0'),
+        render: (_, r) => fmtQtyNode(r.qty_received ?? '0'),
         align: 'right' as const,
       },
       {

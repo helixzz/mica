@@ -55,7 +55,115 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
-## [v1.39.0] — 2026-06-23
+## [v1.40.0] — 2026-06-23
+
+### 新增（VI 体系第二阶段：Typography & Identifier Pass）
+
+`docs/DESIGN.md` Phase 2 落地。Phase 1 (v1.39.0) 铺好的 token 与 utility class 现在被业务页面全面消费——全站业务编号 / 金额 / 数量自动获得 JetBrains Mono + tabular-nums 渲染，StatCard / PageHeader 应用 display token，所有硬编码 Otter Brown 替换为 CSS var。
+
+#### 新组件（`frontend/src/components/ui/Mono.tsx`）
+
+- **`<MonoId>`** — 业务标识符包装（PR-2026-0017、SKU code、合同号等）。基于 v1.39 的 `.mono-id` class，启用 slashed zero + tabular-nums + ss19 OpenType features。降级处理 null/empty 为 `-`
+- **`<MonoNum>`** — 金额 / 数量 / 日期戳包装。`align="right"` 给表格金额列右对齐
+- 二者都从 `@/components/ui/Mono` / `@/components/ui` 桶导出
+
+#### 格式化工具升级（`frontend/src/utils/format.tsx`）
+
+由 `.ts` 改名为 `.tsx`（允许返回 JSX），保留向后兼容：
+
+- **保留** `fmtAmount` / `fmtQty` 字符串版（供 template literal、i18n 插值、`title` HTML attr 使用，~30 处现存调用点零影响）
+- **新增** `fmtAmountNode(value, currency, align='right')` — 返回 `<MonoNum>` JSX，专门为 AntD Table `render` 设计
+- **新增** `fmtQtyNode(value, align='right')` — 同上
+- **新增** `fmtIdNode(value)` — 等价于 `<MonoId>{value}</MonoId>`，便于 callback 场景
+- **新增** `fmtDate(value, withTime?)` / `fmtDateNode(value, withTime?)` — 替代散落各处的 `dayjs().format()` 和 `new Date().toLocaleString()`，统一格式 `YYYY-MM-DD [HH:mm]`
+
+#### 全站业务编号迁移（61 个 render site → 完成）
+
+- **5 个详情页 PageHeader 业务编号 → `<MonoId>`**：PRDetail、PODetail (POHeader)、RFQDetail、ContractDetail、InvoiceDetail
+- **17 个列表表格 28 列 `dataIndex=*_number` → 加 `render` 包 `<MonoId>`**：PRList / POList / Contracts (×3) / RFQList / Invoices / Shipments (×2: shipment_number + tracking_number) / Payments / Items (SKU code) / SKU (PO) / SupplierPortal (×5) / Dashboard / DeliveryCalendarPanel (×2) / ContractDetail (×3) / PRDetail (×2) / PO 子组件 (PaymentsTab / ContractsTab / InvoicesTab / ShipmentsTab × 5 columns)
+- **Dashboard 其他渲染点**：付款/收款条目的 PR/PO/合同号 + Suppliers Tag (SKU code) + ItemDetail Descriptions (SKU code) 全部 mono 化
+
+#### 金额 / 数量 mono 全站落地（52 个 render → 100% 完成）
+
+通过 `sed` 安全地把所有 `render: (...) => fmtAmount(...)` 改为 `render: (...) => fmtAmountNode(...)`（同样 fmtQty）。**只在 AntD Table render callback 上下文做替换**，template literal / Progress format / i18n 字符串完全不动。涉及 22 个文件：PaymentForecastChart、InvoiceTrackerChart、PaymentScheduleTab、ShipmentsTab、ShipmentModal、InvoicesTab、ItemsTab、PaymentsTab、InvoiceModal、ConvertToPOModal、PRQuoteConfirmModal、Payments、Shipments、PRDetail、PRList、Invoices、SKU、ContractDetail、POList、Dashboard、Contracts、SupplierPortal、InvoiceDetail。
+
+每个表格金额列现在右对齐 + 等宽，`¥1,054,197.00` 与 `¥12,500.00` 个位对齐——扫读速度立刻提升
+
+#### StatCard 升级（`components/ui/StatCard.tsx`）
+
+- value 为 primitive（string / number）时自动应用 `var(--font-mono)` + `font-feature-settings: 'tnum' 1, 'zero' 1`
+- 应用 `var(--tracking-display)` (-0.025em) for non-compact / `var(--tracking-heading)` (-0.02em) for compact
+- 行高优化：non-compact 1.15, compact 1.2
+- value 为 JSX node 时跳过自动包装（兼容已经手动包了 `<MonoNum>` 的调用方）
+
+#### PageHeader 升级（`components/ui/PageHeader.tsx`）
+
+- 新增可选 `number?: string | null` prop — 传入业务编号自动用 `<MonoId>` + secondary color 渲染，作为大标题的姐妹元素，参考 docs/DESIGN.md §7.8
+- 标题应用 `letter-spacing: var(--tracking-heading)` (-0.02em) + `line-height: 1.2`，对齐 5 条铁律的 Compressed Tracking
+- 移除自我描述的 JSDoc（v1.38 遗留），新增 `number` prop 的精准 JSDoc
+
+#### 硬编码 Otter Brown 清理（10 处违规）
+
+按 docs/DESIGN.md §2.① 「Single Accent Discipline」，全站不应硬编码品牌色 hex。本版清理：
+
+- PaymentForecastChart (×2)：chart fill 改 `var(--color-viz-primary/baseline)`、StatCard valueStyle 改 `var(--color-primary-500)`
+- InvoiceTrackerChart：chart fill 改 `var(--color-viz-primary/baseline)`
+- PaymentScheduleTab：StatCard valueStyle 改 `var(--color-primary-500)`
+- Suppliers：评分文字色改 `var(--color-primary-500)`
+- PRList：filter icon 高亮色改 `var(--color-primary-500)`
+- InsightsPage (×2)：**移除** 多余 `style={{ backgroundColor: '#8B5E3C' }}`，AntD `type="primary"` 已经自带正确颜色（修正反面案例）
+- ContractDetail：付款计划条颜色 fallback 简化为纯 var
+- SKU / SupplierPortal：背景色改 `var(--color-primary-500)`
+
+剩余 1 处（SKU.tsx:324 的 10-color SKU 调色板）属于 v1.40 范围外，Phase 3 重构
+
+#### 设计原则（贯穿本版）
+
+1. **加法不减法**：format.ts 保留所有字符串版函数，新增 JSX 版函数，未来逐步迁移调用点
+2. **杠杆点**：StatCard 1 处改动 → 16 调用点全部受益；format.ts 1 个新函数 → 52 个表格金额列全部受益
+3. **不破坏 i18n**：template literal、Progress format、`message.success({content: ...})` 等字符串上下文一律保留 fmtAmount，绝不改 JSX
+4. **MonoId 防御性**：null/empty 自动降级 `-`，不抛错
+5. **PageHeader 配置化**：业务编号作为一等 prop，不再各页面散写 `<Typography.Title>` + 编号字符串
+
+#### 文件变更摘要
+
+```
+frontend/src/components/ui/Mono.tsx           +37 (新增)
+frontend/src/components/ui/index.ts           +1
+frontend/src/components/ui/PageHeader.tsx     +/- (number prop, display token)
+frontend/src/components/ui/StatCard.tsx       +/- (isPrimitive 分支 + mono + tracking)
+frontend/src/utils/format.ts → format.tsx     重构 + 5 个新函数
+frontend/src/pages/**/*.tsx                   28+ 个 table columns 加 render 包 MonoId
+frontend/src/components/PO/*.tsx              4 个 PO 子组件 5 列 mono 化
+frontend/src/components/PR/ConvertToPOModal   mono 化
+~22 业务文件                                  fmtAmount→fmtAmountNode、fmtQty→fmtQtyNode
+10 个硬编码 #8B5E3C → CSS var
+```
+
+#### 验证
+
+- TypeScript 0 errors
+- Production build 3.98s, 36 chunks
+- Vitest 63/63 passing
+- Phase 1 token 体系全部沿用，无 token 变更
+
+#### 用户立即感知的变化
+
+打开任意列表 / 详情页都能感受到：
+
+- **金额列对齐了** — `¥1,054,197.00` 和 `¥12,500.00` 个位精确对齐，眼睛一扫看完
+- **业务编号"工具感"** — `PR-2026-0017` 显示为等宽字体，0 带斜杠，立刻像"工业级 ledger"
+- **数字 0 和字母 O 不会再看错** — JetBrains Mono 的 slashed zero
+- **StatCard 大数字更紧凑** — display token + tight tracking 让数字"建筑感"提升
+- **PR/PO 详情页主标题** — 顶部 `<MonoId>PR-2026-0017</MonoId>` 一眼识别"这是 PR 编号"
+
+#### 下一步路线（v1.41.0+ Phase 3）
+
+按页面增量改造：Dashboard chart 配色 → PR/PO 列表 state badge → PR/PO 详情信息层级 → Admin → Mobile。Phase 3 不再大规模 token 调整，专注每个页面的"视觉细节打磨"。
+
+---
+
+
 
 ### 新增（VI 体系第一阶段：Foundation Tokens — Otter Workbench）
 

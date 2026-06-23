@@ -22,8 +22,9 @@ import { extractError } from '@/api/client'
 import { useAuth } from '@/auth/useAuth'
 import { ContractFormModal } from '@/components/ContractFormModal'
 import { downloadCSV } from '@/utils/export'
-import { fmtAmount } from '@/utils/format'
+import { fmtAmount, fmtAmountNode } from '@/utils/format'
 import { showUndoToast } from '@/utils/undo'
+import { MonoId } from '@/components/ui/Mono'
 
 export function ContractsPage() {
   const { t } = useTranslation()
@@ -132,14 +133,14 @@ export function ContractsPage() {
     {
       title: t('field.contract_number'),
       dataIndex: 'contract_number',
-      render: (v, r) => <Link to={`/contracts/${r.id}`}>{v}</Link>,
+      render: (v, r) => <Link to={`/contracts/${r.id}`}><MonoId>{v}</MonoId></Link>,
     },
     { title: t('field.title'), dataIndex: 'title' },
     {
       title: t('field.po_number'),
       dataIndex: 'po_number',
       render: (v: string | null, r) =>
-        v ? <Link to={`/purchase-orders/${r.po_id}`}>{v}</Link> : '-',
+        v ? <Link to={`/purchase-orders/${r.po_id}`}><MonoId>{v}</MonoId></Link> : '-',
     },
     {
       title: t('field.status'),
@@ -156,7 +157,7 @@ export function ContractsPage() {
     {
       title: t('field.total_amount'),
       align: 'right',
-      render: (_, r) => fmtAmount(r.total_amount, r.currency),
+      render: (_, r) => fmtAmountNode(r.total_amount, r.currency),
     },
     { title: t('field.signed_date'), dataIndex: 'signed_date' },
     { title: t('field.expiry_date'), dataIndex: 'expiry_date' },
@@ -275,7 +276,7 @@ export function ContractsPage() {
               {
                 title: t('field.contract_number'),
                 dataIndex: 'contract_number',
-                render: (v, r) => <Link to={`/contracts/${r.id}`}>{v}</Link>,
+                render: (v, r) => <Link to={`/contracts/${r.id}`}><MonoId>{v}</MonoId></Link>,
               },
               { title: t('field.title'), dataIndex: 'title' },
               {
@@ -303,13 +304,13 @@ export function ContractsPage() {
               {
                 title: t('field.contract_number'),
                 dataIndex: 'contract_number',
-                render: (v, r) => <Link to={`/contracts/${r.id}`}>{v}</Link>,
+                render: (v, r) => <Link to={`/contracts/${r.id}`}><MonoId>{v}</MonoId></Link>,
               },
               { title: t('field.title'), dataIndex: 'title' },
               { title: t('field.expiry_date'), dataIndex: 'expiry_date' },
               {
                 title: t('field.amount'),
-                render: (_, r) => fmtAmount(r.total_amount, r.currency),
+                render: (_, r) => fmtAmountNode(r.total_amount, r.currency),
                 align: 'right',
               },
             ]}

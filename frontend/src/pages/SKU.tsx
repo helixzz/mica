@@ -40,7 +40,8 @@ import {
   type Supplier,
 } from '@/api'
 import { extractError } from '@/api/client'
-import { fmtAmount, fmtQty, getCurrencySymbol } from '@/utils/format'
+import { fmtAmount, fmtAmountNode, fmtQty, fmtQtyNode, getCurrencySymbol } from '@/utils/format'
+import { MonoId } from '@/components/ui/Mono'
 
 export function SKUPage() {
   const { t } = useTranslation()
@@ -118,13 +119,13 @@ export function SKUPage() {
       title: t('sku.benchmark_avg'),
       dataIndex: 'baseline_avg_price',
       align: 'right',
-      render: (v: string) => fmtAmount(v, 'CNY'),
+      render: (v: string) => fmtAmountNode(v, 'CNY'),
     },
     {
       title: t('sku.this_price'),
       dataIndex: 'observed_price',
       align: 'right',
-      render: (v: string) => fmtAmount(v, 'CNY'),
+      render: (v: string) => fmtAmountNode(v, 'CNY'),
     },
     {
       title: t('sku.deviation'),
@@ -173,7 +174,7 @@ export function SKUPage() {
       title: t('sku.price_col'),
       dataIndex: 'price',
       align: 'right',
-      render: (v: string) => fmtAmount(v, 'CNY'),
+      render: (v: string) => fmtAmountNode(v, 'CNY'),
     },
     {
       title: t('sku.source_col'),
@@ -560,7 +561,7 @@ function InsightsPanel({ insights, itemName }: { insights: SKUInsights; itemName
                 <div
                   style={{
                     width: `${Math.min(100, (s.avg_price / Math.max(...sc.map((x) => x.avg_price))) * 100)}%`,
-                    background: '#8B5E3C',
+                    background: 'var(--color-primary-500)',
                     borderRadius: 4,
                     height: '100%',
                   }}
@@ -583,10 +584,10 @@ function InsightsPanel({ insights, itemName }: { insights: SKUInsights; itemName
             columns={[
               { title: t('sku.date_col'), dataIndex: 'date', width: 110 },
               { title: t('sku.supplier_col'), dataIndex: 'supplier_name' },
-               { title: t('field.unit_price'), dataIndex: 'unit_price', align: 'right' as const, render: (v: number) => fmtAmount(v, 'CNY') },
-               { title: t('field.qty'), dataIndex: 'qty', align: 'right' as const, render: (v: string) => fmtQty(v) },
-               { title: t('field.amount'), dataIndex: 'amount', align: 'right' as const, render: (v: number) => fmtAmount(v, 'CNY') },
-              { title: 'PO', dataIndex: 'po_number' },
+               { title: t('field.unit_price'), dataIndex: 'unit_price', align: 'right' as const, render: (v: number) => fmtAmountNode(v, 'CNY') },
+               { title: t('field.qty'), dataIndex: 'qty', align: 'right' as const, render: (v: string) => fmtQtyNode(v) },
+               { title: t('field.amount'), dataIndex: 'amount', align: 'right' as const, render: (v: number) => fmtAmountNode(v, 'CNY') },
+              { title: 'PO', dataIndex: 'po_number', render: (v: string) => <MonoId>{v}</MonoId> },
               {
                 title: t('sku.deviation'),
                 dataIndex: 'deviation_pct',

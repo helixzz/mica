@@ -7,6 +7,7 @@ import { api, type Supplier } from '@/api'
 import { client, extractError } from '@/api/client'
 import { useAuth } from '@/auth/useAuth'
 import { fmtAmount, fmtQty, getCurrencySymbol } from '@/utils/format'
+import { MonoId } from '@/components/ui/Mono'
 import { ActivityTimeline } from '@/components/ActivityTimeline'
 
 const statusColors: Record<string, string> = {
@@ -181,7 +182,7 @@ export default function RFQDetailPage() {
     <Space direction="vertical" size="large" style={{ width: '100%' }}>
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
         <Space>
-          <Typography.Title level={3} style={{ margin: 0 }}>{rfq.rfq_number}</Typography.Title>
+          <Typography.Title level={3} style={{ margin: 0 }}><MonoId>{rfq.rfq_number}</MonoId></Typography.Title>
           <Tag color={statusColors[rfq.status]}>{rfq.status}</Tag>
         </Space>
         <Space>

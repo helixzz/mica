@@ -55,7 +55,8 @@ import { useAuth } from '@/auth/useAuth'
 import { StatCard, Section, EmptyState } from '@/components/ui'
 import { PaymentTracker } from '@/components/PaymentForecastChart'
 import { InvoiceTracker } from '@/components/InvoiceTrackerChart'
-import { fmtAmount } from '@/utils/format'
+import { fmtAmount, fmtAmountNode } from '@/utils/format'
+import { MonoId } from '@/components/ui/Mono'
 
 const { Text } = Typography
 
@@ -610,7 +611,7 @@ export function DashboardPage() {
                           title: t('dashboard.total_spend_col'),
                           dataIndex: 'total',
                           key: 'total',
-                          render: (v: number) => fmtAmount(v, 'CNY'),
+                          render: (v: number) => fmtAmountNode(v, 'CNY'),
                         },
                         {
                           title: t('dashboard.pct_of_total'),
@@ -667,7 +668,7 @@ export function DashboardPage() {
               pagination={false}
               size="small"
               columns={[
-                { title: t('field.po_number'), dataIndex: 'po_number', key: 'po_number' },
+                { title: t('field.po_number'), dataIndex: 'po_number', key: 'po_number', render: (v: string) => <MonoId>{v}</MonoId> },
                 { title: t('dashboard.qty_ordered'), dataIndex: 'qty_ordered', key: 'qty_ordered' },
                 { title: t('dashboard.qty_received'), dataIndex: 'qty_received', key: 'qty_received' },
                 { title: t('dashboard.qty_invoiced'), dataIndex: 'qty_invoiced', key: 'qty_invoiced' },
@@ -719,8 +720,8 @@ export function DashboardPage() {
                       }
                       description={
                         <Space>
-{item.po_number && <Text type="secondary">{t('dashboard.payment_po_label')}{item.po_number}</Text>}
-{item.contract_number && <Text type="secondary">{t('dashboard.payment_contract_label')}{item.contract_number}</Text>}
+{item.po_number && <Text type="secondary">{t('dashboard.payment_po_label')}<MonoId>{item.po_number}</MonoId></Text>}
+{item.contract_number && <Text type="secondary">{t('dashboard.payment_contract_label')}<MonoId>{item.contract_number}</MonoId></Text>}
 <Text type="secondary">{t('dashboard.payment_installment_label')}{item.installment_no}</Text>
                         </Space>
                       }
@@ -772,7 +773,7 @@ export function DashboardPage() {
                   style={{ marginBottom: 8 }}
                   title={
                     <Space>
-                      <Text strong>{item.code}</Text>
+                      <Text strong><MonoId>{item.code}</MonoId></Text>
                       <Text type="secondary">{item.label_zh}</Text>
                     </Space>
                   }
@@ -846,7 +847,7 @@ export function DashboardPage() {
                           }
                           title={
                             <Link to={`/purchase-requisitions/${item.pr_id}`}>
-                              {item.pr_number}: {item.title}
+                              <MonoId>{item.pr_number}</MonoId>: {item.title}
                             </Link>
                           }
                           description={

@@ -157,7 +157,7 @@ cd deploy
 - AntD 组件 → `useToken()` 获取语义 token
 - 非 AntD 区域 → 用 CSS 变量 `var(--color-primary-500)` / `var(--space-4)` / `var(--shadow-card)` 等
 - **Otter Brown 纪律**：仅用于 primary CTA / 选中态 / chart 主指标 / `state.progress` Tag。不做装饰边框、不做普通超链接色、不做大面积底色（参见 docs/DESIGN.md §2.①）
-- **业务标识符强制 mono**：PR/PO/合同号 / 金额 / 数量 / 日期戳 / SKU code 必须用 `<code class="mono-id">` 或 `<span class="mono-num">`（参见 docs/DESIGN.md §4.2）
+- **业务标识符强制 mono**：PR/PO/合同号 / SKU code 等用 `<MonoId>`；金额 / 数量 / 日期戳用 `<MonoNum>`（从 `@/components/ui/Mono` 或 `@/components/ui` 导入）。AntD Table 金额列 / 数量列优先用 `fmtAmountNode` / `fmtQtyNode`，普通字符串场景仍用 `fmtAmount` / `fmtQty`。参见 docs/DESIGN.md §4.2 / §7
 - **不要**引入 Tailwind / styled-components / emotion，纯 AntD + CSS custom properties
 - **不要**用 v1.38 之前的纯黑阴影；shadow token 已全部改为 Otter Brown 微染（`rgba(139, 94, 60, ...)`）
 

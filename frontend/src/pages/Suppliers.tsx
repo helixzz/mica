@@ -36,6 +36,7 @@ import { usePersistedColumns } from "@/hooks/usePersistedColumns";
 import { api, type Supplier } from "@/api";
 import { downloadCSV } from "@/utils/export";
 import { showUndoToast } from "@/utils/undo";
+import { MonoId } from '@/components/ui/Mono'
 
 const COLUMN_KEYS = {
   code: "code",
@@ -510,7 +511,7 @@ export default function SuppliersPage() {
                     <Link to={`/suppliers/${item.id}`}>
                       <strong>{item.name}</strong>
                     </Link>
-                    <Tag>{item.code}</Tag>
+                    <Tag><MonoId>{item.code}</MonoId></Tag>
                   </Space>
                   <Tag
                     color={item.is_enabled !== false ? "success" : "default"}
@@ -659,7 +660,7 @@ export default function SuppliersPage() {
           <Divider
             orientation="left"
             plain
-            style={{ fontSize: 13, color: "#8B5E3C" }}
+            style={{ fontSize: 13, color: "var(--color-primary-500)" }}
           >
             {t("supplier.payee_section")}
           </Divider>

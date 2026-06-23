@@ -49,7 +49,8 @@ import { DocumentPreview } from '@/components/DocumentPreview'
 import { PaymentScheduleTab } from '@/components/PaymentScheduleTab'
 import { ShipmentActions } from '@/components/ShipmentActions'
 import { ActivityTimeline } from '@/components/ActivityTimeline'
-import { fmtAmount } from '@/utils/format'
+import { fmtAmount, fmtAmountNode } from '@/utils/format'
+import { MonoId } from '@/components/ui/Mono'
 
 export function ContractDetailPage() {
   const { t } = useTranslation()
@@ -302,7 +303,7 @@ export function ContractDetailPage() {
                     title: t('field.po_number'),
                     dataIndex: 'po_number',
                     render: (value: string, row: NonNullable<Contract['linked_pos']>[number]) => (
-                      <a onClick={() => navigate(`/purchase-orders/${row.id}`)}>{value}</a>
+                      <a onClick={() => navigate(`/purchase-orders/${row.id}`)}><MonoId>{value}</MonoId></a>
                     ),
                   },
                   {
@@ -538,13 +539,14 @@ export function ContractDetailPage() {
                 {
                   title: t('field.shipment_number'),
                   dataIndex: 'shipment_number',
+                  render: (v: string) => <MonoId>{v}</MonoId>,
                 },
                 { title: t('field.status'), dataIndex: 'status',
                   render: (s: string) => <Tag>{t(`status.${s}` as 'status.pending')}</Tag> },
                 { title: t('field.carrier'), dataIndex: 'carrier',
                   render: (v: string | null) => v || '-' },
                 { title: t('field.tracking_number'), dataIndex: 'tracking_number',
-                  render: (v: string | null) => v || '-' },
+                  render: (v: string | null) => v ? <MonoId>{v}</MonoId> : '-' },
                 { title: t('field.expected_date'), dataIndex: 'expected_date',
                   render: (v: string | null) => v || '-' },
                 { title: t('field.actual_date'), dataIndex: 'actual_date',
@@ -585,7 +587,7 @@ export function ContractDetailPage() {
             { title: t('contract.version_col'), dataIndex: 'version_number', width: 80, render: (v: number) => <Tag color="blue">v{v}</Tag> },
             { title: t('contract.change_type_col'), dataIndex: 'change_type', width: 120, render: (v: string) => <Tag>{v}</Tag> },
             { title: t('field.title'), render: (_: unknown, r: ContractVersion) => (r.snapshot_json as Record<string, unknown>)?.title as string || '-' },
-             { title: t('field.total_amount'), render: (_: unknown, r: ContractVersion) => fmtAmount((r.snapshot_json as Record<string, unknown>)?.total_amount as string, contract.currency), align: 'right' as const },
+             { title: t('field.total_amount'), render: (_: unknown, r: ContractVersion) => fmtAmountNode((r.snapshot_json as Record<string, unknown>)?.total_amount as string, contract.currency), align: 'right' as const },
             { title: t('contract.change_summary'), dataIndex: 'change_summary', render: (v: string | null) => v || '-' },
             { title: t('contract.version_created'), dataIndex: 'created_at', render: (v: string) => new Date(v).toLocaleString() },
           ]}
@@ -604,12 +606,12 @@ export function ContractDetailPage() {
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
         <Space align="center">
           <Typography.Title level={3} style={{ margin: 0 }}>
-            {contract.contract_number}
+            <MonoId>{contract.contract_number}</MonoId>
           </Typography.Title>
           <Tag>{t(`status.${contract.status}` as 'status.active')}</Tag>
           <Badge
             count={`v${contract.current_version}`}
-            style={{ backgroundColor: 'var(--color-primary, #8B5E3C)' }}
+            style={{ backgroundColor: 'var(--color-primary-500)' }}
             title={t('contract.current_version_label')}
           />
         </Space>

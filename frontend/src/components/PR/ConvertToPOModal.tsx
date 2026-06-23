@@ -13,7 +13,7 @@ import {
 } from '@/api'
 import { extractError } from '@/api/client'
 import { ItemPickerWithCreate } from '@/components/ItemPickerWithCreate'
-import { fmtAmount, fmtQty } from '@/utils/format'
+import { fmtAmount, fmtAmountNode, fmtQty, fmtQtyNode } from '@/utils/format'
 
 interface ConvertToPOModalProps {
   open: boolean
@@ -309,7 +309,7 @@ export function ConvertToPOModal({
                         title: t('pr.convert_preview_subtotal'),
                         dataIndex: 'subtotal',
                         align: 'right',
-                        render: (v: string) => fmtAmount(v, pr.currency || 'CNY'),
+                        render: (v: string) => fmtAmountNode(v, pr.currency || 'CNY'),
                       },
                     ]}
                   />
@@ -349,7 +349,7 @@ export function ConvertToPOModal({
                           </Typography.Text>
                         ),
                     },
-                    { title: t('field.qty'), dataIndex: 'qty', align: 'right', render: (v: string) => fmtQty(v) },
+                    { title: t('field.qty'), dataIndex: 'qty', align: 'right', render: (v: string) => fmtQtyNode(v) },
                     { title: t('field.uom'), dataIndex: 'uom', width: 70 },
                   ]}
                 />

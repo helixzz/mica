@@ -377,7 +377,7 @@ function BarChart({ months, maxValue, todayMonth }: BarChartProps) {
               y={padTop + innerH + 18}
               fontSize={11}
               textAnchor="middle"
-              fill={isToday ? '#8B5E3C' : '#6F6861'}
+              fill={isToday ? 'var(--color-viz-primary)' : 'var(--color-viz-baseline)'}
               fontWeight={isToday ? 600 : 400}
             >
               {m.month}

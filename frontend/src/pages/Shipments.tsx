@@ -9,7 +9,8 @@ import { api, type DeliveryPlan, type PurchaseOrder, type PurchaseOrderListItem,
 import { useAuth } from '@/auth/useAuth'
 import { ShipmentActions } from '@/components/ShipmentActions'
 import { downloadCSV } from '@/utils/export'
-import { fmtAmount, fmtQty } from '@/utils/format'
+import { fmtAmount, fmtQty, fmtQtyNode } from '@/utils/format'
+import { MonoId } from '@/components/ui/Mono'
 
 const STATUS_COLORS: Record<string, string> = {
   pending: 'default',
@@ -133,10 +134,10 @@ export function ShipmentsPage() {
   }
 
   const columns: ColumnsType<Shipment> = [
-    { title: t('field.shipment_number'), dataIndex: 'shipment_number', width: 150 },
+    { title: t('field.shipment_number'), dataIndex: 'shipment_number', width: 150, render: (v: string) => <MonoId>{v}</MonoId> },
     { title: t('field.status'), dataIndex: 'status', width: 120, render: (s: string) => <Tag color={STATUS_COLORS[s] || 'default'}>{t(`status.${s}` as 'status.pending')}</Tag> },
     { title: t('field.carrier'), dataIndex: 'carrier', render: (v: string | null) => v || '-' },
-    { title: t('field.tracking_number'), dataIndex: 'tracking_number', render: (v: string | null) => v || '-' },
+    { title: t('field.tracking_number'), dataIndex: 'tracking_number', render: (v: string | null) => v ? <MonoId>{v}</MonoId> : '-' },
     { title: t('field.expected_date'), dataIndex: 'expected_date', render: (v: string | null) => v || '-' },
     { title: t('field.actual_date'), dataIndex: 'actual_date', render: (v: string | null) => v || '-' },
     { title: t('shipment.items_count'), dataIndex: 'items', width: 80, render: (items: Shipment['items']) => items?.length || 0 },
@@ -239,8 +240,8 @@ export function ShipmentsPage() {
                 columns={[
                   { title: t('field.line_no'), dataIndex: 'line_no', width: 60 },
                   { title: t('field.item_name'), dataIndex: 'item_name' },
-                   { title: t('field.qty'), dataIndex: 'qty', align: 'right' as const, width: 90, render: (v: string) => fmtQty(v) },
-                   { title: t('field.qty_received'), dataIndex: 'qty_received', align: 'right' as const, width: 100, render: (v: string) => fmtQty(v) },
+                   { title: t('field.qty'), dataIndex: 'qty', align: 'right' as const, width: 90, render: (v: string) => fmtQtyNode(v) },
+                   { title: t('field.qty_received'), dataIndex: 'qty_received', align: 'right' as const, width: 100, render: (v: string) => fmtQtyNode(v) },
                   {
                     title: t('field.qty_shipped'), width: 140,
                     render: (_: unknown, _r, idx: number) => (

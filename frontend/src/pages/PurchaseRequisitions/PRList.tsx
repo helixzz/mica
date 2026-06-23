@@ -6,7 +6,8 @@ import { useTranslation } from 'react-i18next'
 import { Link, useNavigate } from 'react-router-dom'
 
 import { api, type PRListItem } from '@/api'
-import { fmtAmount } from '@/utils/format'
+import { fmtAmount, fmtAmountNode } from '@/utils/format'
+import { MonoId } from '@/components/ui/Mono'
 
 const statusColors: Record<string, string> = {
   draft: 'default',
@@ -60,7 +61,7 @@ export function PRListPage() {
         </Space>
       </div>
     ),
-    filterIcon: (filtered: boolean) => <SearchOutlined style={{ color: filtered ? '#8B5E3C' : undefined }} />,
+    filterIcon: (filtered: boolean) => <SearchOutlined style={{ color: filtered ? 'var(--color-primary-500)' : undefined }} />,
     onFilter: (value: any, record: any) =>
       record[dataIndex]?.toString().toLowerCase().includes(value.toLowerCase()),
   })
@@ -69,7 +70,7 @@ export function PRListPage() {
     {
       title: t('field.pr_number'),
       dataIndex: 'pr_number',
-      render: (v, row) => <Link to={`/purchase-requisitions/${row.id}`}>{v}</Link>,
+      render: (v, row) => <Link to={`/purchase-requisitions/${row.id}`}><MonoId>{v}</MonoId></Link>,
       ...getColumnSearchProps('pr_number'),
     },
     {
@@ -88,7 +89,7 @@ export function PRListPage() {
     },
     {
       title: t('field.total_amount'),
-      render: (_, r) => fmtAmount(r.total_amount, r.currency),
+      render: (_, r) => fmtAmountNode(r.total_amount, r.currency),
       align: 'right',
       sorter: (a, b) => Number(a.total_amount) - Number(b.total_amount),
     },

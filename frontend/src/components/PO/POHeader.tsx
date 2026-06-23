@@ -5,6 +5,7 @@ import { useNavigate } from 'react-router-dom'
 
 import { type PurchaseOrder } from '@/api'
 import { getToken } from '@/api/client'
+import { MonoId } from '@/components/ui/Mono'
 
 interface POHeaderProps {
   po: PurchaseOrder
@@ -38,7 +39,7 @@ export function POHeader({
     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
       <Space align="center">
         <Typography.Title level={3} style={{ margin: 0 }}>
-          {po.po_number}
+          <MonoId>{po.po_number}</MonoId>
         </Typography.Title>
         <Tag color="success">{t(`status.${statusTag(po.status)}` as 'status.confirmed')}</Tag>
       </Space>

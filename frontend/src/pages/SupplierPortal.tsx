@@ -10,7 +10,8 @@ import {
 import { useEffect, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { useParams } from 'react-router-dom'
-import { fmtAmount } from '@/utils/format'
+import { fmtAmount, fmtAmountNode } from '@/utils/format'
+import { MonoId } from '@/components/ui/Mono'
 
 interface PortalPO {
   po_number: string
@@ -152,6 +153,7 @@ export default function SupplierPortalPage() {
       title: t('field.po_number'),
       dataIndex: 'po_number',
       key: 'po_number',
+      render: (v: string) => <MonoId>{v}</MonoId>,
     },
     {
       title: t('field.status'),
@@ -167,7 +169,7 @@ export default function SupplierPortalPage() {
       title: t('field.amount'),
       dataIndex: 'total_amount',
       key: 'total_amount',
-      render: (_: string, r: PortalPO) => fmtAmount(r.total_amount, r.currency),
+      render: (_: string, r: PortalPO) => fmtAmountNode(r.total_amount, r.currency),
     },
     {
       title: t('supplier_portal.qty_received'),
@@ -178,7 +180,7 @@ export default function SupplierPortalPage() {
       title: t('supplier_portal.amount_paid'),
       dataIndex: 'amount_paid',
       key: 'amount_paid',
-      render: (_: string, r: PortalPO) => fmtAmount(r.amount_paid, r.currency),
+      render: (_: string, r: PortalPO) => fmtAmountNode(r.amount_paid, r.currency),
     },
     {
       title: t('field.created_at'),
@@ -192,6 +194,7 @@ export default function SupplierPortalPage() {
     {
       title: t('field.contract_number'),
       dataIndex: 'contract_number',
+      render: (v: string) => <MonoId>{v}</MonoId>,
       key: 'contract_number',
     },
     {
@@ -234,6 +237,7 @@ export default function SupplierPortalPage() {
     {
       title: t('field.payment_number'),
       dataIndex: 'payment_number',
+      render: (v: string) => <MonoId>{v}</MonoId>,
       key: 'payment_number',
     },
     {
@@ -276,6 +280,7 @@ export default function SupplierPortalPage() {
     {
       title: t('field.shipment_number'),
       dataIndex: 'shipment_number',
+      render: (v: string) => <MonoId>{v}</MonoId>,
       key: 'shipment_number',
     },
     {
@@ -303,7 +308,7 @@ export default function SupplierPortalPage() {
       title: t('field.tracking_number'),
       dataIndex: 'tracking_number',
       key: 'tracking_number',
-      render: (v: string | null) => v || '-',
+      render: (v: string | null) => v ? <MonoId>{v}</MonoId> : '-',
     },
     {
       title: t('field.expected_date'),
@@ -330,7 +335,7 @@ export default function SupplierPortalPage() {
       <div style={{ maxWidth: 1200, margin: '0 auto' }}>
         <div
           style={{
-            background: '#8B5E3C',
+            background: 'var(--color-primary-500)',
             borderRadius: 12,
             padding: '24px 32px',
             marginBottom: 24,

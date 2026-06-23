@@ -33,7 +33,7 @@ import dayjs from 'dayjs'
 
 import { api, type PaymentScheduleItem, type PaymentScheduleSummary } from '@/api'
 import { extractError } from '@/api/client'
-import { fmtAmount, getCurrencySymbol } from '@/utils/format'
+import { fmtAmount, fmtAmountNode, getCurrencySymbol } from '@/utils/format'
 
 function StatusTag({ status }: { status: string }) {
   const { t } = useTranslation()
@@ -244,7 +244,7 @@ export function PaymentScheduleTab({
       title: t('contract.planned_amount'),
       dataIndex: 'planned_amount',
       align: 'right',
-      render: (v: string) => fmtAmount(v, currency),
+      render: (v: string) => fmtAmountNode(v, currency),
     },
     {
       title: t('contract.planned_date'),
@@ -351,7 +351,7 @@ export function PaymentScheduleTab({
                 value={Number(schedule.remaining)}
                 prefix={getCurrencySymbol(currency)}
                 precision={2}
-                valueStyle={{ color: '#8B5E3C' }}
+                valueStyle={{ color: 'var(--color-primary-500)' }}
               />
             </Col>
           </Row>

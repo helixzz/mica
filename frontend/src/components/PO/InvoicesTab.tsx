@@ -3,7 +3,8 @@ import { Button, Modal, Table, Tag, message } from 'antd'
 import { useTranslation } from 'react-i18next'
 
 import { api, type InvoiceListRow } from '@/api'
-import { fmtAmount } from '@/utils/format'
+import { fmtAmount, fmtAmountNode } from '@/utils/format'
+import { MonoId } from '@/components/ui/Mono'
 
 interface InvoicesTabProps {
   invoices: InvoiceListRow[]
@@ -49,12 +50,12 @@ export function InvoicesTab({ invoices, onRecordInvoice, onChanged }: InvoicesTa
         dataSource={invoices}
         pagination={false}
         columns={[
-          { title: t('field.internal_number'), dataIndex: 'internal_number' },
-          { title: t('field.invoice_number'), dataIndex: 'invoice_number' },
+          { title: t('field.internal_number'), dataIndex: 'internal_number', render: (v: string) => <MonoId>{v}</MonoId> },
+          { title: t('field.invoice_number'), dataIndex: 'invoice_number', render: (v: string) => <MonoId>{v}</MonoId> },
           { title: t('field.invoice_date'), dataIndex: 'invoice_date' },
-          { title: t('field.subtotal'), dataIndex: 'subtotal', align: 'right', render: (v: string, r: InvoiceListRow) => fmtAmount(v, r.currency) },
-          { title: t('field.tax_amount'), dataIndex: 'tax_amount', align: 'right', render: (v: string, r: InvoiceListRow) => fmtAmount(v, r.currency) },
-          { title: t('field.total_amount'), dataIndex: 'total_amount', align: 'right', render: (v: string, r: InvoiceListRow) => fmtAmount(v, r.currency) },
+          { title: t('field.subtotal'), dataIndex: 'subtotal', align: 'right', render: (v: string, r: InvoiceListRow) => fmtAmountNode(v, r.currency) },
+          { title: t('field.tax_amount'), dataIndex: 'tax_amount', align: 'right', render: (v: string, r: InvoiceListRow) => fmtAmountNode(v, r.currency) },
+          { title: t('field.total_amount'), dataIndex: 'total_amount', align: 'right', render: (v: string, r: InvoiceListRow) => fmtAmountNode(v, r.currency) },
           { title: t('field.status'), dataIndex: 'status',
             render: (s: string) => <Tag>{t(`status.${s}` as 'status.draft')}</Tag> },
           {

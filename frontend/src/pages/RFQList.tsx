@@ -4,6 +4,7 @@ import { Button, Space, Table, Tag, Typography } from 'antd'
 import { useEffect, useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { client } from '@/api/client'
+import { MonoId } from '@/components/ui/Mono'
 
 const statusColors: Record<string, string> = {
   draft: 'default', sent: 'processing', quoting: 'cyan',
@@ -29,7 +30,7 @@ export default function RFQListPage() {
       <Table
         dataSource={rfqs} rowKey="id" loading={loading} size="small"
         columns={[
-          { title: t('rfq.number'), dataIndex: 'rfq_number', render: (v: string, r: any) => <Link to={`/rfqs/${r.id}`}>{v}</Link> },
+          { title: t('rfq.number'), dataIndex: 'rfq_number', render: (v: string, r: any) => <Link to={`/rfqs/${r.id}`}><MonoId>{v}</MonoId></Link> },
           { title: t('field.title'), dataIndex: 'title' },
           { title: t('field.status'), dataIndex: 'status', render: (v: string) => <Tag color={statusColors[v]}>{v}</Tag> },
           { title: t('field.deadline'), dataIndex: 'deadline', render: (v: string | null) => v || '-' },
