@@ -7,6 +7,74 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [v1.42.0] — 2026-06-23
+
+### 改进（VI Phase 3 Round 2：列表页 state badges + Dashboard 工具栏合并）
+
+延续 v1.41 的 VI Phase 3 工作，本版聚焦：(a) 7 个列表页状态 Tag 系统化；(b) 用户反馈的「快捷操作」Section 合并到顶部 toolbar，进一步压缩首屏空间。
+
+### Part A — 列表页状态 Tag 迁移（7 个文件）
+
+按 [DESIGN.md §6.4](./docs/DESIGN.md) outline 状态徽章规范统一：
+
+| 文件 | 改动 |
+|---|---|
+| `pages/PurchaseRequisitions/PRList.tsx` | `statusColors` map → `statusStateClass` map；8 状态映射 |
+| `pages/PurchaseOrders/POList.tsx` | **修复 hidden bug**：原 `<Tag color="success">` 无视实际状态总显示绿。新增 6 状态映射，与 v1.41 POHeader 一致 |
+| `pages/RFQList.tsx` | 7 状态映射 |
+| `pages/Contracts.tsx` | 4 状态映射（active/superseded/terminated/expired） |
+| `pages/Invoices.tsx` | 6 状态映射（draft/pending_match/matched/approved/paid/cancelled） |
+| `pages/Shipments.tsx` | 7 状态映射（pending/in_transit/arrived/accepted/partially_accepted/rejected/cancelled） |
+| `pages/Payments.tsx` | 3 状态内联映射（pending/confirmed/cancelled） |
+
+5 个文件的 `Tag` 导入也一并清理。
+
+### Part B — Dashboard 「快捷操作」合并到顶部 toolbar
+
+用户反馈：首页「快捷操作」Section（标题 + Card 容器 + 7 个按钮 wrap）占用一整个 section 的空间，但实际是几个跳转按钮。
+
+#### 改动
+
+- **删除 quick_actions Section**：`renderSection` 中 `case 'quick_actions': return null`
+- **从默认 layout 中移除**（新用户不再看到此 section）
+- **从 customize drawer 标题映射中移除**
+
+#### 新 toolbar 三件物品（右侧）
+
+```
+[主 CTA] [更多操作 ▼] [自定义 ⚙]
+```
+
+- **主 CTA**：按角色决定（dept_manager → 去审批；requester → 提交需求；admin/it_buyer/procurement_mgr → 新建采购申请；finance_auditor → 付款管理）
+- **更多操作下拉菜单**：剩余按钮（新建询价 / 我的 PR / 查看所有 PO / 管理后台 / 通知）按角色过滤后入下拉
+- **自定义按钮**保留
+
+#### 视觉收益
+
+- 首屏整体高度再 -80px（一个 Section 的高度）
+- toolbar 三件物品紧凑排列，admin 角色不再出现 7 按钮 wrap 两行的尴尬
+
+### Part C — 已知 hidden bug 修复
+
+- **POList.tsx**：之前 `render: (s) => <Tag color="success">` 写死颜色，导致 `cancelled` PO 在列表里显示绿色"已确认"标签。本版按实际 status 动态映射
+
+### 测试
+
+- 后端 726/0（无变化），前端 63/0（无变化）
+- ruff + tsc + build 全绿
+- 0 新组件、0 后端、0 数据库
+
+### i18n
+
+- 前端 +2 keys (`dashboard.more_actions` zh+en)，parity 保持
+
+### 后续路线
+
+- v1.43：PR/PO 详情页剩余 Tag + 履约链 chip 视觉系统化
+- v1.44：8 个 Admin 子页面 Tag 迁移 + 表单密度优化
+
+---
+
 ## [v1.41.0] — 2026-06-23
 
 ### 改进（VI Phase 3 Round 1：图表配色 + 状态徽章 + 审批组件 VI 对齐）

@@ -12,6 +12,15 @@ import { MonoId } from '@/components/ui/Mono'
 
 const PO_STATUSES = ['draft', 'confirmed', 'partially_received', 'fully_received', 'closed']
 
+const poStatusStateClass: Record<string, string> = {
+  draft: 'tag-state tag-state--neutral',
+  confirmed: 'tag-state tag-state--success',
+  partially_received: 'tag-state tag-state--progress',
+  fully_received: 'tag-state tag-state--success',
+  closed: 'tag-state tag-state--neutral',
+  cancelled: 'tag-state tag-state--error',
+}
+
 const COLUMN_KEYS = {
   poNumber: 'po_number',
   prNumber: 'pr_number',
@@ -96,7 +105,7 @@ export function POListPage() {
           value: s,
         })),
         onFilter: (value, record) => record.status === value,
-        render: (s) => <Tag color="success">{t(`status.${s}` as 'status.confirmed')}</Tag>,
+        render: (s) => <span className={poStatusStateClass[s] ?? 'tag-state tag-state--neutral'}>{t(`status.${s}` as 'status.confirmed')}</span>,
       },
       {
         key: COLUMN_KEYS.totalAmount,

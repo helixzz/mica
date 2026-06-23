@@ -1,5 +1,5 @@
 import { DownloadOutlined, PlusOutlined } from '@ant-design/icons'
-import { Button, DatePicker, Input, InputNumber, Modal, Select, Space, Table, Tag, Typography, message } from 'antd'
+import { Button, DatePicker, Input, InputNumber, Modal, Select, Space, Table, Typography, message } from 'antd'
 import type { ColumnsType } from 'antd/es/table'
 import dayjs from 'dayjs'
 import { useEffect, useState } from 'react'
@@ -12,14 +12,14 @@ import { downloadCSV } from '@/utils/export'
 import { fmtAmount, fmtQty, fmtQtyNode } from '@/utils/format'
 import { MonoId } from '@/components/ui/Mono'
 
-const STATUS_COLORS: Record<string, string> = {
-  pending: 'default',
-  in_transit: 'processing',
-  arrived: 'cyan',
-  accepted: 'success',
-  partially_accepted: 'warning',
-  rejected: 'error',
-  cancelled: 'default',
+const shipmentStatusStateClass: Record<string, string> = {
+  pending: 'tag-state tag-state--neutral',
+  in_transit: 'tag-state tag-state--progress',
+  arrived: 'tag-state tag-state--info',
+  accepted: 'tag-state tag-state--success',
+  partially_accepted: 'tag-state tag-state--warning',
+  rejected: 'tag-state tag-state--error',
+  cancelled: 'tag-state tag-state--neutral',
 }
 
 export function ShipmentsPage() {
@@ -135,7 +135,7 @@ export function ShipmentsPage() {
 
   const columns: ColumnsType<Shipment> = [
     { title: t('field.shipment_number'), dataIndex: 'shipment_number', width: 150, render: (v: string) => <MonoId>{v}</MonoId> },
-    { title: t('field.status'), dataIndex: 'status', width: 120, render: (s: string) => <Tag color={STATUS_COLORS[s] || 'default'}>{t(`status.${s}` as 'status.pending')}</Tag> },
+    { title: t('field.status'), dataIndex: 'status', width: 120, render: (s: string) => <span className={shipmentStatusStateClass[s] ?? 'tag-state tag-state--neutral'}>{t(`status.${s}` as 'status.pending')}</span> },
     { title: t('field.carrier'), dataIndex: 'carrier', render: (v: string | null) => v || '-' },
     { title: t('field.tracking_number'), dataIndex: 'tracking_number', render: (v: string | null) => v ? <MonoId>{v}</MonoId> : '-' },
     { title: t('field.expected_date'), dataIndex: 'expected_date', render: (v: string | null) => v || '-' },

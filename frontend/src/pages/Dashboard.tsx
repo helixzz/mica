@@ -1,5 +1,5 @@
-import { Col, Row, Space, Tag, Typography, theme, Button, List, Avatar, Progress, Card, Tabs, Table, Drawer, Switch } from 'antd'
-import { memo, useEffect, useState } from 'react'
+import { Col, Row, Space, Tag, Typography, theme, Button, Dropdown, List, Avatar, Progress, Card, Tabs, Table, Drawer, Switch } from 'antd'
+import { memo, useEffect, useMemo, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { Link, useNavigate } from 'react-router-dom'
 import {
@@ -16,6 +16,7 @@ import {
   AlertOutlined,
   CarOutlined,
   MenuOutlined,
+  MoreOutlined,
 } from '@ant-design/icons'
 import {
   DndContext,
@@ -130,7 +131,6 @@ export function DashboardPage() {
     { id: 'payment_calendar', visible: true },
     { id: 'budget', visible: true },
     { id: 'aging', visible: true },
-    { id: 'quick_actions', visible: true },
     { id: 'my_progress', visible: true },
   ]
 
@@ -250,7 +250,6 @@ export function DashboardPage() {
     payment_calendar: t('dashboard.payment_calendar'),
     budget: t('dashboard.budget_overview'),
     aging: t('dashboard.aging_approvals'),
-    quick_actions: t('dashboard.quick_actions'),
     my_progress: t('pr.my_progress'),
   }
 
@@ -870,48 +869,7 @@ export function DashboardPage() {
           </Row>
         ) : null
       case 'quick_actions':
-        return (
-          <Section title={t('dashboard.quick_actions')} key="quick_actions">
-            <Space wrap size="middle">
-              {(isRequester || isItBuyer || role === 'admin') && (
-                <Button
-                  type="primary"
-                  icon={<PlusOutlined />}
-                  onClick={() => navigate('/purchase-requisitions/new')}
-                >
-                  {isRequester ? t('pr.submit_demand') : t('dashboard.new_pr')}
-                </Button>
-              )}
-              {(isItBuyer || isProcurementMgr || role === 'admin') && (
-                <Button icon={<PlusOutlined />} onClick={() => navigate('/rfqs/new')}>{t('dashboard.new_rfq')}
-                </Button>
-              )}
-              {isRequester && (
-                <Button onClick={() => navigate('/purchase-requisitions')}>{t('pr.my_prs')} {myPrs.length > 0 ? `(${myPrs.length})` : ''}
-                </Button>
-              )}
-              {isDeptManager && (
-                <Button type="primary" icon={<AuditOutlined />} onClick={() => navigate('/approvals')}>{t('dashboard.pending_approvals')} ({pending.length})
-                </Button>
-              )}
-              {isFinanceAuditor && (
-                <Button onClick={() => navigate('/payments')}>{t('dashboard.payment_mgmt')}
-                </Button>
-              )}
-              <Button icon={<AppstoreOutlined />} onClick={() => navigate('/purchase-orders')}>
-                {t('dashboard.view_all_pos')}
-              </Button>
-              {role === 'admin' && (
-                <Button icon={<SettingOutlined />} onClick={() => navigate('/admin')}>
-                  {t('dashboard.admin_panel')}
-                </Button>
-              )}
-              <Button icon={<BellOutlined />} onClick={() => navigate('/notifications')}>
-                {t('dashboard.notifications')}
-              </Button>
-            </Space>
-          </Section>
-        )
+        return null
       case 'my_progress':
         return isRequester && myPrs.length > 0 ? (
           <Section title={t('pr.my_progress')} key="my_progress">
@@ -960,6 +918,80 @@ export function DashboardPage() {
     )
   }
 
+  const { primaryAction, dropdownItems } = useMemo(() => {
+    type Action = {
+      key: string
+      label: string
+      icon: React.ReactNode
+      to: string
+    }
+    const all: { primary: Action | null; rest: Action[] } = { primary: null, rest: [] }
+
+    if (isDeptManager) {
+      all.primary = {
+        key: 'pending',
+        label: `${t('dashboard.pending_approvals')} (${pending.length})`,
+        icon: <AuditOutlined />,
+        to: '/approvals',
+      }
+    } else if (isRequester) {
+      all.primary = {
+        key: 'submit',
+        label: t('pr.submit_demand'),
+        icon: <PlusOutlined />,
+        to: '/purchase-requisitions/new',
+      }
+    } else if (isItBuyer || isProcurementMgr || role === 'admin') {
+      all.primary = {
+        key: 'new_pr',
+        label: t('dashboard.new_pr'),
+        icon: <PlusOutlined />,
+        to: '/purchase-requisitions/new',
+      }
+    } else if (isFinanceAuditor) {
+      all.primary = {
+        key: 'payments',
+        label: t('dashboard.payment_mgmt'),
+        icon: <FileTextOutlined />,
+        to: '/payments',
+      }
+    }
+
+    if ((isItBuyer || isProcurementMgr || role === 'admin') && all.primary?.key !== 'new_pr') {
+      all.rest.push({ key: 'new_pr', label: t('dashboard.new_pr'), icon: <PlusOutlined />, to: '/purchase-requisitions/new' })
+    }
+    if (isItBuyer || isProcurementMgr || role === 'admin') {
+      all.rest.push({ key: 'new_rfq', label: t('dashboard.new_rfq'), icon: <PlusOutlined />, to: '/rfqs/new' })
+    }
+    if (isRequester) {
+      const myCount = myPrs.length
+      all.rest.push({
+        key: 'my_prs',
+        label: myCount > 0 ? `${t('pr.my_prs')} (${myCount})` : t('pr.my_prs'),
+        icon: <FileTextOutlined />,
+        to: '/purchase-requisitions',
+      })
+    }
+    if (isFinanceAuditor && all.primary?.key !== 'payments') {
+      all.rest.push({ key: 'payments', label: t('dashboard.payment_mgmt'), icon: <FileTextOutlined />, to: '/payments' })
+    }
+    all.rest.push({ key: 'all_pos', label: t('dashboard.view_all_pos'), icon: <AppstoreOutlined />, to: '/purchase-orders' })
+    if (role === 'admin') {
+      all.rest.push({ key: 'admin', label: t('dashboard.admin_panel'), icon: <SettingOutlined />, to: '/admin' })
+    }
+    all.rest.push({ key: 'notifications', label: t('dashboard.notifications'), icon: <BellOutlined />, to: '/notifications' })
+
+    return {
+      primaryAction: all.primary,
+      dropdownItems: all.rest.map((a) => ({
+        key: a.key,
+        label: a.label,
+        icon: a.icon,
+        onClick: () => navigate(a.to),
+      })),
+    }
+  }, [role, isRequester, isItBuyer, isProcurementMgr, isFinanceAuditor, isDeptManager, pending.length, myPrs.length, navigate, t])
+
   return (
     <Space direction="vertical" size="middle" style={{ width: '100%', paddingBottom: token.paddingLG }}>
       <div
@@ -981,9 +1013,28 @@ export function DashboardPage() {
             {currentTime.toLocaleString()}
           </Text>
         </Space>
-        <Button size="small" icon={<SettingOutlined />} onClick={() => setCustomizeVisible(true)}>
-          {t('dashboard.customize', 'Customize')}
-        </Button>
+        <Space size="small" wrap>
+          {primaryAction && (
+            <Button
+              type="primary"
+              size="small"
+              icon={primaryAction.icon}
+              onClick={() => navigate(primaryAction.to)}
+            >
+              {primaryAction.label}
+            </Button>
+          )}
+          {dropdownItems.length > 0 && (
+            <Dropdown menu={{ items: dropdownItems }} trigger={['click']} placement="bottomRight">
+              <Button size="small" icon={<MoreOutlined />}>
+                {t('dashboard.more_actions', '更多操作')}
+              </Button>
+            </Dropdown>
+          )}
+          <Button size="small" icon={<SettingOutlined />} onClick={() => setCustomizeVisible(true)}>
+            {t('dashboard.customize', 'Customize')}
+          </Button>
+        </Space>
       </div>
 
       {layout.map((item) => renderSection(item.id))}

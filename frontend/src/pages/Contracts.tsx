@@ -26,6 +26,13 @@ import { fmtAmount, fmtAmountNode } from '@/utils/format'
 import { showUndoToast } from '@/utils/undo'
 import { MonoId } from '@/components/ui/Mono'
 
+const contractStatusStateClass: Record<string, string> = {
+  active: 'tag-state tag-state--success',
+  superseded: 'tag-state tag-state--neutral',
+  terminated: 'tag-state tag-state--error',
+  expired: 'tag-state tag-state--warning',
+}
+
 export function ContractsPage() {
   const { t } = useTranslation()
   const user = useAuth((s) => s.user)
@@ -152,7 +159,7 @@ export function ContractsPage() {
         { text: t('status.expired'), value: 'expired' },
       ],
       onFilter: (value, record) => record.status === value,
-      render: (s: string) => <Tag>{t(`status.${s}` as 'status.active')}</Tag>,
+      render: (s: string) => <span className={contractStatusStateClass[s] ?? 'tag-state tag-state--neutral'}>{t(`status.${s}` as 'status.active')}</span>,
     },
     {
       title: t('field.total_amount'),

@@ -1,5 +1,5 @@
 import { CheckCircleTwoTone, DownloadOutlined, WarningTwoTone } from '@ant-design/icons'
-import { Button, Space, Table, Tag, Typography } from 'antd'
+import { Button, Space, Table, Typography } from 'antd'
 import type { ColumnsType } from 'antd/es/table'
 import { useEffect, useState } from 'react'
 import { useTranslation } from 'react-i18next'
@@ -9,6 +9,15 @@ import { api, type InvoiceListRow } from '@/api'
 import { downloadCSV } from '@/utils/export'
 import { fmtAmount, fmtAmountNode } from '@/utils/format'
 import { MonoId } from '@/components/ui/Mono'
+
+const invoiceStatusStateClass: Record<string, string> = {
+  draft: 'tag-state tag-state--neutral',
+  pending_match: 'tag-state tag-state--warning',
+  matched: 'tag-state tag-state--info',
+  approved: 'tag-state tag-state--success',
+  paid: 'tag-state tag-state--success',
+  cancelled: 'tag-state tag-state--error',
+}
 
 export function InvoicesPage() {
   const { t } = useTranslation()
@@ -52,7 +61,7 @@ export function InvoicesPage() {
     },
     { title: t('field.status'), dataIndex: 'status',
       filters: [{text:'draft',value:'draft'},{text:'pending_match',value:'pending_match'},{text:'matched',value:'matched'},{text:'approved',value:'approved'},{text:'paid',value:'paid'},{text:'cancelled',value:'cancelled'}],
-      onFilter: (value: any, record: any) => record.status === value, render: (s) => <Tag>{t(`status.${s}` as 'status.draft')}</Tag> },
+      onFilter: (value: any, record: any) => record.status === value, render: (s) => <span className={invoiceStatusStateClass[s] ?? 'tag-state tag-state--neutral'}>{t(`status.${s}` as 'status.draft')}</span> },
   ]
 
   return (

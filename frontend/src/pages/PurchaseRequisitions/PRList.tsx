@@ -1,5 +1,5 @@
 import { CopyOutlined, PlusOutlined, SearchOutlined } from '@ant-design/icons'
-import { Button, Input, Space, Table, Tag, Typography } from 'antd'
+import { Button, Input, Space, Table, Typography } from 'antd'
 import type { ColumnsType } from 'antd/es/table'
 import { useEffect, useRef, useState } from 'react'
 import { useTranslation } from 'react-i18next'
@@ -9,15 +9,15 @@ import { api, type PRListItem } from '@/api'
 import { fmtAmount, fmtAmountNode } from '@/utils/format'
 import { MonoId } from '@/components/ui/Mono'
 
-const statusColors: Record<string, string> = {
-  draft: 'default',
-  submitted: 'processing',
-  approved: 'success',
-  rejected: 'error',
-  returned: 'warning',
-  cancelled: 'default',
-  partially_converted: 'gold',
-  converted: 'cyan',
+const statusStateClass: Record<string, string> = {
+  draft: 'tag-state tag-state--neutral',
+  submitted: 'tag-state tag-state--progress',
+  approved: 'tag-state tag-state--success',
+  rejected: 'tag-state tag-state--error',
+  returned: 'tag-state tag-state--warning',
+  cancelled: 'tag-state tag-state--neutral',
+  partially_converted: 'tag-state tag-state--progress',
+  converted: 'tag-state tag-state--info',
 }
 
 const STATUS_OPTIONS = [
@@ -84,7 +84,7 @@ export function PRListPage() {
       filters: STATUS_OPTIONS.map((s) => ({ text: t(`status.${s}` as 'status.draft'), value: s })),
       onFilter: (value, record) => record.status === value,
       render: (s: string) => (
-        <Tag color={statusColors[s] || 'default'}>{t(`status.${s}` as 'status.draft')}</Tag>
+        <span className={statusStateClass[s] ?? 'tag-state tag-state--neutral'}>{t(`status.${s}` as 'status.draft')}</span>
       ),
     },
     {

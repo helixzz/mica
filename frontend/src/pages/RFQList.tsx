@@ -1,14 +1,19 @@
 import { useTranslation } from 'react-i18next'
 import { PlusOutlined } from '@ant-design/icons'
-import { Button, Space, Table, Tag, Typography } from 'antd'
+import { Button, Space, Table, Typography } from 'antd'
 import { useEffect, useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { client } from '@/api/client'
 import { MonoId } from '@/components/ui/Mono'
 
-const statusColors: Record<string, string> = {
-  draft: 'default', sent: 'processing', quoting: 'cyan',
-  evaluation: 'orange', awarded: 'success', closed: 'default', cancelled: 'error',
+const statusStateClass: Record<string, string> = {
+  draft: 'tag-state tag-state--neutral',
+  sent: 'tag-state tag-state--progress',
+  quoting: 'tag-state tag-state--info',
+  evaluation: 'tag-state tag-state--warning',
+  awarded: 'tag-state tag-state--success',
+  closed: 'tag-state tag-state--neutral',
+  cancelled: 'tag-state tag-state--error',
 }
 
 export default function RFQListPage() {
@@ -32,7 +37,7 @@ export default function RFQListPage() {
         columns={[
           { title: t('rfq.number'), dataIndex: 'rfq_number', render: (v: string, r: any) => <Link to={`/rfqs/${r.id}`}><MonoId>{v}</MonoId></Link> },
           { title: t('field.title'), dataIndex: 'title' },
-          { title: t('field.status'), dataIndex: 'status', render: (v: string) => <Tag color={statusColors[v]}>{v}</Tag> },
+          { title: t('field.status'), dataIndex: 'status', render: (v: string) => <span className={statusStateClass[v] ?? 'tag-state tag-state--neutral'}>{v}</span> },
           { title: t('field.deadline'), dataIndex: 'deadline', render: (v: string | null) => v || '-' },
           { title: t('field.created_at'), dataIndex: 'created_at', render: (v: string) => v?.slice(0, 10) },
         ]}

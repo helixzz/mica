@@ -1,5 +1,5 @@
 import { DownloadOutlined } from '@ant-design/icons'
-import { Button, Space, Table, Tag, Typography } from 'antd'
+import { Button, Space, Table, Typography } from 'antd'
 import type { ColumnsType } from 'antd/es/table'
 import { useEffect, useState } from 'react'
 import { useTranslation } from 'react-i18next'
@@ -42,7 +42,10 @@ export function PaymentsPage() {
     { title: t('field.status'), dataIndex: 'status',
       filters: [{text:'pending',value:'pending'},{text:'confirmed',value:'confirmed'},{text:'cancelled',value:'cancelled'}],
       onFilter: (value: any, record: any) => record.status === value,
-      render: (s) => <Tag color={s === 'confirmed' ? 'success' : 'default'}>{t(`status.${s}` as 'status.pending')}</Tag> },
+      render: (s: string) => {
+        const cls = s === 'confirmed' ? 'tag-state--success' : s === 'cancelled' ? 'tag-state--error' : 'tag-state--warning'
+        return <span className={`tag-state ${cls}`}>{t(`status.${s}` as 'status.pending')}</span>
+      } },
     { title: t('field.due_date'), dataIndex: 'due_date' },
     { title: t('field.payment_date'), dataIndex: 'payment_date' },
     { title: t('field.transaction_ref'), dataIndex: 'transaction_ref' },
