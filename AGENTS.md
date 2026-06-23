@@ -152,10 +152,14 @@ cd deploy
 - 当前用 pg_trgm（[ADR 0002](./docs/adr/0002-search-pg-trgm-over-zhparser.md)），不要引入 zhparser
 
 ### 5.8 前端主题
+- **完整视觉规范**：[`docs/DESIGN.md`](./docs/DESIGN.md) — Mica VI 体系（Otter Workbench），含 5 条铁律、token 系统、12 个核心组件 spec、Do/Don't、AI Agent Prompt Guide。**改前端样式前必读**
 - 颜色/间距/字号 → 用 tokens（`frontend/src/theme/tokens.ts`），不要硬编码 hex
 - AntD 组件 → `useToken()` 获取语义 token
-- 非 AntD 区域 → 用 CSS 变量 `var(--color-primary)` / `var(--space-4)` 等
+- 非 AntD 区域 → 用 CSS 变量 `var(--color-primary-500)` / `var(--space-4)` / `var(--shadow-card)` 等
+- **Otter Brown 纪律**：仅用于 primary CTA / 选中态 / chart 主指标 / `state.progress` Tag。不做装饰边框、不做普通超链接色、不做大面积底色（参见 docs/DESIGN.md §2.①）
+- **业务标识符强制 mono**：PR/PO/合同号 / 金额 / 数量 / 日期戳 / SKU code 必须用 `<code class="mono-id">` 或 `<span class="mono-num">`（参见 docs/DESIGN.md §4.2）
 - **不要**引入 Tailwind / styled-components / emotion，纯 AntD + CSS custom properties
+- **不要**用 v1.38 之前的纯黑阴影；shadow token 已全部改为 Otter Brown 微染（`rgba(139, 94, 60, ...)`）
 
 ### 5.9 日期时间
 - 一律用 `datetime.UTC` 而非 `datetime.timezone.utc`（Python 3.12）

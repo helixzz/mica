@@ -55,7 +55,87 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
-## [v1.37.0] — 2026-06-22
+## [v1.39.0] — 2026-06-23
+
+### 新增（VI 体系第一阶段：Foundation Tokens — Otter Workbench）
+
+本版引入完整的视觉规范文档 `docs/DESIGN.md`（1214 行），并落地 Phase 1 token 体系重构。规范吸收 Brex / Column / Linear 三个成熟设计系统的"克制金融工具哲学"，保留 Otter Brown 品牌色与水獭吉祥物作为温度感来源。本版**只动 4 个 theme/style 文件，零业务页面改动**，所有效果通过 token 自动级联到全站。
+
+#### 设计文档
+
+- **新增 `docs/DESIGN.md`**：完整 VI 规范，11 章节涵盖设计哲学、5 条铁律、配色系统、字体系统、形状阴影、间距密度、12 个核心组件视觉 spec、Do/Don't 清单、Phase 1/2/3 落地路线、AI Agent Quick Prompt Guide、维护准则
+- **5 条铁律确立**：① Single Accent Discipline（Otter Brown 仅用于 primary CTA / 选中态 / chart 主指标）② Mono for Identifiers（业务编号 / 金额 / 日期戳必须 JBM + tabular-nums）③ Surfaces over Shadows（底色分层优先于阴影）④ Compressed Inter Tracking（字号越大字距越紧）⑤ Compact Density（B 端密集优先）
+
+#### Token 体系重构（`frontend/src/theme/tokens.ts`）
+
+- **新增 `neutral.25` Paper Beige `#FAFAF8`**：替代纯白成为页面默认画布。整页氛围立刻变温暖、品牌化
+- **新增 `neutral.250` Hairline Beige `#E8E4DF`**：作为主要 1px border 色，比 v1.38 的 `#DFDBD7` 淡，让密集表格 / 卡片边线不抢眼
+- **新增 `color.state` 6 色语义 palette**：info / progress / success / warning / error / neutral，每色 4 阶（50 / 200 / 500 / 700）。`progress` 复用 Otter Brown，让"进行中"状态绑定品牌色
+- **新增 `color.dataViz` 6 色图表 palette**：primary（Otter Brown）/ secondary / positive / attention / critical / baseline。全部降饱和度，与 Otter Brown 主题和谐共存。Recharts 默认蓝绿紫退出 Mica 视野
+- **新增 `font.display` scale**：sm (24px) / md (30px) / lg (36px)，配套 line-height 1.1-1.2 + tight tracking。用于 StatCard 主数字、PageHeader 主标题
+- **新增 `font.tracking` scale**：display -0.025em → caption 0，体系化的 Inter 紧字距规则
+- **shadow 重构为 Brand-tinted**：所有阴影改用 `rgba(139, 94, 60, ...)` Otter Brown 微染，替代原纯黑阴影。全站 elevation 立刻品牌化
+- **暗色模式优化**：`#0F0E0D` → `#161514` 微暖 Onyx，`elevated` 从 `#2F2B27` 降到 `#1F1D1B`，差距更小靠 hairline 区分（学 Linear）
+
+#### AntD 主题映射（`frontend/src/theme/antdTheme.ts`）
+
+- 19 个组件深度配置：Button / Menu / Table / Card / Input / Select / Modal / Drawer / Tag / Tabs / Layout / Form / Tooltip / Popover / Dropdown / Switch / Checkbox / Radio / Steps / Divider
+- Button `controlHeight: 36`、`primaryShadow: 'none'`、`fontWeight: 500`
+- Card `boxShadow: 'none'`、`colorBorderSecondary: hairline`，靠底色 + hairline 分层不靠阴影
+- Table `headerBg: neutral[50]`、`rowHoverBg: neutral[25]` (Paper Beige hover，不染品牌色)、`cellPaddingBlock: 10` (compact density)
+- Input `activeShadow: 'rgba(139, 94, 60, 0.10) 3px ring'`，focus ring 也带 Otter Brown 微染
+- 全站 borderRadius 收敛到 4 / 8 / 12 三档，禁止 6 / 10 / 14 / 16 / 20
+
+#### Global CSS（`frontend/src/styles/global.css`）
+
+- **JetBrains Mono 全局加载**：`@import '@fontsource/jetbrains-mono/400.css'`
+- **body 默认 `font-feature-settings: "tnum" 1`**：全站数字（含 Inter 渲染的金额）自动等宽对齐，表格扫读速度立即提升
+- **新增 `.mono-id` utility class**：用于 PR-2026-0017 / SKU code，启用 `tnum + zero + ss19`，slashed zero 区分 0 与 O
+- **新增 `.mono-num` / `.mono-num--right` utility class**：用于金额、数量、日期戳，强制 tabular-nums + 右对齐
+- **新增 `.tag-state-{6 色变体}`**：outline 风格（浅底 + 中等边 + 深字），替代 AntD solid Tag 的视觉过载
+- **新增 `.status-badge` / `.status-dot` 系统**：6px 圆点 + 13px label，无背景无边，专为密集表格状态列设计
+- **新增 `.text-display` / `.text-display-sm` / `.text-display-lg`**：display 字号 + 紧字距 + 600 字重一站式
+- **CSS variables 同步**：`--color-state-*` (24 个)、`--color-viz-*` (6 个)、`--shadow-card/floating/modal` 等 brand-tinted 阴影、`--tracking-*` 6 个字距档位
+
+#### 依赖
+
+- `frontend/package.json` 新增 `@fontsource/jetbrains-mono` ^5.x
+
+#### 安装路径与零业务影响保证
+
+- Token 文件保留所有 v1.38 引用 API：`tokens.color.success.500` 等仍可用，新代码推荐用 `tokens.color.state.success[500]`
+- AntD 默认色映射到新 token 体系，所有 `<Button type="primary">` / `<Tag color="success">` 自动获得新视觉
+- 36 个 lazy chunk 全部 build 通过，TypeScript 0 错误，63 个前端单元测试 100% 通过
+
+#### 落地路线（参见 `docs/DESIGN.md` §9）
+
+| 阶段 | 版本 | 主题 |
+|---|---|---|
+| **Phase 1** | **v1.39.0**（本版） | **Foundation Tokens — Paper Beige + Hairline + Brand-tinted Shadow + Mono utilities** |
+| Phase 2 | v1.40.0 (next) | Typography & Identifier Pass — 全站推 mono 业务标识符 + display token 应用到 StatCard / PageHeader |
+| Phase 3 | v1.41.0+ | Component-by-Component — Dashboard、PR/PO 详情、Admin 等增量改造 |
+
+#### 设计原则（贯穿本版）
+
+1. **品牌资产保留**：Otter Brown `#8B5E3C` 仍是主品牌色，水獭吉祥物 / 插画继续作为差异化资产
+2. **零破坏性**：所有 v1.38 token 引用继续工作，新 token 加法引入
+3. **AI agent 友好**：docs/DESIGN.md §10 提供 12 个组件参数化 prompt，未来 ralph-loop / Sisyphus-Junior 改前端可直接 `load_skills` 引用规范
+4. **B 端 compact**：拒绝学营销页 80px section gap，密度优先于装饰
+
+#### 文件变更摘要
+
+```
+docs/DESIGN.md                            +1214 (新增)
+frontend/src/theme/tokens.ts              重构（向后兼容）
+frontend/src/theme/antdTheme.ts           重构（19 个组件深度配置）
+frontend/src/styles/global.css            +CSS vars + utility classes
+frontend/package.json                     +@fontsource/jetbrains-mono
+AGENTS.md §5.8                            引用 docs/DESIGN.md
+```
+
+---
+
+
 
 ### 新增（审批流改进 — 路线图 B 阶段：规则按部门 / 成本中心过滤）
 

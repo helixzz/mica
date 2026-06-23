@@ -2,9 +2,9 @@
 @import '@fontsource/inter/500.css';
 @import '@fontsource/inter/600.css';
 @import '@fontsource/inter/700.css';
+@import '@fontsource/jetbrains-mono/400.css';
 
 :root {
-  /* Brand */
   --color-primary-50: #F8F4F1;
   --color-primary-100: #EBE1D8;
   --color-primary-200: #D8C3B1;
@@ -16,11 +16,12 @@
   --color-primary-800: #382518;
   --color-primary-900: #1C130C;
 
-  /* Neutral */
   --color-neutral-0: #FFFFFF;
+  --color-neutral-25: #FAFAF8;
   --color-neutral-50: #F7F6F5;
   --color-neutral-100: #EFECE9;
   --color-neutral-200: #DFDBD7;
+  --color-neutral-250: #E8E4DF;
   --color-neutral-300: #CFCAC5;
   --color-neutral-400: #AFA9A3;
   --color-neutral-500: #8F8881;
@@ -30,24 +31,51 @@
   --color-neutral-900: #1F1C19;
   --color-neutral-950: #0F0E0D;
 
-  /* Semantic */
+  --color-state-info-50: #EFF6FF;
+  --color-state-info-200: #BFDBFE;
+  --color-state-info-500: #3B82F6;
+  --color-state-info-700: #1D4ED8;
+  --color-state-progress-50: #F8F4F1;
+  --color-state-progress-200: #D8C3B1;
+  --color-state-progress-500: #8B5E3C;
+  --color-state-progress-700: #543824;
+  --color-state-success-50: #F0FDF4;
+  --color-state-success-200: #BBF7D0;
+  --color-state-success-500: #22C55E;
+  --color-state-success-700: #15803D;
+  --color-state-warning-50: #FFFBEB;
+  --color-state-warning-200: #FDE68A;
+  --color-state-warning-500: #F59E0B;
+  --color-state-warning-700: #B45309;
+  --color-state-error-50: #FEF2F2;
+  --color-state-error-200: #FECACA;
+  --color-state-error-500: #EF4444;
+  --color-state-error-700: #B91C1C;
+  --color-state-neutral-50: #F7F6F5;
+  --color-state-neutral-200: #DFDBD7;
+  --color-state-neutral-500: #8F8881;
+  --color-state-neutral-700: #4F4943;
+
   --color-success-50: #F0FDF4;
   --color-success-500: #22C55E;
   --color-success-700: #15803D;
-  
   --color-warning-50: #FFFBEB;
   --color-warning-500: #F59E0B;
   --color-warning-700: #B45309;
-  
   --color-error-50: #FEF2F2;
   --color-error-500: #EF4444;
   --color-error-700: #B91C1C;
-  
   --color-info-50: #EFF6FF;
   --color-info-500: #3B82F6;
   --color-info-700: #1D4ED8;
 
-  /* Spacing */
+  --color-viz-primary: #8B5E3C;
+  --color-viz-secondary: #C4A48A;
+  --color-viz-positive: #2F8F69;
+  --color-viz-attention: #C97B3F;
+  --color-viz-critical: #B85450;
+  --color-viz-baseline: #6F6861;
+
   --space-0: 0px;
   --space-1: 4px;
   --space-2: 8px;
@@ -59,61 +87,70 @@
   --space-8: 64px;
   --space-9: 96px;
 
-  /* Radius */
   --radius-none: 0px;
   --radius-sm: 4px;
-  --radius-md: 6px;
-  --radius-lg: 8px;
+  --radius-md: 8px;
+  --radius-lg: 12px;
   --radius-xl: 12px;
   --radius-full: 9999px;
 
-  /* Shadows */
-  --shadow-xs: 0 1px 2px 0 rgba(15, 14, 13, 0.05);
-  --shadow-sm: 0 1px 3px 0 rgba(15, 14, 13, 0.1), 0 1px 2px -1px rgba(15, 14, 13, 0.1);
-  --shadow-md: 0 4px 6px -1px rgba(15, 14, 13, 0.1), 0 2px 4px -2px rgba(15, 14, 13, 0.1);
-  --shadow-lg: 0 10px 15px -3px rgba(15, 14, 13, 0.1), 0 4px 6px -4px rgba(15, 14, 13, 0.1);
-  --shadow-xl: 0 20px 25px -5px rgba(15, 14, 13, 0.1), 0 8px 10px -6px rgba(15, 14, 13, 0.1);
+  --shadow-card: 0 1px 2px 0 rgba(139, 94, 60, 0.04);
+  --shadow-card-hover: 0 2px 6px 0 rgba(139, 94, 60, 0.08);
+  --shadow-floating: 0 4px 12px 0 rgba(139, 94, 60, 0.08), 0 1px 3px 0 rgba(139, 94, 60, 0.04);
+  --shadow-modal: 0 16px 48px 0 rgba(139, 94, 60, 0.12), 0 4px 12px 0 rgba(139, 94, 60, 0.06);
+  --shadow-button-hover: 0 2px 4px 0 rgba(139, 94, 60, 0.10);
 
-  /* Typography */
+  --shadow-xs: 0 1px 2px 0 rgba(139, 94, 60, 0.04);
+  --shadow-sm: 0 1px 2px 0 rgba(139, 94, 60, 0.04);
+  --shadow-md: 0 2px 6px 0 rgba(139, 94, 60, 0.08), 0 1px 2px 0 rgba(139, 94, 60, 0.04);
+  --shadow-lg: 0 4px 12px 0 rgba(139, 94, 60, 0.08), 0 1px 3px 0 rgba(139, 94, 60, 0.04);
+  --shadow-xl: 0 16px 48px 0 rgba(139, 94, 60, 0.12), 0 4px 12px 0 rgba(139, 94, 60, 0.06);
+
   --font-sans: Inter, -apple-system, BlinkMacSystemFont, "PingFang SC", "Microsoft YaHei", sans-serif;
-  --font-mono: "JetBrains Mono", ui-monospace, monospace;
+  --font-mono: "JetBrains Mono", ui-monospace, SFMono-Regular, "Cascadia Code", Consolas, monospace;
 
-  /* Light Theme Defaults */
-  --color-bg-base: #FFFFFF;
+  --tracking-display: -0.025em;
+  --tracking-heading: -0.02em;
+  --tracking-heading-sm: -0.015em;
+  --tracking-sub: -0.01em;
+  --tracking-body: -0.005em;
+  --tracking-caption: 0;
+
+  --color-bg-base: #FAFAF8;
   --color-bg-subtle: #F7F6F5;
   --color-bg-elevated: #FFFFFF;
   --color-bg-sunken: #EFECE9;
-  
+
   --color-text-primary: #1F1C19;
   --color-text-secondary: #4F4943;
   --color-text-tertiary: #8F8881;
   --color-text-disabled: #CFCAC5;
   --color-text-inverse: #FFFFFF;
-  
+
+  --color-border-hairline: #E8E4DF;
   --color-border-subtle: #EFECE9;
   --color-border-default: #DFDBD7;
   --color-border-strong: #AFA9A3;
 }
 
 [data-theme="dark"] {
-  /* Dark Theme Overrides */
-  --color-bg-base: #0F0E0D;
-  --color-bg-subtle: #1F1C19;
-  --color-bg-elevated: #2F2B27;
-  --color-bg-sunken: #000000;
-  
+  --color-bg-base: #161514;
+  --color-bg-subtle: #1A1816;
+  --color-bg-elevated: #1F1D1B;
+  --color-bg-sunken: #0F0E0D;
+
   --color-text-primary: #F7F6F5;
-  --color-text-secondary: #CFCAC5;
-  --color-text-tertiary: #8F8881;
+  --color-text-secondary: #D5D0CB;
+  --color-text-tertiary: #9E9790;
   --color-text-disabled: #4F4943;
   --color-text-inverse: #0F0E0D;
-  
-  --color-border-subtle: #2F2B27;
-  --color-border-default: #4F4943;
-  --color-border-strong: #6F6861;
+
+  --color-border-hairline: #2F2B27;
+  --color-border-subtle: #26221F;
+  --color-border-default: #3A3632;
+  --color-border-strong: #5A544E;
 }
 
-/* Reset */
 *, *::before, *::after {
   box-sizing: border-box;
 }
@@ -129,14 +166,16 @@ html, body {
 
 body {
   font-family: var(--font-sans);
+  font-size: 14px;
   background-color: var(--color-bg-base);
   color: var(--color-text-primary);
   line-height: 1.5;
+  letter-spacing: var(--tracking-body);
+  font-feature-settings: "tnum" 1;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
 }
 
-/* Selection */
 ::selection {
   background-color: var(--color-primary-100);
   color: var(--color-primary-900);
@@ -147,7 +186,6 @@ body {
   color: var(--color-primary-100);
 }
 
-/* Scrollbar */
 ::-webkit-scrollbar {
   width: 8px;
   height: 8px;
@@ -166,7 +204,160 @@ body {
   background: var(--color-border-strong);
 }
 
-/* Print Styles */
+/* ─────────────────────────────────────────────────────────
+   v1.39.0 Identifier utilities — see docs/DESIGN.md §4.2.
+   .mono-id   — business identifiers (PR-2026-0017, SKU code)
+   .mono-num  — currency, quantity, dates (¥1,054,197.00)
+   ───────────────────────────────────────────────────────── */
+
+.mono-id {
+  font-family: var(--font-mono);
+  font-size: 0.95em;
+  letter-spacing: 0;
+  font-feature-settings: "tnum" 1, "zero" 1, "ss19" 1;
+  background: transparent;
+  color: inherit;
+  padding: 0;
+  border: none;
+}
+
+.mono-num {
+  font-family: var(--font-mono);
+  font-variant-numeric: tabular-nums;
+  font-feature-settings: "tnum" 1, "zero" 1;
+}
+
+.mono-num--right {
+  text-align: right;
+}
+
+.tabular-nums {
+  font-variant-numeric: tabular-nums;
+  font-feature-settings: "tnum" 1;
+}
+
+/* ─────────────────────────────────────────────────────────
+   v1.39.0 Tag state variants — see docs/DESIGN.md §3.3 / §7.3.
+   Outline style: pale bg + medium border + dark text.
+   Use these instead of AntD's solid <Tag color="success">.
+   ───────────────────────────────────────────────────────── */
+
+.tag-state {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 2px 8px;
+  border-radius: var(--radius-sm);
+  font-size: 12px;
+  font-weight: 500;
+  line-height: 1.4;
+  border: 1px solid transparent;
+  white-space: nowrap;
+}
+
+.tag-state--info {
+  background: var(--color-state-info-50);
+  color: var(--color-state-info-700);
+  border-color: var(--color-state-info-200);
+}
+
+.tag-state--progress {
+  background: var(--color-state-progress-50);
+  color: var(--color-state-progress-700);
+  border-color: var(--color-state-progress-200);
+}
+
+.tag-state--success {
+  background: var(--color-state-success-50);
+  color: var(--color-state-success-700);
+  border-color: var(--color-state-success-200);
+}
+
+.tag-state--warning {
+  background: var(--color-state-warning-50);
+  color: var(--color-state-warning-700);
+  border-color: var(--color-state-warning-200);
+}
+
+.tag-state--error {
+  background: var(--color-state-error-50);
+  color: var(--color-state-error-700);
+  border-color: var(--color-state-error-200);
+}
+
+.tag-state--neutral {
+  background: var(--color-state-neutral-50);
+  color: var(--color-state-neutral-700);
+  border-color: var(--color-state-neutral-200);
+}
+
+/* ─────────────────────────────────────────────────────────
+   v1.39.0 Status Badge — colored dot + label, no background.
+   For dense table status columns. See docs/DESIGN.md §7.4.
+   ───────────────────────────────────────────────────────── */
+
+.status-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 13px;
+  font-weight: 500;
+  line-height: 1.4;
+  white-space: nowrap;
+}
+
+.status-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: var(--radius-full);
+  display: inline-block;
+  flex-shrink: 0;
+}
+
+.status-badge--info { color: var(--color-state-info-700); }
+.status-badge--info .status-dot { background: var(--color-state-info-500); }
+
+.status-badge--progress { color: var(--color-state-progress-700); }
+.status-badge--progress .status-dot { background: var(--color-state-progress-500); }
+
+.status-badge--success { color: var(--color-state-success-700); }
+.status-badge--success .status-dot { background: var(--color-state-success-500); }
+
+.status-badge--warning { color: var(--color-state-warning-700); }
+.status-badge--warning .status-dot { background: var(--color-state-warning-500); }
+
+.status-badge--error { color: var(--color-state-error-700); }
+.status-badge--error .status-dot { background: var(--color-state-error-500); }
+
+.status-badge--neutral { color: var(--color-state-neutral-700); }
+.status-badge--neutral .status-dot { background: var(--color-state-neutral-500); }
+
+/* ─────────────────────────────────────────────────────────
+   v1.39.0 Display typography utilities — see docs/DESIGN.md §4.3.
+   Pair with .mono-num for StatCard values.
+   ───────────────────────────────────────────────────────── */
+
+.text-display {
+  font-size: 30px;
+  line-height: 1.15;
+  letter-spacing: var(--tracking-display);
+  font-weight: 600;
+}
+
+.text-display-sm {
+  font-size: 24px;
+  line-height: 1.2;
+  letter-spacing: var(--tracking-heading);
+  font-weight: 600;
+}
+
+.text-display-lg {
+  font-size: 36px;
+  line-height: 1.1;
+  letter-spacing: -0.03em;
+  font-weight: 600;
+}
+
 @media print {
   html, body {
     background: white !important;
@@ -175,7 +366,6 @@ body {
     print-color-adjust: exact;
   }
 
-  /* Hide app chrome */
   .ant-layout-header,
   .ant-layout-sider,
   .ant-layout-footer,
@@ -207,7 +397,6 @@ body {
     max-width: none !important;
   }
 
-  /* Expand tabs to show all content when printing */
   .ant-tabs-content-holder {
     position: static !important;
   }
@@ -223,7 +412,6 @@ body {
     break-before: auto;
   }
 
-  /* Card and table print styling */
   .ant-card {
     box-shadow: none !important;
     border: 1px solid #ddd !important;
@@ -237,7 +425,6 @@ body {
     border: 1px solid #999 !important;
   }
 
-  /* Typography for print */
   body {
     font-size: 12pt;
   }
@@ -245,7 +432,6 @@ body {
     break-after: avoid;
   }
 
-  /* Table break behavior */
   table {
     page-break-inside: auto;
     width: 100% !important;
@@ -257,7 +443,6 @@ body {
     display: table-header-group;
   }
 
-  /* Links show URL on paper */
   a[href]::after {
     content: " (" attr(href) ")";
     font-size: 0.8em;
@@ -268,12 +453,10 @@ body {
     content: "";
   }
 
-  /* Forced page breaks */
   .print-page-break {
     break-before: page;
   }
 
-  /* Print-only element — hidden on screen, shown on paper */
   .print-only {
     display: block !important;
   }
@@ -287,7 +470,6 @@ body {
    Responsive / Mobile (approval + view focused, per roadmap)
    ───────────────────────────────────────────────────────── */
 
-/* Tablet and below */
 @media (max-width: 992px) {
   .ant-layout-content {
     padding: var(--space-4) !important;
@@ -298,25 +480,21 @@ body {
   }
 }
 
-/* Phone */
 @media (max-width: 576px) {
   .ant-layout-content {
     padding: var(--space-3) !important;
   }
 
-  /* Stat cards stack instead of 4-across */
   .ant-row.stat-row > .ant-col {
     flex: 0 0 100% !important;
     max-width: 100% !important;
     margin-bottom: var(--space-3);
   }
 
-  /* Tables: enable horizontal scroll */
   .ant-table-wrapper {
     overflow-x: auto;
   }
 
-  /* PageHeader typography scale */
   .ant-typography h2 {
     font-size: 20px !important;
   }
@@ -327,17 +505,14 @@ body {
     font-size: 16px !important;
   }
 
-  /* Hide less-important columns on narrow screens */
   .hide-on-mobile {
     display: none !important;
   }
 
-  /* Buttons become full-width in action rows */
   .action-row .ant-btn {
     flex: 1 1 auto;
   }
 
-  /* Drawer / Modal full-screen */
   .ant-drawer-content-wrapper {
     width: 100vw !important;
   }
@@ -346,14 +521,13 @@ body {
     margin: 8px !important;
   }
 
-  /* Approval-friendly: sticky bottom action bar */
   .mobile-sticky-actions {
     position: sticky;
     bottom: 0;
     left: 0;
     right: 0;
     background: var(--color-bg-base);
-    border-top: 1px solid var(--color-border-subtle);
+    border-top: 1px solid var(--color-border-hairline);
     padding: var(--space-3);
     display: flex;
     gap: var(--space-2);
@@ -364,7 +538,6 @@ body {
   }
 }
 
-/* MarqueeOption: scroll long text in Select dropdowns when highlighted */
 .marquee-option {
   position: relative;
 }
@@ -374,7 +547,6 @@ body {
   white-space: nowrap;
 }
 
-/* Only animate when: (1) text overflows AND (2) option is active/highlighted */
 .ant-select-item-option-active .marquee-option--overflow .marquee-option__text {
   animation: marquee-scroll var(--marquee-duration, 3s) ease-in-out 0.3s infinite alternate;
 }
@@ -388,7 +560,6 @@ body {
   }
 }
 
-/* Respect reduced motion preference */
 @media (prefers-reduced-motion: reduce) {
   .ant-select-item-option-active .marquee-option--overflow .marquee-option__text {
     animation: none;
