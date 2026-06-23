@@ -5,12 +5,13 @@ import { useEffect, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { useNavigate, useParams } from 'react-router-dom'
 
-import { api, type ClassificationItem, flattenCategoryTree, type Item, type Supplier, type ProxyCandidate } from '@/api'
+import { api, type ClassificationItem, type Department, flattenCategoryTree, type Item, type Supplier, type ProxyCandidate } from '@/api'
 import { client, extractError } from '@/api/client'
 import { useAuth } from '@/auth/useAuth'
 import { ItemPickerWithCreate } from '@/components/ItemPickerWithCreate'
 import { AutosaveBanner, AutosaveUnavailableBanner } from '@/components/AutosaveBanner'
 import { PRQuoteConfirmModal } from '@/components/PRQuoteConfirmModal'
+import { MarqueeOption } from '@/components/ui/MarqueeOption'
 import { useAutosave } from '@/hooks/useAutosave'
 import { fmtAmount } from '@/utils/format'
 
@@ -38,6 +39,7 @@ export function PREditPage() {
   const [suppliers, setSuppliers] = useState<Supplier[]>([])
   const [items, setItems] = useState<Item[]>([])
   const [companies, setCompanies] = useState<{ id: string; name_zh: string }[]>([])
+  const [departments, setDepartments] = useState<Department[]>([])
   const [costCenters, setCostCenters] = useState<{ id: string; label_zh: string }[]>([])
   const [expenseTypes, setExpenseTypes] = useState<{ id: string; label_zh: string }[]>([])
   const [procCategories, setProcCategories] = useState<ClassificationItem[]>([])
@@ -53,6 +55,7 @@ export function PREditPage() {
     void api.suppliers().then(setSuppliers)
     void api.items().then(setItems)
     void api.companies().then(setCompanies)
+    void api.departments().then(setDepartments).catch(() => {})
     void api.listCostCenters().then(setCostCenters)
     void api.listLookupValues('expense_type').then(setExpenseTypes)
     void api.getCategoryTree().then((tree) => setProcCategories(flattenCategoryTree(tree)))
@@ -79,6 +82,7 @@ export function PREditPage() {
         required_date: pr.required_date ? dayjs(pr.required_date) : undefined,
         requester_id: pr.requester_id,
         company_id: pr.company_id,
+        department_id: pr.department_id,
         cost_center_id: pr.cost_center_id,
         expense_type_id: pr.expense_type_id,
         procurement_category_id: pr.procurement_category_id,
@@ -193,6 +197,7 @@ export function PREditPage() {
         required_date: values.required_date?.format('YYYY-MM-DD') ?? null,
         requester_id: canProxy ? (values.requester_id || null) : null,
         company_id: values.company_id || null,
+        department_id: values.department_id || null,
         cost_center_id: values.cost_center_id || null,
         expense_type_id: values.expense_type_id || null,
         procurement_category_id: values.procurement_category_id || null,
@@ -358,6 +363,28 @@ export function PREditPage() {
             <Col span={6}>
               <Form.Item label={t('pr.category_label')} name="procurement_category_id" help={t('pr.category_help')}>
                 <Select allowClear showSearch optionFilterProp="label" options={procCategories.map((c) => ({ value: c.id, label: (c.level ?? 1) === 2 ? `  └ ${c.label_zh}` : c.label_zh }))} />
+              </Form.Item>
+            </Col>
+          </Row>
+          <Row gutter={16}>
+            <Col span={12}>
+              <Form.Item
+                label={t('pr.acting_department_label')}
+                name="department_id"
+                help={t('pr.acting_department_help')}
+              >
+                <Select
+                  allowClear
+                  showSearch
+                  optionFilterProp="label"
+                  placeholder={t('pr.select_acting_department')}
+                  popupMatchSelectWidth={false}
+                  optionRender={(option) => <MarqueeOption>{option.label}</MarqueeOption>}
+                  options={departments.map((d) => ({
+                    value: d.id,
+                    label: `${d.name_zh}${d.code ? ` (${d.code})` : ''}`,
+                  }))}
+                />
               </Form.Item>
             </Col>
           </Row>

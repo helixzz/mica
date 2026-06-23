@@ -7,6 +7,23 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [v1.40.1] — 2026-06-23
+
+### 修复
+
+- **采购申请编辑页缺失「代表部门」字段**：v1.36.0 引入 `pr.department_id` 字段时只在 PRNew 表单加了下拉，PREdit 漏加。被退回 (returned) 或处于草稿 (draft) 状态的 PR 进入编辑页时，无法看到/修改代表部门。后端 PATCH endpoint 一直支持该字段，仅前端表单缺失
+  - `PREdit.tsx` 加 `departments` state + `api.departments()` fetch
+  - `setFieldsValue` 中加 `department_id: pr.department_id` 水合
+  - PATCH payload 加 `department_id: values.department_id || null`
+  - 在「公司/成本中心/费用类型/品类」row 下方加新 row：「代表部门」全公司下拉（与 PRNew 一致，全公司启用部门，带 marquee 长名滚动）
+
+### 不变
+
+- 后端零改动（PATCH `/purchase-requisitions/{id}` 早在 v1.36.0 已支持 `department_id`）
+- 单测无新增（前端表单字段缺失，不在测试覆盖范围；E2E 已验证 PATCH→GET 持久化正常）
+
+---
+
 ## [v1.38.0] — 2026-06-22
 
 ### 改进（首页布局密度优化）
