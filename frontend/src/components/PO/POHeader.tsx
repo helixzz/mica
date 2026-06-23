@@ -1,5 +1,5 @@
 import { DeleteOutlined, DownloadOutlined, FileTextOutlined, PlusOutlined } from '@ant-design/icons'
-import { Button, Space, Tag, Typography } from 'antd'
+import { Button, Space, Typography } from 'antd'
 import { useTranslation } from 'react-i18next'
 import { useNavigate } from 'react-router-dom'
 
@@ -22,6 +22,15 @@ function statusTag(s: string): string {
   return s
 }
 
+const poStatusStateClass: Record<string, string> = {
+  draft: 'tag-state tag-state--neutral',
+  confirmed: 'tag-state tag-state--success',
+  partially_received: 'tag-state tag-state--progress',
+  fully_received: 'tag-state tag-state--success',
+  closed: 'tag-state tag-state--neutral',
+  cancelled: 'tag-state tag-state--error',
+}
+
 export function POHeader({
   po,
   contractsCount,
@@ -41,7 +50,9 @@ export function POHeader({
         <Typography.Title level={3} style={{ margin: 0 }}>
           <MonoId>{po.po_number}</MonoId>
         </Typography.Title>
-        <Tag color="success">{t(`status.${statusTag(po.status)}` as 'status.confirmed')}</Tag>
+        <span className={poStatusStateClass[po.status] ?? 'tag-state tag-state--neutral'}>
+          {t(`status.${statusTag(po.status)}` as 'status.confirmed')}
+        </span>
       </Space>
       <Space>
         {canAddSupplementary && (

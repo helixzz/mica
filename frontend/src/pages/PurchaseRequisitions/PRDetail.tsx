@@ -32,14 +32,14 @@ import { fmtAmount, fmtAmountNode, fmtQty, fmtQtyNode } from '@/utils/format'
 import { MonoId } from '@/components/ui/Mono'
 import { useAuth } from '@/auth/useAuth'
 
-const statusColors: Record<string, string> = {
-  draft: 'default',
-  submitted: 'processing',
-  approved: 'success',
-  rejected: 'error',
-  returned: 'warning',
-  cancelled: 'default',
-  converted: 'cyan',
+const statusStateClass: Record<string, string> = {
+  draft: 'tag-state tag-state--neutral',
+  submitted: 'tag-state tag-state--progress',
+  approved: 'tag-state tag-state--success',
+  rejected: 'tag-state tag-state--error',
+  returned: 'tag-state tag-state--warning',
+  cancelled: 'tag-state tag-state--neutral',
+  converted: 'tag-state tag-state--info',
 }
 
 export function PRDetailPage() {
@@ -556,7 +556,7 @@ export function PRDetailPage() {
           <Typography.Title level={3} style={{ margin: 0 }}>
             <MonoId>{pr.pr_number}</MonoId>
           </Typography.Title>
-          <Tag color={statusColors[pr.status]}>{t(`status.${pr.status}` as 'status.draft')}</Tag>
+          <span className={statusStateClass[pr.status] ?? 'tag-state tag-state--neutral'}>{t(`status.${pr.status}` as 'status.draft')}</span>
         </Space>
         <Space>
           <Button onClick={() => navigate('/purchase-requisitions')}>{t('button.back')}</Button>

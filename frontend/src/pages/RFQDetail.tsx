@@ -10,9 +10,14 @@ import { fmtAmount, fmtQty, getCurrencySymbol } from '@/utils/format'
 import { MonoId } from '@/components/ui/Mono'
 import { ActivityTimeline } from '@/components/ActivityTimeline'
 
-const statusColors: Record<string, string> = {
-  draft: 'default', sent: 'processing', quoting: 'cyan',
-  evaluation: 'orange', awarded: 'success', closed: 'default', cancelled: 'error',
+const statusStateClass: Record<string, string> = {
+  draft: 'tag-state tag-state--neutral',
+  sent: 'tag-state tag-state--progress',
+  quoting: 'tag-state tag-state--info',
+  evaluation: 'tag-state tag-state--warning',
+  awarded: 'tag-state tag-state--success',
+  closed: 'tag-state tag-state--neutral',
+  cancelled: 'tag-state tag-state--error',
 }
 
 export default function RFQDetailPage() {
@@ -148,7 +153,7 @@ export default function RFQDetailPage() {
             <Descriptions bordered size="small" column={2}>
               <Descriptions.Item label={t('field.title')}>{rfq.title}</Descriptions.Item>
               <Descriptions.Item label={t('field.deadline')}>{rfq.deadline || '-'}</Descriptions.Item>
-              <Descriptions.Item label={t('field.status')}><Tag color={statusColors[rfq.status]}>{rfq.status}</Tag></Descriptions.Item>
+              <Descriptions.Item label={t('field.status')}><span className={statusStateClass[rfq.status] ?? 'tag-state tag-state--neutral'}>{rfq.status}</span></Descriptions.Item>
               <Descriptions.Item label={t('field.created_at')}>{rfq.created_at?.slice(0, 10)}</Descriptions.Item>
               {rfq.notes && <Descriptions.Item label={t('field.notes')} span={2}>{rfq.notes}</Descriptions.Item>}
             </Descriptions>
@@ -183,7 +188,7 @@ export default function RFQDetailPage() {
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
         <Space>
           <Typography.Title level={3} style={{ margin: 0 }}><MonoId>{rfq.rfq_number}</MonoId></Typography.Title>
-          <Tag color={statusColors[rfq.status]}>{rfq.status}</Tag>
+          <span className={statusStateClass[rfq.status] ?? 'tag-state tag-state--neutral'}>{rfq.status}</span>
         </Space>
         <Space>
           <Button onClick={() => navigate('/rfqs')}>{t('button.back')}</Button>

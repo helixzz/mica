@@ -155,7 +155,7 @@ function BarChart({ months, maxValue }: { months: CashFlowMonth[], maxValue: num
               y={y + 4}
               fontSize={12}
               textAnchor="end"
-              fill="#8c8c8c"
+              fill="var(--color-text-tertiary)"
             >
               {formatCompact(v)}
             </text>
@@ -189,7 +189,7 @@ function BarChart({ months, maxValue }: { months: CashFlowMonth[], maxValue: num
               y={padTop + innerH + 20}
               fontSize={12}
               textAnchor="middle"
-              fill="#595959"
+              fill="var(--color-text-secondary)"
             >
               {m.month}
             </text>

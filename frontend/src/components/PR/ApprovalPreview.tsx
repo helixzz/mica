@@ -1,4 +1,4 @@
-import { Alert, Skeleton, Steps, Tag, Tooltip, Typography } from 'antd'
+import { Alert, Skeleton, Steps, Tooltip, Typography } from 'antd'
 import { useEffect, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 
@@ -21,11 +21,11 @@ function CandidateTag({ candidate }: { candidate: ApprovalPreviewCandidate }) {
   if (candidate.via_delegation_from) {
     return (
       <Tooltip title={t('approval_preview.via_delegation')}>
-        <Tag color="purple">{candidate.display_name}</Tag>
+        <span className="tag-state tag-state--progress">{candidate.display_name}</span>
       </Tooltip>
     )
   }
-  return <Tag color="blue">{candidate.display_name}</Tag>
+  return <span className="tag-state tag-state--info">{candidate.display_name}</span>
 }
 
 export default function ApprovalPreview({
@@ -101,7 +101,7 @@ export default function ApprovalPreview({
         )}
         {stage.fallback_to_admin && (
           <Tooltip title={t('approval_preview.fallback_admin_tip')}>
-            <Tag color="orange">{t('approval_preview.fallback_admin')}</Tag>
+            <span className="tag-state tag-state--warning">{t('approval_preview.fallback_admin')}</span>
           </Tooltip>
         )}
       </div>

@@ -7,6 +7,59 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [v1.41.0] — 2026-06-23
+
+### 改进（VI Phase 3 Round 1：图表配色 + 状态徽章 + 审批组件 VI 对齐）
+
+延续 v1.39 (Phase 1 Foundation Tokens) + v1.40 (Phase 2 Typography) 的 Otter Workbench VI 落地，按 [DESIGN.md §9](./docs/DESIGN.md) 路线 Phase 3 启动。本版聚焦：清理残余硬编码颜色 + 高频状态 Tag 系统化 + 我先前 v1.36 审批组件的 VI 对齐。
+
+### 修复（hardcoded 颜色清理）
+
+- `pages/Insights/panels/CashFlowForecastPanel.tsx`：2 处灰色 hex (`#595959` / `#8c8c8c`) → `var(--color-text-secondary)` / `var(--color-text-tertiary)`
+- `pages/SKU.tsx`：3 处 hex（`#3B82F6` 异常 marker、2× `#999` 轴标签） → CSS vars，与 Otter Brown viz 体系一致
+- `components/PO/POProgressCard.tsx`：2 处 AntD legacy color (`#faad14` / `#52c41a`) → `var(--color-state-warning)` / `var(--color-state-success)`
+
+### 改进（状态 Tag 系统化）
+
+迁移高频可见的状态 Tag 从 AntD `<Tag color="xxx">` 到 DESIGN.md §6.4 的 outline 状态徽章系统：
+
+- `components/PO/POHeader.tsx`：PO 状态 Tag → `tag-state-*` utility class
+- `pages/PurchaseRequisitions/PRDetail.tsx`：PR 状态 Tag → `tag-state-*`
+- `pages/RFQDetail.tsx`：定标 Tag → `tag-state-success`
+- `components/PR/ApprovalPreview.tsx`：候选人 Tag 改用 `tag-state-info`（普通） / `tag-state-progress`（代理人，与 DESIGN.md "进行中" 语义对齐） / `tag-state-warning`（兜底到管理员）
+
+剩余 ~10+ 处 Tag 留 v1.42（PR/PO 列表）和 v1.43（详情）按 DESIGN.md 节奏推进。
+
+### 改进（审批组件 VI 对齐）
+
+- `ApprovalPreview.tsx` 候选人显示：候选人姓名后的部门 code 用 `<MonoId>` 包裹（与 v1.40 全站业务标识符规范一致）
+- `PRNew.tsx` / `PREdit.tsx` 「代表部门」下拉选项：部门 code 用 `<MonoId>` 包裹
+
+### 测试
+
+- 后端 726/0（无变化），前端 63/0（无变化）
+- 无新增测试（纯样式 token 替换，业务逻辑零改动）
+
+### 设计要点
+
+- 0 新组件、0 新 i18n、0 后端
+- 所有改动都是「替换硬编码值为 CSS var / utility class」 + 「补 CHANGELOG」
+- 风险评估：低，token 体系已经在 v1.39/v1.40 落地，本版只是消费
+
+### 后续路线
+
+- v1.42（DESIGN.md §9 Phase 3）：PR/PO **列表** state badge + 表格 hover 优化
+- v1.43：PR/PO **详情**信息层级 + 履约链可视化
+- v1.44：Admin 控制台密集表单优化
+
+### 已知 TODO（留给后续版本，本版未覆盖）
+
+- 7 个 chart 常量颜色未迁移：`PaymentForecastChart.PAID_COLOR`、`InvoiceTrackerChart.{INVOICEABLE,INVOICED,PENDING}_COLOR`、`CashFlowForecastPanel.{PLANNED,CONFIRMED}_COLOR`、`BudgetGaugePanel` 内的 `#faad14` / `#52c41a` 阈值色。这些是 chart 业务语义色，需要先与 dataViz palette 对齐方案，单独一版处理
+- `PaymentScheduleTab` 2 处 `#52c41a`、`GlobalSearch` 1 处 `#8c8c8c` — 同上批次清理
+- `SKU.tsx` 第 324 行 10-色 SKU palette — DESIGN.md §5 标注为唯一例外，待 viz-primary ±15° 色相变体方案确定后重构
+
+---
+
 ## [v1.40.1] — 2026-06-23
 
 ### 修复
@@ -21,6 +74,111 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - 后端零改动（PATCH `/purchase-requisitions/{id}` 早在 v1.36.0 已支持 `department_id`）
 - 单测无新增（前端表单字段缺失，不在测试覆盖范围；E2E 已验证 PATCH→GET 持久化正常）
+
+---
+
+## [v1.40.0] — 2026-06-23
+
+### 新增（Otter Workbench VI Rollout — Phase 2: Typography & Identifier Pass）
+
+延续 v1.39.0 的 token 基础，本版让业务页面真正消费 token。30+ 文件中所有业务标识符、金额、数量、日期改用 JetBrains Mono + tabular-nums 渲染。
+
+### 新组件
+
+- `components/ui/Mono.tsx`
+  - `<MonoId>`：业务标识符（PR/PO/RFQ/合同/发票号、SKU code）。slashed zero + tabular-nums + ss19，空值优雅 fallback `'-'`
+  - `<MonoNum>`：金额/数量/日期。可选 `align='right'` 用于表格列对齐
+
+### 格式工具升级
+
+- `utils/format.ts → format.tsx`
+  - 保留 `fmtAmount` / `fmtQty` 字符串变体（~30 处模板字符串调用未受影响：i18n 插值、title 属性、message.success 内容、Progress format 回调等）
+  - 新增 `fmtAmountNode(value, currency, align='right'): React.ReactNode`
+  - 新增 `fmtQtyNode(value, align='right'): React.ReactNode`
+  - 新增 `fmtIdNode(value): React.ReactNode`
+  - 新增 `fmtDate(value, withTime?)` / `fmtDateNode(value, withTime?)`
+
+### StatCard 增强
+
+- `value` 为 string/number 时自动应用 `var(--font-mono)` + `font-feature-settings: 'tnum' 1, 'zero' 1`
+- 默认 density 应用 `var(--tracking-display)` (-0.025em)
+- compact density 应用 `var(--tracking-heading)` (-0.02em)
+- JSX node value 透传（调用方已手动包装的不变）
+
+### PageHeader 增强
+
+- 新增可选 `number?: string | null` prop，在标题旁渲染 `<MonoId>` 标识符（次要文字色）
+- 标题应用 `letter-spacing: var(--tracking-heading)` + line-height 1.2
+
+### 业务标识符迁移（61 处）
+
+- 5 处详情页 PageHeader 业务编号 → `<MonoId>`：PRDetail、POHeader、RFQDetail、ContractDetail、InvoiceDetail
+- 28 处列表表格列 → `render: (v) => <MonoId>{v}</MonoId>`：PRList、POList、Contracts (×3)、RFQList、Invoices、Shipments (shipment + tracking)、Payments、Items、SKU、SupplierPortal (×5)、Dashboard、DeliveryCalendarPanel (×2)、ContractDetail (×3)、PRDetail (×2)、PaymentsTab、ContractsTab、InvoicesTab、ShipmentsTab
+- Dashboard 付款/合同/PR 标识符 + Suppliers tag + ItemDetail Descriptions 全部 `<MonoId>`
+
+### 金额/数量渲染迁移（52 处，100% 完成）
+
+- 安全 sed 替换：`render: (...) => fmtAmount(` → `fmtAmountNode(`
+- 仅 AntD Table render 回调被转换；模板字符串、Progress format、i18n 字符串保持不变
+
+### 验证
+
+- TypeScript 类型检查 0 错误
+- 生产构建 4.46s，36 chunks
+- Vitest 63/63 通过
+- 本地 docker stack：backend healthz 报告 1.40.0
+- E2E 烟雾测试通过
+
+---
+
+## [v1.39.0] — 2026-06-23
+
+### 新增（Otter Workbench VI Rollout — Phase 1: Foundation Tokens）
+
+Mica 视觉规范 (Visual Identity) 落地的第一阶段。建立 [docs/DESIGN.md](./docs/DESIGN.md)（1214 行）的设计系统，并落地所有基础 token。零业务页面改动 — 新外观通过 token + AntD theme + global.css 自动传播。
+
+### 新文档
+
+- `docs/DESIGN.md`：5 条铁律、12 个组件 spec、3 阶段路线、AI Agent Quick Prompt Guide、完整 Do/Don't 目录
+- `AGENTS.md` §5.8 现引用 DESIGN.md 作为前端样式权威源
+
+### Token 系统（`frontend/src/theme/tokens.ts`）
+
+- 新增 `neutral.25` Paper Beige `#FAFAF8` — 页面画布（不再纯白）
+- 新增 `neutral.250` Hairline Beige `#E8E4DF` — 主要 1px 边框
+- 新增 `color.state` palette（6 个语义色 × 4 阶）— progress 复用 Otter Brown 把"进行中"绑到品牌
+- 新增 `color.dataViz` palette（6 个低饱和度色，锚定 Otter Brown）— 用于 Recharts/SVG，替代默认蓝绿紫
+- 新增 `font.display` 字号阶 (24/30/36px) + `font.tracking` 表 (-0.025em..0)
+- shadow palette 重建为 `rgba(139, 94, 60, ...)` 品牌微染
+- 暗色模式重新平衡（`#161514` 暖色 Onyx，更小的表面差异）
+- 兼容性保留 legacy `color.{success,warning,error,info}`
+
+### AntD 主题（`frontend/src/theme/antdTheme.ts`）
+
+- 19 个组件配置：Button/Menu/Table/Card/Input/Select/Modal/Drawer/Tag/Tabs/Layout/Form/Tooltip/Popover/Dropdown/Switch/Checkbox/Radio/Steps
+- Card boxShadow: none — 通过 hairline 边框 + Paper Beige 画布建立层级
+- Table 紧凑密度 (cellPaddingBlock: 10)、rowHover → Paper Beige
+- Input focus ring 品牌微染：`rgba(139, 94, 60, 0.10)` 3px ring
+- borderRadius 收敛到 4 / 8 / 12 / 9999
+
+### 全局 CSS（`frontend/src/styles/global.css`）
+
+- `@import @fontsource/jetbrains-mono/400.css`
+- `body { font-feature-settings: 'tnum' 1 }` — 全局等宽数字
+- 新增 `.mono-id` / `.mono-num` / `.mono-num--right` / `.tabular-nums` utility
+- 新增 `.tag-state-{info,progress,success,warning,error,neutral}` outline 标签
+- 新增 `.status-badge` / `.status-dot` 系统用于密集表格状态列
+- 新增 `.text-display` / `.text-display-sm` / `.text-display-lg` utility
+- 24 个新 `--color-state-*` CSS vars + 6 个 `--color-viz-*` vars
+- 所有 `--shadow-*` vars 改用品牌微染 `rgba(139, 94, 60, ...)`
+
+### 验证
+
+- TypeScript 类型检查 0 错误
+- 生产构建 4.46s，36 chunks
+- Vitest 63/63 通过
+- 本地 docker stack：backend healthz 报告 1.39.0
+- CSS bundle 确认包含 `#FAFAF8`、JetBrains Mono
 
 ---
 

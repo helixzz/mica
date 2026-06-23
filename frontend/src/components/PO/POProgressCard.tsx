@@ -19,11 +19,11 @@ export function POProgressCard({ progress }: POProgressCardProps) {
         </Col>
         <Col span={8}>
           <Statistic title={t('progress.invoiced')} value={progress.pct_invoiced} suffix="%" />
-          <Progress percent={Math.min(100, progress.pct_invoiced)} status="active" strokeColor="#faad14" />
+          <Progress percent={Math.min(100, progress.pct_invoiced)} status="active" strokeColor="var(--color-state-warning-500)" />
         </Col>
         <Col span={8}>
           <Statistic title={t('progress.paid')} value={progress.pct_paid} suffix="%" />
-          <Progress percent={Math.min(100, progress.pct_paid)} status="active" strokeColor="#52c41a" />
+          <Progress percent={Math.min(100, progress.pct_paid)} status="active" strokeColor="var(--color-state-success-500)" />
         </Col>
       </Row>
     </Card>

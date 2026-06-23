@@ -431,8 +431,8 @@ function ChartContent({
         const y = yScale(val)
         return (
           <g key={i}>
-            <line x1={padding.left} y1={y} x2={width - padding.right} y2={y} stroke="#e5e5e5" strokeWidth={0.5} />
-            <text x={padding.left - 8} y={y + 4} textAnchor="end" fontSize={10} fill="#999">
+            <line x1={padding.left} y1={y} x2={width - padding.right} y2={y} stroke="var(--color-border-hairline)" strokeWidth={0.5} />
+            <text x={padding.left - 8} y={y + 4} textAnchor="end" fontSize={10} fill="var(--color-text-tertiary)">
               {val >= 1000 ? `${(val / 1000).toFixed(1)}k` : val.toFixed(0)}
             </text>
           </g>
@@ -443,7 +443,7 @@ function ChartContent({
         if (allDates.length > 15 && i % Math.ceil(allDates.length / 10) !== 0) return null
         const x = xScale(date)
         return (
-          <text key={date} x={x} y={height - 8} textAnchor="middle" fontSize={10} fill="#999">
+          <text key={date} x={x} y={height - 8} textAnchor="middle" fontSize={10} fill="var(--color-text-tertiary)">
             {date.slice(5)}
           </text>
         )
@@ -475,10 +475,10 @@ function ChartContent({
         const y = yScale(Number(pp.unit_price))
         return (
           <g key={`purchase-${i}`}>
-            <circle cx={x} cy={y} r={7} fill="#3B82F6" stroke="white" strokeWidth={2} opacity={0.9}>
+            <circle cx={x} cy={y} r={7} fill="var(--color-viz-primary)" stroke="white" strokeWidth={2} opacity={0.9}>
               <title>{`★ PO ${pp.po_number}\n${pp.date}: ${fmtAmount(Number(pp.unit_price), 'CNY')}\n${pp.supplier_name}`}</title>
             </circle>
-            <text x={x} y={y - 12} textAnchor="middle" fontSize={9} fill="#3B82F6" fontWeight={600}>
+            <text x={x} y={y - 12} textAnchor="middle" fontSize={9} fill="var(--color-viz-primary)" fontWeight={600}>
               ★
             </text>
           </g>
