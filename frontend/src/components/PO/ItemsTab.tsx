@@ -1,5 +1,5 @@
 import { DeleteOutlined, EditOutlined } from '@ant-design/icons'
-import { Button, Form, Input, InputNumber, Modal, Popover, Space, Table, Tag, Tooltip, Typography, message } from 'antd'
+import { Button, Form, Input, InputNumber, Modal, Popover, Space, Table, Tooltip, Typography, message } from 'antd'
 import { useState } from 'react'
 import { useTranslation } from 'react-i18next'
 
@@ -14,11 +14,11 @@ interface ItemsTabProps {
   onChanged?: () => void
 }
 
-const fulfillmentTypeColors: Record<FulfillmentType, string> = {
-  equivalent: 'green',
-  downgraded: 'orange',
-  substitute: 'volcano',
-  supplementary: 'blue',
+const fulfillmentTypeStateClass: Record<FulfillmentType, string> = {
+  equivalent: 'tag-state tag-state--success',
+  downgraded: 'tag-state tag-state--warning',
+  substitute: 'tag-state tag-state--error',
+  supplementary: 'tag-state tag-state--info',
 }
 
 function FulfillmentLinksCell({ links }: { links: FulfillmentLink[] }) {
@@ -33,9 +33,9 @@ function FulfillmentLinksCell({ links }: { links: FulfillmentLink[] }) {
       {links.map((link) => {
         const label = t(`fulfillment_type.${link.fulfillment_type}` as 'fulfillment_type.equivalent')
         const tag = (
-          <Tag color={fulfillmentTypeColors[link.fulfillment_type]} style={{ marginInlineEnd: 0 }}>
+          <span className={fulfillmentTypeStateClass[link.fulfillment_type] ?? 'tag-state tag-state--neutral'}>
             {label} · {fmtQty(link.qty_contribution)}
-          </Tag>
+          </span>
         )
         if (link.deviation_note) {
           return (

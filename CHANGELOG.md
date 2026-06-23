@@ -7,6 +7,44 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [v1.43.0] — 2026-06-23
+
+### 改进（VI Phase 3 Round 3：详情页 Tag + 履约链 chip）
+
+继续 v1.41/v1.42 的 outline 状态徽章推进。本版处理 PRDetail 内嵌的 PO/合同/履约表格 + ItemsTab 的履约 chip。
+
+### 改动
+
+- **PRDetail.tsx**：
+  - 新增 3 个状态映射：`poStatusStateClass` / `contractStatusStateClass` / `fulfillmentTypeStateClass`
+  - 履约 breakdown popover：fulfillment_type chip 从无色 `<Tag>` → `tag-state-{success/warning/error/info}` 按类型语义化
+  - PR 内嵌 PO 列表：状态列从 `<Tag>` → `tag-state-*`（与 POList v1.42 一致）
+  - PR 内嵌合同列表：状态列从 `<Tag>` → `tag-state-*`（与 Contracts v1.42 一致）
+  - 协作者 Tag 保留（closable 交互）
+
+- **ItemsTab.tsx**：履约链 chip 从 AntD 色系（green/orange/volcano/blue）→ tag-state 系（success/warning/error/info）。语义不变但视觉与 PRDetail 履约 popover 完全一致
+
+### 履约类型 → 颜色语义映射（统一）
+
+| 类型 | 状态 class | 含义 |
+|---|---|---|
+| equivalent (等价) | `tag-state--success` | 完美履约 |
+| downgraded (降配) | `tag-state--warning` | 履约但有损失 |
+| substitute (替换) | `tag-state--error` | 物料替换风险 |
+| supplementary (补充) | `tag-state--info` | 跨物料配套补充 |
+
+### 测试
+
+- 后端 726/0、前端 63/0
+- ruff + tsc + build 全绿
+- 0 新组件、0 后端
+
+### 后续路线
+
+- v1.44：8 个 Admin 子页面 Tag 迁移 + 表单密度优化（Phase 3 收官）
+
+---
+
 ## [v1.42.0] — 2026-06-23
 
 ### 改进（VI Phase 3 Round 2：列表页 state badges + Dashboard 工具栏合并）

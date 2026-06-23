@@ -42,6 +42,29 @@ const statusStateClass: Record<string, string> = {
   converted: 'tag-state tag-state--info',
 }
 
+const poStatusStateClass: Record<string, string> = {
+  draft: 'tag-state tag-state--neutral',
+  confirmed: 'tag-state tag-state--success',
+  partially_received: 'tag-state tag-state--progress',
+  fully_received: 'tag-state tag-state--success',
+  closed: 'tag-state tag-state--neutral',
+  cancelled: 'tag-state tag-state--error',
+}
+
+const contractStatusStateClass: Record<string, string> = {
+  active: 'tag-state tag-state--success',
+  superseded: 'tag-state tag-state--neutral',
+  terminated: 'tag-state tag-state--error',
+  expired: 'tag-state tag-state--warning',
+}
+
+const fulfillmentTypeStateClass: Record<string, string> = {
+  equivalent: 'tag-state tag-state--success',
+  downgraded: 'tag-state tag-state--warning',
+  substitute: 'tag-state tag-state--error',
+  supplementary: 'tag-state tag-state--info',
+}
+
 export function PRDetailPage() {
   const { t } = useTranslation()
   const { token } = theme.useToken()
@@ -381,10 +404,10 @@ export function PRDetailPage() {
                               .filter(([, v]) => Number(v) > 0)
                               .map(([k, v]) => (
                                 <div key={k}>
-                                  <Tag>
+                                  <span className={fulfillmentTypeStateClass[k] ?? 'tag-state tag-state--neutral'}>
                                     {t(`fulfillment_type.${k}` as 'fulfillment_type.equivalent')}
-                                  </Tag>
-                                  {fmtQty(v)}
+                                  </span>
+                                  {' '}{fmtQty(v)}
                                 </div>
                               ))}
                           </Space>
@@ -451,7 +474,7 @@ export function PRDetailPage() {
                           title: t('field.status'),
                           dataIndex: 'status',
                           render: (v: string) => (
-                            <Tag>{t(`status.${v}` as 'status.confirmed')}</Tag>
+                            <span className={poStatusStateClass[v] ?? 'tag-state tag-state--neutral'}>{t(`status.${v}` as 'status.confirmed')}</span>
                           ),
                         },
                         {
@@ -505,7 +528,7 @@ export function PRDetailPage() {
                           title: t('field.status'),
                           dataIndex: 'status',
                           render: (v: string) => (
-                            <Tag>{t(`status.${v}` as 'status.active')}</Tag>
+                            <span className={contractStatusStateClass[v] ?? 'tag-state tag-state--neutral'}>{t(`status.${v}` as 'status.active')}</span>
                           ),
                         },
                         {
