@@ -7,6 +7,54 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [v1.44.0] — 2026-06-23
+
+### 改进（VI Phase 3 收官：Admin 子页面状态徽章）
+
+按 [DESIGN.md §9](./docs/DESIGN.md) 路线 Phase 3 收官，本版处理 8 个 Admin 子页面剩余的 AntD `<Tag>` 组件，统一迁移到 outline 状态徽章系统。这是 v1.41 启动的 VI Phase 3 工作的最后一轮——整站状态显示视觉系统化完成。
+
+### 改动（8 个 Admin Tab，10 个 Tag 站点）
+
+| 文件 | 改动 |
+|---|---|
+| `pages/admin/AIModelPanel.tsx` | enable/disable Tag → tag-state-{success,neutral} |
+| `pages/admin/DocumentTemplatesPanel.tsx` | 2 处：no_file warning + enabled/disabled toggle |
+| `pages/admin/ApprovalRulesTab.tsx` | enable Tag → tag-state |
+| `pages/admin/AuditLogsTab.tsx` | `EVENT_TYPE_COLORS` AntD palette → `EVENT_TYPE_STATE` tag-state map；`getEventTypeColor` → `getEventTypeStateClass`（创建=success / 更新=info / 删除=error / upserted=progress / 密码重置=warning） |
+| `pages/admin/SystemParamsTab.tsx` | 2 处：参数总览 info Tag + 已修改 warning Tag |
+| `pages/admin/CompaniesPanel.tsx` | enable/disable Tag |
+| `pages/admin/AILogsPanel.tsx` | success/error 状态 Tag |
+| `pages/admin/SchedulerTab.tsx` | enable Tag + 清理未用的 Tag import |
+
+### Phase 3 系列总结（v1.41-v1.44）
+
+VI Phase 3 自 v1.41 启动，4 个版本完整覆盖了从画布到细节的状态徽章统一：
+
+| 版本 | 范围 | 文件数 |
+|---|---|---|
+| v1.41 | hardcoded color → CSS vars + 4 高频 Tag (PRDetail/POHeader/RFQDetail/ApprovalPreview) | 7 |
+| v1.42 | 7 列表页 + Dashboard toolbar 合并 | 15 |
+| v1.43 | 详情页内嵌表格 + 履约 chip (PRDetail/ItemsTab) | 7 |
+| v1.44 | 8 Admin 子页面 | 8 |
+| **合计** | | **37 files** |
+
+整站 `<Tag color="...">` 状态徽章使用率从 v1.40 末的 ~30 处下降到 v1.44 末仅余 5 处特殊用途（closable 协作者 Tag、modality 等纯标签）。
+
+### 测试
+
+- 后端 726/0、前端 63/0
+- ruff + tsc + build 全绿
+- 0 新组件、0 后端、0 数据库
+
+### 后续路线（v1.45+）
+
+DESIGN.md §9 的 Phase 3 已收官。后续候选方向：
+- v1.45 候选：Mobile 适配（compact density 在小屏的退化策略）
+- v1.46 候选：剩余 7 个 chart 常量颜色（PAID_COLOR / INVOICEABLE_COLOR 等）与 dataViz palette 统一规划
+- v1.47 候选：SKU.tsx 10-色 palette（DESIGN.md §5 唯一例外）按 viz-primary ±15° 色相变体重构
+
+---
+
 ## [v1.43.0] — 2026-06-23
 
 ### 改进（VI Phase 3 Round 3：详情页 Tag + 履约链 chip）

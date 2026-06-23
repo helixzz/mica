@@ -131,7 +131,7 @@ export function DocumentTemplatesPanel() {
                   </Typography.Text>
                 </Space>
               ) : (
-                <Tag color="warning">{t('admin.document_template.no_file')}</Tag>
+                <span className="tag-state tag-state--warning">{t('admin.document_template.no_file')}</span>
               ),
           },
           {
@@ -148,9 +148,9 @@ export function DocumentTemplatesPanel() {
             dataIndex: 'is_enabled',
             width: 80,
             render: (v: boolean) => (
-              <Tag color={v ? 'success' : 'default'}>
+              <span className={v ? 'tag-state tag-state--success' : 'tag-state tag-state--neutral'}>
                 {v ? t('common.enabled') : t('common.disabled')}
-              </Tag>
+              </span>
             ),
           },
           {

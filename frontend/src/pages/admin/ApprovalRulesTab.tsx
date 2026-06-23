@@ -159,7 +159,7 @@ export function ApprovalRulesTab() {
             : '-',
         },
         { title: t('admin.priority'), dataIndex: 'priority' },
-        { title: t('admin.enabled'), dataIndex: 'is_active', render: (v: boolean) => <Tag color={v ? 'success' : 'default'}>{v ? t('common.yes') : t('common.no')}</Tag> },
+        { title: t('admin.enabled'), dataIndex: 'is_active', render: (v: boolean) => <span className={v ? 'tag-state tag-state--success' : 'tag-state tag-state--neutral'}>{v ? t('common.yes') : t('common.no')}</span> },
         {
           title: t('common.actions'),
           render: (_: unknown, r: any) => (

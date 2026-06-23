@@ -80,7 +80,7 @@ export function AIModelPanel() {
           { title: t('admin.model_table.modality'), dataIndex: 'modality', render: (v) => <Tag>{v}</Tag> },
           { title: t('admin.model_table.api_base'), dataIndex: 'api_base' },
           { title: t('admin.model_table.key'), dataIndex: 'api_key_masked' },
-          { title: t('admin.model_table.active'), dataIndex: 'is_active', render: (v: boolean) => v ? <Tag color="success">{t('common.on')}</Tag> : <Tag>{t('common.off')}</Tag> },
+          { title: t('admin.model_table.active'), dataIndex: 'is_active', render: (v: boolean) => v ? <span className="tag-state tag-state--success">{t('common.on')}</span> : <span className="tag-state tag-state--neutral">{t('common.off')}</span> },
           {
             title: '',
             render: (_, r) => (

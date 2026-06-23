@@ -54,7 +54,7 @@ export function AILogsPanel() {
           { title: 'Provider', dataIndex: 'provider' },
           { title: 'Tokens', render: (_, r) => `${r.prompt_tokens}/${r.completion_tokens}` },
           { title: 'Latency', dataIndex: 'latency_ms', render: (v: number) => `${v}ms` },
-          { title: 'Status', dataIndex: 'status', render: (v: string) => v === 'success' ? <Tag color="success">{v}</Tag> : <Tag color="error">{v}</Tag> },
+          { title: 'Status', dataIndex: 'status', render: (v: string) => v === 'success' ? <span className="tag-state tag-state--success">{v}</span> : <span className="tag-state tag-state--error">{v}</span> },
           { title: 'Error', dataIndex: 'error', ellipsis: true },
         ]}
       />

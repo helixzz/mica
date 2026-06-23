@@ -291,12 +291,12 @@ export const SystemParamsTab: React.FC = () => {
             <Title level={4} style={{ margin: 0 }}>
               {t('admin.system_params.title', 'System Parameters')}
             </Title>
-            <Tag color="blue">
+            <span className="tag-state tag-state--info">
               {t('admin.system_params.summary', '{{total}} params ({{modified}} modified)', {
                 total: params.length,
                 modified: nonDefaultCount,
               })}
-            </Tag>
+            </span>
           </Space>
         }
         extra={
@@ -350,7 +350,7 @@ export const SystemParamsTab: React.FC = () => {
                             </Tooltip>
                           )}
                           {param.value !== param.default_value && (
-                            <Tag color="warning">{t('admin.system_params.modified', 'Modified')}</Tag>
+                            <span className="tag-state tag-state--warning">{t('admin.system_params.modified', 'Modified')}</span>
                           )}
                         </Space>
                         <Text type="secondary" style={{ fontSize: '12px' }}>

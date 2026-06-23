@@ -103,7 +103,7 @@ export function CompaniesPanel() {
         { title: t('admin.name_zh_col'), dataIndex: 'name_zh' },
         { title: t('admin.name_en_col'), dataIndex: 'name_en', render: (v: string | null) => v || '-' },
         { title: t('admin.default_currency'), dataIndex: 'default_currency', width: 80 },
-        { title: t('admin.status_col'), dataIndex: 'is_enabled', width: 70, render: (v: boolean) => <Tag color={v !== false ? 'success' : 'default'}>{v !== false ? t('common.enabled') : t('common.disabled')}</Tag> },
+        { title: t('admin.status_col'), dataIndex: 'is_enabled', width: 70, render: (v: boolean) => <span className={v !== false ? 'tag-state tag-state--success' : 'tag-state tag-state--neutral'}>{v !== false ? t('common.enabled') : t('common.disabled')}</span> },
         {
           title: t('common.actions'),
           width: 220,

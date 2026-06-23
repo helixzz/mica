@@ -29,25 +29,23 @@ interface AuditLogItem {
   metadata: Record<string, unknown> | null
 }
 
-const EVENT_TYPE_COLORS: Record<string, string> = {
-  'admin.ai_model.created': 'green',
-  'admin.ai_model.updated': 'blue',
-  'admin.ai_model.deleted': 'red',
-  'admin.ai_routing.upserted': 'purple',
-  'admin.user.created': 'green',
-  'admin.user.updated': 'blue',
-  'admin.user.deleted': 'red',
-  'admin.user.password_reset': 'orange',
+const EVENT_TYPE_STATE: Record<string, string> = {
+  'admin.ai_model.created': 'tag-state tag-state--success',
+  'admin.ai_model.updated': 'tag-state tag-state--info',
+  'admin.ai_model.deleted': 'tag-state tag-state--error',
+  'admin.ai_routing.upserted': 'tag-state tag-state--progress',
+  'admin.user.created': 'tag-state tag-state--success',
+  'admin.user.updated': 'tag-state tag-state--info',
+  'admin.user.deleted': 'tag-state tag-state--error',
+  'admin.user.password_reset': 'tag-state tag-state--warning',
 }
 
-function getEventTypeColor(eventType: string): string {
-  for (const [prefix, color] of Object.entries(EVENT_TYPE_COLORS)) {
-    if (eventType === prefix) return color
-  }
-  if (eventType.includes('.created')) return 'green'
-  if (eventType.includes('.updated') || eventType.includes('.upserted')) return 'blue'
-  if (eventType.includes('.deleted')) return 'red'
-  return 'default'
+function getEventTypeStateClass(eventType: string): string {
+  if (eventType in EVENT_TYPE_STATE) return EVENT_TYPE_STATE[eventType]
+  if (eventType.includes('.created')) return 'tag-state tag-state--success'
+  if (eventType.includes('.updated') || eventType.includes('.upserted')) return 'tag-state tag-state--info'
+  if (eventType.includes('.deleted')) return 'tag-state tag-state--error'
+  return 'tag-state tag-state--neutral'
 }
 
 export function AuditLogsTab() {
@@ -136,7 +134,7 @@ export function AuditLogsTab() {
         dataIndex: 'event_type',
         width: 200,
         render: (v: string) => (
-          <Tag color={getEventTypeColor(v)}>{v}</Tag>
+          <span className={getEventTypeStateClass(v)}>{v}</span>
         ),
       },
       {

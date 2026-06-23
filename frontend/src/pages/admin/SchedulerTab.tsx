@@ -1,4 +1,4 @@
-import { Card, Table, Tag, Typography } from 'antd'
+import { Card, Table, Typography } from 'antd'
 import type { ColumnsType } from 'antd/es/table'
 import { useEffect, useState } from 'react'
 import { useTranslation } from 'react-i18next'
@@ -39,9 +39,9 @@ export function SchedulerTab() {
       dataIndex: 'enabled',
       width: 120,
       render: (v: boolean) => (
-        <Tag color={v ? 'success' : 'default'}>
+        <span className={v ? 'tag-state tag-state--success' : 'tag-state tag-state--neutral'}>
           {v ? t('admin.scheduler_enabled') : t('admin.scheduler_disabled')}
-        </Tag>
+        </span>
       ),
     },
   ]
