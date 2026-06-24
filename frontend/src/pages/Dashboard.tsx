@@ -400,38 +400,34 @@ export function DashboardPage() {
               <Col xs={24} lg={12}>
                 <Section
                   title={t('dashboard.pending_approvals')}
+                  density="compact"
                   extra={<Link to="/approvals">{t('dashboard.view_all')}</Link>}
                 >
                   {loading ? (
-                    <div style={{ padding: token.paddingXL, textAlign: 'center' }}>{t('message.loading')}</div>
+                    <div style={{ padding: token.paddingMD, textAlign: 'center' }}>{t('message.loading')}</div>
                   ) : pending.length > 0 ? (
                     <List
-                      itemLayout="horizontal"
+                      size="small"
                       dataSource={pending.slice(0, 8)}
                       renderItem={(item) => (
                         <List.Item
+                          style={{ paddingBlock: 6 }}
                           actions={[
                             <Link key="view" to={`/purchase-requisitions/${item.biz_id}`}>
                               {t('button.approve')}
                             </Link>,
                           ]}
                         >
-                          <List.Item.Meta
-                            avatar={
-                              <Avatar
-                                style={{ backgroundColor: token.colorWarningBg, color: token.colorWarning }}
-                                icon={<CheckCircleOutlined />}
-                              />
-                            }
-                            title={<Link to={`/purchase-requisitions/${item.biz_id}`}>{item.biz_number || item.instance_id.slice(0, 8)}: {item.biz_title || item.stage_name}</Link>}
-                            description={
-                              <Space>
-                                <Tag color="orange">{item.stage_name}</Tag>
-                                {item.submitter_name && <Text type="secondary">{item.submitter_name}</Text>}
-                                <Text type="secondary">{new Date(item.assigned_at).toLocaleString()}</Text>
-                              </Space>
-                            }
-                          />
+                          <Space size="small" wrap style={{ flex: 1, minWidth: 0 }}>
+                            <Link to={`/purchase-requisitions/${item.biz_id}`}>
+                              <MonoId>{item.biz_number || item.instance_id.slice(0, 8)}</MonoId>
+                            </Link>
+                            <Text style={{ flex: 1, minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                              {item.biz_title || item.stage_name}
+                            </Text>
+                            <span className="tag-state tag-state--warning">{item.stage_name}</span>
+                            {item.submitter_name && <Text type="secondary" style={{ fontSize: 12 }}>{item.submitter_name}</Text>}
+                          </Space>
                         </List.Item>
                       )}
                     />
@@ -441,69 +437,49 @@ export function DashboardPage() {
                 </Section>
               </Col>
               <Col xs={24} lg={12}>
-                <Section title={t('dashboard.alerts')}>
+                <Section title={t('dashboard.alerts')} density="compact">
                   {loading ? (
                     <div style={{ padding: token.paddingXL, textAlign: 'center' }}>{t('message.loading')}</div>
                   ) : contracts.length === 0 && anomalies.length === 0 && (metrics?.invoices_pending_match ?? 0) + (metrics?.invoices_mismatched ?? 0) === 0 ? (
                     <EmptyState illustration="welcome" title={t('dashboard.no_alerts')} />
                   ) : (
-                    <Space direction="vertical" size="middle" style={{ width: '100%' }}>
+                    <Space direction="vertical" size="small" style={{ width: '100%' }}>
                       {contracts.length > 0 && (
                         <List
+                          size="small"
                           header={<Text strong>{t('dashboard.expiring_contracts')}</Text>}
-                          itemLayout="horizontal"
                           dataSource={contracts.slice(0, 3)}
                           renderItem={(item) => (
-                            <List.Item>
-                              <List.Item.Meta
-                                avatar={
-                                  <Avatar
-                                    style={{ backgroundColor: token.colorErrorBg, color: token.colorError }}
-                                    icon={<AlertOutlined />}
-                                  />
-                                }
-                                title={item.title}
-                                description={
-                                  <Space>
-                                    <Text>{item.contract_number}</Text>
-                                    <Text type="danger">{item.expiry_date}</Text>
-                                  </Space>
-                                }
-                              />
+                            <List.Item style={{ paddingBlock: 6 }}>
+                              <Space size="small" wrap style={{ width: '100%' }}>
+                                <Text>{item.title}</Text>
+                                <MonoId>{item.contract_number}</MonoId>
+                                <span className="tag-state tag-state--error">{item.expiry_date}</span>
+                              </Space>
                             </List.Item>
                           )}
                         />
                       )}
                       {anomalies.length > 0 && (
                         <List
+                          size="small"
                           header={<Text strong>{t('dashboard.price_anomalies')}</Text>}
-                          itemLayout="horizontal"
                           dataSource={anomalies.slice(0, 3)}
                           renderItem={(item) => (
-                            <List.Item>
-                              <List.Item.Meta
-                                avatar={
-                                  <Avatar
-                                    style={{ backgroundColor: token.colorErrorBg, color: token.colorError }}
-                                    icon={<WarningOutlined />}
-                                  />
-                                }
-                                title={t('dashboard.anomaly_item', { id: item.item_id })}
-                                description={
-                                  <Space>
-                                    <Text type="danger">{item.deviation_pct}%</Text>
-                                    <Text type="secondary">{item.observed_price}</Text>
-                                  </Space>
-                                }
-                              />
+                            <List.Item style={{ paddingBlock: 6 }}>
+                              <Space size="small" wrap style={{ width: '100%' }}>
+                                <Text>{t('dashboard.anomaly_item', { id: item.item_id })}</Text>
+                                <span className="tag-state tag-state--error">{item.deviation_pct}%</span>
+                                <Text type="secondary" style={{ fontSize: 12 }}>{item.observed_price}</Text>
+                              </Space>
                             </List.Item>
                           )}
                         />
                       )}
                       {((metrics?.invoices_pending_match ?? 0) + (metrics?.invoices_mismatched ?? 0)) > 0 && (
                         <List
+                          size="small"
                           header={<Text strong>{t('dashboard.pending_invoices')}</Text>}
-                          itemLayout="horizontal"
                           dataSource={[
                             ...(metrics?.invoices_pending_match
                               ? [{ key: 'match', count: metrics.invoices_pending_match, kind: 'pending_match' as const }]
@@ -514,23 +490,15 @@ export function DashboardPage() {
                           ]}
                           renderItem={(item) => (
                             <List.Item
+                              style={{ paddingBlock: 6 }}
                               actions={[<Link key="v" to="/invoices">{t('dashboard.view_all')}</Link>]}
                             >
-                              <List.Item.Meta
-                                avatar={
-                                  <Avatar
-                                    style={{
-                                      backgroundColor: item.kind === 'mismatched' ? token.colorErrorBg : token.colorWarningBg,
-                                      color: item.kind === 'mismatched' ? token.colorError : token.colorWarning,
-                                    }}
-                                    icon={<FileTextOutlined />}
-                                  />
-                                }
-                                title={t('dashboard.invoice_alert_count', {
-                                  count: item.count,
-                                  status: t(`status.${item.kind}` as 'status.pending_match'),
-                                })}
-                              />
+                              <Space size="small">
+                                <span className={item.kind === 'mismatched' ? 'tag-state tag-state--error' : 'tag-state tag-state--warning'}>
+                                  {item.count}
+                                </span>
+                                <Text>{t(`status.${item.kind}` as 'status.pending_match')}</Text>
+                              </Space>
                             </List.Item>
                           )}
                         />
@@ -548,7 +516,7 @@ export function DashboardPage() {
         return (isProcurementMgr || isFinanceAuditor || isItBuyer || role === 'admin') ? <InvoiceTracker key="invoice_tracker" /> : null
       case 'analytics':
         return (isProcurementMgr || isFinanceAuditor || isItBuyer || role === 'admin') && analytics ? (
-          <Section title={t('dashboard.analytics')} key="analytics">
+          <Section title={t('dashboard.analytics')} density="compact" key="analytics">
             <Tabs
               items={[
                 {
@@ -558,7 +526,7 @@ export function DashboardPage() {
                     <EmptyState illustration="welcome" title={t('dashboard.no_analytics_data')} />
                   ) : (
                     <div>
-                      <div style={{ display: 'flex', alignItems: 'flex-end', gap: 8, height: 200, padding: '20px 0 32px', overflow: 'auto' }}>
+                      <div style={{ display: 'flex', alignItems: 'flex-end', gap: 6, height: 160, padding: '12px 0 20px', overflow: 'auto' }}>
                         {analytics.trend.map((point) => {
                           const maxTotal = Math.max(...analytics.trend.map((p) => p.total), 1)
                           const heightPct = (point.total / maxTotal) * 100
@@ -567,27 +535,27 @@ export function DashboardPage() {
                               key={point.month}
                               style={{
                                 flex: 1,
-                                minWidth: 40,
+                                minWidth: 32,
                                 display: 'flex',
                                 flexDirection: 'column',
                                 alignItems: 'center',
                                 height: '100%',
                               }}
                             >
-                              <Text type="secondary" style={{ fontSize: 11, marginBottom: 4 }}>
+                              <Text type="secondary" style={{ fontSize: 10, marginBottom: 2 }}>
                                 {fmtAmount(point.total / 10000, 'CNY')}w
                               </Text>
                               <div
                                 style={{
                                   width: '80%',
                                   height: `${Math.max(heightPct, 2)}%`,
-                                  backgroundColor: 'var(--color-primary)',
+                                  backgroundColor: 'var(--color-viz-primary)',
                                   borderRadius: '4px 4px 0 0',
-                                  minWidth: 20,
+                                  minWidth: 18,
                                   transition: 'height 0.3s',
                                 }}
                               />
-                              <Text type="secondary" style={{ fontSize: 10, marginTop: 4, transform: 'rotate(-45deg)', transformOrigin: 'top left', whiteSpace: 'nowrap' }}>
+                              <Text type="secondary" style={{ fontSize: 10, marginTop: 4, whiteSpace: 'nowrap' }}>
                                 {point.month.slice(2)}
                               </Text>
                             </div>
@@ -662,7 +630,7 @@ export function DashboardPage() {
         ) : null
       case 'invoice_match':
         return (isProcurementMgr || isFinanceAuditor || isItBuyer || role === 'admin') && invoiceMatch.length > 0 ? (
-          <Section title={t('dashboard.invoice_match')} key="invoice_match">
+          <Section title={t('dashboard.invoice_match')} density="compact" key="invoice_match">
             <Table
               dataSource={invoiceMatch}
               rowKey="po_number"
@@ -689,9 +657,9 @@ export function DashboardPage() {
         ) : null
       case 'payment_calendar':
         return (isProcurementMgr || isFinanceAuditor || isItBuyer || role === 'admin') && paymentCalendar.length > 0 ? (
-          <Section title={t('dashboard.payment_calendar')} key="payment_calendar">
+          <Section title={t('dashboard.payment_calendar')} density="compact" key="payment_calendar">
             <List
-              itemLayout="horizontal"
+              size="small"
               dataSource={paymentCalendar}
               rowKey="id"
               renderItem={(item) => {
@@ -699,34 +667,22 @@ export function DashboardPage() {
                 const today = new Date()
                 const diffTime = dueDate.getTime() - today.getTime()
                 const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24))
-                
-                let color = 'default'
-                if (diffDays <= 0) color = 'red'
-                else if (diffDays <= 7) color = 'orange'
+
+                let stateClass = 'tag-state tag-state--neutral'
+                if (diffDays <= 0) stateClass = 'tag-state tag-state--error'
+                else if (diffDays <= 7) stateClass = 'tag-state tag-state--warning'
 
                 return (
-                  <List.Item>
-                    <List.Item.Meta
-                      avatar={
-                        <Avatar
-                          style={{ backgroundColor: color === 'red' ? token.colorErrorBg : color === 'orange' ? token.colorWarningBg : token.colorBgLayout, color: color === 'red' ? token.colorError : color === 'orange' ? token.colorWarning : token.colorText }}
-                          icon={<ClockCircleOutlined />}
-                        />
-                      }
-                      title={
-                        <Space>
-<Text strong>{fmtAmount(item.amount, 'CNY')}</Text>
-<Tag color={color}>{new Date(item.due_date).toLocaleDateString(i18n.language)}</Tag>
-                        </Space>
-                      }
-                      description={
-                        <Space>
-{item.po_number && <Text type="secondary">{t('dashboard.payment_po_label')}<MonoId>{item.po_number}</MonoId></Text>}
-{item.contract_number && <Text type="secondary">{t('dashboard.payment_contract_label')}<MonoId>{item.contract_number}</MonoId></Text>}
-<Text type="secondary">{t('dashboard.payment_installment_label')}{item.installment_no}</Text>
-                        </Space>
-                      }
-                    />
+                  <List.Item style={{ paddingBlock: 6 }}>
+                    <Space size="small" style={{ width: '100%', justifyContent: 'space-between', flexWrap: 'wrap' }}>
+                      <Space size="small" wrap>
+                        <Text strong>{fmtAmount(item.amount, 'CNY')}</Text>
+                        <span className={stateClass}>{new Date(item.due_date).toLocaleDateString(i18n.language)}</span>
+                        {item.po_number && <Text type="secondary" style={{ fontSize: 12 }}>{t('dashboard.payment_po_label')}<MonoId>{item.po_number}</MonoId></Text>}
+                        {item.contract_number && <Text type="secondary" style={{ fontSize: 12 }}>{t('dashboard.payment_contract_label')}<MonoId>{item.contract_number}</MonoId></Text>}
+                      </Space>
+                      <Text type="secondary" style={{ fontSize: 12 }}>{t('dashboard.payment_installment_label')}{item.installment_no}</Text>
+                    </Space>
                   </List.Item>
                 )
               }}
@@ -735,38 +691,35 @@ export function DashboardPage() {
         ) : null
       case 'budget':
         return (isProcurementMgr || isFinanceAuditor || isItBuyer || role === 'admin') && budgetSummary && budgetSummary.items.length > 0 ? (
-          <Section title={t('dashboard.budget_overview')} key="budget">
-            <Row gutter={[16, 16]}>
+          <Section title={t('dashboard.budget_overview')} density="compact" key="budget">
+            <Row gutter={[12, 12]}>
               <Col xs={24} sm={8}>
-                <Card size="small">
-                  <StatCard
-                    label={t('dashboard.total_budget')}
-                    value={fmtAmount(budgetSummary.total_budget, 'CNY')}
-                    loading={loading}
-                  />
-                </Card>
+                <StatCard
+                  label={t('dashboard.total_budget')}
+                  value={fmtAmount(budgetSummary.total_budget, 'CNY')}
+                  loading={loading}
+                  density="compact"
+                />
               </Col>
               <Col xs={24} sm={8}>
-                <Card size="small">
-                  <StatCard
-                    label={t('dashboard.total_spend')}
-                    value={fmtAmount(budgetSummary.total_spend, 'CNY')}
-                    loading={loading}
-                  />
-                </Card>
+                <StatCard
+                  label={t('dashboard.total_spend')}
+                  value={fmtAmount(budgetSummary.total_spend, 'CNY')}
+                  loading={loading}
+                  density="compact"
+                />
               </Col>
               <Col xs={24} sm={8}>
-                <Card size="small">
-                  <StatCard
-                    label={t('dashboard.total_utilization')}
-                    value={`${budgetSummary.total_utilization_pct}%`}
-                    loading={loading}
-                    variant={budgetSummary.total_utilization_pct > 90 ? 'accent' : 'default'}
-                  />
-                </Card>
+                <StatCard
+                  label={t('dashboard.total_utilization')}
+                  value={`${budgetSummary.total_utilization_pct}%`}
+                  loading={loading}
+                  density="compact"
+                  variant={budgetSummary.total_utilization_pct > 90 ? 'accent' : 'default'}
+                />
               </Col>
             </Row>
-            <div style={{ marginTop: 16 }}>
+            <div style={{ marginTop: 12 }}>
               {budgetSummary.items.map((item) => (
                 <Card
                   key={item.cost_center_id}
@@ -810,22 +763,18 @@ export function DashboardPage() {
             <Col span={24}>
               <Section
                 title={t('dashboard.aging_approvals')}
+                density="compact"
                 extra={<Link to="/approvals">{t('dashboard.view_all')}</Link>}
               >
                 <List
-                  itemLayout="horizontal"
+                  size="small"
                   dataSource={agingApprovals}
                   renderItem={(item) => {
-                    const slaColor = item.is_overdue
-                      ? token.colorError
+                    const slaStateClass = item.is_overdue
+                      ? 'tag-state tag-state--error'
                       : item.is_approaching
-                        ? token.colorWarning
-                        : token.colorSuccess
-                    const slaBg = item.is_overdue
-                      ? token.colorErrorBg
-                      : item.is_approaching
-                        ? token.colorWarningBg
-                        : token.colorSuccessBg
+                        ? 'tag-state tag-state--warning'
+                        : 'tag-state tag-state--success'
                     const slaLabel = item.is_overdue
                       ? t('dashboard.overdue')
                       : item.is_approaching
@@ -833,35 +782,25 @@ export function DashboardPage() {
                         : t('dashboard.within_sla')
                     return (
                       <List.Item
+                        style={{ paddingBlock: 6 }}
                         actions={[
                           <Link key="view" to={`/purchase-requisitions/${item.pr_id}`}>
                             {t('dashboard.view_all')}
                           </Link>,
                         ]}
                       >
-                        <List.Item.Meta
-                          avatar={
-                            <Avatar
-                              style={{ backgroundColor: slaBg, color: slaColor }}
-                              icon={<ClockCircleOutlined />}
-                            />
-                          }
-                          title={
-                            <Link to={`/purchase-requisitions/${item.pr_id}`}>
-                              <MonoId>{item.pr_number}</MonoId>: {item.title}
-                            </Link>
-                          }
-                          description={
-                            <Space>
-                              <Text type="secondary">
-                                {t('dashboard.hours_waiting', { hours: item.hours_since_submission })}
-                              </Text>
-                              <Tag color={item.is_overdue ? 'red' : item.is_approaching ? 'orange' : 'green'}>
-                                {slaLabel}
-                              </Tag>
-                            </Space>
-                          }
-                        />
+                        <Space size="small" wrap style={{ flex: 1, minWidth: 0 }}>
+                          <Link to={`/purchase-requisitions/${item.pr_id}`}>
+                            <MonoId>{item.pr_number}</MonoId>
+                          </Link>
+                          <Text style={{ flex: 1, minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                            {item.title}
+                          </Text>
+                          <Text type="secondary" style={{ fontSize: 12 }}>
+                            {t('dashboard.hours_waiting', { hours: item.hours_since_submission })}
+                          </Text>
+                          <span className={slaStateClass}>{slaLabel}</span>
+                        </Space>
                       </List.Item>
                     )
                   }}
@@ -874,11 +813,11 @@ export function DashboardPage() {
         return null
       case 'my_progress':
         return isRequester && myPrs.length > 0 ? (
-          <Section title={t('pr.my_progress')} key="my_progress">
-            <Row gutter={16}>
-              <Col span={8}><StatCard label={t('pr.draft_count')} value={myDrafts} variant={myDrafts > 0 ? 'accent' : 'default'} /></Col>
-              <Col span={8}><StatCard label={t('pr.pending_count')} value={myPending} /></Col>
-              <Col span={8}><StatCard label={t('pr.approved_awaiting')} value={myApproved} variant={myApproved > 0 ? 'accent' : 'default'} /></Col>
+          <Section title={t('pr.my_progress')} density="compact" key="my_progress">
+            <Row gutter={[12, 12]}>
+              <Col xs={24} sm={8}><StatCard label={t('pr.draft_count')} value={myDrafts} density="compact" variant={myDrafts > 0 ? 'accent' : 'default'} /></Col>
+              <Col xs={24} sm={8}><StatCard label={t('pr.pending_count')} value={myPending} density="compact" /></Col>
+              <Col xs={24} sm={8}><StatCard label={t('pr.approved_awaiting')} value={myApproved} density="compact" variant={myApproved > 0 ? 'accent' : 'default'} /></Col>
             </Row>
           </Section>
         ) : null

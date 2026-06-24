@@ -7,6 +7,84 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [v1.46.0] — 2026-06-23
+
+### 改进（Dashboard 下方 section 密度优化）
+
+用户反馈：首页第 1-2 排顶部 StatCard 已经很紧凑，但下方的 analytics / payment_calendar / budget / aging / pending_approvals 等 section 留白多、信息密度低、图表浪费纵向空间。
+
+### 改动
+
+#### Section 组件加 `density` prop
+
+`components/ui/Section.tsx` 新增可选 `density?: 'comfortable' | 'compact'` prop（默认 comfortable，向后兼容）：
+
+| 维度 | comfortable (默认) | compact |
+|---|---|---|
+| Card padding | paddingLG (24px) | paddingMD (16px) |
+| marginBottom | marginLG (24px) | marginMD (16px) |
+| Header → body 间距 | marginLG + paddingMD | marginSM + paddingXS |
+| Title level | 4 | 5 |
+
+每个 compact Section 节省 ~24px 高度。Dashboard 平均一屏 6-8 个 section，整体节省 150-200px。
+
+#### Dashboard 全部 Section 改 compact
+
+8 处 Section 调用全部加 `density="compact"`：
+- alerts 内嵌的 pending_approvals、alerts 子 section
+- analytics、invoice_match、payment_calendar、budget、aging、my_progress
+- 顶层 stats 排已经直接用 Row 不经 Section（v1.41 已优化）
+
+#### 移除 budget Section 双层 Card 嵌套
+
+`<Section><Row><Col><Card><StatCard></Card></Col>` 三层嵌套，每层都有 padding。StatCard 本身已是 Card：
+- 移除外层 `<Card size="small">` wrapper
+- StatCard 改 `density="compact"`
+- gutter 从 [16,16] → [12,12]
+
+每个 budget 顶部 KPI 卡片节省 ~32px 双层 padding。
+
+#### List 渲染从 horizontal-meta 改为单行 inline
+
+`<List itemLayout="horizontal">` + `<List.Item.Meta avatar/title/description>` 模式占用至少 64px/行（avatar 32 + meta padding）。重写为 `<List size="small">` + `<List.Item style={{paddingBlock: 6}}>` + 内联 Space 布局。每行从 ~64px 压缩到 ~28px。
+
+涉及的 list：
+- pending_approvals (alerts 子 section)：原带 Avatar + 旧 Tag color 状态
+- contracts_expiring / anomalies / pending_invoices：alerts section 的 3 个内嵌 List
+- payment_calendar：原带 ClockCircleOutlined Avatar
+- aging_approvals：原带 SLA color Avatar
+
+所有原 `<Tag color="red|orange|green">` 都改为 v1.41-v1.44 的 `tag-state-*` utility class，与全站状态视觉一致。
+
+#### analytics 自绘 bar chart 紧凑
+
+`pages/Dashboard.tsx` 内联 SVG bar chart：
+- height: 200 → 160
+- padding: '20px 0 32px' → '12px 0 20px'
+- gap: 8 → 6, minWidth bar: 40 → 32, bar minWidth: 20 → 18
+- 月份标签从 -45° rotate 改为水平显示（清爽且占用相同宽度）
+- bar 颜色 `var(--color-primary)` → `var(--color-viz-primary)`（DESIGN.md §1.4 dataViz palette 一致性）
+
+### 测试
+
+- 后端 726/0、前端 63/0
+- ruff + tsc + build 全绿
+- 0 后端、0 数据库、0 i18n
+
+### 设计一致性
+
+所有改动延续 v1.41-v1.45 的 VI Phase 3 工作：
+- 状态色统一走 `tag-state-*` utility class
+- chart 颜色用 `var(--color-viz-*)` token
+- density prop 模式与 StatCard v1.38 / v1.40 一致
+
+### 后续候选
+
+- v1.47+：剩余 chart 常量颜色 (PaymentForecastChart.PAID_COLOR 等) 与 dataViz palette 统一
+- v1.48+：SKU.tsx 10-色 palette 重构
+
+---
+
 ## [v1.45.0] — 2026-06-23
 
 ### 改进（Mobile 适配 — DESIGN.md §9 残留路线）
