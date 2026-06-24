@@ -327,7 +327,7 @@ export function PRNewPage() {
         <Form form={form} layout="vertical" initialValues={{ currency: 'CNY', requester_id: canProxy ? user?.id : undefined }}>
           {canProxy && (
             <Row gutter={16}>
-              <Col span={12}>
+              <Col xs={24} md={12}>
                 <Form.Item
                   label={t('pr.requester_label')}
                   name="requester_id"
@@ -350,7 +350,7 @@ export function PRNewPage() {
             </Row>
           )}
           <Row gutter={16}>
-            <Col span={12}>
+            <Col xs={24} md={12}>
               <Form.Item
                 label={t('field.title')}
                 name="title"
@@ -360,12 +360,12 @@ export function PRNewPage() {
                 <Input placeholder={t('placeholder.enter_title')} />
               </Form.Item>
             </Col>
-            <Col span={6}>
+            <Col xs={24} sm={12} md={6}>
               <Form.Item label={t('field.currency')} name="currency">
                 <Select options={[{ value: 'CNY', label: 'CNY ¥' }, { value: 'USD', label: 'USD $' }, { value: 'EUR', label: 'EUR €' }, { value: 'GBP', label: 'GBP £' }, { value: 'JPY', label: 'JPY ¥' }, { value: 'KRW', label: 'KRW ₩' }, { value: 'HKD', label: 'HKD HK$' }, { value: 'TWD', label: 'TWD NT$' }]} />
               </Form.Item>
             </Col>
-            <Col span={6}>
+            <Col xs={24} sm={12} md={6}>
               <Form.Item label={t('field.required_date')} name="required_date">
                 
                 <DatePicker style={{ width: '100%' }} />
@@ -373,7 +373,7 @@ export function PRNewPage() {
             </Col>
           </Row>
           <Row gutter={16}>
-            <Col span={6}>
+            <Col xs={24} sm={12} md={6}>
               <Form.Item label={t('pr.company_label')} name="company_id" help={t('pr.company_help')} rules={[{ required: true, message: t('validation.select_company') }]}>
                 <Select
                   placeholder={t('pr.select_company')}
@@ -381,7 +381,7 @@ export function PRNewPage() {
                 />
               </Form.Item>
             </Col>
-            <Col span={6}>
+            <Col xs={24} sm={12} md={6}>
               <Form.Item label={t('pr.cost_center_label')} name="cost_center_id" help={t('pr.cost_center_help')} rules={[{ required: true, message: t('validation.select_cost_center') }]}>
                 <Select
                   placeholder={t('pr.select_cost_center')}
@@ -389,7 +389,7 @@ export function PRNewPage() {
                 />
               </Form.Item>
             </Col>
-            <Col span={6}>
+            <Col xs={24} sm={12} md={6}>
               <Form.Item label={t('pr.expense_type_label')} name="expense_type_id" help={t('pr.expense_type_help')} rules={[{ required: true, message: t('validation.select_expense_type') }]}>
                 <Select
                   placeholder="CapEx / OpEx"
@@ -397,7 +397,7 @@ export function PRNewPage() {
                 />
               </Form.Item>
             </Col>
-            <Col span={6}>
+            <Col xs={24} sm={12} md={6}>
               <Form.Item label={t('pr.category_label')} name="procurement_category_id" help={t('pr.category_help')}>
                 <Select
                   allowClear
@@ -413,7 +413,7 @@ export function PRNewPage() {
             </Col>
           </Row>
           <Row gutter={16}>
-            <Col span={12}>
+            <Col xs={24} md={12}>
               <Form.Item
                 label={t('pr.acting_department_label')}
                 name="department_id"
@@ -433,7 +433,7 @@ export function PRNewPage() {
                 />
               </Form.Item>
             </Col>
-            <Col span={12}>
+            <Col xs={24} md={12}>
               <Form.Item
                 label={t('pr.preferred_approver_label')}
                 name="preferred_first_approver_id"

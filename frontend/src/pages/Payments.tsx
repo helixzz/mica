@@ -57,7 +57,7 @@ export function PaymentsPage() {
         <Typography.Title level={3} style={{ margin: 0 }}>{t('nav.payments')}</Typography.Title>
         <Button icon={<DownloadOutlined />} onClick={exportExcel}>{t('button.export_excel')}</Button>
       </div>
-      <Table<PaymentRecord> rowKey="id" dataSource={rows} columns={columns} loading={loading} pagination={{ pageSize: 20 }} />
+      <Table<PaymentRecord> rowKey="id" dataSource={rows} columns={columns} loading={loading} pagination={{ pageSize: 20 }} scroll={{ x: 'max-content' }} />
     </Space>
   )
 }

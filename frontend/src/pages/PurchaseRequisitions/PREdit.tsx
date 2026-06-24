@@ -314,17 +314,17 @@ export function PREditPage() {
       <Card title={t('pr.edit_draft')}>
         <Form form={form} layout="vertical">
           <Row gutter={16}>
-            <Col span={12}>
+            <Col xs={24} md={12}>
               <Form.Item label={t('field.title')} name="title" help={t('pr.title_help')} rules={[{ required: true }]}>
                 <Input />
               </Form.Item>
             </Col>
-            <Col span={6}>
+            <Col xs={24} sm={12} md={6}>
               <Form.Item label={t('field.currency')} name="currency">
                 <Select options={[{ value: 'CNY', label: 'CNY ¥' }, { value: 'USD', label: 'USD $' }, { value: 'EUR', label: 'EUR €' }, { value: 'GBP', label: 'GBP £' }, { value: 'JPY', label: 'JPY ¥' }, { value: 'KRW', label: 'KRW ₩' }, { value: 'HKD', label: 'HKD HK$' }, { value: 'TWD', label: 'TWD NT$' }]} />
               </Form.Item>
             </Col>
-            <Col span={6}>
+            <Col xs={24} sm={12} md={6}>
               <Form.Item label={t('field.required_date')} name="required_date">
                 <DatePicker style={{ width: '100%' }} />
               </Form.Item>
@@ -332,7 +332,7 @@ export function PREditPage() {
           </Row>
           {canProxy && (
             <Row gutter={16}>
-              <Col span={12}>
+              <Col xs={24} md={12}>
                 <Form.Item label={t('pr.requester_label')} name="requester_id" help={t('pr.requester_help')}>
                   <Select
                     showSearch
@@ -345,29 +345,29 @@ export function PREditPage() {
             </Row>
           )}
           <Row gutter={16}>
-            <Col span={6}>
+            <Col xs={24} sm={12} md={6}>
               <Form.Item label={t('pr.company_label')} name="company_id" help={t('pr.company_help')} rules={[{ required: true }]}>
                 <Select options={companies.map((c) => ({ value: c.id, label: c.name_zh }))} />
               </Form.Item>
             </Col>
-            <Col span={6}>
+            <Col xs={24} sm={12} md={6}>
               <Form.Item label={t('pr.cost_center_label')} name="cost_center_id" help={t('pr.cost_center_help')} rules={[{ required: true }]}>
                 <Select options={costCenters.map((c) => ({ value: c.id, label: c.label_zh }))} />
               </Form.Item>
             </Col>
-            <Col span={6}>
+            <Col xs={24} sm={12} md={6}>
               <Form.Item label={t('pr.expense_type_label')} name="expense_type_id" help={t('pr.expense_type_help')} rules={[{ required: true }]}>
                 <Select options={expenseTypes.map((e) => ({ value: e.id, label: e.label_zh }))} />
               </Form.Item>
             </Col>
-            <Col span={6}>
+            <Col xs={24} sm={12} md={6}>
               <Form.Item label={t('pr.category_label')} name="procurement_category_id" help={t('pr.category_help')}>
                 <Select allowClear showSearch optionFilterProp="label" options={procCategories.map((c) => ({ value: c.id, label: (c.level ?? 1) === 2 ? `  └ ${c.label_zh}` : c.label_zh }))} />
               </Form.Item>
             </Col>
           </Row>
           <Row gutter={16}>
-            <Col span={12}>
+            <Col xs={24} md={12}>
               <Form.Item
                 label={t('pr.acting_department_label')}
                 name="department_id"

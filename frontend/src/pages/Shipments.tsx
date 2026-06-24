@@ -167,6 +167,7 @@ export function ShipmentsPage() {
         columns={columns}
         loading={loading}
         size="small"
+        scroll={{ x: 'max-content' }}
         pagination={{ pageSize: 20, showSizeChanger: true }}
       />
 

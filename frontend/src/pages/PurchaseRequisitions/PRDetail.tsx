@@ -235,7 +235,7 @@ export function PRDetailPage() {
       children: (
         <Space direction="vertical" size="large" style={{ width: '100%' }}>
           <Card>
-            <Descriptions bordered size="small" column={2}>
+            <Descriptions bordered size="small" column={{ xs: 1, sm: 1, md: 2 }}>
               <Descriptions.Item label={t('field.title')}>{pr.title}</Descriptions.Item>
               <Descriptions.Item label={t('field.requester')}>
                 {pr.requester_name || '-'}

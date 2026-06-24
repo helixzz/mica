@@ -7,6 +7,52 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [v1.45.0] — 2026-06-23
+
+### 改进（Mobile 适配 — DESIGN.md §9 残留路线）
+
+继续 v1.41-v1.44 的 VI Phase 3 收官后的下一阶段：移动端适配。基于现有 `Grid.useBreakpoint()` 模式在 Suppliers 和 DeliveryCalendarPanel 已有的实践，扩展到 Dashboard、详情页、列表页、表单页。
+
+### Dashboard toolbar 小屏退化
+
+- `Grid.useBreakpoint()` 检测 `!screens.md` (< 768px)
+- 移动端：隐藏「当前时间」展示；主 CTA 按钮只显示图标不显示文字；「更多操作」+「自定义」合并为一个 ⋯ 下拉
+- 桌面端保持原有 3 件物品布局
+
+### 列表页表格横滚（5 个文件补齐）
+
+为以下表格添加 `scroll={{ x: 'max-content' }}`，让小屏不再挤压列宽，而是允许横向滚动：
+
+- `PRList`、`RFQList`、`Invoices`、`Shipments`、`Payments`
+- POList 和 Contracts v1 已有，无需改动
+
+### 详情页 Descriptions 响应式
+
+`PRDetail` / `RFQDetail` / `ContractDetail` 的 `<Descriptions column={2}>` 改为 `column={{ xs: 1, sm: 1, md: 2 }}`，小屏自动单列布局。
+
+### PR 表单 Col 响应式
+
+- `PRNew.tsx` / `PREdit.tsx` 的 `<Col span={6}>` (4 列) → `<Col xs={24} sm={12} md={6}>`：移动端单列、平板 2 列、桌面 4 列
+- `<Col span={12}>` (2 列) → `<Col xs={24} md={12}>`
+
+### Header 小屏简化
+
+- 全局搜索框 (`<SearchSlot>`) 在 `isMobile` 状态下不渲染（≤992px）
+- 用户名 `<span class="user-name">` 在 `<576px` 隐藏（global.css 新增规则），保留 Avatar + role badge
+
+### 测试
+
+- 后端 726/0、前端 63/0
+- ruff + tsc + build 全绿
+- 0 新组件、0 后端、0 数据库
+
+### 后续路线
+
+- v1.46（计划中）：Dashboard 下方 section 密度优化（用户反馈：第 2 屏图表留白多、信息密度低）
+- v1.47+：chart 常量颜色与 dataViz palette 统一、SKU 10-色 palette 重构
+
+---
+
 ## [v1.44.0] — 2026-06-23
 
 ### 改进（VI Phase 3 收官：Admin 子页面状态徽章）

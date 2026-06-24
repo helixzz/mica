@@ -133,6 +133,7 @@ export function PRListPage() {
         loading={loading}
         pagination={{ pageSize: 20, showSizeChanger: true, showTotal: (total) => t('item.total_count', { total }) }}
         size="small"
+        scroll={{ x: 'max-content' }}
       />
     </Space>
   )

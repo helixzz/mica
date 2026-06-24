@@ -200,9 +200,11 @@ export function AppLayout() {
           <Logo collapsed={!isMobile && collapsed} />
         </div>
 
-        <div style={{ flex: 1, display: 'flex', justifyContent: 'center', maxWidth: 480, margin: '0 12px', minWidth: 0 }} className="header-search">
-          <SearchSlot />
-        </div>
+        {!isMobile && (
+          <div style={{ flex: 1, display: 'flex', justifyContent: 'center', maxWidth: 480, margin: '0 12px', minWidth: 0 }} className="header-search">
+            <SearchSlot />
+          </div>
+        )}
 
         <Space size="middle" style={{ marginLeft: 'auto' }}>
           <NotificationSlot />

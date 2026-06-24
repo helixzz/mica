@@ -1,4 +1,4 @@
-import { Col, Row, Space, Tag, Typography, theme, Button, Dropdown, List, Avatar, Progress, Card, Tabs, Table, Drawer, Switch } from 'antd'
+import { Col, Row, Space, Tag, Typography, theme, Button, Dropdown, Grid, List, Avatar, Progress, Card, Tabs, Table, Drawer, Switch } from 'antd'
 import { memo, useEffect, useMemo, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { Link, useNavigate } from 'react-router-dom'
@@ -101,6 +101,8 @@ export function DashboardPage() {
   const { t, i18n } = useTranslation()
   const { user } = useAuth()
   const { token } = theme.useToken()
+  const screens = Grid.useBreakpoint()
+  const isMobile = !screens.md
   const navigate = useNavigate()
 
   const [loading, setLoading] = useState(true)
@@ -1008,10 +1010,12 @@ export function DashboardPage() {
           <Typography.Title level={4} style={{ margin: 0, fontWeight: 600 }}>
             {t('nav.dashboard')}
           </Typography.Title>
-          <Text type="secondary" style={{ fontSize: token.fontSizeSM }}>
-            <ClockCircleOutlined style={{ marginRight: 4 }} />
-            {currentTime.toLocaleString()}
-          </Text>
+          {!isMobile && (
+            <Text type="secondary" style={{ fontSize: token.fontSizeSM }}>
+              <ClockCircleOutlined style={{ marginRight: 4 }} />
+              {currentTime.toLocaleString()}
+            </Text>
+          )}
         </Space>
         <Space size="small" wrap>
           {primaryAction && (
@@ -1021,19 +1025,42 @@ export function DashboardPage() {
               icon={primaryAction.icon}
               onClick={() => navigate(primaryAction.to)}
             >
-              {primaryAction.label}
+              {isMobile ? null : primaryAction.label}
             </Button>
           )}
-          {dropdownItems.length > 0 && (
-            <Dropdown menu={{ items: dropdownItems }} trigger={['click']} placement="bottomRight">
-              <Button size="small" icon={<MoreOutlined />}>
-                {t('dashboard.more_actions', '更多操作')}
-              </Button>
+          {isMobile ? (
+            <Dropdown
+              menu={{
+                items: [
+                  ...dropdownItems,
+                  { type: 'divider' as const },
+                  {
+                    key: 'customize',
+                    label: t('dashboard.customize', 'Customize'),
+                    icon: <SettingOutlined />,
+                    onClick: () => setCustomizeVisible(true),
+                  },
+                ],
+              }}
+              trigger={['click']}
+              placement="bottomRight"
+            >
+              <Button size="small" icon={<MoreOutlined />} aria-label={t('dashboard.more_actions', '更多操作')} />
             </Dropdown>
+          ) : (
+            <>
+              {dropdownItems.length > 0 && (
+                <Dropdown menu={{ items: dropdownItems }} trigger={['click']} placement="bottomRight">
+                  <Button size="small" icon={<MoreOutlined />}>
+                    {t('dashboard.more_actions', '更多操作')}
+                  </Button>
+                </Dropdown>
+              )}
+              <Button size="small" icon={<SettingOutlined />} onClick={() => setCustomizeVisible(true)}>
+                {t('dashboard.customize', 'Customize')}
+              </Button>
+            </>
           )}
-          <Button size="small" icon={<SettingOutlined />} onClick={() => setCustomizeVisible(true)}>
-            {t('dashboard.customize', 'Customize')}
-          </Button>
         </Space>
       </div>
 

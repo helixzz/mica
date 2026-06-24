@@ -34,6 +34,7 @@ export default function RFQListPage() {
       </div>
       <Table
         dataSource={rfqs} rowKey="id" loading={loading} size="small"
+        scroll={{ x: 'max-content' }}
         columns={[
           { title: t('rfq.number'), dataIndex: 'rfq_number', render: (v: string, r: any) => <Link to={`/rfqs/${r.id}`}><MonoId>{v}</MonoId></Link> },
           { title: t('field.title'), dataIndex: 'title' },

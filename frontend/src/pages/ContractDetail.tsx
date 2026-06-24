@@ -338,7 +338,7 @@ export function ContractDetailPage() {
           </Card>
 
           <Card>
-            <Descriptions bordered size="small" column={2}>
+            <Descriptions bordered size="small" column={{ xs: 1, sm: 1, md: 2 }}>
               <Descriptions.Item label={t('field.title')}>{contract.title}</Descriptions.Item>
               <Descriptions.Item label={t('field.total_amount')}>
                 {fmtAmount(contract.total_amount, contract.currency)}

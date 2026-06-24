@@ -509,6 +509,10 @@ body {
     display: none !important;
   }
 
+  .user-dropdown .user-name {
+    display: none;
+  }
+
   .action-row .ant-btn {
     flex: 1 1 auto;
   }

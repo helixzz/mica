@@ -70,7 +70,7 @@ export function InvoicesPage() {
         <Typography.Title level={3} style={{ margin: 0 }}>{t('nav.invoices')}</Typography.Title>
         <Button icon={<DownloadOutlined />} onClick={handleExport}>{t('button.export_excel')}</Button>
       </div>
-      <Table<InvoiceListRow> rowKey="id" dataSource={rows} columns={columns} loading={loading} pagination={{ pageSize: 20 }} />
+      <Table<InvoiceListRow> rowKey="id" dataSource={rows} columns={columns} loading={loading} pagination={{ pageSize: 20 }} scroll={{ x: 'max-content' }} />
     </Space>
   )
 }

@@ -150,7 +150,7 @@ export default function RFQDetailPage() {
       children: (
         <Space direction="vertical" size="large" style={{ width: '100%' }}>
           <Card>
-            <Descriptions bordered size="small" column={2}>
+            <Descriptions bordered size="small" column={{ xs: 1, sm: 1, md: 2 }}>
               <Descriptions.Item label={t('field.title')}>{rfq.title}</Descriptions.Item>
               <Descriptions.Item label={t('field.deadline')}>{rfq.deadline || '-'}</Descriptions.Item>
               <Descriptions.Item label={t('field.status')}><span className={statusStateClass[rfq.status] ?? 'tag-state tag-state--neutral'}>{rfq.status}</span></Descriptions.Item>
