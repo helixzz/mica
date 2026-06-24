@@ -21,6 +21,7 @@ export interface EmptyStateProps {
   title: React.ReactNode;
   description?: React.ReactNode;
   action?: React.ReactNode;
+  size?: 'default' | 'compact' | 'inline';
 }
 
 export const EmptyState: React.FC<EmptyStateProps> = ({
@@ -28,11 +29,39 @@ export const EmptyState: React.FC<EmptyStateProps> = ({
   title,
   description,
   action,
+  size = 'default',
 }) => {
   const { token } = theme.useToken();
   const { t } = useTranslation();
 
   const src = ILLUSTRATIONS[illustration] || ILLUSTRATIONS.empty;
+  const isCompact = size === 'compact';
+  const isInline = size === 'inline';
+
+  if (isInline) {
+    return (
+      <div
+        style={{
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          gap: token.marginSM,
+          padding: `${token.paddingSM}px ${token.paddingMD}px`,
+          color: token.colorTextSecondary,
+        }}
+      >
+        <Text type="secondary" style={{ fontSize: token.fontSize }}>
+          {title || t('empty.default')}
+        </Text>
+        {action}
+      </div>
+    );
+  }
+
+  const illustrationSize = isCompact ? 80 : 240;
+  const verticalPadding = isCompact ? token.paddingMD : token.paddingXL * 2;
+  const horizontalPadding = isCompact ? token.paddingMD : token.paddingLG;
+  const titleLevel: 4 | 5 = isCompact ? 5 : 4;
 
   return (
     <div
@@ -41,21 +70,22 @@ export const EmptyState: React.FC<EmptyStateProps> = ({
         flexDirection: 'column',
         alignItems: 'center',
         justifyContent: 'center',
-        padding: `${token.paddingXL * 2}px ${token.paddingLG}px`,
+        padding: `${verticalPadding}px ${horizontalPadding}px`,
         textAlign: 'center',
-        backgroundColor: token.colorBgContainer,
+        backgroundColor: 'transparent',
         borderRadius: token.borderRadiusLG,
-        border: `1px dashed ${token.colorBorderSecondary}`,
+        border: isCompact ? 'none' : `1px dashed ${token.colorBorderSecondary}`,
       }}
     >
       <div
         style={{
-          width: 240,
-          height: 240,
-          marginBottom: token.marginLG,
+          width: illustrationSize,
+          height: illustrationSize,
+          marginBottom: isCompact ? token.marginSM : token.marginLG,
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'center',
+          opacity: isCompact ? 0.7 : 1,
         }}
       >
         <img
@@ -67,16 +97,16 @@ export const EmptyState: React.FC<EmptyStateProps> = ({
           }}
         />
       </div>
-      <Space direction="vertical" size={token.marginSM} style={{ maxWidth: 400 }}>
-        <Title level={4} style={{ margin: 0, color: token.colorText }}>
+      <Space direction="vertical" size={isCompact ? token.marginXXS : token.marginSM} style={{ maxWidth: 400 }}>
+        <Title level={titleLevel} style={{ margin: 0, color: token.colorText, fontWeight: 500 }}>
           {title || t('empty.default')}
         </Title>
         {description && (
-          <Text type="secondary" style={{ fontSize: token.fontSize }}>
+          <Text type="secondary" style={{ fontSize: isCompact ? token.fontSizeSM : token.fontSize }}>
             {description}
           </Text>
         )}
-        {action && <div style={{ marginTop: token.marginMD }}>{action}</div>}
+        {action && <div style={{ marginTop: isCompact ? token.marginXS : token.marginMD }}>{action}</div>}
       </Space>
     </div>
   );

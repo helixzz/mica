@@ -34,4 +34,21 @@ describe('<EmptyState />', () => {
     const img = container.querySelector('img')
     expect(img?.getAttribute('alt')).toBe('welcome')
   })
+
+  it('compact size renders illustration but smaller than default', () => {
+    const { container } = renderWithProviders(
+      <EmptyState title="紧凑空态" size="compact" />,
+    )
+    expect(screen.getByText('紧凑空态')).toBeInTheDocument()
+    const img = container.querySelector('img')
+    expect(img).toBeInTheDocument()
+  })
+
+  it('inline size renders just text without illustration', () => {
+    const { container } = renderWithProviders(
+      <EmptyState title="行内空态" size="inline" />,
+    )
+    expect(screen.getByText('行内空态')).toBeInTheDocument()
+    expect(container.querySelector('img')).toBeNull()
+  })
 })

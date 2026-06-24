@@ -432,7 +432,7 @@ export function DashboardPage() {
                       )}
                     />
                   ) : (
-                    <EmptyState illustration="welcome" title={t('dashboard.no_pending_approvals')} />
+                    <EmptyState illustration="welcome" size="compact" title={t('dashboard.no_pending_approvals')} />
                   )}
                 </Section>
               </Col>
@@ -441,7 +441,7 @@ export function DashboardPage() {
                   {loading ? (
                     <div style={{ padding: token.paddingXL, textAlign: 'center' }}>{t('message.loading')}</div>
                   ) : contracts.length === 0 && anomalies.length === 0 && (metrics?.invoices_pending_match ?? 0) + (metrics?.invoices_mismatched ?? 0) === 0 ? (
-                    <EmptyState illustration="welcome" title={t('dashboard.no_alerts')} />
+                    <EmptyState illustration="welcome" size="compact" title={t('dashboard.no_alerts')} />
                   ) : (
                     <Space direction="vertical" size="small" style={{ width: '100%' }}>
                       {contracts.length > 0 && (
@@ -523,7 +523,7 @@ export function DashboardPage() {
                   key: 'spend-trend',
                   label: t('dashboard.spend_trend'),
                   children: analytics.trend.length === 0 ? (
-                    <EmptyState illustration="welcome" title={t('dashboard.no_analytics_data')} />
+                    <EmptyState illustration="welcome" size="compact" title={t('dashboard.no_analytics_data')} />
                   ) : (
                     <div>
                       <div style={{ display: 'flex', alignItems: 'flex-end', gap: 6, height: 160, padding: '12px 0 20px', overflow: 'auto' }}>

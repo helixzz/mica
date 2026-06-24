@@ -1,10 +1,11 @@
 import { LeftOutlined, RightOutlined, HomeOutlined } from '@ant-design/icons'
-import { Button, Card, Col, Empty, Row, Space, Statistic, Table, Typography } from 'antd'
+import { Button, Card, Col, Empty, Row, Space, Table, Typography } from 'antd'
 import type { ColumnsType } from 'antd/es/table'
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 
 import { api, type PaymentForecast, type PaymentForecastMonth } from '@/api'
+import { MiniStat } from '@/components/ui/MiniStat'
 import { fmtAmount, fmtAmountNode } from '@/utils/format'
 
 const PLANNED_COLOR = '#B48A6A'
@@ -149,78 +150,64 @@ export function PaymentTracker({ title }: PaymentTrackerProps) {
     >
       {data && (
         <>
-          <Row gutter={16} style={{ marginBottom: 16 }}>
-            <Col xs={12} md={6}>
-              <Statistic
-                title={t('dashboard.paid_to_date')}
-                value={Number(data.paid_to_date)}
-                prefix="¥"
-                precision={2}
-                valueStyle={{ color: PAID_COLOR }}
-              />
-            </Col>
-            <Col xs={12} md={6}>
-              <Statistic
-                title={t('dashboard.tracker_window_planned')}
-                value={Number(data.grand_planned)}
-                prefix="¥"
-                precision={2}
-              />
-            </Col>
-            <Col xs={12} md={6}>
-              <Statistic
-                title={t('dashboard.tracker_window_paid')}
-                value={Number(data.grand_paid)}
-                prefix="¥"
-                precision={2}
-                valueStyle={{ color: PAID_COLOR }}
-              />
-            </Col>
-            <Col xs={12} md={6}>
-              <Statistic
-                title={t('dashboard.tracker_window_remaining')}
-                value={Math.max(0, Number(data.grand_planned) - Number(data.grand_paid))}
-                prefix="¥"
-                precision={2}
-                valueStyle={{ color: 'var(--color-primary-500)' }}
-              />
-            </Col>
-            <Col xs={12} md={6}>
-              <Statistic
-                title={t('dashboard.tracker_contract_remaining')}
-                value={Number(data.grand_contract_remaining)}
-                prefix="¥"
-                precision={2}
-                valueStyle={{ color: PLANNED_COLOR }}
-              />
-            </Col>
-          </Row>
+          <div
+            style={{
+              display: 'flex',
+              flexWrap: 'wrap',
+              gap: 16,
+              marginBottom: 16,
+            }}
+          >
+            <MiniStat
+              label={t('dashboard.paid_to_date')}
+              value={fmtAmount(data.paid_to_date, 'CNY')}
+              valueColor={PAID_COLOR}
+            />
+            <MiniStat
+              label={t('dashboard.tracker_window_planned')}
+              value={fmtAmount(data.grand_planned, 'CNY')}
+            />
+            <MiniStat
+              label={t('dashboard.tracker_window_paid')}
+              value={fmtAmount(data.grand_paid, 'CNY')}
+              valueColor={PAID_COLOR}
+            />
+            <MiniStat
+              label={t('dashboard.tracker_window_remaining')}
+              value={fmtAmount(Math.max(0, Number(data.grand_planned) - Number(data.grand_paid)), 'CNY')}
+              valueColor={'var(--color-primary-500)'}
+            />
+            <MiniStat
+              label={t('dashboard.tracker_contract_remaining')}
+              value={fmtAmount(data.grand_contract_remaining, 'CNY')}
+              valueColor={PLANNED_COLOR}
+            />
+          </div>
 
           {(Number(data.undated_planned) > 0 || Number(data.out_of_window_planned) > 0) && (
-            <Row gutter={16} style={{ marginBottom: 16 }}>
+            <div
+              style={{
+                display: 'flex',
+                flexWrap: 'wrap',
+                gap: 16,
+                marginBottom: 16,
+              }}
+            >
               {Number(data.undated_planned) > 0 && (
-                <Col xs={12} md={6}>
-                  <Statistic
-                    title={t('dashboard.tracker_undated_planned')}
-                    value={Number(data.undated_planned)}
-                    prefix="¥"
-                    precision={2}
-                    valueStyle={{ color: PLANNED_COLOR }}
-                  />
-                </Col>
+                <MiniStat
+                  label={t('dashboard.tracker_undated_planned')}
+                  value={fmtAmount(data.undated_planned, 'CNY')}
+                  valueColor={PLANNED_COLOR}
+                />
               )}
               {Number(data.out_of_window_planned) > 0 && (
-                <Col xs={12} md={6}>
-                  <Statistic
-                    title={t('dashboard.tracker_out_of_window_planned')}
-                    value={Number(data.out_of_window_planned)}
-                    prefix="¥"
-                    precision={2}
-                    valueStyle={{ color: PLANNED_COLOR }}
-                  />
-                </Col>
+                <MiniStat
+                  label={t('dashboard.tracker_out_of_window_planned')}
+                  value={fmtAmount(data.out_of_window_planned, 'CNY')}
+                  valueColor={PLANNED_COLOR}
+                />
               )}
-            </Row>
+            </div>
           )}
 
           {data.months.length === 0 ||

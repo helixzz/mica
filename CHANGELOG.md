@@ -7,6 +7,63 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [v1.47.0] — 2026-06-23
+
+### 改进（Dashboard 空状态 + KPI 行进一步紧凑）
+
+用户反馈：截图显示「待办审批」section 在空状态时占用 ~600px（240×240 水獭插画 + 大字标题 + dashed 边框），与旁边「预警」section 高度悬殊；下方「月度付款追踪」5 个 Statistic 在 4 列布局下挤换行成 4+1，KPI 散乱。
+
+### Part A — EmptyState 三种尺寸
+
+`components/ui/EmptyState.tsx` 新增可选 `size?: 'default' | 'compact' | 'inline'` prop（默认 `default` 向后兼容）：
+
+| size | 用途 | 插画 | padding | border |
+|---|---|---|---|---|
+| `default` (原行为) | 全页空状态（404、列表无任何数据） | 240×240 | paddingXL × 2 | 1px dashed |
+| `compact` | Section 内空状态 | 80×80 (opacity 0.7) | paddingMD | none |
+| `inline` | List header 等位置 | 无 | paddingSM | none |
+
+**Dashboard 3 处 EmptyState 改为 `size="compact"`**：
+- `dashboard.no_pending_approvals` (待办审批空状态)
+- `dashboard.no_alerts` (预警空状态)
+- `dashboard.no_analytics_data` (分析无数据)
+
+每处节省 ~280-400px 高度。**「待办审批」从 ~600px 压到 ~150px，与「预警」section 高度对齐**，截图中的"水獭插画占满半屏"问题彻底消除。
+
+### Part B — PaymentTracker / InvoiceTracker KPI 行紧凑
+
+原结构问题：
+- 5 个 `<Col xs={12} md={6}>` × `<Statistic>` 每个 ~80px 高，5 个在 4 列布局换行成 4+1
+- AntD `Statistic` 默认字号 24px、内边距大，dashboard 紧凑场景显得臃肿
+
+新做法：
+- 新增共享组件 `components/ui/MiniStat.tsx`：单行 label (12px secondary) + value (16px bold mono tabular-nums) 紧凑布局
+- 用 flex `flex-wrap: wrap; gap: 16` 替代 Row/Col 12-grid，自然换行
+- `flex: '1 1 140px'` 让每个 MiniStat 最少 140px、剩余空间均分
+
+**视觉收益**：
+- PaymentTracker 顶部 KPI 行高度 ~140px → ~60px
+- InvoiceTracker 同样紧凑
+- 5 个 KPI 在桌面屏一行容纳（之前 4+1 换行）
+
+### 已移除的依赖
+
+- `PaymentForecastChart.tsx` / `InvoiceTrackerChart.tsx` 不再 import AntD `Statistic`
+- 与 v1.41-v1.46 的 mono 字体一致性进一步加强（MiniStat 默认 mono + tabular-nums）
+
+### 测试
+
+- 后端 726/0、前端 65/0（+2 EmptyState compact + inline 测试）
+- ruff + tsc + build 全绿
+- 0 后端、0 数据库、0 i18n
+
+### 后续候选
+
+- v1.48+：`PaymentForecastChart.PAID_COLOR` / InvoiceTracker 的 hardcoded chart 常量颜色，与 dataViz palette 统一规划
+- v1.49+：SKU.tsx 10-色 palette 重构
+
+---
+
 ## [v1.46.0] — 2026-06-23
 
 ### 改进（Dashboard 下方 section 密度优化）

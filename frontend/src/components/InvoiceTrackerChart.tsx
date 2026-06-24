@@ -1,10 +1,11 @@
 import { LeftOutlined, RightOutlined, HomeOutlined } from '@ant-design/icons'
-import { Button, Card, Col, Empty, Row, Space, Statistic, Table, Typography } from 'antd'
+import { Button, Card, Col, Empty, Row, Space, Table, Typography } from 'antd'
 import type { ColumnsType } from 'antd/es/table'
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 
 import { api, type InvoiceForecast, type InvoiceForecastMonth } from '@/api'
+import { MiniStat } from '@/components/ui/MiniStat'
 import { fmtAmount } from '@/utils/format'
 
 const INVOICEABLE_COLOR = '#B48A6A'
@@ -152,44 +153,35 @@ export function InvoiceTracker({ title }: InvoiceTrackerProps) {
     >
       {data && (
         <>
-          <Row gutter={16} style={{ marginBottom: 16 }}>
-            <Col xs={12} md={6}>
-              <Statistic
-                title={t('dashboard.invoiceable_to_date')}
-                value={Number(data.grand_invoiceable_to_date)}
-                prefix="¥"
-                precision={2}
-                valueStyle={{ color: INVOICEABLE_COLOR }}
-              />
-            </Col>
-            <Col xs={12} md={6}>
-              <Statistic
-                title={t('dashboard.invoiced_to_date')}
-                value={Number(data.grand_invoiced_to_date)}
-                prefix="¥"
-                precision={2}
-                valueStyle={{ color: INVOICED_COLOR }}
-              />
-            </Col>
-            <Col xs={12} md={6}>
-              <Statistic
-                title={t('dashboard.pending_to_invoice_to_date')}
-                value={Number(data.grand_pending_to_date)}
-                prefix="¥"
-                precision={2}
-                valueStyle={{ color: PENDING_COLOR }}
-              />
-            </Col>
-            <Col xs={12} md={6}>
-              <Statistic
-                title={t('dashboard.tracker_window_invoiced')}
-                value={Number(data.window_invoiced)}
-                prefix="¥"
-                precision={2}
-                valueStyle={{ color: INVOICED_COLOR }}
-              />
-            </Col>
-          </Row>
+          <div
+            style={{
+              display: 'flex',
+              flexWrap: 'wrap',
+              gap: 16,
+              marginBottom: 16,
+            }}
+          >
+            <MiniStat
+              label={t('dashboard.invoiceable_to_date')}
+              value={fmtAmount(data.grand_invoiceable_to_date, 'CNY')}
+              valueColor={INVOICEABLE_COLOR}
+            />
+            <MiniStat
+              label={t('dashboard.invoiced_to_date')}
+              value={fmtAmount(data.grand_invoiced_to_date, 'CNY')}
+              valueColor={INVOICED_COLOR}
+            />
+            <MiniStat
+              label={t('dashboard.pending_to_invoice_to_date')}
+              value={fmtAmount(data.grand_pending_to_date, 'CNY')}
+              valueColor={PENDING_COLOR}
+            />
+            <MiniStat
+              label={t('dashboard.tracker_window_invoiced')}
+              value={fmtAmount(data.window_invoiced, 'CNY')}
+              valueColor={INVOICED_COLOR}
+            />
+          </div>
 
           {data.months.length === 0 ||
           data.months.every((m) => Number(m.invoiceable) === 0 && Number(m.invoiced) === 0) ? (
