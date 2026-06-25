@@ -123,7 +123,7 @@ export const GlobalSearch: React.FC = () => {
     menuItems.push({
       key: 'see-all',
       label: (
-        <div onClick={handleSeeAll} style={{ textAlign: 'center', color: '#1890ff' }}>
+        <div onClick={handleSeeAll} style={{ textAlign: 'center', color: '#8B5E3C' }}>
           {t('search.seeAll', { count: results.total })}
         </div>
       ),
@@ -189,7 +189,7 @@ export const GlobalSearch: React.FC = () => {
                   if (hits.length === 0) return null;
                   return (
                     <div key={type} style={{ marginBottom: 16 }}>
-                      <div style={{ marginBottom: 8, fontWeight: 'bold', color: '#8c8c8c' }}>
+                      <div style={{ marginBottom: 8, fontWeight: 'bold', color: 'var(--color-text-tertiary)' }}>
                         {t(`search.types.${type}`, type.toUpperCase())}
                       </div>
                       {hits.map(hit => (

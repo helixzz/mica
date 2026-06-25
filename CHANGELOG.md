@@ -7,6 +7,72 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [v1.48.0] — 2026-06-23
+
+### 改进（Chart 颜色 dataViz palette 全面统一）
+
+v1.41-v1.47 完成了状态徽章、空状态、KPI 行的视觉系统化，但 chart 内部的常量颜色仍使用 AntD legacy 色系（蓝/绿/红/橙的"原生 hex"），与 Otter Brown VI 不协调。本版做最后一轮清理，把所有残留 hardcoded chart 色映射到 [DESIGN.md §1.4](./docs/DESIGN.md) 的 dataViz palette。
+
+### dataViz 语义映射
+
+| 旧值 | 新值 | viz token | 语义 |
+|---|---|---|---|
+| `#52c41a` (AntD green) | `#2F8F69` | viz-positive | 已完成/正向 |
+| `#1890ff` / `#1677ff` (AntD blue) | `#8B5E3C` | viz-primary | 主指标/Otter Brown |
+| `#B48A6A` (旧 brown) | `#C4A48A` | viz-secondary | 计划/次要 |
+| `#faad14` (AntD yellow) | `#C97B3F` | viz-attention | 警示/接近阈值 |
+| `#d4380d` / `#ff4d4f` (AntD red) | `#B85450` | viz-critical | 严重/超阈值 |
+| `#8c8c8c` (AntD gray) | `var(--color-text-tertiary)` | text-tertiary | 弱化文字（非 viz） |
+
+### Chart 常量重映射（7 个文件）
+
+| 文件 | 改动 |
+|---|---|
+| `PaymentForecastChart.tsx` | `PLANNED_COLOR` / `PAID_COLOR` |
+| `InvoiceTrackerChart.tsx` | `INVOICEABLE_COLOR` / `INVOICED_COLOR` / `PENDING_COLOR` |
+| `CashFlowForecastPanel.tsx` | `PLANNED_COLOR` / `CONFIRMED_COLOR` |
+| `BudgetGaugePanel.tsx` | 3 阈值色（红/黄/绿）映射到 critical/attention/positive |
+| `WorkflowKanbanPanel.tsx` | `#1890ff` (todo) + `#52c41a` (done) |
+| `ApprovalBottleneckPanel.tsx` | overdue (`#ff4d4f`) + normal (`#1890ff`) |
+| `AnomalyWallPanel.tsx` | Badge bg `#ff4d4f` + CheckCircleFilled `#52c41a` |
+
+### 其他散落 hex 清理（7 个文件）
+
+| 文件 | 改动 |
+|---|---|
+| `PRQuoteConfirmModal.tsx` | 2 处 brown/blue 文字色 |
+| `Shipments.tsx` | 1 处 link 文字色 |
+| `PaymentScheduleTab.tsx` | paid 图标 + 已付金额数字色 |
+| `Invoices.tsx` | TwoToneIcon 二色图标 |
+| `InvoiceDetail.tsx` | 2 处 TwoToneIcon |
+| `ItemDetail.tsx` | 趋势 flat 状态文字色 |
+| `GlobalSearch.tsx` + `SearchResults.tsx` | 弱化文字 → `var(--color-text-tertiary)` |
+| `SystemParamsTab.tsx` | category count Badge bg |
+| `utils/undo.tsx` | undo 按钮文字色 |
+
+### 不在范围内（保留）
+
+- **SKU.tsx 10-色 palette**（line 324）：DESIGN.md §5 标注为唯一例外，需要 viz-primary ±15° 色相变体方案设计后才能重构，留 v1.49+
+
+### 设计要点
+
+- **保留 hex 字符串而非 CSS var**：SVG `fill="..."` 跨浏览器对 CSS var 支持不一致（Safari 历史问题）；hex 字符串 + 注释方式更稳妥
+- **viz-positive/-critical/-attention 等语义命名**取代 AntD 默认 green/red/yellow，未来切换主题或暗色优化时只需改一处 token
+- **AntD `TwoToneIcon twoToneColor` prop** 也吃 hex，统一过来
+
+### 测试
+
+- 后端 726/0、前端 65/0
+- ruff + tsc + build 全绿
+- 0 后端、0 数据库、0 i18n、0 新组件
+
+### 后续候选
+
+- v1.49+：SKU.tsx 10-色 palette 重构（DESIGN.md §5 唯一例外）
+- v1.50+：业务方向回归（报表导出、SLA 提醒优化、审批加签等）
+
+---
+
 ## [v1.47.0] — 2026-06-23
 
 ### 改进（Dashboard 空状态 + KPI 行进一步紧凑）

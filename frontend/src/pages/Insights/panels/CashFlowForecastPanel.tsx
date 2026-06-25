@@ -7,8 +7,8 @@ import { fmtAmount } from '@/utils/format';
 
 const { Text } = Typography;
 
-const PLANNED_COLOR = '#1677ff';
-const CONFIRMED_COLOR = '#52c41a';
+const PLANNED_COLOR = '#C4A48A';
+const CONFIRMED_COLOR = '#2F8F69';
 
 export default function CashFlowForecastPanel({ width, height }: PanelProps) {
   const { t } = useTranslation();

@@ -97,7 +97,7 @@ export default function ApprovalBottleneckPanel({ width, height }: PanelProps) {
             <Progress 
               percent={(stage.avg_hours / maxStageHours) * 100} 
               showInfo={false} 
-              strokeColor={stage.avg_hours > 48 ? '#ff4d4f' : '#1890ff'}
+              strokeColor={stage.avg_hours > 48 ? '#B85450' : '#8B5E3C'}
             />
           </div>
         ))}

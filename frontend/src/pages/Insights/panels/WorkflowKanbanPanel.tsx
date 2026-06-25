@@ -143,7 +143,7 @@ export default function WorkflowKanbanPanel({ maxItemsPerColumn = 10, width, hei
 
   const getTypeIcon = (type: string) => {
     switch (type) {
-      case 'pr': return <FileTextOutlined style={{ color: '#1890ff' }} />;
+      case 'pr': return <FileTextOutlined style={{ color: '#8B5E3C' }} />;
       case 'po': return <ShoppingCartOutlined style={{ color: '#722ed1' }} />;
       case 'approval': return <CheckSquareOutlined style={{ color: '#fa8c16' }} />;
       default: return null;
@@ -235,10 +235,10 @@ export default function WorkflowKanbanPanel({ maxItemsPerColumn = 10, width, hei
   return (
     <Card title={t('insights.workflow_kanban', '工作流看板')} bordered={false} style={{ height: '100%', display: 'flex', flexDirection: 'column' }} bodyStyle={{ flex: 1, padding: '16px', overflow: 'hidden' }}>
       <Row gutter={[16, 16]} style={{ height: '100%' }}>
-        {renderColumn(t('insights.todo', '待我处理'), columns.todo, '#1890ff')}
+        {renderColumn(t('insights.todo', '待我处理'), columns.todo, '#8B5E3C')}
         {renderColumn(t('insights.in_progress', '进行中'), columns.inProgress, '#fa8c16')}
         {renderColumn(t('insights.waiting', '待对方回复'), columns.waiting, '#d9d9d9')}
-        {renderColumn(t('insights.done_recently', '近期完成'), columns.done, '#52c41a')}
+        {renderColumn(t('insights.done_recently', '近期完成'), columns.done, '#2F8F69')}
       </Row>
     </Card>
   );

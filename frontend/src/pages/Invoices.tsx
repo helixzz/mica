@@ -57,7 +57,7 @@ export function InvoicesPage() {
       dataIndex: 'is_fully_matched',
       width: 80,
       render: (v: boolean) =>
-        v ? <CheckCircleTwoTone twoToneColor="#52c41a" /> : <WarningTwoTone twoToneColor="#faad14" />,
+        v ? <CheckCircleTwoTone twoToneColor="#2F8F69" /> : <WarningTwoTone twoToneColor="#C97B3F" />,
     },
     { title: t('field.status'), dataIndex: 'status',
       filters: [{text:'draft',value:'draft'},{text:'pending_match',value:'pending_match'},{text:'matched',value:'matched'},{text:'approved',value:'approved'},{text:'paid',value:'paid'},{text:'cancelled',value:'cancelled'}],

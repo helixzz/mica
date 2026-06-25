@@ -99,9 +99,9 @@ export function InvoiceDetailPage() {
             {t(`status.${inv.status}` as 'status.draft')}
           </Tag>
           {inv.is_fully_matched ? (
-            <CheckCircleTwoTone twoToneColor="#52c41a" style={{ fontSize: 20 }} />
+            <CheckCircleTwoTone twoToneColor="#2F8F69" style={{ fontSize: 20 }} />
           ) : (
-            <WarningTwoTone twoToneColor="#faad14" style={{ fontSize: 20 }} />
+            <WarningTwoTone twoToneColor="#C97B3F" style={{ fontSize: 20 }} />
           )}
         </Space>
         <Button onClick={() => navigate('/invoices')}>{t('button.back')}</Button>

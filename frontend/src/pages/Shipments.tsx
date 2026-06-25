@@ -195,7 +195,7 @@ export function ShipmentsPage() {
                 <span style={{ color: '#888', marginLeft: 8 }}>
                   {po.supplier_name || '-'}
                 </span>
-                <span style={{ color: '#1677ff', marginLeft: 8 }}>
+                <span style={{ color: '#8B5E3C', marginLeft: 8 }}>
                   {fmtAmount(po.total_amount, po.currency || 'CNY')}
                 </span>
                 <span style={{ color: '#999', marginLeft: 8, fontSize: 12 }}>

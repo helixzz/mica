@@ -8,8 +8,8 @@ import { api, type PaymentForecast, type PaymentForecastMonth } from '@/api'
 import { MiniStat } from '@/components/ui/MiniStat'
 import { fmtAmount, fmtAmountNode } from '@/utils/format'
 
-const PLANNED_COLOR = '#B48A6A'
-const PAID_COLOR = '#52c41a'
+const PLANNED_COLOR = '#C4A48A'
+const PAID_COLOR = '#2F8F69'
 const TODAY_HIGHLIGHT_BG = 'rgba(139, 94, 60, 0.08)'
 
 interface PaymentTrackerProps {

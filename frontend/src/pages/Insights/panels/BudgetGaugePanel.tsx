@@ -30,9 +30,9 @@ export default function BudgetGaugePanel({ width, height }: PanelProps) {
   }, []);
 
   const getProgressColor = (pct: number) => {
-    if (pct >= 90) return '#ff4d4f'; // red
-    if (pct >= 70) return '#faad14'; // yellow
-    return '#52c41a'; // green
+    if (pct >= 90) return '#B85450'; // viz-critical
+    if (pct >= 70) return '#C97B3F'; // viz-attention
+    return '#2F8F69'; // viz-positive
   };
 
   if (loading) {

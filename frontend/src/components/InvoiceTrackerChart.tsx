@@ -8,9 +8,9 @@ import { api, type InvoiceForecast, type InvoiceForecastMonth } from '@/api'
 import { MiniStat } from '@/components/ui/MiniStat'
 import { fmtAmount } from '@/utils/format'
 
-const INVOICEABLE_COLOR = '#B48A6A'
-const INVOICED_COLOR = '#1677ff'
-const PENDING_COLOR = '#d4380d'
+const INVOICEABLE_COLOR = '#C4A48A'
+const INVOICED_COLOR = '#8B5E3C'
+const PENDING_COLOR = '#C97B3F'
 const TODAY_HIGHLIGHT_BG = 'rgba(139, 94, 60, 0.08)'
 
 interface InvoiceTrackerProps {

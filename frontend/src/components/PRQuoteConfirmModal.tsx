@@ -115,13 +115,13 @@ export function PRQuoteConfirmModal({ prId, open, onClose }: Props) {
         }
         if (r.already_exists) {
           return (
-            <Typography.Text style={{ fontSize: 12, color: '#B48A6A' }}>
+            <Typography.Text style={{ fontSize: 12, color: '#C4A48A' }}>
               {t('pr.sku_quote_state_update')}
             </Typography.Text>
           )
         }
         return (
-          <Typography.Text style={{ fontSize: 12, color: '#1677ff' }}>
+          <Typography.Text style={{ fontSize: 12, color: '#8B5E3C' }}>
             {t('pr.sku_quote_state_new')}
           </Typography.Text>
         )

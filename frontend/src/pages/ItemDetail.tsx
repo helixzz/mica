@@ -53,7 +53,7 @@ export default function ItemDetailPage() {
   const trendConfig = {
     up: { color: '#cf1322', icon: <ArrowUpOutlined />, label: t('forecast.trend_up') },
     down: { color: '#3f8600', icon: <ArrowDownOutlined />, label: t('forecast.trend_down') },
-    flat: { color: '#8c8c8c', icon: <MinusOutlined />, label: t('forecast.trend_flat') },
+    flat: { color: 'var(--color-text-tertiary)', icon: <MinusOutlined />, label: t('forecast.trend_flat') },
   }
 
   const currencyFormatter = (val: number | null) =>

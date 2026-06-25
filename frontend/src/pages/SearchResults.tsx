@@ -108,7 +108,7 @@ export const SearchResults: React.FC = () => {
               </div>
             )}
             {hit.meta && Object.keys(hit.meta).length > 0 && (
-              <div style={{ display: 'flex', gap: '16px', flexWrap: 'wrap', fontSize: '12px', color: '#8c8c8c' }}>
+              <div style={{ display: 'flex', gap: '16px', flexWrap: 'wrap', fontSize: '12px', color: 'var(--color-text-tertiary)' }}>
                 {Object.entries(hit.meta).map(([k, v]) => (
                   <span key={k}>
                     <strong>{t(`search.meta.${k}`, k)}:</strong> {String(v)}
