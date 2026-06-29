@@ -11,19 +11,14 @@ See mica-internal discussion on test strategy (oracle recommendation):
 Option C (auto-discovery) + curated path-param supplement.
 """
 
-import pytest
 from fastapi.routing import APIRoute
 
 from app.main import app
 
-# GET endpoints excluded from auto-discovery, each with a reason.
 _EXCLUDED_GET_PATHS: dict[str, str] = {
-    # Non-JSON binary responses (Excel export)
     "/api/v1/payments/export/excel": "returns xlsx binary, not JSON",
-    # SAML browser-redirect flows (302 to IdP, not JSON)
     "/api/v1/saml/login": "redirects to IdP",
     "/api/v1/saml/metadata": "returns XML metadata",
-    # AI quarterly summary may trigger an external LLM call
     "/api/v1/insights/quarterly-summary": "may call external LLM",
 }
 
@@ -50,9 +45,6 @@ def _discover_parameterless_get_paths() -> list[str]:
     return sorted(set(paths))
 
 
-_GET_PATHS = _discover_parameterless_get_paths()
-
-
 async def _admin_token(seeded_client) -> str:
     resp = await seeded_client.post(
         "/api/v1/auth/login/json",
@@ -62,22 +54,33 @@ async def _admin_token(seeded_client) -> str:
     return resp.json()["access_token"]
 
 
-def test_discovery_found_endpoints():
-    # Guard: if discovery breaks (returns 0), the parametrized test would
-    # silently pass with no cases. Fail loudly instead.
-    assert len(_GET_PATHS) >= 50, f"expected many GET endpoints, found {len(_GET_PATHS)}"
+async def test_all_parameterless_get_endpoints_contract(seeded_client):
+    """Drive every parameterless GET /api/v1/* and assert no 5xx / valid JSON.
 
+    Discovery happens inside the test (not at module import) so router
+    registration is guaranteed to be complete regardless of pytest
+    collection ordering. Previously this was a module-level constant fed
+    into @pytest.mark.parametrize, which in CI saw an empty route table
+    when collected before fixtures imported the full app.
+    """
+    paths = _discover_parameterless_get_paths()
+    assert len(paths) >= 50, f"expected many GET endpoints, found {len(paths)}"
 
-@pytest.mark.parametrize("path", _GET_PATHS)
-async def test_get_endpoint_contract(seeded_client, path: str):
     token = await _admin_token(seeded_client)
-    resp = await seeded_client.get(path, headers={"Authorization": f"Bearer {token}"})
+    headers = {"Authorization": f"Bearer {token}"}
+    failures: list[str] = []
 
-    # No server errors — catches 500s from serialization / eager-load bugs
-    assert resp.status_code < 500, f"GET {path} returned {resp.status_code}: {resp.text[:500]}"
+    for path in paths:
+        resp = await seeded_client.get(path, headers=headers)
+        if resp.status_code >= 500:
+            failures.append(f"GET {path} → {resp.status_code}: {resp.text[:200]}")
+            continue
+        if resp.status_code == 200 and resp.content:
+            ctype = resp.headers.get("content-type", "")
+            if "application/json" in ctype:
+                try:
+                    resp.json()
+                except Exception as exc:
+                    failures.append(f"GET {path} → invalid JSON: {exc}")
 
-    # Successful responses must be valid JSON (response_model serialization)
-    if resp.status_code == 200 and resp.content:
-        ctype = resp.headers.get("content-type", "")
-        if "application/json" in ctype:
-            resp.json()  # raises if body is not valid JSON
+    assert not failures, "API contract failures:\n" + "\n".join(failures)

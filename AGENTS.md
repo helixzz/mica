@@ -12,7 +12,7 @@
 - **当前版本**：见 `frontend/package.json` / `backend/pyproject.toml` / `backend/app/config.py` / `README.md` 四处版本号同步（参见 §9）· [CHANGELOG.md](./CHANGELOG.md)
 - **设计准则**：效率优先 > 扩展性 > 标准化管控（业务上"宁可让 admin 兜底，也不要让流程卡死"）
 - **仓库**：`git@github.com:helixzz/mica.git`（main 分支，无 develop / staging 分支）
-- **生产环境**：`https://mica.jqdomain.com` · `ssh ubuntu@10.8.252.64` 无密码登录可直接部署
+- **生产环境**：`https://mica.<internal-domain>` · `ssh ubuntu@10.8.252.64` 无密码登录可直接部署（具体域名见 `system_parameters` 或部署私笔记，不入 git 历史）
 
 ## 2. 技术栈
 
