@@ -75,13 +75,13 @@ export default function ApprovalBottleneckPanel({ width, height }: PanelProps) {
           <Statistic title={t('insights.pending_approvals')} value={data.total_pending} />
         </Col>
         <Col span={8}>
-          <Statistic title={t('insights.approved_30d')} value={data.total_approved_30d} valueStyle={{ color: '#3f8600' }} />
+          <Statistic title={t('insights.approved_30d')} value={data.total_approved_30d} valueStyle={{ color: 'var(--color-viz-positive)' }} />
         </Col>
         <Col span={8}>
           <Statistic 
             title={t('insights.avg_hours')} 
             value={data.avg_time_to_approve.toFixed(1)} 
-            valueStyle={{ color: data.avg_time_to_approve > 48 ? '#cf1322' : undefined }}
+            valueStyle={{ color: data.avg_time_to_approve > 48 ? 'var(--color-viz-critical)' : undefined }}
           />
         </Col>
       </Row>
@@ -97,7 +97,7 @@ export default function ApprovalBottleneckPanel({ width, height }: PanelProps) {
             <Progress 
               percent={(stage.avg_hours / maxStageHours) * 100} 
               showInfo={false} 
-              strokeColor={stage.avg_hours > 48 ? '#B85450' : '#8B5E3C'}
+              strokeColor={stage.avg_hours > 48 ? 'var(--color-viz-critical)' : 'var(--color-primary-500)'}
             />
           </div>
         ))}

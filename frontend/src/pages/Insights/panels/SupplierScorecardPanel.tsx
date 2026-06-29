@@ -31,9 +31,9 @@ export default function SupplierScorecardPanel({ width, height }: PanelProps) {
   }, []);
 
   const getScoreColor = (score: number) => {
-    if (score >= 80) return 'green';
-    if (score >= 60) return 'gold';
-    return 'red';
+    if (score >= 80) return 'var(--color-viz-positive)';
+    if (score >= 60) return 'var(--color-viz-attention)';
+    return 'var(--color-viz-critical)';
   };
 
   const columns = [
@@ -52,7 +52,7 @@ export default function SupplierScorecardPanel({ width, height }: PanelProps) {
       render: (score: number) => (
         <Badge 
           count={score} 
-          style={{ backgroundColor: getScoreColor(score), color: '#fff' }} 
+          style={{ backgroundColor: getScoreColor(score), color: 'var(--color-text-inverse)' }} 
           showZero
         />
       )

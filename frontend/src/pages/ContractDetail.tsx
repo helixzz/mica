@@ -719,8 +719,8 @@ export function ContractDetailPage() {
             style={{
               maxHeight: '60vh',
               overflow: 'auto',
-              background: 'var(--color-bg-subtle, #fafafa)',
-              border: '1px solid var(--color-border-default, #ddd)',
+              background: 'var(--color-bg-subtle)',
+              border: '1px solid var(--color-border-default)',
               borderRadius: 6,
               padding: 12,
               whiteSpace: 'pre-wrap',

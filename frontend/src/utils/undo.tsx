@@ -13,7 +13,7 @@ export function showUndoToast(
     btn: (
       <button
         onClick={() => { notification.destroy(key); onUndo() }}
-        style={{ cursor: 'pointer', background: 'none', border: 'none', color: '#8B5E3C', fontWeight: 500, padding: 0 }}
+        style={{ cursor: 'pointer', background: 'none', border: 'none', color: 'var(--color-primary-500)', fontWeight: 500, padding: 0 }}
       >
         Undo
       </button>

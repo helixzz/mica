@@ -117,7 +117,7 @@ export function ActivityTimeline({ resourceType, resourceId }: ActivityTimelineP
               {metadataText && (
                 <div style={{ marginTop: 4 }}>
                   <Typography.Text
-                    style={{ fontSize: 12, color: 'var(--color-text-secondary, #666)' }}
+                    style={{ fontSize: 12, color: 'var(--color-text-secondary)' }}
                   >
                     {metadataText}
                   </Typography.Text>

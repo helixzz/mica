@@ -123,7 +123,7 @@ export const GlobalSearch: React.FC = () => {
     menuItems.push({
       key: 'see-all',
       label: (
-        <div onClick={handleSeeAll} style={{ textAlign: 'center', color: '#8B5E3C' }}>
+        <div onClick={handleSeeAll} style={{ textAlign: 'center', color: 'var(--color-primary-500)' }}>
           {t('search.seeAll', { count: results.total })}
         </div>
       ),
@@ -196,7 +196,7 @@ export const GlobalSearch: React.FC = () => {
                         <div
                           key={hit.entity_id}
                           onClick={() => handleSelect(hit.link_url)}
-                          style={{ padding: '8px 0', borderBottom: '1px solid #f0f0f0', cursor: 'pointer' }}
+                          style={{ padding: '8px 0', borderBottom: '1px solid var(--color-border-hairline)', cursor: 'pointer' }}
                         >
                           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                             <Text strong>{hit.title}</Text>

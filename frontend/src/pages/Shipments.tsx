@@ -192,13 +192,13 @@ export function ShipmentsPage() {
             {poList.map(po => (
               <Select.Option key={po.id} value={po.id}>
                 <span style={{ fontWeight: 600 }}>{po.po_number}</span>
-                <span style={{ color: '#888', marginLeft: 8 }}>
+                <span style={{ color: 'var(--color-text-tertiary)', marginLeft: 8 }}>
                   {po.supplier_name || '-'}
                 </span>
-                <span style={{ color: '#8B5E3C', marginLeft: 8 }}>
+                <span style={{ color: 'var(--color-primary-500)', marginLeft: 8 }}>
                   {fmtAmount(po.total_amount, po.currency || 'CNY')}
                 </span>
-                <span style={{ color: '#999', marginLeft: 8, fontSize: 12 }}>
+                <span style={{ color: 'var(--color-text-tertiary)', marginLeft: 8, fontSize: 12 }}>
                   {dayjs(po.created_at).format('YYYY-MM-DD')}
                 </span>
               </Select.Option>

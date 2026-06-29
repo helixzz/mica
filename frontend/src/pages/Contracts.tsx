@@ -300,7 +300,7 @@ export function ContractsPage() {
       {expiring.length > 0 && (
         <Card
           title={t('contract.expiring_title', { count: expiring.length })}
-          style={{ background: '#fff7e6', borderColor: '#ffd591' }}
+          style={{ background: 'var(--color-state-warning-50)', borderColor: 'var(--color-state-warning-200)' }}
         >
           <Table
             rowKey="id"

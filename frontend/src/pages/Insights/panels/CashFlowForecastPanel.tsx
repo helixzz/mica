@@ -7,8 +7,8 @@ import { fmtAmount } from '@/utils/format';
 
 const { Text } = Typography;
 
-const PLANNED_COLOR = '#C4A48A';
-const CONFIRMED_COLOR = '#2F8F69';
+const PLANNED_COLOR = 'var(--color-primary-300)';
+const CONFIRMED_COLOR = 'var(--color-viz-positive)';
 
 export default function CashFlowForecastPanel({ width, height }: PanelProps) {
   const { t } = useTranslation();
@@ -147,7 +147,7 @@ function BarChart({ months, maxValue }: { months: CashFlowMonth[], maxValue: num
               x2={padLeft + innerW}
               y1={y}
               y2={y}
-              stroke="#f0f0f0"
+              stroke="var(--color-viz-grid)"
               strokeDasharray={i === 0 ? '' : '4 4'}
             />
             <text

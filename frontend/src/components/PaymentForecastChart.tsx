@@ -8,9 +8,9 @@ import { api, type PaymentForecast, type PaymentForecastMonth } from '@/api'
 import { MiniStat } from '@/components/ui/MiniStat'
 import { fmtAmount, fmtAmountNode } from '@/utils/format'
 
-const PLANNED_COLOR = '#C4A48A'
-const PAID_COLOR = '#2F8F69'
-const TODAY_HIGHLIGHT_BG = 'rgba(139, 94, 60, 0.08)'
+const PLANNED_COLOR = 'var(--color-primary-300)'
+const PAID_COLOR = 'var(--color-viz-positive)'
+const TODAY_HIGHLIGHT_BG = 'var(--color-viz-today-bg)'
 
 interface PaymentTrackerProps {
   title?: string
@@ -323,9 +323,9 @@ function BarChart({ months, maxValue, todayMonth }: BarChartProps) {
       style={{
         width: '100%',
         maxHeight: 320,
-        border: '1px solid var(--color-border-default, #ddd)',
+        border: '1px solid var(--color-border-default)',
         borderRadius: 8,
-        background: 'var(--color-bg-subtle, #fafafa)',
+        background: 'var(--color-bg-subtle)',
       }}
       role="img"
       aria-label={t('dashboard.payment_tracker')}
@@ -340,7 +340,7 @@ function BarChart({ months, maxValue, todayMonth }: BarChartProps) {
             y={padTop}
             width={groupW}
             height={innerH}
-            fill="rgba(139, 94, 60, 0.08)"
+            fill="var(--color-viz-today-bg)"
           />
         )
       })}
@@ -354,7 +354,7 @@ function BarChart({ months, maxValue, todayMonth }: BarChartProps) {
               x2={padLeft + innerW}
               y1={y}
               y2={y}
-              stroke="#E5E0DC"
+              stroke="var(--color-viz-grid)"
               strokeDasharray={i === 0 ? '' : '3 3'}
             />
             <text
@@ -362,7 +362,7 @@ function BarChart({ months, maxValue, todayMonth }: BarChartProps) {
               y={y + 4}
               fontSize={11}
               textAnchor="end"
-              fill="#6F6861"
+              fill="var(--color-viz-axis-text)"
             >
               {formatCompact(v)}
             </text>

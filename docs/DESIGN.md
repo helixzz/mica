@@ -327,6 +327,45 @@ dark: {
 
 **关键**：`canvas → nav → card → subtle` 四层，每层差距很小，靠 1px hairline border 区分。绝不靠"亮度跳一大段"做 elevation。
 
+### 3.6 Dark Mode State & Viz 覆盖（v1.49.0）
+
+亮模式的 State Tokens（`success-50/200/500/700`）是高饱和色对（`#F0FDF4` + `#15803D` 等），适合纸色画布。直接搬到暗色画布会"晃眼"：浅绿背景在 Onyx 上反而显眼到刺人。
+
+**暗模式 state 重映射规则**：
+
+```css
+[data-theme="dark"] {
+  /* tag-state 背景：18% / 14% alpha 的语义色，而不是 #50 浅纯色 */
+  --color-state-success-50: rgba(34, 197, 94, 0.14);   /* 不是 #F0FDF4 */
+  --color-state-success-200: rgba(34, 197, 94, 0.32);
+  --color-state-success-500: #4ADE80;                  /* 提亮 +1 阶 */
+  --color-state-success-700: #86EFAC;                  /* 文字提到 #200~#300 */
+}
+```
+
+- **背景**: 浅色 50 → 暗色 14% alpha 的同色（保留色相，不再发光）
+- **边框**: 浅色 200 → 暗色 32% alpha 同色
+- **文字 / dot**: 浅色 700（深色文字）→ 暗色 200/300（浅色文字，保证 4.5:1 对比）
+
+Same for `info / progress / warning / error / neutral`. 这套规则确保 `tag-state--success`、`status-badge--success`、Tag、Badge 在暗模式下"读得清但不刺眼"。
+
+**Viz 暗色覆盖**（图表组件）：
+
+```css
+[data-theme="dark"] {
+  --color-viz-positive: #4ADE80;  /* 亮色 #2F8F69 → 暗色提亮 */
+  --color-viz-critical: #F87171;  /* 亮色 #B85450 → 暗色提亮 */
+  --color-viz-attention: #FBBF24;
+  --color-viz-grid: #2F2B27;       /* hairline 同色 */
+  --color-viz-axis-text: #9E9790;  /* tertiary text */
+  --color-viz-today-bg: rgba(177, 133, 99, 0.14);
+}
+```
+
+**AntD ComponentToken 暗色覆盖**：`Modal / Drawer / Select / Dropdown / Tag / Tooltip / Popover` 在 `darkTheme.components` 里都必须显式重写 `headerBg / contentBg / colorBgElevated / optionSelectedBg / colorBgSpotlight` 等 — 因为 baseTheme 把它们硬编码到 `tokens.color.surface.light.*`，darkAlgorithm 不会自动覆盖 componentToken。
+
+> 这是 v1.49.0 修复的核心 — 在此之前，整页 Drawer / Modal 在暗模式下白底白字。
+
 ---
 
 ## 4. 字体系统

@@ -225,5 +225,41 @@ export const darkTheme: ThemeConfig = {
       ...baseTheme.components?.Card,
       colorBorderSecondary: tokens.color.border.dark.hairline,
     },
+    Modal: {
+      ...baseTheme.components?.Modal,
+      headerBg: tokens.color.surface.dark.elevated,
+      contentBg: tokens.color.surface.dark.elevated,
+      footerBg: tokens.color.surface.dark.elevated,
+    },
+    Drawer: {
+      ...baseTheme.components?.Drawer,
+      colorBgElevated: tokens.color.surface.dark.elevated,
+    },
+    Select: {
+      ...baseTheme.components?.Select,
+      optionSelectedBg: tokens.color.primary[900],
+      optionSelectedColor: tokens.color.primary[100],
+      optionActiveBg: tokens.color.surface.dark.subtle,
+    },
+    Dropdown: {
+      ...baseTheme.components?.Dropdown,
+      controlItemBgHover: tokens.color.surface.dark.subtle,
+      controlItemBgActive: tokens.color.primary[900],
+      controlItemBgActiveHover: tokens.color.primary[800],
+    },
+    Tag: {
+      ...baseTheme.components?.Tag,
+      defaultBg: tokens.color.surface.dark.subtle,
+      defaultColor: tokens.color.text.dark.secondary,
+    },
+    Tooltip: {
+      ...baseTheme.components?.Tooltip,
+      colorBgSpotlight: tokens.color.neutral[50],
+      colorTextLightSolid: tokens.color.neutral[900],
+    },
+    Popover: {
+      ...baseTheme.components?.Popover,
+      colorBgElevated: tokens.color.surface.dark.elevated,
+    },
   },
 };

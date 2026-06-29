@@ -88,7 +88,7 @@ export const SearchResults: React.FC = () => {
     <List.Item
       key={hit.entity_id}
       onClick={() => navigate(hit.link_url)}
-      style={{ cursor: 'pointer', padding: '16px', background: '#fff', marginBottom: '8px', borderRadius: '8px', border: '1px solid #f0f0f0' }}
+      style={{ cursor: 'pointer', padding: '16px', background: 'var(--color-bg-elevated)', marginBottom: '8px', borderRadius: '8px', border: '1px solid var(--color-border-hairline)' }}
       className="hover:shadow-md transition-shadow"
     >
       <List.Item.Meta
@@ -103,7 +103,7 @@ export const SearchResults: React.FC = () => {
         description={
           <div style={{ marginTop: '8px' }}>
             {hit.snippet && (
-              <div style={{ marginBottom: '8px', color: '#595959' }}>
+              <div style={{ marginBottom: '8px', color: 'var(--color-text-secondary)' }}>
                 <span>{highlightMarks(hit.snippet)}</span>
               </div>
             )}

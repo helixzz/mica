@@ -75,6 +75,9 @@
   --color-viz-attention: #C97B3F;
   --color-viz-critical: #B85450;
   --color-viz-baseline: #6F6861;
+  --color-viz-grid: #E5E0DC;
+  --color-viz-axis-text: #6F6861;
+  --color-viz-today-bg: rgba(139, 94, 60, 0.08);
 
   --space-0: 0px;
   --space-1: 4px;
@@ -120,6 +123,7 @@
   --color-bg-subtle: #F7F6F5;
   --color-bg-elevated: #FFFFFF;
   --color-bg-sunken: #EFECE9;
+  --color-bg-layout: #FAFAF8;
 
   --color-text-primary: #1F1C19;
   --color-text-secondary: #4F4943;
@@ -138,6 +142,7 @@
   --color-bg-subtle: #1A1816;
   --color-bg-elevated: #1F1D1B;
   --color-bg-sunken: #0F0E0D;
+  --color-bg-layout: #161514;
 
   --color-text-primary: #F7F6F5;
   --color-text-secondary: #D5D0CB;
@@ -149,6 +154,71 @@
   --color-border-subtle: #26221F;
   --color-border-default: #3A3632;
   --color-border-strong: #5A544E;
+
+  /* ─────────────────────────────────────────────────────────
+     v1.49.0 Dark-mode state palette — tag-state / status-badge.
+     Light variants are bright 50/700 pairs (e.g. #F0FDF4 + #15803D);
+     in dark mode we use low-saturation tinted backgrounds + lifted
+     foregrounds so badges read calmly on warm Onyx canvas instead
+     of glaring. Hue is preserved so semantics remain readable.
+     ───────────────────────────────────────────────────────── */
+  --color-state-info-50: rgba(59, 130, 246, 0.14);
+  --color-state-info-200: rgba(59, 130, 246, 0.32);
+  --color-state-info-500: #60A5FA;
+  --color-state-info-700: #93C5FD;
+
+  --color-state-progress-50: rgba(139, 94, 60, 0.18);
+  --color-state-progress-200: rgba(139, 94, 60, 0.40);
+  --color-state-progress-500: #B18563;
+  --color-state-progress-700: #D8C3B1;
+
+  --color-state-success-50: rgba(34, 197, 94, 0.14);
+  --color-state-success-200: rgba(34, 197, 94, 0.32);
+  --color-state-success-500: #4ADE80;
+  --color-state-success-700: #86EFAC;
+
+  --color-state-warning-50: rgba(245, 158, 11, 0.14);
+  --color-state-warning-200: rgba(245, 158, 11, 0.32);
+  --color-state-warning-500: #FBBF24;
+  --color-state-warning-700: #FCD34D;
+
+  --color-state-error-50: rgba(239, 68, 68, 0.14);
+  --color-state-error-200: rgba(239, 68, 68, 0.32);
+  --color-state-error-500: #F87171;
+  --color-state-error-700: #FCA5A5;
+
+  --color-state-neutral-50: rgba(159, 152, 144, 0.14);
+  --color-state-neutral-200: rgba(159, 152, 144, 0.30);
+  --color-state-neutral-500: #9E9790;
+  --color-state-neutral-700: #D5D0CB;
+
+  /* Mirror state palette into legacy aliases (--color-success-*, etc.)
+     so any consumer still using the older names also adapts. */
+  --color-success-50: rgba(34, 197, 94, 0.14);
+  --color-success-500: #4ADE80;
+  --color-success-700: #86EFAC;
+  --color-warning-50: rgba(245, 158, 11, 0.14);
+  --color-warning-500: #FBBF24;
+  --color-warning-700: #FCD34D;
+  --color-error-50: rgba(239, 68, 68, 0.14);
+  --color-error-500: #F87171;
+  --color-error-700: #FCA5A5;
+  --color-info-50: rgba(59, 130, 246, 0.14);
+  --color-info-500: #60A5FA;
+  --color-info-700: #93C5FD;
+
+  /* Visualization palette — slightly brighter / desaturated for dark canvas.
+     Used by SVG charts (PaymentForecastChart, InvoiceTrackerChart,
+     CashFlowForecastPanel, SKU trend chart, BudgetGauge progress, etc.). */
+  --color-viz-primary: #B18563;
+  --color-viz-secondary: #C4A48A;
+  --color-viz-positive: #4ADE80;
+  --color-viz-attention: #FBBF24;
+  --color-viz-critical: #F87171;
+  --color-viz-baseline: #9E9790;
+  --color-viz-grid: #2F2B27;
+  --color-viz-axis-text: #9E9790;
+  --color-viz-today-bg: rgba(177, 133, 99, 0.14);
 }
 
 *, *::before, *::after {

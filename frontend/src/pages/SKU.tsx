@@ -375,7 +375,7 @@ function PriceTrendChart({
       <Typography.Text type="secondary" style={{ display: 'block', marginBottom: 8 }}>
         {t('sku.trend_title', { count: skuNames.length })}
       </Typography.Text>
-      <svg viewBox={`0 0 800 320`} style={{ width: '100%', maxHeight: 400, border: '1px solid var(--color-border-default, #ddd)', borderRadius: 8, background: 'var(--color-bg-subtle, #fafafa)' }}>
+      <svg viewBox={`0 0 800 320`} style={{ width: '100%', maxHeight: 400, border: '1px solid var(--color-border-default)', borderRadius: 8, background: 'var(--color-bg-subtle)' }}>
         <ChartContent data={chartData} skuNames={skuNames} width={800} height={320} purchasePoints={purchasePoints} />
       </svg>
       <div style={{ display: 'flex', flexWrap: 'wrap', gap: 12, marginTop: 8 }}>
@@ -493,9 +493,9 @@ function InsightsPanel({ insights, itemName }: { insights: SKUInsights; itemName
   const { purchase_stats: ps, market_stats: ms, supplier_comparison: sc, purchase_history: ph } = insights
 
   const signalMap: Record<string, { color: string; text: string }> = {
-    below_avg: { color: '#22C55E', text: t('sku.buy_signal_below') },
-    above_avg: { color: '#EF4444', text: t('sku.buy_signal_above') },
-    at_avg: { color: '#F59E0B', text: t('sku.buy_signal_at') },
+    below_avg: { color: 'var(--color-viz-positive)', text: t('sku.buy_signal_below') },
+    above_avg: { color: 'var(--color-viz-critical)', text: t('sku.buy_signal_above') },
+    at_avg: { color: 'var(--color-viz-attention)', text: t('sku.buy_signal_at') },
   }
 
   return (
@@ -529,7 +529,7 @@ function InsightsPanel({ insights, itemName }: { insights: SKUInsights; itemName
                 value={ms.current_vs_avg_pct}
                 suffix="%"
                 precision={1}
-                valueStyle={{ color: ms.current_vs_avg_pct > 0 ? '#EF4444' : '#22C55E' }}
+                valueStyle={{ color: ms.current_vs_avg_pct > 0 ? 'var(--color-viz-critical)' : 'var(--color-viz-positive)' }}
                 prefix={ms.current_vs_avg_pct > 0 ? '+' : ''}
               />
             </Col>
@@ -538,7 +538,7 @@ function InsightsPanel({ insights, itemName }: { insights: SKUInsights; itemName
                 title={t('sku.volatility')}
                 value={ms.volatility_pct}
                 suffix="%"
-                valueStyle={ms.volatility_pct > 15 ? { color: '#EF4444' } : undefined}
+                valueStyle={ms.volatility_pct > 15 ? { color: 'var(--color-viz-critical)' } : undefined}
               />
             </Col>
             <Col span={6}>
@@ -557,7 +557,7 @@ function InsightsPanel({ insights, itemName }: { insights: SKUInsights; itemName
           {sc.map((s) => (
             <div key={s.supplier_name} style={{ display: 'flex', alignItems: 'center', marginBottom: 8, gap: 12 }}>
               <Typography.Text style={{ width: 180, flexShrink: 0 }}>{s.supplier_name}</Typography.Text>
-              <div style={{ flex: 1, background: '#f0f0f0', borderRadius: 4, height: 20, position: 'relative' }}>
+              <div style={{ flex: 1, background: 'var(--color-bg-subtle)', borderRadius: 4, height: 20, position: 'relative' }}>
                 <div
                   style={{
                     width: `${Math.min(100, (s.avg_price / Math.max(...sc.map((x) => x.avg_price))) * 100)}%`,

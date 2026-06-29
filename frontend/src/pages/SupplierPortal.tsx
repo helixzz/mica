@@ -118,7 +118,7 @@ export default function SupplierPortalPage() {
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'center',
-          background: 'var(--color-bg-layout, #f5f5f5)',
+          background: 'var(--color-bg-layout)',
         }}
       >
         <Spin size="large" />
@@ -135,7 +135,7 @@ export default function SupplierPortalPage() {
           alignItems: 'center',
           justifyContent: 'center',
           padding: 24,
-          background: 'var(--color-bg-layout, #f5f5f5)',
+          background: 'var(--color-bg-layout)',
         }}
       >
         <Alert
@@ -328,7 +328,7 @@ export default function SupplierPortalPage() {
     <div
       style={{
         minHeight: '100vh',
-        background: 'var(--color-bg-layout, #F7F6F5)',
+        background: 'var(--color-bg-layout)',
         padding: '24px',
       }}
     >

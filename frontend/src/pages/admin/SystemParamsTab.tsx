@@ -321,7 +321,7 @@ export const SystemParamsTab: React.FC = () => {
               header={
                 <Space>
                   <Text strong>{category.toUpperCase()}</Text>
-                  <Badge count={categoryParams.length} style={{ backgroundColor: '#2F8F69' }} />
+                  <Badge count={categoryParams.length} style={{ backgroundColor: 'var(--color-viz-positive)' }} />
                 </Space>
               }
             >

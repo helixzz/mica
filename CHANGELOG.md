@@ -7,7 +7,119 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
-## [v1.48.0] — 2026-06-23
+## [v1.49.0] — 2026-06-29
+
+### 修复（Dark Mode 全站可读性）
+
+v1.41-v1.48 用 dataViz palette 把 chart 颜色统一到 Otter Brown VI 体系，但全程都用亮模式视角验证。本版做一次彻底的暗色模式可读性扫描，按"白底白字 / 浅色徽章在 Onyx 上晃眼 / SVG grid 不可见"等问题分层修复。
+
+### 关键症状（修复前）
+
+- **Drawer / Modal 全白底**：在暗色模式下打开「新增供应商」「编辑 PR」等抽屉/弹窗，整个容器仍是 `#FFFFFF` 白底，但文字、Input 走 dark algorithm 切到暗色 → 白底浅灰字，几乎不可读。
+- **状态 Tag 晃眼**：PR 列表「状态」列的「已批准 / 部分生成订单」等 `tag-state--success / --progress` 标签在 Onyx 画布上显示浅绿/浅棕鲜亮背景，对比过强、视觉刺人。
+- **SVG 图表网格消失**：`PaymentForecastChart` / `InvoiceTrackerChart` / `CashFlowForecastPanel` 内 SVG 写死 `stroke="#E5E0DC"` / `fill="#6F6861"`，暗色画布上几乎不可见。
+- **inline 硬编码颜色不响应主题切换**：散落在 `Shipments / GlobalSearch / SearchResults / SKU / Insights / Contracts / undo / SystemParamsTab` 等 ~20 处的 `style={{ color: '#xxx' }}` 不切色。
+
+### 修复（架构层）
+
+#### 1. AntD ComponentToken 暗色覆盖（`antdTheme.ts`）
+
+`baseTheme.components` 把多个组件的 `headerBg / contentBg / colorBgElevated / optionSelectedBg` 等硬编码到 `tokens.color.surface.light.*`。`darkTheme.components` 之前只覆盖了 `Menu / Table / Layout / Card`，遗漏 7 个组件 — 本版补齐：
+
+| 组件 | 新增暗色覆盖 |
+|---|---|
+| `Modal` | `headerBg / contentBg / footerBg → surface.dark.elevated` |
+| `Drawer` | `colorBgElevated → surface.dark.elevated` |
+| `Select` | `optionSelectedBg → primary[900]`, `optionActiveBg → surface.dark.subtle` |
+| `Dropdown` | `controlItemBgHover / Active / ActiveHover` 全部走暗色 |
+| `Tag` | `defaultBg → surface.dark.subtle`, `defaultColor → text.dark.secondary` |
+| `Tooltip` | `colorBgSpotlight → neutral[50]`（暗色 Tooltip 反而要浅底） |
+| `Popover` | `colorBgElevated → surface.dark.elevated` |
+
+#### 2. State Tokens 暗色重映射（`global.css`）
+
+亮模式 `--color-state-success-50/200/500/700` 是高饱和色对（`#F0FDF4` + `#15803D`），适合纸色画布；在 Onyx 上反而"晃眼"。本版在 `[data-theme="dark"]` 内重新定义全部 6 组 state 调色板：
+
+```css
+[data-theme="dark"] {
+  --color-state-success-50:  rgba(34, 197, 94, 0.14);   /* 14% alpha 同色背景 */
+  --color-state-success-200: rgba(34, 197, 94, 0.32);
+  --color-state-success-500: #4ADE80;                    /* 提亮一阶 */
+  --color-state-success-700: #86EFAC;                    /* 浅色文字 */
+}
+```
+
+同样规则应用到 `info / progress / warning / error / neutral`，及向后兼容的 `--color-success-* / --color-warning-* / --color-error-* / --color-info-*`。
+
+**效果**：所有 `tag-state` / `status-badge` 在暗模式下自动从"鲜亮发光"变为"低饱和柔和"。覆盖范围 — PR / PO / 合同 / 付款 / 到货 / 发票 / RFQ / 询价 等全部列表的状态列。
+
+#### 3. Viz Tokens 暗色重映射 + 新增 Chart Tokens
+
+新增三个 viz token 供 SVG 图表使用：
+
+```css
+:root {
+  --color-viz-grid: #E5E0DC;
+  --color-viz-axis-text: #6F6861;
+  --color-viz-today-bg: rgba(139, 94, 60, 0.08);
+}
+[data-theme="dark"] {
+  --color-viz-grid: #2F2B27;          /* 同 hairline */
+  --color-viz-axis-text: #9E9790;     /* tertiary text */
+  --color-viz-today-bg: rgba(177, 133, 99, 0.14);
+  --color-viz-positive: #4ADE80;       /* 提亮一阶 */
+  --color-viz-critical: #F87171;
+  --color-viz-attention: #FBBF24;
+}
+```
+
+新增 `--color-bg-layout`（亮 `#FAFAF8` / 暗 `#161514`），替代 SupplierPortal 之前的 `var(--color-bg-layout, #f5f5f5)` 硬 fallback。
+
+### 修复（替换层 — 14 个文件）
+
+| 文件 | 修复点 |
+|---|---|
+| `theme/antdTheme.ts` | +7 个组件暗色覆盖 |
+| `styles/global.css` | +1 个新基础 token + state/viz 暗色重映射 + 3 个新 chart token |
+| `components/PaymentForecastChart.tsx` | SVG `stroke/fill` + 常量颜色 → CSS var |
+| `components/InvoiceTrackerChart.tsx` | 同上 |
+| `components/PaymentScheduleTab.tsx` | `#2F8F69` → `var(--color-viz-positive)` |
+| `components/PRQuoteConfirmModal.tsx` | brown hex → `var(--color-primary-*)` |
+| `components/GlobalSearch/GlobalSearch.tsx` | `#8B5E3C` / `#f0f0f0` → CSS var |
+| `components/ActivityTimeline.tsx` | 移除 fallback hex |
+| `pages/Insights/panels/CashFlowForecastPanel.tsx` | SVG + 常量 |
+| `pages/Insights/panels/WorkflowKanbanPanel.tsx` | 列背景 `#f5f5f5` + 4 列标识色 + 类型 icon 色 |
+| `pages/Insights/panels/ApprovalBottleneckPanel.tsx` | green/red statistic + Progress strokeColor |
+| `pages/Insights/panels/AnomalyWallPanel.tsx` | Badge bg + success 区色 |
+| `pages/Insights/panels/BudgetGaugePanel.tsx` | 3 阈值色（pct >= 90/70）|
+| `pages/Insights/panels/SupplierScorecardPanel.tsx` | green/gold/red badge → viz tokens |
+| `pages/SKU.tsx` | trend chart bg/border + buy signal 3 色 + vsAvg 涨跌色 + 供应商对比 progress bg |
+| `pages/Shipments.tsx` | Select option 3 处颜色 |
+| `pages/ItemDetail.tsx` | trend up/down/flat 三色 |
+| `pages/RFQDetail.tsx` | selected quote `#22C55E` |
+| `pages/Contracts.tsx` | expiring Card 浅黄背景 |
+| `pages/SearchResults.tsx` | List item 浅底浅边框 |
+| `pages/ContractDetail.tsx` | 移除 fallback hex |
+| `pages/SupplierPortal.tsx` | 移除 fallback hex（保留 over-primary 白字） |
+| `pages/admin/SystemParamsTab.tsx` | Badge `#2F8F69` |
+| `utils/undo.tsx` | undo button brown |
+
+### 设计文档
+
+- 新增 [docs/DESIGN.md §3.6](./docs/DESIGN.md#36-dark-mode-state--viz-覆盖v1490) — Dark Mode State & Viz 覆盖规则
+- 沉淀 v1.49 教训：**baseTheme.components 不要硬编码 light token，要么走顶层 `colorBgElevated`（自动跟随 algorithm），要么 darkTheme.components 显式覆盖**
+
+### 保留不动
+
+- `Login.tsx` 蓝色 gradient + 标题色 — 营销风格登录页，独立于主题切换
+- `SupplierPortal.tsx` over-primary banner 内的 `color: '#fff'` — 永远在水獭棕背景上，无须切换
+- `CheckCircleTwoTone twoToneColor="#2F8F69"` — AntD TwoTone icon prop 不接 CSS var，hex 值在暗色下也尚可读
+- `SKU.tsx CHART_COLORS` 10 色 categorical palette — 装饰性，在两种模式下都可见
+- `@media print` 内的 `#ddd / #999 / #666` — 打印强制白底，hardcoded 正确
+
+---
+
+
 
 ### 改进（Chart 颜色 dataViz palette 全面统一）
 

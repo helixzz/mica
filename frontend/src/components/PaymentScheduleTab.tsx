@@ -307,7 +307,7 @@ export function PaymentScheduleTab({
               onClick={() => handleDelete(r)}
             />
           )}
-          {r.status === 'paid' && <CheckCircleOutlined style={{ color: '#2F8F69' }} />}
+          {r.status === 'paid' && <CheckCircleOutlined style={{ color: 'var(--color-viz-positive)' }} />}
         </Space>
       ),
     },
@@ -342,7 +342,7 @@ export function PaymentScheduleTab({
                 value={Number(schedule.paid_total)}
                 prefix={getCurrencySymbol(currency)}
                 precision={2}
-                valueStyle={{ color: '#2F8F69' }}
+                valueStyle={{ color: 'var(--color-viz-positive)' }}
               />
             </Col>
             <Col xs={12} md={6}>

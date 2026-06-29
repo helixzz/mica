@@ -8,10 +8,10 @@ import { api, type InvoiceForecast, type InvoiceForecastMonth } from '@/api'
 import { MiniStat } from '@/components/ui/MiniStat'
 import { fmtAmount } from '@/utils/format'
 
-const INVOICEABLE_COLOR = '#C4A48A'
-const INVOICED_COLOR = '#8B5E3C'
-const PENDING_COLOR = '#C97B3F'
-const TODAY_HIGHLIGHT_BG = 'rgba(139, 94, 60, 0.08)'
+const INVOICEABLE_COLOR = 'var(--color-primary-300)'
+const INVOICED_COLOR = 'var(--color-primary-500)'
+const PENDING_COLOR = 'var(--color-viz-attention)'
+const TODAY_HIGHLIGHT_BG = 'var(--color-viz-today-bg)'
 
 interface InvoiceTrackerProps {
   title?: string
@@ -296,9 +296,9 @@ function BarChart({ months, maxValue, todayMonth }: BarChartProps) {
       style={{
         width: '100%',
         maxHeight: 320,
-        border: '1px solid var(--color-border-default, #ddd)',
+        border: '1px solid var(--color-border-default)',
         borderRadius: 8,
-        background: 'var(--color-bg-subtle, #fafafa)',
+        background: 'var(--color-bg-subtle)',
       }}
       role="img"
       aria-label={t('dashboard.invoice_tracker')}
@@ -313,7 +313,7 @@ function BarChart({ months, maxValue, todayMonth }: BarChartProps) {
             y={padTop}
             width={groupW}
             height={innerH}
-            fill="rgba(139, 94, 60, 0.08)"
+            fill="var(--color-viz-today-bg)"
           />
         )
       })}
@@ -327,10 +327,10 @@ function BarChart({ months, maxValue, todayMonth }: BarChartProps) {
               x2={padLeft + innerW}
               y1={y}
               y2={y}
-              stroke="#E5E0DC"
+              stroke="var(--color-viz-grid)"
               strokeDasharray={i === 0 ? '' : '3 3'}
             />
-            <text x={padLeft - 6} y={y + 4} fontSize={11} textAnchor="end" fill="#6F6861">
+            <text x={padLeft - 6} y={y + 4} fontSize={11} textAnchor="end" fill="var(--color-viz-axis-text)">
               {formatCompact(v)}
             </text>
           </g>

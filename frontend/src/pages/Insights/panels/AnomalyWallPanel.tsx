@@ -59,7 +59,7 @@ export default function AnomalyWallPanel({ width, height }: PanelProps) {
     <Space>
       {t('insights.anomaly_wall', '异常红旗')}
       {!loading && anomalies.length > 0 && (
-        <Badge count={anomalies.length} style={{ backgroundColor: '#B85450' }} />
+        <Badge count={anomalies.length} style={{ backgroundColor: 'var(--color-viz-critical)' }} />
       )}
     </Space>
   );
@@ -80,7 +80,7 @@ export default function AnomalyWallPanel({ width, height }: PanelProps) {
           flexDirection: 'column', 
           alignItems: 'center', 
           justifyContent: 'center',
-          color: 'var(--color-viz-positive, #2F8F69)'
+          color: 'var(--color-viz-positive)'
         }}>
           <CheckCircleFilled style={{ fontSize: 48, marginBottom: 16 }} />
           <Text strong style={{ fontSize: 16 }}>
