@@ -9,6 +9,11 @@ from app.models import User, UserRole
 from app.services import approval_reminder, sla_escalation
 
 
+def _as_int(value: object) -> int:
+    assert isinstance(value, int)
+    return value
+
+
 @pytest.mark.asyncio
 async def test_approval_reminder_disabled(db_session, monkeypatch):
     async def disabled_get(self, session, key, default=None):
@@ -102,19 +107,38 @@ async def test_sla_escalation_with_pending_instance_mocked_notifications(
     )
     await seeded_db_session.commit()
 
+    resolved_titles: list[str] = []
+    resolved_bodies: list[str] = []
+
+    def _resolve_text(value) -> str:
+        resolved = value(admin) if callable(value) else value
+        return str(resolved or "")
+
     async def _mock_create(db, *args, **kwargs):
+        resolved_titles.append(_resolve_text(kwargs.get("title")))
+        resolved_bodies.append(_resolve_text(kwargs.get("body")))
         return MagicMock()
 
     async def _mock_bulk_notify(db, *args, **kwargs):
+        resolved_titles.append(_resolve_text(kwargs.get("title")))
+        resolved_bodies.append(_resolve_text(kwargs.get("body")))
         return [MagicMock(), MagicMock()]
 
     monkeypatch.setattr(sla_escalation, "create_notification", _mock_create)
     monkeypatch.setattr(sla_escalation, "bulk_notify_role", _mock_bulk_notify)
 
     result = await sla_escalation.check_overdue_approvals(seeded_db_session)
-    assert result["scanned"] >= 1
-    assert result["escalated"] >= 1
-    assert result["notifications"] >= 1
+    assert _as_int(result["scanned"]) >= 1
+    assert _as_int(result["escalated"]) >= 1
+    assert _as_int(result["notifications"]) >= 1
+    target_bodies = [body for body in resolved_bodies if "SLA Test PR" in body]
+    assert target_bodies
+    for body in target_bodies:
+        assert "{" not in body
+        assert "}" not in body
+        assert "SLA Test PR" in body
+        assert "24" in body
+        assert "manager" in body
 
 
 @pytest.mark.asyncio
@@ -160,6 +184,6 @@ async def test_approval_reminder_with_pending_instance(seeded_db_session, monkey
     monkeypatch.setattr(approval_reminder, "create_notification", _mock_create)
 
     result = await approval_reminder.send_reminders(seeded_db_session)
-    assert result["scanned"] >= 1
-    assert result["reminded"] >= 1
-    assert result["notifications"] >= 1
+    assert _as_int(result["scanned"]) >= 1
+    assert _as_int(result["reminded"]) >= 1
+    assert _as_int(result["notifications"]) >= 1

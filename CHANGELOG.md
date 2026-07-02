@@ -7,6 +7,31 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [v1.49.1] — 2026-07-02
+
+### 修复（飞书审批超时通知正文占位符未替换）
+
+- **SLA escalation 飞书卡片正文出现 `{title}` / `{biz_number}` / `{hours}` / `{stage}` 原始占位符**：审批超时通知的卡片标题能正确显示真实 PR 标题，但正文显示模板原文，例如 `采购申请「{title}」(# {biz_number}) 已超时 {hours} 小时，审批阶段：{stage}`
+- **根因**：`backend/app/services/sla_escalation.py` 中三类通知正文 lambda（submitter / procurement_mgr / admin）没有给 i18n 模板传完整变量：
+  - submitter body 只传 `stage`，漏 `title` / `hours`
+  - manager body 只传 `biz_number` / `stage`，漏 `title` / `hours`
+  - admin body 只传 `biz_number` / `stage`，漏 `title` / `hours`
+- **触发机制**：`app.i18n.t()` 用 Python `str.format(**kwargs)` 替换模板。任一占位符缺少 kwarg 会抛 `KeyError`；当前 `t()` 为兼容历史行为会返回原始模板字符串，因此所有占位符都保持未替换。
+- **修复**：三个 body lambda 全部补齐 `title=_instance.title` 和 `hours=_sla_hours`；submitter body 同时补捕获 `_instance` / `_sla_hours`。
+
+### 测试
+
+- 增强 `backend/tests/unit/test_scheduled_tasks.py::test_sla_escalation_with_pending_instance_mocked_notifications`：mock 通知发送但实际执行 title/body lambda，断言 SLA Test PR 的通知正文：
+  - 不包含 `{` / `}` 原始占位符
+  - 包含真实标题 `SLA Test PR`
+  - 包含 SLA 小时数 `24`
+  - 包含审批阶段 `manager`
+- 验证：`backend/.venv/bin/pytest tests/unit/test_scheduled_tasks.py -q` → **8 passed**
+- 验证：`backend/.venv/bin/ruff check app tests/unit/test_scheduled_tasks.py` → **All checks passed**
+- LSP：`sla_escalation.py` 与 `test_scheduled_tasks.py` 0 errors
+
+---
+
 ## [v1.49.0] — 2026-06-29
 
 ### 修复（Dark Mode 全站可读性）
@@ -3552,4 +3577,3 @@ Mica has reached production-grade readiness. This RC consolidates all v0.9.x har
 - i18n: zh-CN / en-US coverage across UI and backend messages
 - Column visibility customization with localStorage persistence
 - SKU price records auto-recorded from PR supplier quotes and PO actual prices
-

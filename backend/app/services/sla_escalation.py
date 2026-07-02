@@ -15,6 +15,7 @@ from app.i18n import t
 from app.models import (
     ApprovalInstance,
     NotificationCategory,
+    User,
     UserRole,
 )
 from app.services.notifications import bulk_notify_role, create_notification
@@ -26,11 +27,11 @@ TASK_STATUS_PENDING = "pending"
 INSTANCE_STATUS_PENDING = "pending"
 
 
-def _locale(user):
+def _locale(user: User | None) -> str:
     return user.preferred_locale if user and user.preferred_locale else "zh-CN"
 
 
-async def check_overdue_approvals(db: AsyncSession) -> dict:
+async def check_overdue_approvals(db: AsyncSession) -> dict[str, object]:
     """Find approval instances that exceeded SLA and send escalation notifications.
 
     Reads approval.sla_hours and approval.sla_alert_enabled from system_params.
@@ -79,10 +80,14 @@ async def check_overdue_approvals(db: AsyncSession) -> dict:
                     title=_instance.title,
                     hours=_sla_hours,
                 ),
-                body=lambda user, _stage_names=stage_names: t(
-                    "notification.sla.escalated_submitter_body",
-                    _locale(user),
-                    stage=",".join(_stage_names),
+                body=lambda user, _instance=instance, _sla_hours=sla_hours, _stage_names=stage_names: (
+                    t(
+                        "notification.sla.escalated_submitter_body",
+                        _locale(user),
+                        title=_instance.title,
+                        hours=_sla_hours,
+                        stage=",".join(_stage_names),
+                    )
                 ),
                 link_url="/approvals",
                 biz_type="approval_escalation_submitter",
@@ -116,11 +121,15 @@ async def check_overdue_approvals(db: AsyncSession) -> dict:
                     title=_instance.title,
                     hours=_sla_hours,
                 ),
-                body=lambda user, _instance=instance, _stage_names=stage_names: t(
-                    "notification.sla.escalated_manager_body",
-                    _locale(user),
-                    biz_number=_instance.biz_number or "",
-                    stage=",".join(_stage_names),
+                body=lambda user, _instance=instance, _sla_hours=sla_hours, _stage_names=stage_names: (
+                    t(
+                        "notification.sla.escalated_manager_body",
+                        _locale(user),
+                        title=_instance.title,
+                        hours=_sla_hours,
+                        biz_number=_instance.biz_number or "",
+                        stage=",".join(_stage_names),
+                    )
                 ),
                 link_url="/approvals",
                 biz_type="approval_escalation",
@@ -153,11 +162,15 @@ async def check_overdue_approvals(db: AsyncSession) -> dict:
                     title=_instance.title,
                     hours=_sla_hours,
                 ),
-                body=lambda user, _instance=instance, _stage_names=stage_names: t(
-                    "notification.sla.escalated_admin_body",
-                    _locale(user),
-                    biz_number=_instance.biz_number or "",
-                    stage=",".join(_stage_names),
+                body=lambda user, _instance=instance, _sla_hours=sla_hours, _stage_names=stage_names: (
+                    t(
+                        "notification.sla.escalated_admin_body",
+                        _locale(user),
+                        title=_instance.title,
+                        hours=_sla_hours,
+                        biz_number=_instance.biz_number or "",
+                        stage=",".join(_stage_names),
+                    )
                 ),
                 link_url="/approvals",
                 biz_type="approval_escalation",
