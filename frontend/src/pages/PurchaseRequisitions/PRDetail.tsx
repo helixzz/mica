@@ -255,6 +255,12 @@ export function PRDetailPage() {
               <Descriptions.Item label={t('field.required_date')}>
                 {pr.required_date || '-'}
               </Descriptions.Item>
+              <Descriptions.Item label={t('field.expected_delivery_date')}>
+                {pr.expected_delivery_date ? <span className="mono-num">{pr.expected_delivery_date}</span> : '-'}
+              </Descriptions.Item>
+              <Descriptions.Item label={t('field.delivery_address')} span={2}>
+                {pr.delivery_address || '-'}
+              </Descriptions.Item>
               <Descriptions.Item label={t('field.created_at')}>
                 {new Date(pr.created_at).toLocaleString()}
               </Descriptions.Item>

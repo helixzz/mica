@@ -424,6 +424,8 @@ class PurchaseRequisition(Base, TimestampMixin):
         Numeric(18, 4), default=Decimal("0"), nullable=False
     )
     required_date: Mapped[date | None] = mapped_column(Date)
+    delivery_address: Mapped[str | None] = mapped_column(Text)
+    expected_delivery_date: Mapped[date | None] = mapped_column(Date)
     submitted_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
     decided_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
     decided_by_id: Mapped[UUID | None] = mapped_column(PGUUID(as_uuid=True), ForeignKey("users.id"))
@@ -532,6 +534,8 @@ class PurchaseOrder(Base, TimestampMixin):
     source_type: Mapped[str] = mapped_column(String(32), default="manual", nullable=False)
     source_ref: Mapped[str | None] = mapped_column(String(128))
     pr_title: Mapped[str | None] = mapped_column(String(255), nullable=True)
+    delivery_address: Mapped[str | None] = mapped_column(Text)
+    expected_delivery_date: Mapped[date | None] = mapped_column(Date)
     created_by_id: Mapped[UUID] = mapped_column(
         PGUUID(as_uuid=True), ForeignKey("users.id"), nullable=False
     )

@@ -6,6 +6,7 @@ import { useNavigate } from 'react-router-dom'
 
 import { api, type PaymentRecord } from '@/api'
 import { extractError } from '@/api/client'
+import { useAuth } from '@/auth/useAuth'
 import { fmtAmount, fmtAmountNode } from '@/utils/format'
 import { MonoId } from '@/components/ui/Mono'
 
@@ -20,6 +21,8 @@ interface PaymentsTabProps {
 export function PaymentsTab({ payments, currency, loadAll, onRecordPayment, onEditPayment }: PaymentsTabProps) {
   const { t } = useTranslation()
   const navigate = useNavigate()
+  const { user } = useAuth()
+  const canDeleteConfirmed = ['admin', 'finance_auditor'].includes(user?.role ?? '')
 
   return (
     <>
@@ -91,14 +94,17 @@ export function PaymentsTab({ payments, currency, loadAll, onRecordPayment, onEd
                 >
                   {t('button.edit')}
                 </Button>
-                {r.status !== 'confirmed' && (
+                {(r.status !== 'confirmed' || canDeleteConfirmed) && (
                   <Button
                     size="small"
                     danger
                     onClick={() => {
                       Modal.confirm({
                         title: t('po.payment_confirm_delete_title'),
-                        content: t('po.payment_confirm_delete_body'),
+                        content:
+                          r.status === 'confirmed'
+                            ? t('po.payment_confirm_delete_confirmed_body')
+                            : t('po.payment_confirm_delete_body'),
                         okText: t('button.delete'),
                         okType: 'danger',
                         cancelText: t('button.cancel'),

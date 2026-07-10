@@ -30,6 +30,7 @@ async def _create_confirmed_po(db, username: str = "alice", *, title: str = "Del
     supplier = await _get_supplier(db)
     item = await _get_item(db)
     payload = PRCreateIn(
+        expected_delivery_date="2026-12-31",
         title=title,
         business_reason="Delivery plan testing",
         currency="CNY",

@@ -33,6 +33,7 @@ async def test_pr_with_free_text_item_no_sku(seeded_client):
         "/api/v1/purchase-requisitions",
         json={
             "title": "Free-text PR",
+            "expected_delivery_date": "2026-12-31",
             "business_reason": "Testing free-text items",
             "currency": "CNY",
             "items": [
@@ -64,6 +65,7 @@ async def test_multi_supplier_pr_preview_and_convert(seeded_client):
         "/api/v1/purchase-requisitions",
         json={
             "title": "Multi-supplier test PR",
+            "expected_delivery_date": "2026-12-31",
             "business_reason": "Integration test",
             "currency": "CNY",
             "items": [
@@ -223,6 +225,7 @@ async def test_pr_supplier_quote_candidates_and_save(seeded_client):
         "/api/v1/purchase-requisitions",
         json={
             "title": "Quote test PR",
+            "expected_delivery_date": "2026-12-31",
             "business_reason": "Testing quotes",
             "currency": "CNY",
             "items": [

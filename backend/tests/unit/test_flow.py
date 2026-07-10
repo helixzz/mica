@@ -55,6 +55,7 @@ async def _create_confirmed_po(
     user = await _get_user(db, username)
     supplier = await _get_supplier(db)
     payload = PRCreateIn(
+        expected_delivery_date="2026-12-31",
         title=title,
         business_reason="Flow testing",
         currency="CNY",
@@ -1034,6 +1035,37 @@ async def test_delete_payment_removes_pending_records(seeded_db_session):
         await db.execute(select(PaymentRecord).where(PaymentRecord.id == payment.id))
     ).scalar_one_or_none()
     assert remaining is None
+
+
+async def test_delete_payment_admin_can_remove_confirmed_and_deducts_amount_paid(
+    seeded_db_session,
+):
+    db = seeded_db_session
+    user, _supplier, _pr, po = await _create_confirmed_po(db)
+    admin = await _get_user(db, "admin")
+    contract = await flow_svc.create_contract(
+        db, user, po.id, title="Dup pay test", total_amount=Decimal("1000")
+    )
+    payment = await flow_svc.create_payment(
+        db,
+        user,
+        po.id,
+        amount=Decimal("300"),
+        contract_id=contract.id,
+        payment_date=date(2026, 4, 22),
+    )
+    po_before = await purchase_svc.get_po(db, po.id)
+    paid_before = Decimal(str(po_before.amount_paid))
+    assert paid_before >= Decimal("300")
+
+    await flow_svc.delete_payment(db, admin, payment.id)
+
+    remaining = (
+        await db.execute(select(PaymentRecord).where(PaymentRecord.id == payment.id))
+    ).scalar_one_or_none()
+    assert remaining is None
+    po_after = await purchase_svc.get_po(db, po.id)
+    assert Decimal(str(po_after.amount_paid)) == paid_before - Decimal("300")
 
 
 async def test_update_payment_can_retroactively_set_contract(seeded_db_session):

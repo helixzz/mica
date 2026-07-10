@@ -86,6 +86,7 @@ def _pr_payload(
     items: list[PRItemIn] | None = None,
 ) -> PRCreateIn:
     return PRCreateIn(
+        expected_delivery_date="2026-12-31",
         title=title,
         business_reason=business_reason,
         currency=currency,
@@ -318,7 +319,13 @@ async def test_submit_pr_rejects_pr_without_items(seeded_db_session):
     pr = await purchase_svc.create_pr(
         db,
         actor,
-        PRCreateIn(title="Empty PR", business_reason="Testing", currency="CNY", items=[]),
+        PRCreateIn(
+            expected_delivery_date="2026-12-31",
+            title="Empty PR",
+            business_reason="Testing",
+            currency="CNY",
+            items=[],
+        ),
     )
 
     with pytest.raises(HTTPException) as exc:
@@ -428,6 +435,74 @@ async def test_convert_pr_to_po_creates_order_from_approved_pr(seeded_db_session
     assert refreshed_pr.status == PRStatus.CONVERTED.value
 
 
+async def test_create_pr_stores_delivery_fields(seeded_db_session):
+    db = seeded_db_session
+    actor = await _get_user(db, "alice")
+    supplier = await _get_supplier(db)
+
+    payload = PRCreateIn(
+        title="Delivery fields PR",
+        currency="CNY",
+        expected_delivery_date=date(2026, 9, 30),
+        delivery_address="上海市浦东新区张江高科技园区 88 号 5 层机房",
+        items=[_pr_item(1, "Widget", "1", "100", supplier_id=supplier.id)],
+    )
+    pr = await purchase_svc.create_pr(db, actor, payload)
+
+    assert pr.expected_delivery_date == date(2026, 9, 30)
+    assert pr.delivery_address == "上海市浦东新区张江高科技园区 88 号 5 层机房"
+
+
+async def test_create_pr_requires_expected_delivery_date():
+    import pydantic
+    import pytest
+
+    with pytest.raises(pydantic.ValidationError):
+        PRCreateIn(title="Missing date PR", currency="CNY", items=[])
+
+
+async def test_update_pr_updates_delivery_fields(seeded_db_session):
+    db = seeded_db_session
+    actor = await _get_user(db, "alice")
+    supplier = await _get_supplier(db)
+    pr = await _create_pr(db, actor, supplier.id)
+
+    updated = await purchase_svc.update_pr(
+        db,
+        actor,
+        pr.id,
+        PRUpdateIn(
+            delivery_address="北京市海淀区中关村大街 1 号",
+            expected_delivery_date=date(2027, 1, 15),
+        ),
+    )
+
+    assert updated.delivery_address == "北京市海淀区中关村大街 1 号"
+    assert updated.expected_delivery_date == date(2027, 1, 15)
+
+
+async def test_convert_pr_to_po_propagates_delivery_fields(seeded_db_session):
+    db = seeded_db_session
+    actor = await _get_user(db, "alice")
+    supplier = await _get_supplier(db)
+
+    payload = PRCreateIn(
+        title="Propagation PR",
+        currency="CNY",
+        expected_delivery_date=date(2026, 10, 1),
+        delivery_address="广州市天河区体育西路 191 号",
+        items=[_pr_item(1, "Widget", "2", "50", supplier_id=supplier.id)],
+    )
+    pr = await purchase_svc.create_pr(db, actor, payload)
+    await _mark_pr_approved(db, pr)
+
+    pos = await purchase_svc.convert_pr_to_po(db, actor, pr.id)
+
+    assert len(pos) == 1
+    assert pos[0].delivery_address == "广州市天河区体育西路 191 号"
+    assert pos[0].expected_delivery_date == date(2026, 10, 1)
+
+
 async def test_get_pr_downstream_returns_generated_po_and_primary_contract(seeded_db_session):
     from app.services import flow as flow_svc
 
@@ -473,6 +548,7 @@ async def test_convert_pr_to_po_splits_by_supplier_atomically(seeded_db_session)
         db,
         actor,
         PRCreateIn(
+            expected_delivery_date="2026-12-31",
             title="Mixed Supplier PR",
             business_reason="Testing multi-supplier split",
             currency="CNY",
@@ -511,6 +587,7 @@ async def test_convert_pr_to_po_three_suppliers_split(seeded_db_session):
         db,
         actor,
         PRCreateIn(
+            expected_delivery_date="2026-12-31",
             title="Three-way",
             business_reason="Testing",
             currency="CNY",
@@ -538,6 +615,7 @@ async def test_convert_pr_to_po_rejects_items_missing_supplier(seeded_db_session
         db,
         actor,
         PRCreateIn(
+            expected_delivery_date="2026-12-31",
             title="Incomplete supplier PR",
             business_reason="Testing",
             currency="CNY",
@@ -565,6 +643,7 @@ async def test_preview_pr_conversion_returns_supplier_groups(seeded_db_session):
         db,
         actor,
         PRCreateIn(
+            expected_delivery_date="2026-12-31",
             title="Preview test",
             business_reason="Testing",
             currency="CNY",
@@ -611,6 +690,7 @@ async def test_convert_pr_to_po_auto_fills_sku_price_records(seeded_db_session):
     supplier = await _get_supplier(db)
     item = await _get_item(db)
     payload = PRCreateIn(
+        expected_delivery_date="2026-12-31",
         title="SKU Auto-fill Test",
         business_reason="Testing",
         currency="CNY",
@@ -724,6 +804,7 @@ async def _create_pr_with_one_eligible_item(seeded_db_session):
         db,
         actor,
         PRCreateIn(
+            expected_delivery_date="2026-12-31",
             title="Quote candidate test",
             business_reason="Testing",
             currency="CNY",
@@ -765,6 +846,7 @@ async def test_list_pr_quote_candidates_skips_lines_without_item_id(seeded_db_se
         db,
         actor,
         PRCreateIn(
+            expected_delivery_date="2026-12-31",
             title="No item id",
             business_reason="Testing",
             currency="CNY",
@@ -853,6 +935,7 @@ async def test_save_pr_supplier_quotes_respects_line_filter(seeded_db_session):
         db,
         actor,
         PRCreateIn(
+            expected_delivery_date="2026-12-31",
             title="Two-line filter test",
             business_reason="Testing",
             currency="CNY",
@@ -1275,6 +1358,7 @@ async def test_delete_po_partial_resets_to_partially_converted(seeded_db_session
         db,
         actor,
         PRCreateIn(
+            expected_delivery_date="2026-12-31",
             title="Two-supplier PR",
             business_reason="testing partial deletion",
             currency="CNY",
@@ -1355,12 +1439,16 @@ async def test_delete_po_not_found(seeded_db_session):
 
 async def _count_links_for_pr(db, pr_id) -> list[PRFulfillmentLink]:
     rows = (
-        await db.execute(
-            select(PRFulfillmentLink)
-            .join(PRFulfillmentLink.pr_item)
-            .where(PRFulfillmentLink.pr_item.has(pr_id=pr_id))
+        (
+            await db.execute(
+                select(PRFulfillmentLink)
+                .join(PRFulfillmentLink.pr_item)
+                .where(PRFulfillmentLink.pr_item.has(pr_id=pr_id))
+            )
         )
-    ).scalars().all()
+        .scalars()
+        .all()
+    )
     return list(rows)
 
 
@@ -1388,6 +1476,7 @@ async def test_convert_pr_to_po_partial_creates_only_selected_items(seeded_db_se
         db,
         actor,
         PRCreateIn(
+            expected_delivery_date="2026-12-31",
             title="Partial PR",
             business_reason="testing partial conversion",
             currency="CNY",
@@ -1422,6 +1511,7 @@ async def test_convert_pr_to_po_partial_then_full_marks_converted(seeded_db_sess
         db,
         actor,
         PRCreateIn(
+            expected_delivery_date="2026-12-31",
             title="Two-step PR",
             business_reason="partial then full",
             currency="CNY",
@@ -1454,6 +1544,7 @@ async def test_convert_pr_to_po_partial_rejects_already_converted_item(seeded_db
         db,
         actor,
         PRCreateIn(
+            expected_delivery_date="2026-12-31",
             title="Repeat PR",
             business_reason="reject duplicate",
             currency="CNY",
@@ -1595,6 +1686,7 @@ async def test_create_fulfillment_link_enforces_soft_qty_limit(seeded_db_session
         db,
         actor,
         PRCreateIn(
+            expected_delivery_date="2026-12-31",
             title="Soft limit PR",
             business_reason="testing soft limit",
             currency="CNY",
@@ -1735,6 +1827,7 @@ async def test_pr_item_split_across_two_po_items(seeded_db_session):
         db,
         actor,
         PRCreateIn(
+            expected_delivery_date="2026-12-31",
             title="Split PR",
             business_reason="testing split",
             currency="CNY",
@@ -1752,9 +1845,7 @@ async def test_pr_item_split_across_two_po_items(seeded_db_session):
         unit_price=Decimal("800"),
     )
 
-    breakdown_before = await purchase_svc.get_pr_item_fulfillment_breakdown(
-        db, pr.items[0].id
-    )
+    breakdown_before = await purchase_svc.get_pr_item_fulfillment_breakdown(db, pr.items[0].id)
     assert breakdown_before["equivalent"] == Decimal("10")
 
     await purchase_svc.create_fulfillment_link(
@@ -1766,9 +1857,7 @@ async def test_pr_item_split_across_two_po_items(seeded_db_session):
         qty_contribution=Decimal("3"),
     )
 
-    breakdown_after = await purchase_svc.get_pr_item_fulfillment_breakdown(
-        db, pr.items[0].id
-    )
+    breakdown_after = await purchase_svc.get_pr_item_fulfillment_breakdown(db, pr.items[0].id)
     assert breakdown_after["equivalent"] == Decimal("10")
     assert breakdown_after["downgraded"] == Decimal("3")
 
@@ -1805,6 +1894,7 @@ async def test_convert_pr_to_po_with_specs_partial_qty_and_type(seeded_db_sessio
         db,
         actor,
         PRCreateIn(
+            expected_delivery_date="2026-12-31",
             title="Spec convert test",
             business_reason="testing qty split + type",
             currency="CNY",
@@ -1844,6 +1934,7 @@ async def test_convert_pr_to_po_with_specs_then_downgrade_remainder(seeded_db_se
         db,
         actor,
         PRCreateIn(
+            expected_delivery_date="2026-12-31",
             title="Two-pass convert",
             business_reason="32 equivalent + 32 downgraded",
             currency="CNY",
@@ -1896,6 +1987,7 @@ async def test_convert_pr_to_po_with_specs_rejects_overflow(seeded_db_session):
         db,
         actor,
         PRCreateIn(
+            expected_delivery_date="2026-12-31",
             title="Overflow test",
             business_reason="reject 1.5x soft limit",
             currency="CNY",
@@ -1961,9 +2053,7 @@ async def test_update_po_item_recomputes_amount_and_po_total(seeded_db_session):
     original_po_total = Decimal(str(po.total_amount))
 
     new_unit_price = Decimal("500")
-    updated = await purchase_svc.update_po_item(
-        db, actor, po_item.id, unit_price=new_unit_price
-    )
+    updated = await purchase_svc.update_po_item(db, actor, po_item.id, unit_price=new_unit_price)
     assert updated.unit_price == new_unit_price
     expected_new_amount = original_qty * new_unit_price
     assert Decimal(str(updated.amount)) == expected_new_amount
@@ -1981,6 +2071,7 @@ async def test_update_po_item_syncs_link_qty(seeded_db_session):
         db,
         actor,
         PRCreateIn(
+            expected_delivery_date="2026-12-31",
             title="Sync link qty",
             currency="CNY",
             items=[_pr_item(1, "ItemA", "10", "100", supplier_id=supplier.id)],
@@ -1993,9 +2084,7 @@ async def test_update_po_item_syncs_link_qty(seeded_db_session):
 
     await purchase_svc.update_po_item(db, actor, po_item.id, qty=Decimal("8"))
 
-    breakdown = await purchase_svc.get_pr_item_fulfillment_breakdown(
-        db, pr.items[0].id
-    )
+    breakdown = await purchase_svc.get_pr_item_fulfillment_breakdown(db, pr.items[0].id)
     assert breakdown["equivalent"] == Decimal("8")
 
 
@@ -2029,6 +2118,7 @@ async def test_delete_po_item_recomputes_po_total(seeded_db_session):
         db,
         actor,
         PRCreateIn(
+            expected_delivery_date="2026-12-31",
             title="Delete one line",
             currency="CNY",
             items=[
@@ -2100,6 +2190,7 @@ async def test_convert_with_specs_uses_custom_unit_price(seeded_db_session):
         db,
         actor,
         PRCreateIn(
+            expected_delivery_date="2026-12-31",
             title="Downgrade with custom price",
             currency="CNY",
             items=[_pr_item(1, "Server X", "10", "1000", supplier_id=supplier.id)],
@@ -2137,6 +2228,7 @@ async def test_convert_with_specs_supplementary_separate_supplier(seeded_db_sess
         db,
         actor,
         PRCreateIn(
+            expected_delivery_date="2026-12-31",
             title="Server with GPU bundle",
             currency="CNY",
             items=[_pr_item(1, "Server X full-config", "64", "2681000", supplier_id=s_main.id)],
@@ -2190,6 +2282,7 @@ async def test_convert_with_specs_supplementary_skips_soft_limit(seeded_db_sessi
         db,
         actor,
         PRCreateIn(
+            expected_delivery_date="2026-12-31",
             title="Soft limit bypass for supplementary",
             currency="CNY",
             items=[_pr_item(1, "Server", "10", "1000", supplier_id=supplier.id)],
@@ -2227,6 +2320,7 @@ async def test_convert_with_specs_main_plus_supplementary_groups_correctly(seede
         db,
         actor,
         PRCreateIn(
+            expected_delivery_date="2026-12-31",
             title="Mix grouping",
             currency="CNY",
             items=[_pr_item(1, "Item", "10", "100", supplier_id=s_main.id)],
@@ -2281,6 +2375,7 @@ async def test_add_supplementary_for_pr_item_opens_new_po(seeded_db_session):
         db,
         actor,
         PRCreateIn(
+            expected_delivery_date="2026-12-31",
             title="Add supp later",
             currency="CNY",
             items=[_pr_item(1, "Server X", "64", "2681000", supplier_id=s_main.id)],
@@ -2322,13 +2417,17 @@ async def test_add_supplementary_for_pr_item_opens_new_po(seeded_db_session):
     from app.models import PurchaseOrder
 
     new_po_rows = (
-        await db.execute(
-            select(PurchaseOrder).where(
-                PurchaseOrder.pr_id == pr_id,
-                PurchaseOrder.supplier_id == s_gpu_id,
+        (
+            await db.execute(
+                select(PurchaseOrder).where(
+                    PurchaseOrder.pr_id == pr_id,
+                    PurchaseOrder.supplier_id == s_gpu_id,
+                )
             )
         )
-    ).scalars().all()
+        .scalars()
+        .all()
+    )
     assert len(new_po_rows) == 1
     assert new_po_rows[0].id != main_po_id
 
@@ -2341,6 +2440,7 @@ async def test_add_supplementary_for_pr_item_appends_to_existing_po(seeded_db_se
         db,
         actor,
         PRCreateIn(
+            expected_delivery_date="2026-12-31",
             title="Append supp same supplier",
             currency="CNY",
             items=[_pr_item(1, "Item", "10", "100", supplier_id=s_main.id)],
@@ -2379,6 +2479,7 @@ async def test_add_supplementary_for_pr_item_rejects_supplier_mismatch(seeded_db
         db,
         actor,
         PRCreateIn(
+            expected_delivery_date="2026-12-31",
             title="Supplier mismatch",
             currency="CNY",
             items=[_pr_item(1, "Item", "1", "100", supplier_id=s_main.id)],
@@ -2404,7 +2505,7 @@ async def test_add_supplementary_for_pr_item_rejects_supplier_mismatch(seeded_db
 
 async def test_resource_activity_logs_visible_to_owner_requester(seeded_db_session):
     """Activity log endpoint should return business events for resource owners."""
-    from app.api.v1.activity_logs import _check_resource_access, _ALLOWED_RESOURCE_TYPES
+    from app.api.v1.activity_logs import _ALLOWED_RESOURCE_TYPES, _check_resource_access
     from app.models import AuditLog
 
     db = seeded_db_session

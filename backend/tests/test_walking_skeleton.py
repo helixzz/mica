@@ -28,6 +28,7 @@ async def test_walking_skeleton_end_to_end(seeded_client):
         headers=alice_headers,
         json={
             "title": "新员工笔记本采购",
+            "expected_delivery_date": "2026-12-31",
             "business_reason": "Q2 入职",
             "currency": "CNY",
             "items": [

@@ -7,6 +7,42 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [v1.50.0] — 2026-07-02
+
+### 新增（PR 收货地址 + 期望到货时间）
+
+- **PR 新增「期望到货时间」必填字段（`expected_delivery_date`）**：创建采购申请时必须填写期望到货日期。`PRCreateIn` schema 层强制必填（DB 列 nullable 以兼容存量数据，符合"效率优先、不卡流程"原则）
+- **PR 新增「收货地址」可选字段（`delivery_address`）**：Text 类型，支持多行中文地址
+- **PR→PO 自动传播**：从 PR 生成采购订单时（一键全转 / 选行整转 / 自定义拆分 / 事后补充派生项，共 3 条 PO 创建路径），两个字段自动带入新 PO，供应商视角可直接看到交付要求
+- **前端表单**：PRNew / PREdit 新增一行「期望到货时间（必填 DatePicker）+ 收货地址（选填 Input）」；复制 PR 时同步带出两个字段
+- **详情展示**：PR 详情页 Descriptions 新增两行；PO 详情 POInfoCard 有值时展示（`mono-num` 日期渲染，符合 VI §4.2）
+- **API 类型补齐**：`createPR` payload TypeScript 类型顺带补上此前缺失的 `company_id` / `cost_center_id` / `expense_type_id` / `procurement_category_id`（历史遗漏，实际一直在传）
+
+### 修复（付款记录删除按钮不可见 / 不可用）
+
+用户报告 PO-2026-0010 存在重复付款（P01/P02）但界面无删除入口。根因有二：
+
+- **i18n key 命名空间 bug**：`PaymentsTab` 删除确认框引用 `po.payment_confirm_delete_title`，但该 key 实际是 nested 于 `po` 对象内 — key 本身没错；真正的问题是删除按钮仅在 `status !== 'confirmed'` 时渲染，而重复付款均已确认，按钮被整体隐藏
+- **已确认付款无法删除**：`delete_payment` 服务对 confirmed 一律 409。重复登记后无任何自助补救途径（无撤销端点）
+
+修复方案：
+
+- **后端**：`delete_payment` 允许 `admin` / `finance_auditor` 删除已确认付款；删除时自动从 `po.amount_paid` 回减对应金额（下限 0），审计日志记录 `was_confirmed` 标记；其他角色对已确认付款仍 409
+- **前端**：删除按钮对 admin / finance_auditor 始终显示；删除已确认付款时使用专用确认文案（明确提示会回减订单已付金额）；pending 付款行为不变
+- **i18n**：新增 `po.payment_confirm_delete_confirmed_body` zh/en
+
+### 数据库
+
+- **迁移 0055**：`purchase_requisitions` + `purchase_orders` 各加 `delivery_address` (Text, nullable) + `expected_delivery_date` (Date, nullable)。存量行零迁移成本
+
+### 测试
+
+- 后端 +5：PR 存储 delivery 字段 / schema 必填校验 / update 更新字段 / 转 PO 传播 / admin 删除已确认付款回减 amount_paid
+- 存量 PRCreateIn 测试工厂与集成测试统一补 `expected_delivery_date`
+- 后端 660 passed；前端 type-check 0 错误、build 通过、65 tests passed；i18n zh/en parity 无缺口
+
+---
+
 ## [v1.49.1] — 2026-07-02
 
 ### 修复（飞书审批超时通知正文占位符未替换）

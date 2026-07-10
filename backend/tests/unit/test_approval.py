@@ -777,11 +777,9 @@ async def test_rule_filter_falls_back_to_unrestricted_rule_when_specific_misses(
         amount_max=None,
         department_ids=[
             str(
-                (
-                    await seeded_db_session.execute(
-                        select(Department).where(Department.code == "IT")
-                    )
-                ).scalar_one().id
+                (await seeded_db_session.execute(select(Department).where(Department.code == "IT")))
+                .scalar_one()
+                .id
             )
         ],
         cost_center_ids=None,

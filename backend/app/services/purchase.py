@@ -147,6 +147,8 @@ async def create_pr(db: AsyncSession, actor: User, payload: PRCreateIn) -> Purch
         procurement_category_id=payload.procurement_category_id,
         currency=payload.currency,
         required_date=payload.required_date,
+        delivery_address=payload.delivery_address,
+        expected_delivery_date=payload.expected_delivery_date,
         preferred_first_approver_id=payload.preferred_first_approver_id,
     )
     db.add(pr)
@@ -287,6 +289,10 @@ async def update_pr(
         pr.currency = payload.currency
     if payload.required_date is not None:
         pr.required_date = payload.required_date
+    if payload.delivery_address is not None:
+        pr.delivery_address = payload.delivery_address
+    if payload.expected_delivery_date is not None:
+        pr.expected_delivery_date = payload.expected_delivery_date
     if payload.preferred_first_approver_id is not None:
         pr.preferred_first_approver_id = payload.preferred_first_approver_id
 
@@ -770,6 +776,8 @@ async def _create_pos_for_specs(
             currency=pr.currency,
             total_amount=subtotal,
             source_type="manual",
+            delivery_address=pr.delivery_address,
+            expected_delivery_date=pr.expected_delivery_date,
             created_by_id=actor.id,
         )
         db.add(po)
@@ -915,6 +923,8 @@ async def _create_pos_for_pr_items(
             currency=pr.currency,
             total_amount=subtotal,
             source_type="manual",
+            delivery_address=pr.delivery_address,
+            expected_delivery_date=pr.expected_delivery_date,
             created_by_id=actor.id,
         )
         db.add(po)
@@ -1477,6 +1487,8 @@ async def add_supplementary_for_pr_item(
             currency=pr.currency,
             total_amount=amount,
             source_type="manual",
+            delivery_address=pr.delivery_address,
+            expected_delivery_date=pr.expected_delivery_date,
             created_by_id=actor.id,
         )
         db.add(target_po)

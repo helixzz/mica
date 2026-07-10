@@ -123,6 +123,8 @@ export interface PurchaseRequisition {
   currency: string
   total_amount: string
   required_date: string | null
+  delivery_address: string | null
+  expected_delivery_date: string | null
   submitted_at: string | null
   decided_at: string | null
   decided_by_id: string | null
@@ -142,6 +144,7 @@ export interface PRListItem {
   requester_id: string
   currency: string
   total_amount: string
+  expected_delivery_date: string | null
   submitted_at: string | null
   created_at: string
 }
@@ -194,6 +197,8 @@ export interface PurchaseOrder {
   amount_invoiced: string
   source_type: string
   source_ref: string | null
+  delivery_address?: string | null
+  expected_delivery_date?: string | null
   created_by_id: string
   created_at: string
   updated_at: string
@@ -1214,8 +1219,14 @@ export const api = {
     title: string
     business_reason?: string
     department_id?: string | null
+    company_id?: string | null
+    cost_center_id?: string | null
+    expense_type_id?: string | null
+    procurement_category_id?: string | null
     currency: string
     required_date?: string | null
+    delivery_address?: string | null
+    expected_delivery_date: string
     requester_id?: string | null
     preferred_first_approver_id?: string | null
     items: PRItem[]

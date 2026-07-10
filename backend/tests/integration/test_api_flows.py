@@ -56,6 +56,7 @@ async def test_pr_convert_single_supplier(seeded_client):
 
     pr_payload = {
         "title": "Integration test PR",
+        "expected_delivery_date": "2026-12-31",
         "business_reason": "Integration test",
         "currency": "CNY",
         "items": [

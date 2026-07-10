@@ -279,6 +279,8 @@ class PRCreateIn(BaseModel):
     procurement_category_id: UUID | None = None
     currency: str = "CNY"
     required_date: date | None = None
+    delivery_address: str | None = None
+    expected_delivery_date: date = Field(...)
     requester_id: UUID | None = None
     preferred_first_approver_id: UUID | None = None
     items: list[PRItemIn] = Field(default_factory=list)
@@ -294,6 +296,8 @@ class PRUpdateIn(BaseModel):
     procurement_category_id: UUID | None = None
     currency: str | None = None
     required_date: date | None = None
+    delivery_address: str | None = None
+    expected_delivery_date: date | None = None
     preferred_first_approver_id: UUID | None = None
     items: list[PRItemIn] | None = None
 
@@ -323,6 +327,8 @@ class PROut(BaseModel):
     currency: str
     total_amount: Decimal
     required_date: date | None
+    delivery_address: str | None = None
+    expected_delivery_date: date | None = None
     submitted_at: datetime | None
     decided_at: datetime | None
     decided_by_id: UUID | None
@@ -409,6 +415,7 @@ class PRListOut(BaseModel):
     requester_id: UUID
     currency: str
     total_amount: Decimal
+    expected_delivery_date: date | None = None
     submitted_at: datetime | None
     created_at: datetime
 
@@ -446,6 +453,8 @@ class POOut(BaseModel):
     amount_invoiced: Decimal
     source_type: str
     source_ref: str | None
+    delivery_address: str | None = None
+    expected_delivery_date: date | None = None
     created_by_id: UUID
     created_at: datetime
     updated_at: datetime

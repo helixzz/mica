@@ -28,6 +28,20 @@ export function POInfoCard({ po }: POInfoCardProps) {
         <Descriptions.Item label={t('field.amount_paid')}>
           {fmtAmount(po.amount_paid, po.currency)}
         </Descriptions.Item>
+        {(po.expected_delivery_date || po.delivery_address) && (
+          <>
+            <Descriptions.Item label={t('field.expected_delivery_date')}>
+              {po.expected_delivery_date ? (
+                <span className="mono-num">{po.expected_delivery_date}</span>
+              ) : (
+                '-'
+              )}
+            </Descriptions.Item>
+            <Descriptions.Item label={t('field.delivery_address')} span={2}>
+              {po.delivery_address || '-'}
+            </Descriptions.Item>
+          </>
+        )}
         <Descriptions.Item label={t('field.created_at')} span={3}>
           {new Date(po.created_at).toLocaleString()}
         </Descriptions.Item>

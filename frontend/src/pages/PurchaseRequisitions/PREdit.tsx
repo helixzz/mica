@@ -80,6 +80,10 @@ export function PREditPage() {
         business_reason: pr.business_reason,
         currency: pr.currency,
         required_date: pr.required_date ? dayjs(pr.required_date) : undefined,
+        delivery_address: pr.delivery_address || '',
+        expected_delivery_date: pr.expected_delivery_date
+          ? dayjs(pr.expected_delivery_date)
+          : undefined,
         requester_id: pr.requester_id,
         company_id: pr.company_id,
         department_id: pr.department_id,
@@ -195,6 +199,8 @@ export function PREditPage() {
         business_reason: values.business_reason,
         currency: values.currency || 'CNY',
         required_date: values.required_date?.format('YYYY-MM-DD') ?? null,
+        delivery_address: values.delivery_address?.trim() || null,
+        expected_delivery_date: values.expected_delivery_date?.format('YYYY-MM-DD') ?? null,
         requester_id: canProxy ? (values.requester_id || null) : null,
         company_id: values.company_id || null,
         department_id: values.department_id || null,
@@ -327,6 +333,22 @@ export function PREditPage() {
             <Col xs={24} sm={12} md={6}>
               <Form.Item label={t('field.required_date')} name="required_date">
                 <DatePicker style={{ width: '100%' }} />
+              </Form.Item>
+            </Col>
+          </Row>
+          <Row gutter={16}>
+            <Col xs={24} sm={12} md={6}>
+              <Form.Item
+                label={t('field.expected_delivery_date')}
+                name="expected_delivery_date"
+                rules={[{ required: true, message: t('common.required') }]}
+              >
+                <DatePicker style={{ width: '100%' }} />
+              </Form.Item>
+            </Col>
+            <Col xs={24} md={18}>
+              <Form.Item label={t('field.delivery_address')} name="delivery_address">
+                <Input placeholder={t('pr.delivery_address_placeholder')} />
               </Form.Item>
             </Col>
           </Row>

@@ -36,6 +36,7 @@ from app.models import (
     ShipmentStatus,
     Supplier,
     User,
+    UserRole,
 )
 from app.services import contracts as contract_svc
 
@@ -1478,7 +1479,12 @@ async def delete_payment(db: AsyncSession, actor: User, payment_id: UUID) -> Non
     ).scalar_one_or_none()
     if record is None:
         raise HTTPException(404, "payment.not_found")
-    if record.status == PaymentStatus.CONFIRMED.value:
+
+    was_confirmed = record.status == PaymentStatus.CONFIRMED.value
+    if was_confirmed and actor.role not in (
+        UserRole.ADMIN.value,
+        UserRole.FINANCE_AUDITOR.value,
+    ):
         raise HTTPException(409, "payment.cannot_delete_confirmed")
 
     if record.schedule_item_id is not None:
@@ -1489,6 +1495,12 @@ async def delete_payment(db: AsyncSession, actor: User, payment_id: UUID) -> Non
             schedule_item.actual_date = None
             schedule_item.status = ScheduleItemStatus.PLANNED.value
 
+    if was_confirmed:
+        po = await _load_po(db, record.po_id)
+        if po:
+            new_paid = (po.amount_paid or Decimal("0")) - record.amount
+            po.amount_paid = new_paid if new_paid > Decimal("0") else Decimal("0")
+
     payment_number = record.payment_number
     await db.delete(record)
     await _audit_write(
@@ -1497,7 +1509,7 @@ async def delete_payment(db: AsyncSession, actor: User, payment_id: UUID) -> Non
         "payment.deleted",
         "payment_record",
         str(payment_id),
-        meta={"payment_number": payment_number},
+        meta={"payment_number": payment_number, "was_confirmed": was_confirmed},
     )
     await db.commit()
 
