@@ -42,6 +42,15 @@ from app.services import contracts as contract_svc
 
 logger = logging.getLogger("mica.flow")
 
+_PAYMENT_WRITE_ROLES = frozenset(
+    {
+        UserRole.ADMIN.value,
+        UserRole.IT_BUYER.value,
+        UserRole.PROCUREMENT_MGR.value,
+        UserRole.FINANCE_AUDITOR.value,
+    }
+)
+
 
 def _as_decimal(v) -> Decimal:
     return v if isinstance(v, Decimal) else Decimal(str(v))
@@ -1481,10 +1490,7 @@ async def delete_payment(db: AsyncSession, actor: User, payment_id: UUID) -> Non
         raise HTTPException(404, "payment.not_found")
 
     was_confirmed = record.status == PaymentStatus.CONFIRMED.value
-    if was_confirmed and actor.role not in (
-        UserRole.ADMIN.value,
-        UserRole.FINANCE_AUDITOR.value,
-    ):
+    if was_confirmed and actor.role not in _PAYMENT_WRITE_ROLES:
         raise HTTPException(409, "payment.cannot_delete_confirmed")
 
     if record.schedule_item_id is not None:
@@ -1495,14 +1501,24 @@ async def delete_payment(db: AsyncSession, actor: User, payment_id: UUID) -> Non
             schedule_item.actual_date = None
             schedule_item.status = ScheduleItemStatus.PLANNED.value
 
-    if was_confirmed:
-        po = await _load_po(db, record.po_id)
-        if po:
-            new_paid = (po.amount_paid or Decimal("0")) - record.amount
-            po.amount_paid = new_paid if new_paid > Decimal("0") else Decimal("0")
-
     payment_number = record.payment_number
+    po_id = record.po_id
     await db.delete(record)
+    await db.flush()
+
+    if was_confirmed:
+        amount_paid = (
+            await db.execute(
+                select(func.coalesce(func.sum(PaymentRecord.amount), 0)).where(
+                    PaymentRecord.po_id == po_id,
+                    PaymentRecord.status == PaymentStatus.CONFIRMED.value,
+                )
+            )
+        ).scalar_one()
+        po = await _load_po(db, po_id)
+        if po:
+            po.amount_paid = Decimal(str(amount_paid))
+
     await _audit_write(
         db,
         actor,

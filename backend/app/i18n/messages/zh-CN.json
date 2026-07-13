@@ -395,7 +395,7 @@
     "contract_po_mismatch": "合同与采购订单不匹配",
     "schedule_parent_mismatch": "付款计划分期与所选合同/订单不匹配",
     "schedule_requires_primary_po": "合同付款计划的付款必须记到该合同的主采购订单下",
-    "cannot_delete_confirmed": "已确认的付款不可删除，请先撤销"
+    "cannot_delete_confirmed": "当前角色无权删除已确认的付款记录"
   },
   "attachment": {
     "not_found": "附件不存在"

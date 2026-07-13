@@ -22,14 +22,18 @@ export function PaymentsTab({ payments, currency, loadAll, onRecordPayment, onEd
   const { t } = useTranslation()
   const navigate = useNavigate()
   const { user } = useAuth()
-  const canDeleteConfirmed = ['admin', 'finance_auditor'].includes(user?.role ?? '')
+  const canWritePayment = ['admin', 'it_buyer', 'procurement_mgr', 'finance_auditor'].includes(
+    user?.role ?? '',
+  )
 
   return (
     <>
       <div style={{ marginBottom: 12, textAlign: 'right' }}>
-        <Button type="primary" icon={<PlusOutlined />} onClick={onRecordPayment}>
-          {t('button.record_payment')}
-        </Button>
+        {canWritePayment && (
+          <Button type="primary" icon={<PlusOutlined />} onClick={onRecordPayment}>
+            {t('button.record_payment')}
+          </Button>
+        )}
       </div>
       <Table
         rowKey="id"
@@ -70,7 +74,7 @@ export function PaymentsTab({ payments, currency, loadAll, onRecordPayment, onEd
             width: 220,
             render: (_: unknown, r: PaymentRecord) => (
               <Space size="small">
-                {r.status === 'pending' && (
+                {canWritePayment && r.status === 'pending' && (
                   <Button
                     size="small"
                     onClick={async () => {
@@ -88,13 +92,12 @@ export function PaymentsTab({ payments, currency, loadAll, onRecordPayment, onEd
                     {t('button.mark_paid')}
                   </Button>
                 )}
-                <Button
-                  size="small"
-                  onClick={() => onEditPayment(r)}
-                >
-                  {t('button.edit')}
-                </Button>
-                {(r.status !== 'confirmed' || canDeleteConfirmed) && (
+                {canWritePayment && (
+                  <Button size="small" onClick={() => onEditPayment(r)}>
+                    {t('button.edit')}
+                  </Button>
+                )}
+                {canWritePayment && (
                   <Button
                     size="small"
                     danger

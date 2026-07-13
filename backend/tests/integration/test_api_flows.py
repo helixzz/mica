@@ -7,10 +7,12 @@ authorization, and Alembic-seeded system parameters.
 Uses pytest-asyncio with seeded_client (uses test_walking_skeleton fixture).
 """
 
+from uuid import uuid4
+
 import pytest
 
 
-async def _login_as(seeded_client, username: str) -> dict:
+async def _login_as(seeded_client, username: str) -> dict[str, str]:
     """Return {Authorization, headers} for the given seed user."""
     r = await seeded_client.post(
         "/api/v1/auth/login/json",
@@ -42,6 +44,29 @@ async def test_dashboard_metrics_includes_invoice_counts(seeded_client):
     assert "invoices_mismatched" in data
     assert isinstance(data["invoices_pending_match"], int)
     assert isinstance(data["invoices_mismatched"], int)
+
+
+@pytest.mark.asyncio
+async def test_confirm_payment_requires_payment_writer_role(seeded_client):
+    auth = await _login_as(seeded_client, "bob")
+    response = await seeded_client.post(
+        f"/api/v1/payments/{uuid4()}/confirm",
+        headers=auth,
+        json={},
+    )
+    assert response.status_code == 403
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize("username", ["admin", "alice", "carol", "dave"])
+async def test_confirm_payment_allows_payment_writer_roles(seeded_client, username):
+    auth = await _login_as(seeded_client, username)
+    response = await seeded_client.post(
+        f"/api/v1/payments/{uuid4()}/confirm",
+        headers=auth,
+        json={},
+    )
+    assert response.status_code == 404
 
 
 @pytest.mark.asyncio

@@ -395,7 +395,7 @@
     "contract_po_mismatch": "Selected contract does not belong to this purchase order",
     "schedule_parent_mismatch": "Schedule item does not belong to the selected contract/PO",
     "schedule_requires_primary_po": "Contract schedule payments must be recorded against the contract's primary PO",
-    "cannot_delete_confirmed": "Confirmed payments cannot be deleted — reverse first"
+    "cannot_delete_confirmed": "Your role cannot delete confirmed payment records"
   },
   "attachment": {
     "not_found": "Attachment not found"

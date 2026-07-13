@@ -35,6 +35,8 @@ from app.services import export_excel, flow
 
 router = APIRouter()
 
+_PAYMENT_WRITE_ROLES = ("admin", "it_buyer", "procurement_mgr", "finance_auditor")
+
 
 def _contract_to_out(c: Contract, linked_pos: list[PurchaseOrder] | None = None) -> ContractOut:
     data = ContractOut.model_validate(c)
@@ -372,7 +374,7 @@ async def create_payment(
     db: Annotated[AsyncSession, Depends(get_db)],
     _role: Annotated[
         None,
-        Depends(require_roles("admin", "it_buyer", "procurement_mgr", "finance_auditor")),
+        Depends(require_roles(*_PAYMENT_WRITE_ROLES)),
     ],
 ):
     p = await flow.create_payment(
@@ -397,9 +399,7 @@ async def update_payment(
     payload: PaymentUpdateIn,
     user: CurrentUser,
     db: Annotated[AsyncSession, Depends(get_db)],
-    _role: Annotated[
-        None, Depends(require_roles("admin", "procurement_mgr", "finance_auditor", "it_buyer"))
-    ],
+    _role: Annotated[None, Depends(require_roles(*_PAYMENT_WRITE_ROLES))],
 ):
     updates = payload.model_dump(exclude_unset=True)
     p = await flow.update_payment(db, user, payment_id, updates)
@@ -411,9 +411,7 @@ async def delete_payment(
     payment_id: UUID,
     user: CurrentUser,
     db: Annotated[AsyncSession, Depends(get_db)],
-    _role: Annotated[
-        None, Depends(require_roles("admin", "procurement_mgr", "finance_auditor", "it_buyer"))
-    ],
+    _role: Annotated[None, Depends(require_roles(*_PAYMENT_WRITE_ROLES))],
 ) -> Response:
     await flow.delete_payment(db, user, payment_id)
     return Response(status_code=status.HTTP_204_NO_CONTENT)
@@ -425,6 +423,7 @@ async def confirm_payment(
     payload: PaymentConfirmIn,
     user: CurrentUser,
     db: Annotated[AsyncSession, Depends(get_db)],
+    _role: Annotated[None, Depends(require_roles(*_PAYMENT_WRITE_ROLES))],
 ):
     p = await flow.confirm_payment(
         db, user, payment_id, payload.payment_date, payload.transaction_ref
@@ -451,7 +450,7 @@ async def list_payments(
                 select(Contract.id, Contract.contract_number).where(Contract.id.in_(contract_ids))
             )
         ).all()
-        contract_map = dict(rows)
+        contract_map = {row[0]: row[1] for row in rows}
     out: list[PaymentListOut] = []
     for p in payments:
         data = PaymentListOut.model_validate(p)

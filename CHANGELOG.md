@@ -7,6 +7,23 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [v1.50.1] — 2026-07-13
+
+### 改进（付款写权限统一）
+
+- **统一付款写角色**：创建、编辑、确认、删除付款统一为 `admin / it_buyer / procurement_mgr / finance_auditor`。原先确认付款端点缺少角色守卫，本版补齐 `_PAYMENT_WRITE_ROLES` 共用常量。
+- **放宽已确认付款删除**：只要具备付款创建权限，即可删除 pending 或 confirmed 付款；`dept_manager / requester` 等非付款写角色仍不可删除已确认付款。
+- **已付金额改为重算而非减法**：删除 confirmed 付款后，按该 PO 剩余的所有 confirmed `PaymentRecord.amount` 重新汇总 `PO.amount_paid`。即使历史金额已因重复登记或人工修复发生漂移，也能一次恢复到真实值。
+- **前端权限对齐**：付款页的登记、确认、编辑、删除按钮统一按同一组付款写角色显示；it_buyer / procurement_mgr 现在可删除 confirmed 付款。
+
+### 测试
+
+- 服务层：非付款写角色删除 confirmed 付款仍 409；it_buyer 删除 confirmed 付款后，`amount_paid` 从故意写入的错误值重算为剩余 confirmed 付款总额。
+- API 层：`bob/dept_manager` 确认付款返回 403；admin / alice(it_buyer) / carol(finance_auditor) / dave(procurement_mgr) 均通过角色守卫并进入业务层。
+- 后端全量：665 passed；前端 type-check/build 通过，65 tests passed。
+
+---
+
 ## [v1.50.0] — 2026-07-02
 
 ### 新增（PR 收货地址 + 期望到货时间）
