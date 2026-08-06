@@ -7,6 +7,22 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [v1.50.2] — 2026-08-06
+
+### 修复（Dark Mode 文本选区对比度）
+
+- **深色模式选中文字时不易辨认**：旧规则使用 `primary-900 #1C130C` 作为选区背景，与暗色画布 `#161514` / 卡片 `#1F1D1B` 几乎融为一体。
+- **新选区配色**：深色模式改为 `primary-400 #B18563` 暖铜背景 + `primary-900 #1C130C` 深棕文字；亮色模式保持不变。
+- **对比度**：选区背景 vs 暗色画布 5.56:1；选中文字 vs 选区背景 5.58:1，均超过 WCAG AA 4.5:1。
+- **视觉验证**：真实浏览器在 375 / 768 / 1280 px 三个视口选中标题文字并截图；CSSOM 确认实际渲染为 `rgb(177,133,99)` / `rgb(28,19,12)`。双重独立 Visual QA 均 PASS。
+
+### 验证
+
+- 前端 type-check 通过、生产构建通过、65 tests passed。
+- Design system compliance：完全复用现有 Otter Brown `primary-400 / primary-900` token，无新增硬编码颜色。
+
+---
+
 ## [v1.50.1] — 2026-07-13
 
 ### 改进（付款写权限统一）
