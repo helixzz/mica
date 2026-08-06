@@ -252,8 +252,8 @@ body {
 }
 
 [data-theme="dark"] ::selection {
-  background-color: var(--color-primary-900);
-  color: var(--color-primary-100);
+  background-color: var(--color-primary-400);
+  color: var(--color-primary-900);
 }
 
 ::-webkit-scrollbar {
