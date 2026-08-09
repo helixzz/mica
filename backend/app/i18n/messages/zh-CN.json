@@ -53,7 +53,9 @@
     "already_fully_converted": "该采购申请的所有物料行均已生成采购订单",
     "proxy_not_allowed": "您没有权限代他人提交采购申请",
     "requester_not_found": "指定的需求方不存在或已停用",
-    "cannot_delete_active": "审批中或已转订单的采购申请不可删除"
+    "cannot_delete_active": "审批中或已转订单的采购申请不可删除",
+    "cannot_cancel_non_approved": "仅已批准且尚未生成采购订单的采购申请可作废",
+    "cannot_cancel_with_pos": "该采购申请已生成采购订单，请先在采购订单层处理后续撤销"
   },
   "po": {
     "not_found": "po不存在",

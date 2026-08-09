@@ -53,7 +53,9 @@
     "already_fully_converted": "All items in this PR are already converted to POs",
     "proxy_not_allowed": "You don't have permission to submit PRs on behalf of others",
     "requester_not_found": "Specified requester not found or inactive",
-    "cannot_delete_active": "Cannot delete a requisition that is under approval or converted to a PO"
+    "cannot_delete_active": "Cannot delete a requisition that is under approval or converted to a PO",
+    "cannot_cancel_non_approved": "Only approved requisitions without purchase orders can be cancelled",
+    "cannot_cancel_with_pos": "This requisition already has a purchase order; handle reversal at the PO level first"
   },
   "po": {
     "not_found": "Po not found",
