@@ -10,6 +10,7 @@ from sqlalchemy.orm import selectinload
 
 from app.models import (
     ApprovalInstance,
+    AuditLog,
     Company,
     CostCenter,
     Department,
@@ -433,6 +434,78 @@ async def test_convert_pr_to_po_creates_order_from_approved_pr(seeded_db_session
     assert po.items[0].item_name == pr.items[0].item_name
     assert po.items[1].amount == pr.items[1].amount
     assert refreshed_pr.status == PRStatus.CONVERTED.value
+
+
+async def test_cancel_approved_pr_allows_requester_owner(seeded_db_session):
+    db = seeded_db_session
+    requester = await _get_user(db, "alice")
+    supplier = await _get_supplier(db)
+    pr = await _create_pr(db, requester, supplier.id)
+    await _mark_pr_approved(db, pr)
+
+    cancelled = await purchase_svc.cancel_pr(db, requester, pr.id, reason="No longer needed")
+
+    assert cancelled.status == PRStatus.CANCELLED.value
+    assert cancelled.decision_comment == "No longer needed"
+    audit = (
+        await db.execute(
+            select(AuditLog).where(
+                AuditLog.event_type == "pr.cancelled",
+                AuditLog.resource_id == str(pr.id),
+            )
+        )
+    ).scalar_one()
+    assert audit.actor_id == requester.id
+    assert audit.comment == "No longer needed"
+
+
+@pytest.mark.parametrize("username", ["admin", "alice", "dave"])
+async def test_cancel_approved_pr_allows_owner_and_management_roles(
+    seeded_db_session,
+    username,
+):
+    db = seeded_db_session
+    requester = await _get_user(db, "alice")
+    actor = await _get_user(db, username)
+    supplier = await _get_supplier(db)
+    pr = await _create_pr(db, requester, supplier.id)
+    await _mark_pr_approved(db, pr)
+
+    cancelled = await purchase_svc.cancel_pr(db, actor, pr.id)
+
+    assert cancelled.status == PRStatus.CANCELLED.value
+
+
+async def test_cancel_approved_pr_blocks_non_owner_non_management_role(seeded_db_session):
+    db = seeded_db_session
+    requester = await _get_user(db, "alice")
+    actor = await _get_user(db, "bob")
+    supplier = await _get_supplier(db)
+    pr = await _create_pr(db, requester, supplier.id)
+    await _mark_pr_approved(db, pr)
+
+    with pytest.raises(HTTPException) as exc:
+        await purchase_svc.cancel_pr(db, actor, pr.id)
+
+    assert exc.value.status_code == 403
+    assert exc.value.detail == "insufficient_role"
+
+
+async def test_cancel_approved_pr_blocks_when_po_exists(seeded_db_session):
+    db = seeded_db_session
+    requester = await _get_user(db, "alice")
+    supplier = await _get_supplier(db)
+    pr = await _create_pr(db, requester, supplier.id)
+    await _mark_pr_approved(db, pr)
+    _ = await purchase_svc.convert_pr_to_po(db, requester, pr.id)
+    pr.status = PRStatus.APPROVED.value
+    await db.commit()
+
+    with pytest.raises(HTTPException) as exc:
+        await purchase_svc.cancel_pr(db, requester, pr.id)
+
+    assert exc.value.status_code == 409
+    assert exc.value.detail == "pr.cannot_cancel_with_pos"
 
 
 async def test_create_pr_stores_delivery_fields(seeded_db_session):

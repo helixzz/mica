@@ -18,6 +18,7 @@ from app.schemas import (
     POItemUpdateIn,
     POListOut,
     POOut,
+    PRCancelIn,
     PRConversionPreviewGroup,
     PRCreateIn,
     PRDecisionIn,
@@ -162,6 +163,17 @@ async def decide_pr(
     _role: Annotated[None, Depends(require_roles("admin", "dept_manager", "procurement_mgr"))],
 ):
     pr = await svc.decide_pr(db, user, pr_id, payload)
+    return PROut.model_validate(pr)
+
+
+@router.post("/purchase-requisitions/{pr_id}/cancel", response_model=PROut, tags=["purchase"])
+async def cancel_pr(
+    pr_id: UUID,
+    payload: PRCancelIn,
+    user: CurrentUser,
+    db: Annotated[AsyncSession, Depends(get_db)],
+):
+    pr = await svc.cancel_pr(db, user, pr_id, payload.reason)
     return PROut.model_validate(pr)
 
 

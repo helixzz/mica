@@ -307,6 +307,10 @@ class PRDecisionIn(BaseModel):
     comment: str | None = None
 
 
+class PRCancelIn(BaseModel):
+    reason: str | None = Field(default=None, max_length=2000)
+
+
 class PROut(BaseModel):
     model_config = ConfigDict(from_attributes=True)
     id: UUID

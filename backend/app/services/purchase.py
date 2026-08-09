@@ -5,6 +5,7 @@ import logging
 from dataclasses import dataclass
 from datetime import UTC, datetime
 from decimal import Decimal
+from typing import Final
 from uuid import UUID
 
 from fastapi import HTTPException
@@ -35,6 +36,14 @@ from app.schemas import PRCreateIn, PRDecisionIn, PRUpdateIn
 from app.services import approval as approval_svc
 
 logger = logging.getLogger("mica.purchase")
+
+_PR_CANCEL_MANAGEMENT_ROLES: Final = frozenset(
+    {
+        UserRole.ADMIN.value,
+        UserRole.PROCUREMENT_MGR.value,
+        UserRole.IT_BUYER.value,
+    }
+)
 
 
 def _as_decimal(v: Decimal | int | float | str) -> Decimal:
@@ -477,6 +486,44 @@ async def decide_pr(
         "purchase_requisition",
         str(pr.id),
         comment=payload.comment,
+    )
+    await db.commit()
+    result = await _load_pr(db, pr.id)
+    if result is None:
+        raise HTTPException(404, "pr.not_found")
+    return result
+
+
+async def cancel_pr(
+    db: AsyncSession,
+    actor: User,
+    pr_id: UUID,
+    reason: str | None = None,
+) -> PurchaseRequisition:
+    pr = await get_pr(db, actor, pr_id)
+    is_owner = pr.requester_id == actor.id
+    if not is_owner and actor.role not in _PR_CANCEL_MANAGEMENT_ROLES:
+        raise HTTPException(403, "insufficient_role")
+    if pr.status != PRStatus.APPROVED.value:
+        raise HTTPException(409, "pr.cannot_cancel_non_approved")
+
+    po_count = (
+        await db.execute(select(func.count(PurchaseOrder.id)).where(PurchaseOrder.pr_id == pr.id))
+    ).scalar_one()
+    if po_count:
+        raise HTTPException(409, "pr.cannot_cancel_with_pos")
+
+    pr.status = PRStatus.CANCELLED.value
+    pr.decided_at = datetime.now(UTC)
+    pr.decided_by_id = actor.id
+    pr.decision_comment = reason
+    await _audit(
+        db,
+        actor,
+        "pr.cancelled",
+        "purchase_requisition",
+        str(pr.id),
+        comment=reason,
     )
     await db.commit()
     result = await _load_pr(db, pr.id)
