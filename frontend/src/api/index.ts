@@ -1245,6 +1245,13 @@ export const api = {
   async deletePR(id: string): Promise<void> {
     await client.delete(`/purchase-requisitions/${id}`)
   },
+  async cancelPR(id: string, reason?: string): Promise<PurchaseRequisition> {
+    const { data } = await client.post<PurchaseRequisition>(
+      `/purchase-requisitions/${id}/cancel`,
+      { reason },
+    )
+    return data
+  },
   async deletePO(id: string): Promise<void> {
     await client.delete(`/purchase-orders/${id}`)
   },

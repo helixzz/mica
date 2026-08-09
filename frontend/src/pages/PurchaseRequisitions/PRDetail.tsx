@@ -95,6 +95,7 @@ export function PRDetailPage() {
       supplier_name: string | null
     }[]
   }>({ purchase_orders: [], contracts: [] })
+  const [downstreamLoaded, setDownstreamLoaded] = useState(false)
   const [allUsers, setAllUsers] = useState<{ id: string; display_name: string; email: string }[]>([])
   const [convertOpen, setConvertOpen] = useState(false)
   const [suppOpen, setSuppOpen] = useState(false)
@@ -114,8 +115,10 @@ export function PRDetailPage() {
         purchase_orders: d.purchase_orders,
         contracts: d.contracts,
       })
+      setDownstreamLoaded(true)
     } catch {
       setDownstream({ purchase_orders: [], contracts: [] })
+      setDownstreamLoaded(false)
     }
   }
 
@@ -148,6 +151,11 @@ export function PRDetailPage() {
   const canEdit = (pr.status === 'draft' || pr.status === 'returned') && isOwnerOrElevated
   const canDelete =
     ['draft', 'returned', 'rejected', 'cancelled'].includes(pr.status) && isOwnerOrElevated
+  const canCancel =
+    pr.status === 'approved' &&
+    isOwnerOrElevated &&
+    downstreamLoaded &&
+    downstream.purchase_orders.length === 0
   const canDecide =
     pr.status === 'submitted' && (user?.role === 'dept_manager' || user?.role === 'admin')
   const isBuyer = user?.role === 'it_buyer' || user?.role === 'procurement_mgr' || user?.role === 'admin'
@@ -210,6 +218,28 @@ export function PRDetailPage() {
           navigate('/purchase-requisitions')
         } catch (e) {
           void message.error(extractError(e).detail)
+        }
+      },
+    })
+  }
+
+  const runCancel = () => {
+    Modal.confirm({
+      title: t('pr.confirm_cancel_title'),
+      content: t('pr.confirm_cancel_body'),
+      okText: t('button.cancel_pr'),
+      okType: 'danger',
+      cancelText: t('button.back'),
+      onOk: async () => {
+        setBusy(true)
+        try {
+          await api.cancelPR(pr.id)
+          void message.success(t('message.cancel_success'))
+          await load()
+        } catch (e) {
+          void message.error(extractError(e).detail || t('error.unexpected'))
+        } finally {
+          setBusy(false)
         }
       },
     })
@@ -580,14 +610,22 @@ export function PRDetailPage() {
 
   return (
     <Space direction="vertical" size="large" style={{ width: '100%' }}>
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-        <Space align="center">
-          <Typography.Title level={3} style={{ margin: 0 }}>
+      <div
+        style={{
+          display: 'flex',
+          justifyContent: 'space-between',
+          alignItems: 'center',
+          flexWrap: 'wrap',
+          gap: token.marginSM,
+        }}
+      >
+        <Space align="center" style={{ flexShrink: 0 }}>
+          <Typography.Title level={3} style={{ margin: 0, whiteSpace: 'nowrap' }}>
             <MonoId>{pr.pr_number}</MonoId>
           </Typography.Title>
           <span className={statusStateClass[pr.status] ?? 'tag-state tag-state--neutral'}>{t(`status.${pr.status}` as 'status.draft')}</span>
         </Space>
-        <Space>
+        <Space wrap className="page-header-actions" style={{ justifyContent: 'flex-end' }}>
           <Button onClick={() => navigate('/purchase-requisitions')}>{t('button.back')}</Button>
           <Button icon={<CopyOutlined />} onClick={() => navigate(`/purchase-requisitions/new/${pr.id}`)}>
             {t('pr.copy_button')}
@@ -663,6 +701,11 @@ export function PRDetailPage() {
           )}
           {canSupplementQuote && !hasIncompleteItems && (
             <Button onClick={() => navigate(`/purchase-requisitions/${pr.id}/edit`)}>{t('pr.modify_quote')}
+            </Button>
+          )}
+          {canCancel && (
+            <Button danger onClick={runCancel} loading={busy}>
+              {t('button.cancel_pr')}
             </Button>
           )}
         </Space>
