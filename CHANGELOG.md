@@ -7,6 +7,43 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [v1.51.0] — 2026-08-09
+
+### 新增（已批准 PR 作废流程）
+
+- **补齐长期缺失的 `approved → cancelled` 状态流转**：`PRStatus.CANCELLED`、状态标签、删除允许列表和用户手册从早期版本就已存在，但系统一直没有任何 service / API / UI 能把 PR 置为 `cancelled`。
+- **安全边界**：仅 `approved` 且尚未生成任何采购订单的 PR 可作废；一旦存在 PO，后端返回 409 并提示应从订单层处理。`partially_converted / converted` 不可作废。
+- **权限**：PR 申请人本人，以及 `admin / procurement_mgr / it_buyer` 可作废；其他角色或非本人不可操作。
+- **审计**：作废写入 `decided_at / decided_by_id / decision_comment`，并记录 `pr.cancelled` 审计事件。
+- **删除链路保持安全**：approved PR 仍不可直接硬删除；作废后进入既有 `cancelled → delete` 流程，保留审批与状态变更审计。
+
+### 前端
+
+- PR 详情页新增 danger 语义「作废 / Cancel PR」按钮，仅在 downstream 查询成功且确认 PO 数为 0 时显示；服务端仍做最终校验，防止竞态绕过。
+- 确认框明确说明：作废终止采购需求、仅限未生成 PO、作废后仍可删除。
+- PR 顶部动作区增加换行能力，PR 编号保持单行；移动端主操作「生成采购订单」优先于危险操作「作废」，危险操作位于末尾。
+
+### API
+
+- 新增 `POST /api/v1/purchase-requisitions/{pr_id}/cancel`，请求体 `PRCancelIn { reason?: string }`。
+- 前端新增 `api.cancelPR(id, reason?)`。
+- 新增后端 i18n：`pr.cannot_cancel_non_approved` / `pr.cannot_cancel_with_pos`；新增前端 zh/en button、确认框和成功消息。
+
+### 文档
+
+- 修正用户手册曾描述但实际不存在的取消能力：草稿直接删除；approved 且无 PO 可作废；有 PO 时从订单层修正；cancelled 可删除。
+- 更新全局流程、角色工作流、功能状态表与 Mermaid 状态图。
+
+### 测试与验证
+
+- 后端取消策略测试：申请人本人成功；admin / procurement_mgr / it_buyer 成功；非本人非管理角色 403；存在 PO 时 409；审计事件与原因正确。
+- 后端全量：671 passed、12 skipped、1 xfailed、1 xpassed。
+- 前端：type-check 与 build 通过，65 tests passed；zh/en i18n parity 无差异。
+- 浏览器 E2E：无 PO 的 approved PR 显示作废；有 PO 的 approved PR 不显示；作废后状态变 cancelled 并出现删除按钮；临时数据已清理。
+- 视觉 QA：375 / 768 / 1280 + 375/1280 modal 最终双重独立审查 PASS / PASS，无阻塞项。
+
+---
+
 ## [v1.50.2] — 2026-08-06
 
 ### 修复（Dark Mode 文本选区对比度）
