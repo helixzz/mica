@@ -54,13 +54,12 @@ flowchart LR
 stateDiagram-v2
     [*] --> draft: 新建申请
     draft --> submitted: 提交审批
-    draft --> cancelled: 取消
     submitted --> approved: 审批通过
     submitted --> rejected: 审批拒绝
     submitted --> returned: 审批退回
     returned --> draft: 修改后重新编辑
     approved --> converted: 生成采购订单
-    approved --> cancelled: 取消（特殊情况）
+    approved --> cancelled: 作废（尚未生成 PO）
 
     rejected --> [*]
     cancelled --> [*]
