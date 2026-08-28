@@ -18,10 +18,13 @@ from app.models import (
 from app.services import payment_schedule as svc
 
 
-async def _ensure_contract(db_session) -> Contract:
-    existing = (await db_session.execute(select(Contract).limit(1))).scalar_one_or_none()
-    if existing:
-        return existing
+async def _ensure_contract(db_session, *, total_amount: Decimal | None = None) -> Contract:
+    if total_amount is None:
+        existing = (await db_session.execute(select(Contract).limit(1))).scalar_one_or_none()
+        if existing:
+            return existing
+
+    amount = Decimal("48000") if total_amount is None else total_amount
 
     user = (await db_session.execute(select(User).limit(1))).scalar_one()
     supplier = (await db_session.execute(select(Supplier).limit(1))).scalar_one()
@@ -36,7 +39,7 @@ async def _ensure_contract(db_session) -> Contract:
         company_id=user.company_id,
         department_id=user.department_id,
         currency="CNY",
-        total_amount=Decimal("48000"),
+        total_amount=amount,
     )
     db_session.add(pr)
     await db_session.flush()
@@ -49,7 +52,7 @@ async def _ensure_contract(db_session) -> Contract:
         company_id=user.company_id,
         status=POStatus.CONFIRMED.value,
         currency="CNY",
-        total_amount=Decimal("48000"),
+        total_amount=amount,
         created_by_id=user.id,
     )
     db_session.add(po)
@@ -63,7 +66,7 @@ async def _ensure_contract(db_session) -> Contract:
         title="Schedule Test Contract",
         status=ContractStatus.ACTIVE.value,
         currency="CNY",
-        total_amount=Decimal("48000"),
+        total_amount=amount,
     )
     db_session.add(contract)
     await db_session.flush()
@@ -109,6 +112,181 @@ async def test_replace_schedule_removes_old_planned_items(seeded_db_session):
     )
     assert len(new_items) == 1
     assert new_items[0].label == "v2"
+
+
+async def test_replace_schedule_preserves_paid_contract_installment_and_reindexes_new_items(
+    seeded_db_session,
+):
+    contract = await _ensure_contract(seeded_db_session, total_amount=Decimal("53620000"))
+    original_items = await svc.replace_schedule(
+        seeded_db_session,
+        [
+            {
+                "installment_no": 1,
+                "label": "original-paid-30-percent",
+                "planned_amount": Decimal("16086000"),
+                "planned_date": "2026-05-01",
+            },
+            {
+                "installment_no": 2,
+                "label": "old-planned-balance",
+                "planned_amount": Decimal("37534000"),
+                "planned_date": "2026-08-01",
+            },
+        ],
+        contract_id=contract.id,
+    )
+    paid_item = await svc.execute_schedule_item(
+        seeded_db_session,
+        1,
+        contract_id=contract.id,
+        payment_method="bank_transfer",
+        transaction_ref="PAID-30-PERCENT",
+        invoice_id=None,
+        amount_override=None,
+    )
+    paid_item_id = paid_item.id
+    paid_payment_record_id = paid_item.payment_record_id
+    paid_actual_date = paid_item.actual_date
+    old_planned_item_id = original_items[1].id
+
+    assert paid_payment_record_id is not None
+    assert paid_actual_date is not None
+
+    created_items = await svc.replace_schedule(
+        seeded_db_session,
+        [
+            {
+                "installment_no": 1,
+                "label": "replacement-30-percent-a",
+                "planned_amount": Decimal("16086000"),
+                "planned_date": "2026-09-01",
+            },
+            {
+                "installment_no": 2,
+                "label": "replacement-30-percent-b",
+                "planned_amount": Decimal("16086000"),
+                "planned_date": "2026-10-01",
+            },
+            {
+                "installment_no": 3,
+                "label": "replacement-40-percent",
+                "planned_amount": Decimal("21448000"),
+                "planned_date": "2026-11-01",
+            },
+        ],
+        contract_id=contract.id,
+    )
+
+    schedule = await svc.list_schedule(seeded_db_session, contract_id=contract.id)
+
+    assert [item.installment_no for item in created_items] == [2, 3, 4]
+    assert [item.installment_no for item in schedule] == [1, 2, 3, 4]
+    assert [item.status for item in schedule] == [
+        ScheduleItemStatus.PAID.value,
+        ScheduleItemStatus.PLANNED.value,
+        ScheduleItemStatus.PLANNED.value,
+        ScheduleItemStatus.PLANNED.value,
+    ]
+    assert schedule[0].id == paid_item_id
+    assert schedule[0].planned_amount == Decimal("16086000")
+    assert schedule[0].actual_amount == Decimal("16086000")
+    assert schedule[0].payment_record_id == paid_payment_record_id
+    assert schedule[0].actual_date == paid_actual_date
+    assert [item.planned_amount for item in schedule[1:]] == [
+        Decimal("16086000"),
+        Decimal("16086000"),
+        Decimal("21448000"),
+    ]
+    assert [item.actual_amount for item in schedule[1:]] == [None, None, None]
+    assert [item.payment_record_id for item in schedule[1:]] == [None, None, None]
+    assert [item.actual_date for item in schedule[1:]] == [None, None, None]
+    assert old_planned_item_id not in {item.id for item in schedule}
+
+
+async def test_replace_schedule_preserves_partially_paid_contract_installment_and_appends_items(
+    seeded_db_session,
+):
+    contract = await _ensure_contract(seeded_db_session, total_amount=Decimal("53620000"))
+    original_items = await svc.replace_schedule(
+        seeded_db_session,
+        [
+            {
+                "installment_no": 1,
+                "label": "original-partial-installment",
+                "planned_amount": Decimal("20000000"),
+                "planned_date": "2026-05-01",
+            },
+            {
+                "installment_no": 2,
+                "label": "old-planned-balance",
+                "planned_amount": Decimal("33620000"),
+                "planned_date": "2026-08-01",
+            },
+        ],
+        contract_id=contract.id,
+    )
+    partial_item = await svc.execute_schedule_item(
+        seeded_db_session,
+        1,
+        contract_id=contract.id,
+        payment_method="bank_transfer",
+        transaction_ref="PARTIAL-PAID",
+        invoice_id=None,
+        amount_override=Decimal("8000000"),
+    )
+    # Payment history is persisted by the service; this underpayment is historical.
+    partial_item.status = ScheduleItemStatus.PARTIALLY_PAID.value
+    await seeded_db_session.flush()
+    partial_item_id = partial_item.id
+    partial_payment_record_id = partial_item.payment_record_id
+    partial_actual_date = partial_item.actual_date
+    old_planned_item_id = original_items[1].id
+
+    assert partial_payment_record_id is not None
+    assert partial_actual_date is not None
+
+    created_items = await svc.replace_schedule(
+        seeded_db_session,
+        [
+            {
+                "installment_no": 1,
+                "label": "replacement-balance-a",
+                "planned_amount": Decimal("13448000"),
+                "planned_date": "2026-09-01",
+            },
+            {
+                "installment_no": 2,
+                "label": "replacement-balance-b",
+                "planned_amount": Decimal("20172000"),
+                "planned_date": "2026-10-01",
+            },
+        ],
+        contract_id=contract.id,
+    )
+
+    schedule = await svc.list_schedule(seeded_db_session, contract_id=contract.id)
+
+    assert [item.installment_no for item in created_items] == [2, 3]
+    assert [item.installment_no for item in schedule] == [1, 2, 3]
+    assert [item.status for item in schedule] == [
+        ScheduleItemStatus.PARTIALLY_PAID.value,
+        ScheduleItemStatus.PLANNED.value,
+        ScheduleItemStatus.PLANNED.value,
+    ]
+    assert schedule[0].id == partial_item_id
+    assert schedule[0].planned_amount == Decimal("20000000")
+    assert schedule[0].actual_amount == Decimal("8000000")
+    assert schedule[0].payment_record_id == partial_payment_record_id
+    assert schedule[0].actual_date == partial_actual_date
+    assert [item.planned_amount for item in schedule[1:]] == [
+        Decimal("13448000"),
+        Decimal("20172000"),
+    ]
+    assert [item.actual_amount for item in schedule[1:]] == [None, None]
+    assert [item.payment_record_id for item in schedule[1:]] == [None, None]
+    assert [item.actual_date for item in schedule[1:]] == [None, None]
+    assert old_planned_item_id not in {item.id for item in schedule}
 
 
 async def test_list_schedule_returns_summary(seeded_db_session):
@@ -385,6 +563,90 @@ async def test_po_level_payment_schedule_create_and_summary(seeded_db_session):
     assert len(summary["items"]) == 2
 
 
+async def test_replace_schedule_preserves_paid_direct_po_installment_and_reindexes_new_items(
+    seeded_db_session,
+):
+    po = await _ensure_standalone_po(seeded_db_session)
+    original_items = await svc.replace_schedule(
+        seeded_db_session,
+        [
+            {
+                "installment_no": 1,
+                "label": "original-paid-deposit",
+                "planned_amount": Decimal("10000"),
+                "planned_date": "2026-05-01",
+            },
+            {
+                "installment_no": 2,
+                "label": "old-planned-balance",
+                "planned_amount": Decimal("20000"),
+                "planned_date": "2026-08-01",
+            },
+        ],
+        po_id=po.id,
+    )
+    paid_item = await svc.execute_schedule_item(
+        seeded_db_session,
+        1,
+        po_id=po.id,
+        payment_method="bank_transfer",
+        transaction_ref="PO-PAID-DEPOSIT",
+        invoice_id=None,
+        amount_override=None,
+    )
+    paid_item_id = paid_item.id
+    paid_payment_record_id = paid_item.payment_record_id
+    paid_actual_date = paid_item.actual_date
+    old_planned_item_id = original_items[1].id
+
+    assert paid_payment_record_id is not None
+    assert paid_actual_date is not None
+
+    created_items = await svc.replace_schedule(
+        seeded_db_session,
+        [
+            {
+                "installment_no": 1,
+                "label": "replacement-direct-po-a",
+                "planned_amount": Decimal("8000"),
+                "planned_date": "2026-09-01",
+            },
+            {
+                "installment_no": 2,
+                "label": "replacement-direct-po-b",
+                "planned_amount": Decimal("12000"),
+                "planned_date": "2026-10-01",
+            },
+        ],
+        po_id=po.id,
+    )
+
+    schedule = await svc.list_schedule(seeded_db_session, po_id=po.id)
+
+    assert [item.installment_no for item in created_items] == [2, 3]
+    assert [item.installment_no for item in schedule] == [1, 2, 3]
+    assert [item.status for item in schedule] == [
+        ScheduleItemStatus.PAID.value,
+        ScheduleItemStatus.PLANNED.value,
+        ScheduleItemStatus.PLANNED.value,
+    ]
+    assert [item.po_id for item in schedule] == [po.id, po.id, po.id]
+    assert [item.contract_id for item in schedule] == [None, None, None]
+    assert schedule[0].id == paid_item_id
+    assert schedule[0].planned_amount == Decimal("10000")
+    assert schedule[0].actual_amount == Decimal("10000")
+    assert schedule[0].payment_record_id == paid_payment_record_id
+    assert schedule[0].actual_date == paid_actual_date
+    assert [item.planned_amount for item in schedule[1:]] == [
+        Decimal("8000"),
+        Decimal("12000"),
+    ]
+    assert [item.actual_amount for item in schedule[1:]] == [None, None]
+    assert [item.payment_record_id for item in schedule[1:]] == [None, None]
+    assert [item.actual_date for item in schedule[1:]] == [None, None]
+    assert old_planned_item_id not in {item.id for item in schedule}
+
+
 async def test_po_level_schedule_isolation_from_contract_schedules(seeded_db_session):
     db = seeded_db_session
     po = await _ensure_standalone_po(db)
@@ -477,7 +739,7 @@ async def test_po_scoped_update_reaches_legacy_linked_contract_installment(seede
 
     updated = await svc.update_schedule_item(
         db,
-        installment_no=2,
+        installment_no=1,
         updates={"label": "updated-via-po", "planned_amount": Decimal("60000")},
         po_id=po_id,
     )

@@ -210,8 +210,14 @@ async def replace_schedule(
         )
     )
 
+    max_remaining_installment = (
+        await db.execute(
+            select(func.max(PaymentSchedule.installment_no)).where(_parent_filter(parent))
+        )
+    ).scalar_one() or 0
+
     created: list[PaymentSchedule] = []
-    for item_data in items:
+    for installment_no, item_data in enumerate(items, start=max_remaining_installment + 1):
         raw_date = item_data.get("planned_date")
         if isinstance(raw_date, str):
             raw_date = date.fromisoformat(raw_date)
@@ -220,7 +226,7 @@ async def replace_schedule(
             id=new_uuid(),
             contract_id=parent.id if parent.kind == "contract" else None,
             po_id=parent.id if parent.kind == "po" else None,
-            installment_no=item_data["installment_no"],
+            installment_no=installment_no,
             label=item_data["label"],
             planned_amount=Decimal(str(item_data["planned_amount"])),
             planned_date=raw_date,
