@@ -295,22 +295,41 @@ async def execute_schedule_item(
     item = await _find_schedule_item(db, parent, installment_no)
     if item is None:
         raise HTTPException(404, "schedule_item.not_found")
+    # Match delete_payment's schedule -> PO order; refresh paid state after lock waits.
+    await db.refresh(item, with_for_update=True)
     if item.status == ScheduleItemStatus.PAID.value:
         raise HTTPException(409, "schedule_item.already_paid")
 
+    # Serialize numbering and amount_paid updates across this PO's schedule executions.
+    po = (
+        await db.execute(
+            select(PurchaseOrder)
+            .where(PurchaseOrder.id == parent.po_id_for_payment)
+            .with_for_update()
+            .execution_options(populate_existing=True)
+        )
+    ).scalar_one()
+
     pay_amount = amount_override if amount_override is not None else item.planned_amount
 
-    existing_count = (
-        await db.execute(
-            select(func.count(PaymentRecord.id)).where(
-                PaymentRecord.po_id == parent.po_id_for_payment
-            )
+    prefix = f"PAY-{parent.number}-"
+    existing_numbers = await db.scalars(
+        select(PaymentRecord.payment_number).where(
+            PaymentRecord.payment_number.startswith(prefix, autoescape=True)
         )
-    ).scalar() or 0
+    )
+    suffixes = (number[len(prefix) :] for number in existing_numbers)
+    next_number = (
+        max(
+            (int(suffix) for suffix in suffixes if suffix.isascii() and suffix.isdecimal()),
+            default=0,
+        )
+        + 1
+    )
 
     payment = PaymentRecord(
         id=new_uuid(),
-        payment_number=f"PAY-{parent.number}-{existing_count + 1:03d}",
+        payment_number=f"{prefix}{next_number:03d}",
         po_id=parent.po_id_for_payment,
         contract_id=item.contract_id,
         installment_no=installment_no,
@@ -330,9 +349,7 @@ async def execute_schedule_item(
     item.payment_record_id = payment.id
     item.status = ScheduleItemStatus.PAID.value
 
-    po = await db.get(PurchaseOrder, parent.po_id_for_payment)
-    if po is not None:
-        po.amount_paid = (po.amount_paid or Decimal("0")) + pay_amount
+    po.amount_paid = (po.amount_paid or Decimal("0")) + pay_amount
 
     if invoice_id is not None:
         invoice = await db.get(Invoice, invoice_id)
