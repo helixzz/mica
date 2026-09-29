@@ -58,6 +58,16 @@ services:
       - ${DATA_DIR:-/data}/media:/app/media
     ports:
       - "${BACKEND_BIND:-0.0.0.0}:${BACKEND_PORT:-8000}:8000"
+    healthcheck:
+      disable: false
+      # Must actually hit the API: a process-liveness check reports healthy
+      # while uvicorn is still booting, which let upgrade.sh pass its health
+      # gate and fail the smoke test with a connection refused (502).
+      test: ["CMD-SHELL", "python -c \"import urllib.request; urllib.request.urlopen('http://127.0.0.1:8000/health', timeout=3)\""]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 20s
 
   scheduler:
     image: mica-backend:${APP_VERSION:-0.0.1}

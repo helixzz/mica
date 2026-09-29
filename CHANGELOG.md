@@ -7,6 +7,19 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [v1.52.2] — 2026-09-29
+
+### 修复（健康门禁形同虚设，冒烟测试因启动竞态误报失败）
+
+- **根因**：`deploy/docker-compose.yml` 的 **backend 服务没有定义 healthcheck**。`_lib.sh::container_status` 因此回落到 `State.Status == running` 并返回 `up`，而 `wait_healthy` 把 `up` 视为通过。于是「all containers healthy」在 uvicorn 尚未开始监听端口时就打印出来，紧随其后的冒烟测试撞上 `Connection refused`，被误判为部署失败。
+- **修复**（三处，互相配合）：
+  - backend 服务新增**真实** healthcheck：请求 `http://127.0.0.1:8000/health`，而不再只检查进程存活；配 `start_period: 20s` 避免启动期误判。
+  - `_lib.sh::container_status` 不再把 healthcheck 的 `starting` 状态伪装成 `up`，使 `wait_healthy` 真正等待应用就绪。
+  - `upgrade.sh` 的冒烟测试改为最多 8 次、每次间隔 5 秒的重试，消除首个请求的启动竞态。
+- **现场记录**：v1.52.0 与 v1.52.1 两次部署均在冒烟阶段报 502，其中 v1.52.1 的 nginx 错误日志显示上游 IP 正是当时 backend 的真实 IP，错误为 `Connection refused` —— 证明确为启动竞态而非上游地址错误。两次部署期间系统实际均可用（`app_version`、`alembic_version=0056`、台账端点 401、前端 bundle 新文案均已验证）。本版本使升级门禁恢复可信，不再产生「部署失败」误报。
+
+---
+
 ## [v1.52.1] — 2026-09-29
 
 ### 修复（升级脚本导致部署后 API 全部 502）

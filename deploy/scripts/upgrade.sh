@@ -130,7 +130,17 @@ if ! wait_healthy 120; then compose ps; exit 6; fi
 log_ok "all containers healthy"
 
 log_info "smoke test"
-if ! smoke_test; then exit 7; fi
+# The API may accept connections a moment after its container is up, so give the
+# first request a few attempts instead of failing the whole upgrade on a race.
+smoke_ok=0
+for attempt in 1 2 3 4 5 6 7 8; do
+  if smoke_test; then smoke_ok=1; break; fi
+  if (( attempt < 8 )); then
+    log_warn "smoke attempt ${attempt} failed — retrying in 5s"
+    sleep 5
+  fi
+done
+if (( ! smoke_ok )); then exit 7; fi
 
 trap - ERR
 DURATION=$(( $(date +%s) - START_EPOCH ))

@@ -45,6 +45,7 @@ container_status() {
   health="$(docker inspect -f '{{if .State.Health}}{{.State.Health.Status}}{{else}}none{{end}}' "${name}" 2>/dev/null || echo "none")"
   if [[ "${health}" == "healthy" ]]; then echo "healthy"
   elif [[ "${health}" == "unhealthy" ]]; then echo "unhealthy"
+  elif [[ "${health}" == "starting" ]]; then echo "starting"
   elif [[ "${state}" == "running" ]]; then echo "up"
   elif [[ "${state}" == "absent" ]]; then echo "absent"
   else echo "${state}"
