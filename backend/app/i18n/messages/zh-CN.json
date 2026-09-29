@@ -4,6 +4,11 @@
     "column_phone": "电话",
     "column_email": "邮箱"
   },
+  "export": {
+    "too_many_rows": "导出行数超过上限，请先收窄筛选条件后重试",
+    "invalid_status": "存在无效的采购订单状态筛选值",
+    "invalid_date_range": "开始日期不能晚于结束日期"
+  },
   "auth": {
     "invalid_credentials": "auth invalid credentials",
     "user_inactive": "auth user inactive",

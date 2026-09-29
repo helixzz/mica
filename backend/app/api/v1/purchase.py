@@ -1,7 +1,8 @@
+from datetime import date
 from typing import Annotated
 from uuid import UUID
 
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, Query, status
 from fastapi.responses import Response
 from pydantic import BaseModel
 from sqlalchemy import select
@@ -34,6 +35,7 @@ from app.schemas import (
 )
 from app.services import export_excel, export_pdf
 from app.services import purchase as svc
+from app.services.system_params import system_params
 
 router = APIRouter()
 
@@ -289,6 +291,68 @@ async def list_pos(
 ):
     items = await svc.list_pos(db, user)
     return [POListOut.model_validate(i) for i in items]
+
+
+@router.get("/purchase-orders/export/ledger", tags=["purchase"])
+async def export_po_ledger(
+    user: CurrentUser,
+    db: Annotated[AsyncSession, Depends(get_db)],
+    _role: Annotated[
+        None,
+        Depends(require_roles("admin", "it_buyer", "procurement_mgr", "finance_auditor")),
+    ],
+    export_format: Annotated[str, Query(alias="format", pattern="^(xlsx|csv)$")] = "xlsx",
+    date_from: date | None = None,
+    date_to: date | None = None,
+    po_status: Annotated[list[str] | None, Query(alias="status")] = None,
+    supplier_id: UUID | None = None,
+    q: str | None = None,
+):
+    """Export the cross-entity procurement ledger.
+
+    One row per PO line item, plus companion payment / invoice-line sheets in
+    the XLSX variant. ``format=csv`` renders the main ledger table only
+    (CSV cannot carry multiple sheets). ``export.max_rows`` caps each sheet
+    individually.
+    """
+    from app.models import POStatus
+
+    if date_from is not None and date_to is not None and date_from > date_to:
+        raise HTTPException(400, "export.invalid_date_range")
+
+    if po_status:
+        invalid = [s for s in po_status if s not in {m.value for m in POStatus}]
+        if invalid:
+            raise HTTPException(400, "export.invalid_status")
+
+    max_rows = await system_params.get_int_or(db, "export.max_rows", 5000)
+    data = await export_excel.collect_procurement_ledger(
+        db,
+        actor=user,
+        date_from=date_from,
+        date_to=date_to,
+        statuses=po_status,
+        supplier_id=supplier_id,
+        keyword=q,
+        max_rows=max_rows,
+    )
+
+    if export_format == "csv":
+        payload = export_excel.ledger_to_csv(data)
+        media_type = "text/csv; charset=utf-8"
+    else:
+        payload = export_excel.ledger_to_xlsx(data)
+        media_type = "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+
+    filename = export_excel.ledger_filename(export_format)
+    return Response(
+        content=payload,
+        media_type=media_type,
+        headers={
+            "Content-Disposition": f'attachment; filename="{filename}"',
+            "Content-Length": str(len(payload)),
+        },
+    )
 
 
 @router.get("/purchase-orders/{po_id}", response_model=POOut, tags=["purchase"])

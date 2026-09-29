@@ -7,6 +7,31 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [v1.52.0] — 2026-09-29
+
+### 安全修复（由独立验证发现）
+
+- **修复付款导出越权（高危）**：`GET /api/v1/payments/export/excel` 此前**既无角色校验、也无数据范围过滤**，任何已登录用户（含 requester）都能下载全系统付款记录，其中包含付款方式、银行流水号与备注。现补上 `require_roles("admin", "it_buyer", "procurement_mgr", "finance_auditor")`，并在 `render_payments_xlsx` 内复用 `visible_po_id_subquery` 做行级过滤、经 Cerbos 字段校验遮蔽 `payment_method` / `transaction_ref` / `notes`。不传 `actor` 的内部调用保持原行为。
+- **修复导出文件公式注入（高危）**：openpyxl 会把以 `=` 开头的字符串写成**公式**（`data_type='f'`），Excel 打开即求值；CSV 更是按首个字符判定，`= + - @ \t \r` 开头的文本在 Excel/LibreOffice 导入时会被当作公式，构成 DDE/公式注入。供应商名称、合同号、发票号、备注等均为用户可控，现对三处导出统一加固：XLSX 侧在保存前把公式样式的文本单元格强制为字符串类型（值不变），CSV 侧对危险前缀加 `'`。该缺陷在既有的 `render_payments_xlsx` / `render_rfq_sheet_xlsx` 中同样存在，一并修复。
+- **修复付款备注字段绕过字段级权限**：台账「付款明细」Sheet 的备注列直接写入，未纳入字段校验；`it_buyer` 因此能看到未授权的备注。现纳入校验并按权限遮蔽。
+- **修复 `date_to=9999-12-31` 返回 500**：上界改用 `time.max` 而非 `date_to + 1 天`，避免 `date.max` 加法溢出；同时对 `date_from > date_to` 返回 400（新增 i18n 键 `export.invalid_date_range`）。
+- **合同号单元格顺序确定化**：合同查询补 `ORDER BY contract_number`，并在合并 `contracts.po_id` 主关联与 `po_contract_links` 多对多两个来源后再整体排序，避免同一 PO 的合同拼接顺序随来源与数据库返回顺序漂移。
+
+### 新增（采购台账批量导出）
+
+- **跨实体采购台账**：新增 `GET /api/v1/purchase-orders/export/ledger`，把 PR 抬头、PO 行项目、合同号、付款单号和履约进度汇成一张可直接透视的宽表。主表**每行对应一个 PO 行项目**（数量 / 单价 / 总金额的唯一归属），一对多的合同与付款横向摊成列而非乘成行，保证金额可汇总。
+- **单文件多 Sheet**：XLSX 版同时输出「采购台账」（POItem 粒度）、「付款明细」（PaymentRecord 粒度）和「发票明细」（InvoiceLine 粒度），最细粒度的信息不丢失。`format=csv` 输出主台账单表（UTF-8 BOM，Excel 直接打开不乱码）。
+- **列构成**：序号、申请单号、申请人、成本中心、公司、供应商、合同流程号、数量、单价、总金额、币种、采购订单号、采购付款单号、开票状态、到货状态、OA付款单号（预留给后续飞书审批流对接，当前人工填写）、备注（人工填写）。
+- **进度状态实时推导**：开票状态与到货状态分别由 `po_items.qty_invoiced` / `qty_received` 与行数量比对得出（未开票 / 部分开票 / 已开票、未交付 / 部分到货 / 已到货），不额外 JOIN 发票表。
+- **合同归属口径**：同时覆盖 `contracts.po_id` 主关联与 `po_contract_links` 多对多关联，与 `GET /contracts?po_id=` 的既有语义一致；一号多合同时按「 / 」拼接。
+- **筛选参数**：`date_from` / `date_to` / `status`（可重复传参，支持多状态）/ `supplier_id` / `q`（匹配 PO 号、PR 号、供应商名称）。前端 POList 的「导出采购台账」按钮会把当前状态列筛选透传过去。
+- **行数上限**：新增系统参数 `export.max_rows`（Alembic 0056，默认 5000），**按工作表**生效，超出时返回 400 `export.too_many_rows` 并提示收窄筛选条件，绝不静默截断。该参数与其他系统参数一致走进程内读缓存，故直接改库需重启或经管理端接口写入才生效（ADR 0003 既有行为）。
+- **权限对齐**：端点挂 `require_roles("admin", "it_buyer", "procurement_mgr", "finance_auditor")`，行级复用 `core.scoping.visible_po_id_subquery`，列级经 Cerbos `check_field_access` 校验金额、付款单号与发票字段。每次导出只做 3 次字段检查（按资源类型而非按行），Cerbos 不可达时按既有逻辑降级到静态 `FIELD_PERMISSIONS`。
+- **前端**：POList 增加「导出采购台账」下拉（Excel / CSV），按钮按角色显隐，导出中显示 loading，失败时展示后端本地化错误信息；状态筛选补上此前遗漏的 `cancelled`。
+- **测试与验证**：新增 32 项用例（`test_export_excel.py` 15 项、`test_export_ledger_api.py` 11 项、新增 `test_payments_export_security.py` 5 项，其中 1 项参数化为 2 个用例），覆盖行粒度、合同/付款拼接与跨来源排序、进度状态、四种筛选、部门行级过滤、字段权限（含真实静态回退路径，非 mock）、行数上限经系统参数生效、三 Sheet 结构与合计行、CSV BOM 与不过度转义、公式注入加固（XLSX 三 Sheet + CSV + 两个既有导出）、付款导出越权回归、路由不被 `{po_id}` 抢占、角色拒绝、日期边界与非法区间。后端全量 **725 passed**；`ruff check` / `ruff format --check` 通过；前端 type-check、vitest 65 passed 与生产构建通过。另由三路独立 subagent 完成对抗式审查与真实 HTTP 端到端复跑（各自使用隔离数据库，覆盖越权、注入、时区边界、迁移升降级与缓存行为），并按复验结论补齐了合同排序缺陷与测试盲区。
+
+---
+
 ## [v1.51.2] — 2026-09-24
 
 ### 修复（执行付款计划时付款单号冲突）

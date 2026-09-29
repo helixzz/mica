@@ -1,4 +1,7 @@
 {
+  "export": {
+    "failed": "Export failed, please try again later"
+  },
   "common": {
     "total_count": "{{count}} total",
     "save_changes": "Save Changes",
@@ -108,6 +111,8 @@
     "print": "Print",
     "export_pdf": "Export PDF",
     "export_excel": "Export Excel",
+    "export_csv": "Export CSV",
+    "export_ledger": "Export Ledger",
     "reset": "Reset",
     "refresh": "Refresh",
     "download": "Download",

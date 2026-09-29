@@ -465,11 +465,16 @@ async def list_payments(
 async def export_payments_excel(
     user: CurrentUser,
     db: Annotated[AsyncSession, Depends(get_db)],
+    _role: Annotated[
+        None,
+        Depends(require_roles("admin", "it_buyer", "procurement_mgr", "finance_auditor")),
+    ],
     po_id: UUID | None = None,
     status_filter: str | None = None,
 ):
     xlsx_bytes = await export_excel.render_payments_xlsx(
         db,
+        actor=user,
         po_id=str(po_id) if po_id else None,
         status=status_filter,
     )

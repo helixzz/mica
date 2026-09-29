@@ -4,6 +4,11 @@
     "column_phone": "Phone",
     "column_email": "Email"
   },
+  "export": {
+    "too_many_rows": "Export exceeds the row limit; narrow the filters and try again",
+    "invalid_status": "Invalid purchase order status filter value",
+    "invalid_date_range": "The start date cannot be later than the end date"
+  },
   "auth": {
     "invalid_credentials": "auth invalid credentials",
     "user_inactive": "auth user inactive",

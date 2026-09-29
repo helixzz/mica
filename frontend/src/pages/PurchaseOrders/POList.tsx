@@ -1,4 +1,5 @@
-import { Space, Table, Tag, Typography } from 'antd'
+import { DownloadOutlined } from '@ant-design/icons'
+import { Button, Dropdown, Space, Table, Tag, Typography, message } from 'antd'
 import type { ColumnsType } from 'antd/es/table'
 import { useEffect, useMemo, useState } from 'react'
 import { useTranslation } from 'react-i18next'
@@ -7,10 +8,24 @@ import { Link } from 'react-router-dom'
 import { ColumnSettings, type ColumnOption } from '@/components/ColumnSettings'
 import { usePersistedColumns } from '@/hooks/usePersistedColumns'
 import { api, type PurchaseOrderListItem } from '@/api'
+import { getToken } from '@/api/client'
+import { useAuth } from '@/auth/useAuth'
+import i18n from '@/i18n'
 import { fmtAmount, fmtAmountNode, fmtQty, fmtQtyNode } from '@/utils/format'
 import { MonoId } from '@/components/ui/Mono'
 
-const PO_STATUSES = ['draft', 'confirmed', 'partially_received', 'fully_received', 'closed']
+const PO_STATUSES = [
+  'draft',
+  'confirmed',
+  'partially_received',
+  'fully_received',
+  'closed',
+  'cancelled',
+]
+
+// Keep in sync with the require_roles(...) guard on GET
+// /purchase-orders/export/ledger (AGENTS §5.15).
+const LEDGER_EXPORT_ROLES = ['admin', 'it_buyer', 'procurement_mgr', 'finance_auditor']
 
 const poStatusStateClass: Record<string, string> = {
   draft: 'tag-state tag-state--neutral',
@@ -47,14 +62,51 @@ const DEFAULT_VISIBLE: string[] = [
 
 export function POListPage() {
   const { t } = useTranslation()
+  const user = useAuth((s) => s.user)
   const [rows, setRows] = useState<PurchaseOrderListItem[]>([])
   const [loading, setLoading] = useState(false)
+  const [exporting, setExporting] = useState(false)
+  const [statusFilter, setStatusFilter] = useState<string[]>([])
   const cols = usePersistedColumns('po-list', DEFAULT_VISIBLE)
+
+  const canExportLedger = LEDGER_EXPORT_ROLES.includes(user?.role ?? '')
 
   useEffect(() => {
     setLoading(true)
     api.listPOs().then(setRows).finally(() => setLoading(false))
   }, [])
+
+  const exportLedger = async (format: 'xlsx' | 'csv') => {
+    const params = new URLSearchParams({ format })
+    statusFilter.forEach((value) => params.append('status', value))
+    setExporting(true)
+    try {
+      const resp = await fetch(`/api/v1/purchase-orders/export/ledger?${params.toString()}`, {
+        headers: {
+          Authorization: `Bearer ${getToken() ?? ''}`,
+          'Accept-Language': i18n.language || 'zh-CN',
+        },
+      })
+      if (!resp.ok) {
+        const body = (await resp.json().catch(() => null)) as { detail?: string } | null
+        message.error(typeof body?.detail === 'string' ? body.detail : t('export.failed'))
+        return
+      }
+      const blob = await resp.blob()
+      const url = URL.createObjectURL(blob)
+      const a = document.createElement('a')
+      a.href = url
+      a.download = `mica-procurement-ledger-${new Date().toISOString().slice(0, 10).replace(/-/g, '')}.${format}`
+      document.body.appendChild(a)
+      a.click()
+      a.remove()
+      URL.revokeObjectURL(url)
+    } catch {
+      message.error(t('export.failed'))
+    } finally {
+      setExporting(false)
+    }
+  }
 
   const allColumns: ColumnsType<PurchaseOrderListItem> = useMemo(
     () => [
@@ -181,18 +233,39 @@ export function POListPage() {
         <Typography.Title level={3} style={{ margin: 0 }}>
           {t('nav.purchase_orders')}
         </Typography.Title>
-        <ColumnSettings
-          options={columnOptions}
-          visibleKeys={cols.visibleKeys}
-          onToggle={cols.toggle}
-          onReset={cols.reset}
-        />
+        <Space>
+          {canExportLedger && (
+            <Dropdown
+              menu={{
+                items: [
+                  { key: 'xlsx', label: t('button.export_excel') },
+                  { key: 'csv', label: t('button.export_csv') },
+                ],
+                onClick: ({ key }) => void exportLedger(key as 'xlsx' | 'csv'),
+              }}
+              trigger={['click']}
+            >
+              <Button icon={<DownloadOutlined />} loading={exporting}>
+                {t('button.export_ledger')}
+              </Button>
+            </Dropdown>
+          )}
+          <ColumnSettings
+            options={columnOptions}
+            visibleKeys={cols.visibleKeys}
+            onToggle={cols.toggle}
+            onReset={cols.reset}
+          />
+        </Space>
       </div>
       <Table<PurchaseOrderListItem>
         rowKey="id"
         dataSource={rows}
         columns={visibleColumns}
         loading={loading}
+        onChange={(_, filters) => {
+          setStatusFilter((filters[COLUMN_KEYS.status] ?? []).map(String))
+        }}
         pagination={{
           pageSize: 20,
           showSizeChanger: true,

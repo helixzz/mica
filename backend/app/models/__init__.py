@@ -1277,6 +1277,7 @@ class SystemParameterCategory(StrEnum):
     NOTIFICATION = "notification"
     SYSTEM = "system"
     FULFILLMENT = "fulfillment"
+    EXPORT = "export"
 
 
 class SystemParameter(Base, TimestampMixin):
