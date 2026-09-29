@@ -75,6 +75,7 @@ if (( DRY_RUN )); then
   log_info "would: docker compose stop backend frontend"
   log_info "would: docker compose run --rm migrate alembic upgrade head"
   log_info "would: docker compose up -d"
+  log_info "would: nginx -s reload (refresh upstream IPs)"
   log_info "would: wait_healthy 120"
   log_info "would: smoke_test"
   printf '\n%sDry-run complete. No changes made.%s\n' "${C_GRN}${C_BOLD}" "${C_RST}"
@@ -111,6 +112,18 @@ log_ok "migration done"
 
 log_info "[6/7] starting containers"
 compose up -d >/dev/null
+
+# nginx resolves `proxy_pass http://backend:8000` / `http://frontend:80` once,
+# when its configuration is loaded. The containers above are recreated here and
+# therefore get new IP addresses, so without a reload nginx keeps proxying to
+# the previous addresses and every API request returns 502 even though all
+# containers report healthy.
+log_info "[6b/7] refreshing nginx upstream resolution"
+if ! compose exec -T nginx nginx -s reload >/dev/null 2>&1; then
+  log_warn "nginx reload failed — falling back to a full nginx restart"
+  compose restart nginx >/dev/null || exit 6
+fi
+log_ok "nginx upstreams refreshed"
 
 log_info "[7/7] waiting for health (up to 120s)"
 if ! wait_healthy 120; then compose ps; exit 6; fi

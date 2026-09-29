@@ -7,6 +7,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [v1.52.1] — 2026-09-29
+
+### 修复（升级脚本导致部署后 API 全部 502）
+
+- **根因**：`deploy/nginx/conf.d/mica.conf` 使用 `proxy_pass http://backend:8000/...` 与 `http://frontend:80`，nginx 只在**加载配置时解析一次**上游主机名。而 `upgrade.sh` 的设计是 nginx 保持运行以实现零停机，只重建 backend / frontend 容器；重建后容器获得新的 IP，nginx 仍把请求发往旧地址，于是所有 API 请求返回 502，即使 `docker compose ps` 显示全部 healthy。
+- **修复**：`upgrade.sh` 在 `docker compose up -d` 之后、健康检查之前执行 `nginx -s reload` 重新解析上游地址；reload 失败时回退为重启 nginx。dry-run 输出同步补充该步骤。
+- **现场记录**：v1.52.0 首次部署命中该缺陷，冒烟测试报 `POST /api/v1/auth/login → 502`。**应用代码与数据库迁移本身正常**：手动 reload nginx 后端点全部恢复，台账导出端点由 404 变为 401，`app_version=1.52.0`、`alembic_version=0056`、`export.max_rows` 均已就位，前端 bundle 含新文案。此后升级不再需要人工干预。
+- 说明：`trap rollback ERR` 对显式 `exit N` 不生效，故冒烟失败时**不会**自动从备份回滚数据库。此处保持保守行为——冒烟失败可能只是 nginx 之类的外部原因，自动恢复数据库备份反而会丢弃升级后的写入；该缺陷的触发源已由本次 reload 修复。
+
+---
+
 ## [v1.52.0] — 2026-09-29
 
 ### 安全修复（由独立验证发现）
