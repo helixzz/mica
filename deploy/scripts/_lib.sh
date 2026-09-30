@@ -52,11 +52,46 @@ container_status() {
   fi
 }
 
+# Compose names containers "<project>-<service>-<index>" unless the service pins
+# `container_name:`. Services without it (nginx) are therefore known as
+# "mica-nginx-1" rather than "mica-nginx", which silently made every lookup of
+# them report "absent".
+container_name() {
+  local svc="$1"
+  if docker inspect "${svc}" >/dev/null 2>&1; then
+    echo "${svc}"
+    return
+  fi
+  local found
+  found="$(docker ps -a --filter "name=^${svc}(-[0-9]+)?$" --format '{{.Names}}' 2>/dev/null | head -1)"
+  echo "${found:-${svc}}"
+}
+
+# nginx terminates TLS whenever certs are present, so plain http probes only
+# ever see a 301 redirect and report a false failure.
+smoke_base_url() {
+  if [[ -f "${DEPLOY_DIR}/certs/server.crt" ]]; then
+    printf 'https://localhost:%s' "${HTTPS_PORT:-443}"
+  else
+    printf 'http://localhost:%s' "${HTTP_PORT}"
+  fi
+}
+
+# curl flags matching smoke_base_url(): -k because the certificate is usually
+# self-signed for an internal deployment.
+smoke_curl_opts() {
+  if [[ -f "${DEPLOY_DIR}/certs/server.crt" ]]; then
+    printf '%s' "-sk"
+  else
+    printf '%s' "-s"
+  fi
+}
+
 wait_healthy() {
   local timeout="${1:-120}"; local deadline=$(( $(date +%s) + timeout ))
   local svcs=(mica-postgres mica-backend mica-frontend)
   local nginx_name
-  nginx_name="$(docker ps --filter "name=mica.*nginx" --format '{{.Names}}' 2>/dev/null | head -1)"
+  nginx_name="$(container_name mica-nginx)"
   [[ -n "${nginx_name}" ]] && svcs+=("${nginx_name}")
   while [[ $(date +%s) -lt ${deadline} ]]; do
     local all_ok=1
@@ -71,14 +106,12 @@ wait_healthy() {
 }
 
 smoke_test() {
-  local base_url="http://localhost:${HTTP_PORT}"
-  if [[ -f "${DEPLOY_DIR}/certs/server.crt" ]]; then
-    base_url="https://localhost:${HTTPS_PORT:-443}"
-  fi
+  local base_url; base_url="$(smoke_base_url)"
+  local curl_opts; curl_opts="$(smoke_curl_opts)"
   local api_code frontend_code
-  api_code="$(curl -sk -o /dev/null -w '%{http_code}' -X POST "${base_url}/api/v1/auth/login" 2>/dev/null)"
+  api_code="$(curl ${curl_opts} -o /dev/null -w '%{http_code}' -X POST "${base_url}/api/v1/auth/login" 2>/dev/null)"
   [[ -z "${api_code}" ]] && api_code="000"
-  frontend_code="$(curl -sk -o /dev/null -w '%{http_code}' "${base_url}/" 2>/dev/null)"
+  frontend_code="$(curl ${curl_opts} -o /dev/null -w '%{http_code}' "${base_url}/" 2>/dev/null)"
   [[ -z "${frontend_code}" ]] && frontend_code="000"
   if [[ ! "${api_code}" =~ ^4[0-9][0-9]$ ]]; then
     log_err "API smoke failed: POST ${base_url}/api/v1/auth/login → ${api_code}"

@@ -9,14 +9,15 @@ for arg in "$@"; do [[ "${arg}" == "--json" ]] && JSON_MODE=1; done
 
 SVCS=(mica-postgres mica-backend mica-frontend mica-nginx)
 
-declare -A ST UPT CPU MEM
+declare -A ST UPT CPU MEM CNAME
 for s in "${SVCS[@]}"; do
-  ST[$s]="$(container_status "${s}")"
+  CNAME[$s]="$(container_name "${s}")"
+  ST[$s]="$(container_status "${CNAME[$s]}")"
   if [[ "${ST[$s]}" == "absent" ]]; then
     UPT[$s]=0; CPU[$s]="n/a"; MEM[$s]="n/a"
     continue
   fi
-  started="$(docker inspect -f '{{.State.StartedAt}}' "${s}" 2>/dev/null || echo "")"
+  started="$(docker inspect -f '{{.State.StartedAt}}' "${CNAME[$s]}" 2>/dev/null || echo "")"
   if [[ -n "${started}" ]]; then
     start_s="$(date -d "${started}" +%s 2>/dev/null || echo 0)"
     now_s="$(date +%s)"
@@ -24,7 +25,7 @@ for s in "${SVCS[@]}"; do
   else
     UPT[$s]=0
   fi
-  stats="$(docker stats --no-stream --format '{{.CPUPerc}}|{{.MemUsage}}' "${s}" 2>/dev/null || echo "|")"
+  stats="$(docker stats --no-stream --format '{{.CPUPerc}}|{{.MemUsage}}' "${CNAME[$s]}" 2>/dev/null || echo "|")"
   CPU[$s]="${stats%%|*}"
   MEM[$s]="${stats#*|}"; MEM[$s]="${MEM[$s]%% /*}"
   [[ -z "${CPU[$s]}" ]] && CPU[$s]="n/a"
@@ -41,9 +42,11 @@ MEDIA_SIZE="$(docker run --rm -v mica_media:/data alpine du -sh /data 2>/dev/nul
 
 DISK_FREE="$(df -BG --output=avail /var/lib/docker 2>/dev/null | tail -1 | tr -dc '0-9' || echo "0")"
 
-API_CODE="$(curl -s -o /dev/null -w '%{http_code}' -X POST "http://localhost:${HTTP_PORT}/api/v1/auth/login" 2>/dev/null)"
+SMOKE_BASE="$(smoke_base_url)"
+SMOKE_OPTS="$(smoke_curl_opts)"
+API_CODE="$(curl ${SMOKE_OPTS} -o /dev/null -w '%{http_code}' -X POST "${SMOKE_BASE}/api/v1/auth/login" 2>/dev/null)"
 [[ -z "${API_CODE}" ]] && API_CODE="000"
-FE_CODE="$(curl -s -o /dev/null -w '%{http_code}' "http://localhost:${HTTP_PORT}/" 2>/dev/null)"
+FE_CODE="$(curl ${SMOKE_OPTS} -o /dev/null -w '%{http_code}' "${SMOKE_BASE}/" 2>/dev/null)"
 [[ -z "${FE_CODE}" ]] && FE_CODE="000"
 API_OK=0; FE_OK=0
 [[ "${API_CODE}" =~ ^4[0-9][0-9]$ ]] && API_OK=1
@@ -67,8 +70,8 @@ if (( JSON_MODE )); then
   for s in "${SVCS[@]}"; do
     (( first )) || printf ',\n'
     first=0
-    printf '    {"name": "%s", "status": "%s", "uptime_s": %s, "cpu": "%s", "mem": "%s"}' \
-      "${s}" "${ST[$s]}" "${UPT[$s]}" "${CPU[$s]}" "${MEM[$s]}"
+    printf '    {"name": "%s", "container": "%s", "status": "%s", "uptime_s": %s, "cpu": "%s", "mem": "%s"}' \
+      "${s}" "${CNAME[$s]}" "${ST[$s]}" "${UPT[$s]}" "${CPU[$s]}" "${MEM[$s]}"
   done
   printf '\n  ],\n'
   printf '  "disk_free_gb": %s,\n' "${DISK_FREE:-0}"
@@ -101,7 +104,7 @@ for s in "${SVCS[@]}"; do
   else uptime_str="n/a"
   fi
   printf '%-18s %b%-10s%b %-10s %-8s %-12s\n' \
-    "${s}" "${color}" "${st}" "${C_RST}" "${uptime_str}" "${CPU[$s]}" "${MEM[$s]}"
+    "${CNAME[$s]}" "${color}" "${st}" "${C_RST}" "${uptime_str}" "${CPU[$s]}" "${MEM[$s]}"
 done
 printf '\n'
 printf 'DB size:           %s\n' "${DB_SIZE}"

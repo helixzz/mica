@@ -7,6 +7,22 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [v1.52.3] — 2026-09-29
+
+### 修复（`health.sh` 在启用 TLS 的部署上恒报 DEGRADED）
+
+- **根因（两处硬编码假设）**：
+  1. `health.sh` 的服务列表写死 `mica-nginx`。该服务在 `docker-compose.yml` 中未设置 `container_name:`，compose v2 实际把它命名为 `mica-nginx-1`，于是 nginx 一栏恒为 `absent` 并把整体判定拉成 degraded（`upgrade.sh` 的 `wait_healthy` 早已用正则规避，`health.sh` 没有）。
+  2. 探测固定使用 `http://localhost:${HTTP_PORT}` 且不带 `-k`。存在证书时 nginx 会把 http 跳转到 https，探测只能拿到 301，导致 `API smoke` 与 `Frontend smoke` 同时判负。
+- **修复**：把两处逻辑上提到 `_lib.sh` 共用，避免 `upgrade.sh` 与 `health.sh` 各维护一份：
+  - 新增 `container_name()`：先按字面名解析，否则用 `^<svc>(-N)?$` 匹配 compose v2 的实际容器名；`wait_healthy` 一并改用它。
+  - 新增 `smoke_base_url()` / `smoke_curl_opts()`：存在 `certs/server.crt` 时切到 https 并加 `-k`；`smoke_test` 与 `health.sh` 共用同一判定。
+  - `health.sh` 表格改为显示真实容器名；`--json` 新增 `container` 字段（真实容器名），`name` 仍为 compose 服务名，保持既有告警管线兼容。
+  - 同步更新 `deploy/scripts/README.md` 的「health.sh 报 degraded 但 API 能用」排查章节。
+- **验证**：在生产上以只读方式预演补丁逻辑——旧实现 `container_status mica-nginx → absent`、`http://localhost:80 → 301`；新实现解析出 `mica-nginx-1`（`up`）、探测 `https://localhost:443`（`-sk`）得到 API 422 / 前端 200。补丁部署后 `health.sh` 报 `✓ HEALTHY`。
+
+---
+
 ## [v1.52.2] — 2026-09-29
 
 ### 修复（健康门禁形同虚设，冒烟测试因启动竞态误报失败）

@@ -144,12 +144,18 @@ docker compose exec postgres psql -U mica -d postgres -c \
 
 ### `health.sh` 报 degraded 但 API 能用
 
-多数情况下是 `docker stats` 失败或 `docker inspect` 输出格式异常。直接看容器状态：
+先看是哪一项判负：
+
+1. **`mica-nginx` 显示 `absent`** —— 该服务在 compose 里没有 `container_name:`，compose v2 会把它命名为 `mica-nginx-1`。`health.sh` 已通过 `container_name()` 解析真实名字，若你看到 `absent` 说明容器确实没起来。
+2. **`API smoke` / `Frontend smoke` 报 301** —— nginx 在存在证书时会做 http→https 跳转，探测必须用 https。`health.sh` 已通过 `smoke_base_url()` 自动切换 scheme 并加 `-k`（自签证书）。若仍报 301，检查 `deploy/certs/server.crt` 是否存在。
+3. 其余情况多是 `docker stats` 失败或 `docker inspect` 输出格式异常。直接看容器状态：
 
 ```bash
 docker compose ps
 docker compose logs --tail 50
 ```
+
+`health.sh --json` 会同时给出 `name`（compose 服务名，如 `mica-nginx`）与 `container`（真实容器名，如 `mica-nginx-1`）；告警管线按 `name` 做键即可。
 
 ### 磁盘满了
 
