@@ -7,6 +7,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [v1.53.1] — 2026-09-30
+
+### 修复（采购订单页未接入新导出抽屉）
+
+- v1.53.0 的提交漏掉了 `frontend/src/pages/PurchaseOrders/POList.tsx`：该页仍保留旧的「导出采购台账」下拉，而它引用的 `button.export_excel` / `button.export_csv` 两个 i18n 键已在同一版本中清理，于是**线上采购订单页的导出下拉会直接显示原始 key 文本**（功能仍可用，但文案明显异常）。
+- 现将该页改为使用统一的 `ExportDrawer` + `datasetKey="procurement_ledger"`，可筛选日期区间 / 状态 / 供应商 / 关键词，并把页面当前的状态列筛选透传为预选项；同时删除重复维护的 `LEDGER_EXPORT_ROLES` 常量（改用共享的 `canExport()`），顺带清掉两条已无引用的 i18n 键 `button.export_excel` / `button.export_csv`。
+- `GET /purchase-orders/export/ledger` 保持可用，未做改动。
+
+---
+
 ## [v1.53.0] — 2026-09-30
 
 ### 新增（通用导出框架 + 10 个数据集）

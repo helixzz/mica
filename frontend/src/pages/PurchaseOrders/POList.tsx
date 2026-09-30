@@ -1,5 +1,5 @@
 import { DownloadOutlined } from '@ant-design/icons'
-import { Button, Dropdown, Space, Table, Tag, Typography, message } from 'antd'
+import { Button, Space, Table, Tag, Typography } from 'antd'
 import type { ColumnsType } from 'antd/es/table'
 import { useEffect, useMemo, useState } from 'react'
 import { useTranslation } from 'react-i18next'
@@ -8,9 +8,8 @@ import { Link } from 'react-router-dom'
 import { ColumnSettings, type ColumnOption } from '@/components/ColumnSettings'
 import { usePersistedColumns } from '@/hooks/usePersistedColumns'
 import { api, type PurchaseOrderListItem } from '@/api'
-import { getToken } from '@/api/client'
 import { useAuth } from '@/auth/useAuth'
-import i18n from '@/i18n'
+import { ExportDrawer, canExport } from '@/components/Export'
 import { fmtAmount, fmtAmountNode, fmtQty, fmtQtyNode } from '@/utils/format'
 import { MonoId } from '@/components/ui/Mono'
 
@@ -22,10 +21,6 @@ const PO_STATUSES = [
   'closed',
   'cancelled',
 ]
-
-// Keep in sync with the require_roles(...) guard on GET
-// /purchase-orders/export/ledger (AGENTS §5.15).
-const LEDGER_EXPORT_ROLES = ['admin', 'it_buyer', 'procurement_mgr', 'finance_auditor']
 
 const poStatusStateClass: Record<string, string> = {
   draft: 'tag-state tag-state--neutral',
@@ -65,48 +60,16 @@ export function POListPage() {
   const user = useAuth((s) => s.user)
   const [rows, setRows] = useState<PurchaseOrderListItem[]>([])
   const [loading, setLoading] = useState(false)
-  const [exporting, setExporting] = useState(false)
+  const [exportOpen, setExportOpen] = useState(false)
   const [statusFilter, setStatusFilter] = useState<string[]>([])
   const cols = usePersistedColumns('po-list', DEFAULT_VISIBLE)
 
-  const canExportLedger = LEDGER_EXPORT_ROLES.includes(user?.role ?? '')
+  const canExportLedger = canExport(user?.role)
 
   useEffect(() => {
     setLoading(true)
     api.listPOs().then(setRows).finally(() => setLoading(false))
   }, [])
-
-  const exportLedger = async (format: 'xlsx' | 'csv') => {
-    const params = new URLSearchParams({ format })
-    statusFilter.forEach((value) => params.append('status', value))
-    setExporting(true)
-    try {
-      const resp = await fetch(`/api/v1/purchase-orders/export/ledger?${params.toString()}`, {
-        headers: {
-          Authorization: `Bearer ${getToken() ?? ''}`,
-          'Accept-Language': i18n.language || 'zh-CN',
-        },
-      })
-      if (!resp.ok) {
-        const body = (await resp.json().catch(() => null)) as { detail?: string } | null
-        message.error(typeof body?.detail === 'string' ? body.detail : t('export.failed'))
-        return
-      }
-      const blob = await resp.blob()
-      const url = URL.createObjectURL(blob)
-      const a = document.createElement('a')
-      a.href = url
-      a.download = `mica-procurement-ledger-${new Date().toISOString().slice(0, 10).replace(/-/g, '')}.${format}`
-      document.body.appendChild(a)
-      a.click()
-      a.remove()
-      URL.revokeObjectURL(url)
-    } catch {
-      message.error(t('export.failed'))
-    } finally {
-      setExporting(false)
-    }
-  }
 
   const allColumns: ColumnsType<PurchaseOrderListItem> = useMemo(
     () => [
@@ -235,20 +198,9 @@ export function POListPage() {
         </Typography.Title>
         <Space>
           {canExportLedger && (
-            <Dropdown
-              menu={{
-                items: [
-                  { key: 'xlsx', label: t('button.export_excel') },
-                  { key: 'csv', label: t('button.export_csv') },
-                ],
-                onClick: ({ key }) => void exportLedger(key as 'xlsx' | 'csv'),
-              }}
-              trigger={['click']}
-            >
-              <Button icon={<DownloadOutlined />} loading={exporting}>
-                {t('button.export_ledger')}
-              </Button>
-            </Dropdown>
+            <Button icon={<DownloadOutlined />} onClick={() => setExportOpen(true)}>
+              {t('button.export_ledger')}
+            </Button>
           )}
           <ColumnSettings
             options={columnOptions}
@@ -273,6 +225,12 @@ export function POListPage() {
         }}
         size="small"
         scroll={{ x: 'max-content' }}
+      />
+      <ExportDrawer
+        datasetKey="procurement_ledger"
+        open={exportOpen}
+        onClose={() => setExportOpen(false)}
+        pageFilters={{ status: statusFilter }}
       />
     </Space>
   )
