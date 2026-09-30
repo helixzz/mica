@@ -377,18 +377,64 @@ backend ──(HTTP)──> cerbos sidecar (:3593)
                     ├── purchase_requisition.yaml
                     ├── purchase_order.yaml
                     ├── payment_record.yaml
-                    └── invoice.yaml
+                    ├── invoice.yaml
+                    ├── contract.yaml / supplier.yaml / item.yaml
+                    └── sku_price_record.yaml / shipment.yaml / delivery_plan.yaml
 ```
 
 ### 添加新 resource 的字段权限
 
-1. 在 `deploy/cerbos-policies/` 加一个 YAML 文件，格式参照现有 4 个
+1. 在 `deploy/cerbos-policies/` 加一个 YAML 文件，格式参照现有文件
 2. 在 `core/field_authz.py` 的 `FIELD_PERMISSIONS` dict 加对应项（作为 fallback）
 3. Cerbos 自动热加载（`watchForChanges: true`），不需要重启容器
+
+> ⚠️ 两步都要做。`filter_dict_by_role` 对**字典里没有的 resource / role 会放行全部字段**，只加 YAML 而漏掉 fallback 项，会在 Cerbos 不可达时静默 fail-open。导出框架的 `register()` 会强制校验这一点，见下节。
 
 ### Graceful fallback
 
 Cerbos 不可达时（如开发环境没启动 cerbos 容器），`cerbos_client.py` 自动降级到 `FIELD_PERMISSIONS` 静态 dict。零故障风险。
+
+## 数据导出框架（v1.53.0+）
+
+`GET /api/v1/exports` 返回数据集目录，`GET /api/v1/exports/{key}` 导出。前端导出抽屉由目录元数据驱动，**新增数据集不需要改前端**。
+
+### 添加一个导出数据集
+
+只需在 `backend/app/services/export_datasets.py` 里 `register(...)` 一个 `ExportDataset`：
+
+```python
+register(
+    ExportDataset(
+        key="my_dataset",                     # URL 里的 key，同时用于文件名
+        label_zh="我的数据", label_en="My Dataset",
+        filters=frozenset({"date_range", "status", "keyword"}),  # 必须 ⊆ FILTER_KEYS
+        sheets=[
+            ExportSheetSpec(
+                title_zh="明细", title_en="Detail",
+                total_column=3,               # 可选：对该列追加「合计」行
+                columns=[
+                    ExportColumn("seq", "序号", "No.", get=lambda r: r[0], width=6),
+                    # field="<cerbos_kind>.<field>" → 该列受字段级权限控制
+                    ExportColumn(
+                        "amount", "金额", "Amount",
+                        get=lambda r: r[1], field="purchase_order.total_amount",
+                    ),
+                ],
+            ),
+        ],
+        loader=_load_my_dataset,              # async (db, request) -> 每个 Sheet 一个行列表
+    )
+)
+```
+
+约定与注意事项：
+
+- **行粒度**：主表取头部维度（一单一行），一对多**横向摊成一格**，绝不用笛卡尔积撑行；更细的明细另开 Sheet（见采购台账的 3 Sheet 写法）。
+- **`loader` 必须返回与 `sheets` 等长的行列表**，顺序一致。行首的 `0` 占位符由 `_with_index()` 替换为 `1..N`（**不要**自己插入序号，否则所有列会右移一位）。
+- **行级权限**：在 loader 里复用 `core/scoping.py` 的 `visible_po_id_subquery` / `visible_pr_id_subquery`，不要手写 where。
+- **字段级权限**：`field` 引用的 kind **必须**同时存在于 `FIELD_PERMISSIONS` 与 `deploy/cerbos-policies/`，否则 `register()` 直接抛错（刻意设计，防止 fail-open）。每次导出只按 kind 做一次检查，不按行放大。
+- **框架已经替你做了**：公式注入防护、CSV BOM、`export.max_rows` 行数上限、表头样式、Content-Disposition、文件名。不要在数据集里重复实现。
+- **筛选器**：数据集未声明的筛选器一旦被传入会返回 400（而不是静默忽略），所以 `filters` 要与 loader 实际处理的范围保持一致。
 
 ## PR → PO 履约偏离模型（v1.26+）
 

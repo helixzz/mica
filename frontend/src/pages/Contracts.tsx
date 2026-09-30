@@ -21,8 +21,8 @@ import { api, type Contract, type ContractExpiring, type ContractSearchHit } fro
 import { extractError } from '@/api/client'
 import { useAuth } from '@/auth/useAuth'
 import { ContractFormModal } from '@/components/ContractFormModal'
-import { downloadCSV } from '@/utils/export'
-import { fmtAmount, fmtAmountNode } from '@/utils/format'
+import { ExportDrawer, canExport } from '@/components/Export'
+import { fmtAmountNode } from '@/utils/format'
 import { showUndoToast } from '@/utils/undo'
 import { MonoId } from '@/components/ui/Mono'
 
@@ -44,6 +44,9 @@ export function ContractsPage() {
   const [editing, setEditing] = useState<Contract | null>(null)
   const [scanCreateOpen, setScanCreateOpen] = useState(false)
   const [extractedData, setExtractedData] = useState<Record<string, unknown> | null>(null)
+  const [exportOpen, setExportOpen] = useState(false)
+
+  const canExportData = canExport(user?.role)
 
   const canWrite = Boolean(
     user && ['admin', 'procurement_mgr', 'it_buyer'].includes(user.role),
@@ -70,19 +73,6 @@ export function ContractsPage() {
   useEffect(() => {
     void load()
   }, [load])
-
-  const handleExport = () => {
-    const headers = [
-      t('field.contract_number'), t('field.title'), t('field.po_number'),
-      t('field.status'), t('field.total_amount'), t('field.signed_date'), t('field.expiry_date'),
-    ]
-    const data = rows.map(r => [
-      r.contract_number, r.title, r.po_number || '',
-      t(`status.${r.status}` as 'status.active'), fmtAmount(r.total_amount, r.currency),
-      r.signed_date || '', r.expiry_date || '',
-    ])
-    downloadCSV(`mica-contracts-${new Date().toISOString().slice(0, 10)}.csv`, headers, data)
-  }
 
   const doSearch = async () => {
     if (!query.trim()) {
@@ -234,7 +224,9 @@ export function ContractsPage() {
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
         <Typography.Title level={3} style={{ margin: 0 }}>{t('nav.contracts')}</Typography.Title>
         <Space>
-        <Button icon={<DownloadOutlined />} onClick={handleExport}>{t('button.export_excel')}</Button>
+        {canExportData && (
+          <Button icon={<DownloadOutlined />} onClick={() => setExportOpen(true)}>{t('button.export')}</Button>
+        )}
         <Upload
           accept=".pdf,.jpg,.jpeg,.png"
           showUploadList={false}
@@ -335,6 +327,13 @@ export function ContractsPage() {
           scroll={{ x: 1100 }}
         />
       </Card>
+
+      <ExportDrawer
+        datasetKey="contracts"
+        open={exportOpen}
+        onClose={() => setExportOpen(false)}
+        pageFilters={{ keyword: query }}
+      />
 
       <ContractFormModal
         open={editing !== null}

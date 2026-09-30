@@ -1,0 +1,17 @@
+---
+apiVersion: "api.cerbos.dev/v1"
+resourcePolicy:
+  version: "default"
+  resource: "delivery_plan"
+  # Mirrors FIELD_PERMISSIONS["delivery_plan"] in field_authz.py.
+  rules:
+    - actions: ["read:*"]
+      effect: EFFECT_ALLOW
+      roles: ["admin", "procurement_mgr", "it_buyer", "finance_auditor"]
+
+    - actions: ["read:id", "read:po_id", "read:contract_id", "read:item_id",
+                "read:plan_name", "read:planned_qty", "read:planned_date",
+                "read:actual_qty", "read:actual_date", "read:status",
+                "read:created_at", "read:updated_at"]
+      effect: EFFECT_ALLOW
+      roles: ["dept_manager"]

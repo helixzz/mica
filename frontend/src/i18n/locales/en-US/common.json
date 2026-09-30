@@ -1,5 +1,18 @@
 {
   "export": {
+    "title": "Export data",
+    "dataset_unavailable": "This dataset is not available",
+    "filter_date_range": "Date range",
+    "filter_category": "Category",
+    "filter_item": "Item",
+    "filter_keyword": "Keyword",
+    "filter_keyword_placeholder": "Search by number or name",
+    "filter_status_placeholder": "Select or type a status",
+    "filter_any": "Any",
+    "filter_format": "Format",
+    "format_excel": "Excel",
+    "format_csv": "CSV",
+    "success": "Your export is downloading",
     "failed": "Export failed, please try again later"
   },
   "common": {
@@ -102,6 +115,7 @@
     "submit": "Submit",
     "save": "Save",
     "cancel": "Cancel",
+    "export": "Export",
     "confirm": "Confirm",
     "delete": "Delete",
     "edit": "Edit",
@@ -110,8 +124,6 @@
     "search": "Search",
     "print": "Print",
     "export_pdf": "Export PDF",
-    "export_excel": "Export Excel",
-    "export_csv": "Export CSV",
     "export_ledger": "Export Ledger",
     "reset": "Reset",
     "refresh": "Refresh",

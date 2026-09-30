@@ -1,4 +1,4 @@
-import { CopyOutlined, PlusOutlined, SearchOutlined } from '@ant-design/icons'
+import { CopyOutlined, DownloadOutlined, PlusOutlined, SearchOutlined } from '@ant-design/icons'
 import { Button, Input, Space, Table, Typography } from 'antd'
 import type { ColumnsType } from 'antd/es/table'
 import { useEffect, useRef, useState } from 'react'
@@ -6,6 +6,8 @@ import { useTranslation } from 'react-i18next'
 import { Link, useNavigate } from 'react-router-dom'
 
 import { api, type PRListItem } from '@/api'
+import { useAuth } from '@/auth/useAuth'
+import { ExportDrawer, canExport } from '@/components/Export'
 import { fmtAmount, fmtAmountNode } from '@/utils/format'
 import { MonoId } from '@/components/ui/Mono'
 
@@ -33,9 +35,13 @@ const STATUS_OPTIONS = [
 export function PRListPage() {
   const { t } = useTranslation()
   const navigate = useNavigate()
+  const user = useAuth((s) => s.user)
   const [rows, setRows] = useState<PRListItem[]>([])
   const [loading, setLoading] = useState(false)
+  const [exportOpen, setExportOpen] = useState(false)
   const searchInput = useRef<any>(null)
+
+  const canExportData = canExport(user?.role)
 
   const load = () => {
     setLoading(true)
@@ -122,10 +128,22 @@ export function PRListPage() {
         <Typography.Title level={3} style={{ margin: 0 }}>
           {t('nav.purchase_requisitions')}
         </Typography.Title>
-        <Button type="primary" icon={<PlusOutlined />} onClick={() => navigate('/purchase-requisitions/new')}>
-          {t('button.create')}
-        </Button>
+        <Space>
+          {canExportData && (
+            <Button icon={<DownloadOutlined />} onClick={() => setExportOpen(true)}>
+              {t('button.export')}
+            </Button>
+          )}
+          <Button type="primary" icon={<PlusOutlined />} onClick={() => navigate('/purchase-requisitions/new')}>
+            {t('button.create')}
+          </Button>
+        </Space>
       </div>
+      <ExportDrawer
+        datasetKey="purchase_requisitions"
+        open={exportOpen}
+        onClose={() => setExportOpen(false)}
+      />
       <Table<PRListItem>
         rowKey="id"
         dataSource={rows}

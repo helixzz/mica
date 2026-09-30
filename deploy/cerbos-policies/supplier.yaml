@@ -1,0 +1,25 @@
+---
+apiVersion: "api.cerbos.dev/v1"
+resourcePolicy:
+  version: "default"
+  resource: "supplier"
+  # Mirrors FIELD_PERMISSIONS["supplier"] in backend/app/core/field_authz.py.
+  # Settlement data (tax number, payee name / bank / account) is deliberately
+  # withheld from it_buyer and dept_manager.
+  rules:
+    - actions: ["read:*"]
+      effect: EFFECT_ALLOW
+      roles: ["admin", "procurement_mgr", "finance_auditor"]
+
+    - actions: ["read:id", "read:code", "read:name", "read:contact_name",
+                "read:contact_phone", "read:contact_email", "read:notes",
+                "read:is_enabled", "read:is_deleted",
+                "read:created_at", "read:updated_at"]
+      effect: EFFECT_ALLOW
+      roles: ["it_buyer"]
+
+    - actions: ["read:id", "read:code", "read:name", "read:contact_name",
+                "read:contact_phone", "read:contact_email",
+                "read:is_enabled", "read:created_at", "read:updated_at"]
+      effect: EFFECT_ALLOW
+      roles: ["dept_manager"]

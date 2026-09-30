@@ -1,0 +1,17 @@
+---
+apiVersion: "api.cerbos.dev/v1"
+resourcePolicy:
+  version: "default"
+  resource: "item"
+  # Mirrors FIELD_PERMISSIONS["item"] in backend/app/core/field_authz.py.
+  rules:
+    - actions: ["read:*"]
+      effect: EFFECT_ALLOW
+      roles: ["admin", "procurement_mgr", "it_buyer", "finance_auditor"]
+
+    - actions: ["read:id", "read:code", "read:name", "read:category",
+                "read:category_id", "read:uom", "read:specification",
+                "read:requires_serial", "read:is_enabled",
+                "read:created_at", "read:updated_at"]
+      effect: EFFECT_ALLOW
+      roles: ["dept_manager"]

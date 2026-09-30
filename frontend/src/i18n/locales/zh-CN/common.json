@@ -1,5 +1,18 @@
 {
   "export": {
+    "title": "导出数据",
+    "dataset_unavailable": "该数据集当前不可用",
+    "filter_date_range": "日期范围",
+    "filter_category": "分类",
+    "filter_item": "物料",
+    "filter_keyword": "关键词",
+    "filter_keyword_placeholder": "按编号或名称搜索",
+    "filter_status_placeholder": "选择或输入状态",
+    "filter_any": "全部",
+    "filter_format": "文件格式",
+    "format_excel": "Excel",
+    "format_csv": "CSV",
+    "success": "导出已开始下载",
     "failed": "导出失败，请稍后重试"
   },
   "common": {
@@ -102,6 +115,7 @@
     "submit": "提交",
     "save": "保存",
     "cancel": "取消",
+    "export": "导出",
     "confirm": "确认",
     "delete": "删除",
     "edit": "编辑",
@@ -110,8 +124,6 @@
     "search": "搜索",
     "print": "打印",
     "export_pdf": "导出 PDF",
-    "export_excel": "导出 Excel",
-    "export_csv": "导出 CSV",
     "export_ledger": "导出采购台账",
     "reset": "重置",
     "refresh": "刷新",

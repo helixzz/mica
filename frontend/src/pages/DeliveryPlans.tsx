@@ -1,4 +1,4 @@
-import { DeleteOutlined, EditOutlined, PlusOutlined, SplitCellsOutlined } from '@ant-design/icons'
+import { DeleteOutlined, DownloadOutlined, EditOutlined, PlusOutlined, SplitCellsOutlined } from '@ant-design/icons'
 import { Button, Card, Col, DatePicker, Input, Popconfirm, Progress, Row, Select, Space, Table, Tag, Tooltip, Typography, theme } from 'antd'
 import dayjs from 'dayjs'
 import { useEffect, useState } from 'react'
@@ -7,6 +7,7 @@ import { useTranslation } from 'react-i18next'
 import { api, Contract, DeliveryPlan, DeliveryPlanOverview, PurchaseOrderListItem } from '@/api'
 import { useAuth } from '@/auth/useAuth'
 import { DeliveryPlanModal } from '@/components/DeliveryPlanModal'
+import { ExportDrawer, canExport } from '@/components/Export'
 import { EmptyState } from '@/components/ui/EmptyState'
 import { PageHeader } from '@/components/ui/PageHeader'
 import { StatCard } from '@/components/ui/StatCard'
@@ -24,6 +25,9 @@ export function DeliveryPlansPage() {
   const [contracts, setContracts] = useState<Contract[]>([])
   const [modalOpen, setModalOpen] = useState(false)
   const [editingPlan, setEditingPlan] = useState<DeliveryPlan | undefined>()
+  const [exportOpen, setExportOpen] = useState(false)
+
+  const canExportData = canExport(user?.role)
 
   const [filters, setFilters] = useState<{
     po_id?: string
@@ -239,11 +243,18 @@ export function DeliveryPlansPage() {
       <PageHeader
         title={t('delivery_plan.title')}
         actions={
-          !isRequester && (
-            <Button type="primary" icon={<PlusOutlined />} onClick={() => { setEditingPlan(undefined); setModalOpen(true) }}>
-              {t('delivery_plan.new_plan')}
-            </Button>
-          )
+          <Space>
+            {canExportData && (
+              <Button icon={<DownloadOutlined />} onClick={() => setExportOpen(true)}>
+                {t('button.export')}
+              </Button>
+            )}
+            {!isRequester && (
+              <Button type="primary" icon={<PlusOutlined />} onClick={() => { setEditingPlan(undefined); setModalOpen(true) }}>
+                {t('delivery_plan.new_plan')}
+              </Button>
+            )}
+          </Space>
         }
       />
 
@@ -347,6 +358,18 @@ export function DeliveryPlansPage() {
           )}
         </Space>
       </Card>
+
+      <ExportDrawer
+        datasetKey="delivery_plans"
+        open={exportOpen}
+        onClose={() => setExportOpen(false)}
+        pageFilters={{
+          status: filters.status ? [filters.status] : undefined,
+          keyword: filters.search,
+          dateFrom: filters.dateRange?.[0]?.format('YYYY-MM-DD'),
+          dateTo: filters.dateRange?.[1]?.format('YYYY-MM-DD'),
+        }}
+      />
 
       <DeliveryPlanModal
         open={modalOpen}

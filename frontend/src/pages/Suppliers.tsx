@@ -34,7 +34,8 @@ import { ColumnSettings, type ColumnOption } from "@/components/ColumnSettings";
 import { usePersistedColumns } from "@/hooks/usePersistedColumns";
 
 import { api, type Supplier } from "@/api";
-import { downloadCSV } from "@/utils/export";
+import { useAuth } from "@/auth/useAuth";
+import { ExportDrawer, canExport } from "@/components/Export";
 import { showUndoToast } from "@/utils/undo";
 import { MonoId } from '@/components/ui/Mono'
 
@@ -60,6 +61,7 @@ const DEFAULT_VISIBLE: string[] = [
 
 export default function SuppliersPage() {
   const { t } = useTranslation();
+  const user = useAuth((s) => s.user);
   const [suppliers, setSuppliers] = useState<Supplier[]>([]);
   const [loading, setLoading] = useState(false);
   const [total, setTotal] = useState(0);
@@ -70,6 +72,9 @@ export default function SuppliersPage() {
     undefined,
   );
   const [selectedRowKeys, setSelectedRowKeys] = useState<React.Key[]>([]);
+  const [exportOpen, setExportOpen] = useState(false);
+
+  const canExportData = canExport(user?.role);
 
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [editingSupplier, setEditingSupplier] = useState<Supplier | null>(null);
@@ -167,32 +172,6 @@ export default function SuppliersPage() {
         e?.response?.data?.detail || t("admin.operation_failed"),
       );
     }
-  };
-
-  const handleExport = () => {
-    const headers = [
-      t("supplier.code"),
-      t("supplier.name"),
-      t("supplier.tax_number"),
-      t("field.contact_name"),
-      t("field.contact_phone"),
-      t("field.contact_email"),
-      t("supplier.status"),
-    ];
-    const data = suppliers.map((s) => [
-      s.code,
-      s.name,
-      s.tax_number || "",
-      s.contact_name || "",
-      s.contact_phone || "",
-      s.contact_email || "",
-      s.is_enabled !== false ? t("common.enabled") : t("common.disabled"),
-    ]);
-    downloadCSV(
-      `mica-suppliers-${new Date().toISOString().slice(0, 10)}.csv`,
-      headers,
-      data,
-    );
   };
 
   const handleSave = async () => {
@@ -410,9 +389,14 @@ export default function SuppliersPage() {
           {t("supplier.title")}
         </Typography.Title>
         <Space>
-          <Button icon={<DownloadOutlined />} onClick={handleExport}>
-            {t("button.export_excel")}
-          </Button>
+          {canExportData && (
+            <Button
+              icon={<DownloadOutlined />}
+              onClick={() => setExportOpen(true)}
+            >
+              {t("button.export")}
+            </Button>
+          )}
           <Button
             type="primary"
             icon={<PlusOutlined />}
@@ -685,6 +669,13 @@ export default function SuppliersPage() {
           </Form.Item>
         </Form>
       </Drawer>
+
+      <ExportDrawer
+        datasetKey="suppliers"
+        open={exportOpen}
+        onClose={() => setExportOpen(false)}
+        pageFilters={{ keyword: searchText }}
+      />
     </Space>
   );
 }

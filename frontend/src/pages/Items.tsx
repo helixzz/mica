@@ -4,13 +4,15 @@ import { useEffect, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 
 import { api, type ClassificationItem, flattenCategoryTree, type Item } from '@/api'
-import { downloadCSV } from '@/utils/export'
+import { useAuth } from '@/auth/useAuth'
+import { ExportDrawer, canExport } from '@/components/Export'
 import { showUndoToast } from '@/utils/undo'
 import { MonoId } from '@/components/ui/Mono'
 
 export default function ItemsPage() {
   const { t } = useTranslation()
   const { token } = theme.useToken()
+  const user = useAuth((s) => s.user)
   const [data, setData] = useState<Item[]>([])
   const [total, setTotal] = useState(0)
   const [loading, setLoading] = useState(false)
@@ -20,8 +22,11 @@ export default function ItemsPage() {
   const [page, setPage] = useState(1)
   const [pageSize, setPageSize] = useState(50)
   const [drawerOpen, setDrawerOpen] = useState(false)
+  const [exportOpen, setExportOpen] = useState(false)
   const [editingItem, setEditingItem] = useState<Item | null>(null)
   const [form] = Form.useForm()
+
+  const canExportData = canExport(user?.role)
 
   const categoryMap = Object.fromEntries(categories.map((c) => [c.id, c]))
 
@@ -48,19 +53,6 @@ export default function ItemsPage() {
   useEffect(() => {
     void load()
   }, [categoryFilter, search, page, pageSize])
-
-  const handleExport = () => {
-    const headers = [
-      t('item.code'), t('field.item_name'), t('item.category_label'),
-      t('field.uom'), t('field.specification'), t('item.status_col'),
-    ]
-    const rows = data.map((i) => [
-      i.code, i.name, categoryMap[i.category_id || '']?.label_zh || t('item.uncategorized'),
-      i.uom, i.specification || '',
-      i.is_enabled !== false ? t('item.active') : t('item.inactive'),
-    ])
-    downloadCSV(`mica-items-${new Date().toISOString().slice(0, 10)}.csv`, headers, rows)
-  }
 
   const handleSave = async () => {
     try {
@@ -107,7 +99,9 @@ export default function ItemsPage() {
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
         <Typography.Title level={3} style={{ margin: 0 }}>{t('item.title')}</Typography.Title>
         <Space>
-          <Button icon={<DownloadOutlined />} onClick={handleExport}>{t('button.export_excel')}</Button>
+          {canExportData && (
+            <Button icon={<DownloadOutlined />} onClick={() => setExportOpen(true)}>{t('button.export')}</Button>
+          )}
           <Button type="primary" icon={<PlusOutlined />} onClick={() => { setEditingItem(null); form.resetFields(); setDrawerOpen(true) }}>{t('item.new')}</Button>
         </Space>
       </div>
@@ -212,6 +206,13 @@ export default function ItemsPage() {
           </Space>
         </Col>
       </Row>
+
+      <ExportDrawer
+        datasetKey="items"
+        open={exportOpen}
+        onClose={() => setExportOpen(false)}
+        pageFilters={{ categoryId: categoryFilter, keyword: search }}
+      />
 
       <Drawer title={editingItem ? t('item.edit_code', { code: editingItem.code }) : t('item.new')} width={480} open={drawerOpen} onClose={() => { setDrawerOpen(false); setEditingItem(null) }} footer={
         <Space style={{ float: 'right' }}><Button onClick={() => setDrawerOpen(false)}>{t('button.cancel')}</Button><Button type="primary" onClick={handleSave}>{t('button.save')}</Button></Space>

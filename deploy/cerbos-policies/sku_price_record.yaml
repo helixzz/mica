@@ -1,0 +1,32 @@
+---
+apiVersion: "api.cerbos.dev/v1"
+resourcePolicy:
+  version: "default"
+  resource: "sku_price_record"
+  # Mirrors the sku_price_record entry in FIELD_PERMISSIONS
+  # (backend/app/core/field_authz.py).
+  # Covers the price record, its rolling benchmark and the anomaly rows, which
+  # are all commercially sensitive.
+  rules:
+    - actions: ["read:*"]
+      effect: EFFECT_ALLOW
+      roles: ["admin", "procurement_mgr", "finance_auditor"]
+
+    - actions: ["read:id", "read:item_id", "read:supplier_id", "read:price",
+                "read:currency", "read:quotation_date", "read:source_type",
+                "read:source_ref", "read:entered_by_id", "read:notes",
+                "read:created_at", "read:updated_at",
+                "read:avg_price", "read:median_price", "read:stddev",
+                "read:min_price", "read:max_price", "read:sample_size",
+                "read:last_refreshed_at", "read:baseline_avg_price",
+                "read:observed_price", "read:deviation_pct", "read:severity",
+                "read:status"]
+      effect: EFFECT_ALLOW
+      roles: ["it_buyer"]
+
+    - actions: ["read:id", "read:item_id", "read:supplier_id", "read:price",
+                "read:currency", "read:quotation_date", "read:source_type",
+                "read:created_at", "read:avg_price", "read:median_price",
+                "read:min_price", "read:max_price", "read:sample_size"]
+      effect: EFFECT_ALLOW
+      roles: ["dept_manager"]

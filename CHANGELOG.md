@@ -7,6 +7,58 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [v1.53.0] — 2026-09-30
+
+### 新增（通用导出框架 + 10 个数据集）
+
+- **从「一个功能」升级为「一套框架」**：新增 `app/services/export_registry.py`。数据集以**声明式**描述自己（支持的筛选器、允许的角色、Sheet 与列、每列对应的字段级权限、loader），框架统一负责行级 scoping、列级门禁、行数上限、公式注入防护、CSV BOM、表头样式与文件名。新增数据集只需 `register(...)` 一份声明，**前端零改动**即可出现在导出抽屉里（UI 由目录元数据驱动）。
+- **两个新端点**：
+  - `GET /api/v1/exports` —— 数据集目录（按角色过滤），含中英标签、支持的筛选器、**合法状态值**、Sheet 与列名
+  - `GET /api/v1/exports/{key}` —— 统一导出，`format=xlsx|csv` + 全部可选筛选器
+- **10 个数据集**：
+
+  | key | 说明 | Sheet |
+  |---|---|---|
+  | `procurement_ledger` | 采购台账（PR/PO/合同/付款/发票宽表） | 3 |
+  | `purchase_requisitions` | 采购申请 + 申请行项目 | 2 |
+  | `contracts` | 合同 + 关联采购订单 | 2 |
+  | `delivery_plans` | 交货计划（实际数量/日期由到货记录推导） | 1 |
+  | `shipments` | 到货收货（行项目粒度） | 1 |
+  | `invoices` | 发票 + 发票行项目 | 2 |
+  | `sku_prices` | SKU 行情：价格记录 / 行情基准 / 价格异常 | 3 |
+  | `suppliers` | 供应商主数据 | 1 |
+  | `items` | 物料主数据 | 1 |
+  | `payments` | 付款记录 | 1 |
+
+- **筛选器**：`date_from` / `date_to` / `status`（可重复传参）/ `supplier_id` / `company_id` / `department_id` / `cost_center_id` / `category_id` / `item_id` / `q`。由数据集声明支持范围；传入不支持的筛选器返回 **400 `export.unsupported_filter`**，而不是静默忽略（避免用户以为筛过了）。
+- **行粒度**：主表一律取头部维度（一单一合同一行），一对多**横向摊成一格**，更细的明细另开 Sheet —— 与 v1.52.0 台账的结论一致，杜绝笛卡尔积撑行。
+- **字段级权限补齐**：此前只有 4 类资源有策略，其余资源会落到「字典里没有该 kind 就放行全部字段」的静态回退。本次新增 `contract` / `supplier` / `item` / `sku_price_record` / `shipment` / `delivery_plan` 六份 Cerbos 策略与对应的 `FIELD_PERMISSIONS` 条目；并在注册时**强制校验**：任何数据集引用了没有策略的 kind 就直接抛错，从机制上杜绝 fail-open。供应商的税号与收款户名/开户行/银行账号对 `it_buyer`、`dept_manager` 遮蔽；到货单价对 `dept_manager` 遮蔽。
+- **状态值不再硬编码**：目录下发每个数据集的 `status_values`（直接来自 `PRStatus` / `ContractStatus` / … 枚举），前端据此渲染状态下拉。此项修掉了前端硬编码列表已出现的漂移——原先漏了 `PRStatus.cancelled` 与 `InvoiceStatus.mismatched`；注册时也要求声明 status 筛选器就必须给出 `status_values`。
+- **前端**：新增目录驱动的导出抽屉（只渲染该数据集声明的筛选器 + Excel/CSV 选择），接入 **9 个列表页**（含付款页，替换其原先的裸下载）；**删除 5 处前端裸 CSV 导出**及其 `utils/export.ts`（它们导出全量、绕过权限与页面筛选，且同样存在公式注入）。按钮按角色显隐，导出失败展示后端本地化错误。
+- **兼容性**：`GET /purchase-orders/export/ledger` 保留，内部复用同一注册表（采购台账现为本框架的一个数据集）。
+- **文档**：`docs/DEVELOPMENT.md` 新增「数据导出框架」章节（如何注册数据集、行粒度约定、`_with_index` 的坑、Cerbos 两步齐做）；用户手册新增「数据导出」章节。
+
+### 安全与正确性修复（由独立验证发现）
+
+- **合同「关联采购订单」Sheet 越权泄露**：合同经 `contracts.po_id` 可见、但其 `po_contract_links` 指向一个不可见 PO 时，链接 Sheet 仍会导出该 PO 的单号与状态。现将链接行按可见 PO 集合过滤（ACL 放宽前不可达，但属真实缺陷）。
+- **发票「行项目」Sheet 越权泄露**：发票只要**任一**行命中可见 PO 就会被选中，随后导出其**全部**行，包括落在不可见 PO 上的行。现将行按可见 PO 过滤。
+- **SKU 副表筛选不一致**：`category` / `keyword` / `item` 原先只作用于「价格记录」Sheet，「行情基准」「价格异常」仍会带出不符合条件的物料。现将物料维度筛选统一作用于三张表。
+- **通用端点缺状态校验**：`status=bogus` 原先返回 200 空文件，现按数据集的 `status_values` 校验并返回 400 `export.invalid_status`（与旧端点一致）。
+- **不可枚举数据集 key**：非导出角色现在在任何 key 上都得到 403，而不是「存在的 key 403、不存在的 key 404」。
+- **注册期角色覆盖校验**：`register()` 除校验 kind 外，还要求数据集的每个可导出角色在该 kind 的 `FIELD_PERMISSIONS` 中都有条目——补上静态回退「角色缺失即放行全部字段」的最后一条 fail-open 路径。
+- **测试盲点修补**（验证方证明原测试会漏过以下缺陷，现已能捕获并已用注入缺陷反证）：列取值接错下标；副表串入其他表的数据；**many-to-one 关系漏 `selectinload`**（生产 `expire_on_commit=True` 下会 `MissingGreenlet` 500）。新增“清空 identity map 后重跑全部数据集”的用例复现生产会话语义，并替换掉一条恒真的日期测试为真实的跨日边界测试。
+- **Migration 0057**：`export.max_rows` 的说明由「单次导出的最大行数上限」改为「每个工作表」，与实际实现（按 Sheet 计数）对齐；不改行为，避免收紧后突然拒绝原本可用的导出。
+
+### 验证
+
+- 后端全量 **764 passed**，`ruff check` / `ruff format --check` 通过
+- 前端 `npm run type-check`、`npm run build`、`vitest` **13 files / 71 tests passed**；zh/en i18n parity 无差异（仅 7 个既有 `insights.*` zh-only）
+- 新增后端用例 41 项，覆盖：10 个数据集逐个渲染 XLSX/CSV 且 Sheet/表头/关键列取值与声明一致、序号列不右移、清空 identity map 后仍可导出、副表不串数据、目录按角色过滤、未声明筛选器 400、未知/非法状态 400、未知数据集 404、非导出角色 403 且不可枚举、行数上限、字段门禁遮蔽敏感列、公式注入在全部数据集被中和、CSV 危险前缀与不过度转义、跨日边界与 `date.max` 不溢出、台账数据集与旧端点 Sheet 一致、状态值来自枚举、无策略 kind 或角色覆盖不全时注册即失败
+- 前端新增 6 项用例（导出抽屉只渲染声明的筛选器、未知数据集禁用导出、`status` 重复传参）
+- 另由独立 subagent 完成对抗式验证（C1–C12，隔离库 + 真实 HTTP + 埋点注入），本节的修复项即其结论；生成的两处越权与三处测试盲点均已修复并复验
+
+---
+
 ## [v1.52.3] — 2026-09-29
 
 ### 修复（`health.sh` 在启用 TLS 的部署上恒报 DEGRADED）

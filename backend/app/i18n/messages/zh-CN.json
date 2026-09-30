@@ -7,7 +7,9 @@
   "export": {
     "too_many_rows": "导出行数超过上限，请先收窄筛选条件后重试",
     "invalid_status": "存在无效的采购订单状态筛选值",
-    "invalid_date_range": "开始日期不能晚于结束日期"
+    "invalid_date_range": "开始日期不能晚于结束日期",
+    "dataset_not_found": "导出数据集不存在",
+    "unsupported_filter": "该数据集不支持所选筛选条件"
   },
   "auth": {
     "invalid_credentials": "auth invalid credentials",

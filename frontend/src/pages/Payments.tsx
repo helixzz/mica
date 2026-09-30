@@ -5,35 +5,24 @@ import { useEffect, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 
 import { api, type PaymentRecord } from '@/api'
-import { fmtAmount, fmtAmountNode } from '@/utils/format'
-import { getToken } from '@/api/client'
+import { useAuth } from '@/auth/useAuth'
+import { ExportDrawer, canExport } from '@/components/Export'
+import { fmtAmountNode } from '@/utils/format'
 import { MonoId } from '@/components/ui/Mono'
 
 export function PaymentsPage() {
   const { t } = useTranslation()
+  const user = useAuth((s) => s.user)
   const [rows, setRows] = useState<PaymentRecord[]>([])
   const [loading, setLoading] = useState(false)
+  const [exportOpen, setExportOpen] = useState(false)
+
+  const canExportData = canExport(user?.role)
 
   useEffect(() => {
     setLoading(true)
     api.listPayments().then(setRows).catch(() => setRows([])).finally(() => setLoading(false))
   }, [])
-
-  const exportExcel = async () => {
-    const resp = await fetch('/api/v1/payments/export/excel', {
-      headers: { Authorization: `Bearer ${getToken() ?? ''}` },
-    })
-    if (!resp.ok) return
-    const blob = await resp.blob()
-    const url = URL.createObjectURL(blob)
-    const a = document.createElement('a')
-    a.href = url
-    a.download = `mica-payments-${new Date().toISOString().slice(0, 10)}.xlsx`
-    document.body.appendChild(a)
-    a.click()
-    a.remove()
-    URL.revokeObjectURL(url)
-  }
 
   const columns: ColumnsType<PaymentRecord> = [
     { title: t('field.payment_number'), dataIndex: 'payment_number', render: (v: string) => <MonoId>{v}</MonoId> },
@@ -55,8 +44,15 @@ export function PaymentsPage() {
     <Space direction="vertical" size="large" style={{ width: '100%' }}>
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
         <Typography.Title level={3} style={{ margin: 0 }}>{t('nav.payments')}</Typography.Title>
-        <Button icon={<DownloadOutlined />} onClick={exportExcel}>{t('button.export_excel')}</Button>
+        {canExportData && (
+          <Button icon={<DownloadOutlined />} onClick={() => setExportOpen(true)}>{t('button.export')}</Button>
+        )}
       </div>
+      <ExportDrawer
+        datasetKey="payments"
+        open={exportOpen}
+        onClose={() => setExportOpen(false)}
+      />
       <Table<PaymentRecord> rowKey="id" dataSource={rows} columns={columns} loading={loading} pagination={{ pageSize: 20 }} scroll={{ x: 'max-content' }} />
     </Space>
   )

@@ -1,0 +1,30 @@
+---
+apiVersion: "api.cerbos.dev/v1"
+resourcePolicy:
+  version: "default"
+  resource: "shipment"
+  # Mirrors FIELD_PERMISSIONS["shipment"] in field_authz.py.
+  # The rule names cover both the shipment header and its line items
+  # (item_name / line_no / qty_shipped / qty_received / unit_price).
+  rules:
+    - actions: ["read:*"]
+      effect: EFFECT_ALLOW
+      roles: ["admin", "procurement_mgr", "finance_auditor"]
+
+    - actions: ["read:id", "read:shipment_number", "read:po_id", "read:contract_id",
+                "read:batch_no", "read:is_default", "read:status", "read:carrier",
+                "read:tracking_number", "read:expected_date", "read:actual_date",
+                "read:received_by_id", "read:notes", "read:created_at",
+                "read:updated_at", "read:item_name", "read:line_no",
+                "read:qty_shipped", "read:qty_received", "read:unit_price"]
+      effect: EFFECT_ALLOW
+      roles: ["it_buyer"]
+
+    - actions: ["read:id", "read:shipment_number", "read:po_id", "read:contract_id",
+                "read:batch_no", "read:status", "read:carrier",
+                "read:tracking_number", "read:expected_date", "read:actual_date",
+                "read:notes", "read:created_at", "read:updated_at",
+                "read:item_name", "read:line_no", "read:qty_shipped",
+                "read:qty_received"]
+      effect: EFFECT_ALLOW
+      roles: ["dept_manager"]

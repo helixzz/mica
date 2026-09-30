@@ -1,4 +1,6 @@
-import { client } from './client'
+import i18n from '@/i18n'
+
+import { client, getToken } from './client'
 
 export interface User {
   id: string
@@ -1008,6 +1010,129 @@ export interface PanelConfig {
   w: number
   h: number
   config?: Record<string, unknown>
+}
+
+// ---------------------------------------------------------------------------
+// Generic dataset export (GET /exports, GET /exports/{key})
+// ---------------------------------------------------------------------------
+
+/** One column of an export sheet. Labels come from the API, never from i18n. */
+export interface ExportColumn {
+  key: string
+  label_zh: string
+  label_en: string
+}
+
+export interface ExportSheet {
+  title_zh: string
+  title_en: string
+  columns: ExportColumn[]
+}
+
+/** Filter keys a dataset declares. Only these may be sent back as query params. */
+export type ExportFilterKey =
+  | 'company'
+  | 'cost_center'
+  | 'category'
+  | 'date_range'
+  | 'department'
+  | 'item'
+  | 'keyword'
+  | 'status'
+  | 'supplier'
+
+export interface ExportDataset {
+  key: string
+  label_zh: string
+  label_en: string
+  filters: string[]
+  /** Allowed values for the `status` filter, supplied by the backend. */
+  status_values: string[]
+  sheets: ExportSheet[]
+}
+
+export type ExportFormat = 'xlsx' | 'csv'
+
+/** Query params accepted by ``GET /exports/{key}`` (all optional). */
+export interface ExportParams {
+  format?: ExportFormat
+  date_from?: string
+  date_to?: string
+  status?: string[]
+  supplier_id?: string
+  company_id?: string
+  department_id?: string
+  cost_center_id?: string
+  category_id?: string
+  item_id?: string
+  q?: string
+}
+
+/** Build the download URL. ``status`` is repeated once per selected value. */
+export function buildExportUrl(key: string, params: ExportParams = {}): string {
+  const search = new URLSearchParams()
+  if (params.format) search.set('format', params.format)
+  if (params.date_from) search.set('date_from', params.date_from)
+  if (params.date_to) search.set('date_to', params.date_to)
+  params.status?.filter(Boolean).forEach((value) => search.append('status', value))
+  if (params.supplier_id) search.set('supplier_id', params.supplier_id)
+  if (params.company_id) search.set('company_id', params.company_id)
+  if (params.department_id) search.set('department_id', params.department_id)
+  if (params.cost_center_id) search.set('cost_center_id', params.cost_center_id)
+  if (params.category_id) search.set('category_id', params.category_id)
+  if (params.item_id) search.set('item_id', params.item_id)
+  if (params.q) search.set('q', params.q)
+  const query = search.toString()
+  return `/api/v1/exports/${encodeURIComponent(key)}${query ? `?${query}` : ''}`
+}
+
+function filenameFromDisposition(disposition: string | null, fallback: string): string {
+  if (!disposition) return fallback
+  const utf8 = /filename\*=UTF-8''([^;]+)/i.exec(disposition)
+  if (utf8?.[1]) {
+    try {
+      return decodeURIComponent(utf8[1].trim())
+    } catch {
+      // fall through to the plain filename form
+    }
+  }
+  const plain = /filename="?([^";]+)"?/i.exec(disposition)
+  return plain?.[1]?.trim() || fallback
+}
+
+/**
+ * Fetch a dataset export and save it as a blob (same pattern as
+ * ``POList``'s ledger export). Resolves with the saved filename; rejects with
+ * an ``Error`` whose message is the localised backend ``detail`` (empty string
+ * when the backend sent none, so callers can fall back to ``export.failed``).
+ */
+export async function downloadExport(key: string, params: ExportParams = {}): Promise<string> {
+  const resp = await fetch(buildExportUrl(key, params), {
+    headers: {
+      Authorization: `Bearer ${getToken() ?? ''}`,
+      'Accept-Language': i18n.language || 'zh-CN',
+    },
+  })
+  if (!resp.ok) {
+    const body = (await resp.json().catch(() => null)) as { detail?: string } | null
+    throw new Error(typeof body?.detail === 'string' ? body.detail : '')
+  }
+  const blob = await resp.blob()
+  const stamp = new Date().toISOString().slice(0, 10).replace(/-/g, '')
+  const extension = params.format === 'csv' ? 'csv' : 'xlsx'
+  const filename = filenameFromDisposition(
+    resp.headers.get('Content-Disposition'),
+    `mica-${key}-${stamp}.${extension}`,
+  )
+  const url = URL.createObjectURL(blob)
+  const a = document.createElement('a')
+  a.href = url
+  a.download = filename
+  document.body.appendChild(a)
+  a.click()
+  a.remove()
+  URL.revokeObjectURL(url)
+  return filename
 }
 
 export const api = {
@@ -2261,5 +2386,9 @@ export const api = {
   async getInsightsRoleDefaults(): Promise<{ panels: PanelConfig[] }> {
     const { data } = await client.get('/insights/role-defaults')
     return data
+  },
+  async listExportDatasets(): Promise<ExportDataset[]> {
+    const { data } = await client.get<{ datasets: ExportDataset[] }>('/exports')
+    return data.datasets
   },
 }

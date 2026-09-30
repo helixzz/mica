@@ -1,0 +1,25 @@
+---
+apiVersion: "api.cerbos.dev/v1"
+resourcePolicy:
+  version: "default"
+  resource: "contract"
+  # Mirrors FIELD_PERMISSIONS["contract"] in backend/app/core/field_authz.py.
+  # Anything not matched here is denied by Cerbos' default-deny.
+  rules:
+    - actions: ["read:*"]
+      effect: EFFECT_ALLOW
+      roles: ["admin", "procurement_mgr", "finance_auditor"]
+
+    - actions: ["read:id", "read:contract_number", "read:po_id", "read:supplier_id",
+                "read:title", "read:current_version", "read:status", "read:currency",
+                "read:total_amount", "read:signed_date", "read:effective_date",
+                "read:expiry_date", "read:notes", "read:created_at", "read:updated_at"]
+      effect: EFFECT_ALLOW
+      roles: ["it_buyer"]
+
+    - actions: ["read:id", "read:contract_number", "read:po_id", "read:supplier_id",
+                "read:title", "read:current_version", "read:status", "read:currency",
+                "read:total_amount", "read:signed_date", "read:effective_date",
+                "read:expiry_date", "read:created_at", "read:updated_at"]
+      effect: EFFECT_ALLOW
+      roles: ["dept_manager"]

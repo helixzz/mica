@@ -1,4 +1,4 @@
-import { CheckOutlined, DatabaseOutlined, EditOutlined, DeleteOutlined, LineChartOutlined, PlusOutlined, WarningOutlined } from '@ant-design/icons'
+import { CheckOutlined, DatabaseOutlined, DownloadOutlined, EditOutlined, DeleteOutlined, LineChartOutlined, PlusOutlined, WarningOutlined } from '@ant-design/icons'
 import {
   Alert,
   Button,
@@ -40,11 +40,14 @@ import {
   type Supplier,
 } from '@/api'
 import { extractError } from '@/api/client'
+import { useAuth } from '@/auth/useAuth'
+import { ExportDrawer, canExport } from '@/components/Export'
 import { fmtAmount, fmtAmountNode, fmtQty, fmtQtyNode, getCurrencySymbol } from '@/utils/format'
 import { MonoId } from '@/components/ui/Mono'
 
 export function SKUPage() {
   const { t } = useTranslation()
+  const user = useAuth((s) => s.user)
   const [items, setItems] = useState<Item[]>([])
   const [suppliers, setSuppliers] = useState<Supplier[]>([])
   const [anomalies, setAnomalies] = useState<SKUAnomaly[]>([])
@@ -56,6 +59,9 @@ export function SKUPage() {
   const [categories, setCategories] = useState<ClassificationItem[]>([])
   const [categoryFilter, setCategoryFilter] = useState<string | null>(null)
   const [insights, setInsights] = useState<SKUInsights | null>(null)
+  const [exportOpen, setExportOpen] = useState(false)
+
+  const canExportData = canExport(user?.role)
 
   const load = () => {
     void api.items().then(setItems).catch(() => {})
@@ -185,8 +191,20 @@ export function SKUPage() {
 
   return (
     <Space direction="vertical" size="large" style={{ width: '100%' }}>
-      <Typography.Title level={3} style={{ margin: 0 }}>{t('sku.title')}
-      </Typography.Title>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+        <Typography.Title level={3} style={{ margin: 0 }}>{t('sku.title')}
+        </Typography.Title>
+        {canExportData && (
+          <Button icon={<DownloadOutlined />} onClick={() => setExportOpen(true)}>{t('button.export')}</Button>
+        )}
+      </div>
+
+      <ExportDrawer
+        datasetKey="sku_prices"
+        open={exportOpen}
+        onClose={() => setExportOpen(false)}
+        pageFilters={{ categoryId: categoryFilter ?? undefined }}
+      />
 
       <Tabs
         defaultActiveKey="market"
