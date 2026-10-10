@@ -46,7 +46,12 @@ from app.models import (
     Supplier,
     User,
 )
-from app.services.export_excel import _num, collect_procurement_ledger
+from app.services.export_excel import (
+    LEDGER_COLUMNS,
+    LEDGER_TOTAL_COLUMN,
+    _num,
+    collect_procurement_ledger,
+)
 from app.services.export_registry import (
     ExportColumn,
     ExportDataset,
@@ -1236,26 +1241,6 @@ register(
 
 LEDGER_FILTERS = frozenset({"date_range", "status", "supplier", "keyword"})
 
-_LEDGER_HEADERS = [
-    ("seq", "序号", "No.", 6),
-    ("pr_number", "申请单号", "PR No.", 16),
-    ("requester", "申请人", "Requester", 18),
-    ("cost_center", "成本中心", "Cost Center", 14),
-    ("company", "公司", "Company", 28),
-    ("supplier", "供应商", "Supplier", 30),
-    ("contracts", "合同流程号", "Contract No.", 22),
-    ("qty", "数量", "Qty", 10),
-    ("unit_price", "单价", "Unit Price", 14),
-    ("amount", "总金额", "Amount", 16),
-    ("currency", "币种", "Currency", 8),
-    ("po_number", "采购订单号", "PO No.", 16),
-    ("payments", "采购付款单号", "Payment No.", 26),
-    ("invoice_status", "开票状态", "Invoice Status", 18),
-    ("delivery_status", "到货状态", "Delivery Status", 18),
-    ("oa_payment", "OA付款单号", "OA Payment No.", 18),
-    ("notes", "备注", "Notes", 30),
-]
-
 _LEDGER_PAYMENT_HEADERS = [
     ("seq", "序号", "No.", 6),
     ("po_number", "采购订单号", "PO No.", 16),
@@ -1299,8 +1284,8 @@ LEDGER_SHEETS = [
     ExportSheetSpec(
         title_zh="采购台账",
         title_en="Ledger",
-        columns=_index_columns(_LEDGER_HEADERS),
-        total_column=9,
+        columns=_index_columns(LEDGER_COLUMNS),
+        total_column=LEDGER_TOTAL_COLUMN,
     ),
     ExportSheetSpec(
         title_zh="付款明细",

@@ -7,6 +7,38 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [v1.54.0] — 2026-09-30
+
+### 新增（采购台账补充需求背景与物料信息）
+
+采购同学反馈：台账主表有 PR 编号却看不到 PR 标题，有数量却看不出买的是什么，无法对应到具体的采购需求背景。主表新增 5 列：
+
+| 新列 | 数据来源 |
+|---|---|
+| **申请标题 PR Title** | `purchase_requisitions.title` |
+| **需求说明 Business Reason** | `purchase_requisitions.business_reason`（业务缘由，即需求的背景说明） |
+| **品名 Item Name** | `po_items.item_name`（实际下单的物料，非 PR 行） |
+| **规格 Specification** | `po_items.specification` |
+| **SKU 编码 SKU Code** | `po_items.item_id → items.code` |
+
+- 列序：`申请单号 → 申请标题 → 需求说明 → 申请人 → …`，物料三列紧邻数量/单价/总金额之前，便于对照「这一行买的是什么、多少、多少钱」。
+- 申请标题与需求说明经 Cerbos 字段级校验（`purchase_requisition.title` / `business_reason`），台账因此多一次字段检查（共 4 次，仍按资源类型而非按行）；品名/规格/SKU 为物料描述，不做门禁。
+- SKU 编码通过 `po_items.item_id` 关联 `items.code` 一次查询得到（`POItem` 无 `item` 关系），不产生 N+1。
+- 同步影响 CSV 导出与框架端点 `GET /api/v1/exports/procurement_ledger`（表头与合计列位置由同一份列声明推导）。
+
+### 重构（列声明收敛为单一来源）
+
+- 台账主表的列定义由散落的 `LEDGER_HEADERS` / `LEDGER_COL_WIDTHS` / 硬编码合计列下标，收敛为 `export_excel.LEDGER_COLUMNS`（key / 中英表头 / 列宽），表头、列宽、合计列位置与框架适配器的列全部由它推导。
+- 新增防漂移用例：断言每一行的长度等于列声明长度，并断言框架适配器的表头与 `LEDGER_HEADERS` 完全一致——此前行构造与表头是两处手工维护，正是本次加列时最容易出错的地方。
+- 测试中的台账断言由「硬编码下标」改为「按表头取值」（`_ledger_row()` 辅助 + `PO_COL` / `CONTRACT_COL` / `SUPPLIER_COL` 常量），避免以后再改列时批量失效。
+
+### 验证
+
+- 后端全量 **765 passed**，`ruff check` / `ruff format --check` 通过
+- 真实数据演示确认新列取值正确（申请标题、需求说明、品名、规格、SKU 编码均落位，列数 22）
+
+---
+
 ## [v1.53.1] — 2026-09-30
 
 ### 修复（采购订单页未接入新导出抽屉）

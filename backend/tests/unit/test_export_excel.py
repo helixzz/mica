@@ -14,6 +14,7 @@ from app.models import (
     Invoice,
     InvoiceLine,
     InvoiceStatus,
+    Item,
     PaymentRecord,
     PaymentStatus,
     POContractLink,
@@ -407,29 +408,37 @@ async def test_collect_procurement_ledger_groups_one_row_per_po_item(seeded_db_s
 
     data = await svc.collect_procurement_ledger(db, actor=actor)
 
-    rows = [row for row in data.ledger_rows if row[11] == po.po_number]
+    rows = [row for row in data.ledger_rows if row[PO_COL] == po.po_number]
     assert len(rows) == 2
     first = rows[0]
-    assert first[1] == pr.pr_number
-    assert first[2] == actor.display_name
-    assert first[5] == supplier.name
-    assert first[6] == "JQPA202606008002 / JQPA202606009003"
-    assert first[7] == pytest.approx(400.0)
-    assert first[8] == pytest.approx(129000.0)
-    assert first[9] == pytest.approx(51600000.0)
-    assert first[10] == "CNY"
-    assert first[11] == po.po_number
-    assert first[12] == "PAY-A-001 / PAY-A-002"
-    assert first[13] == "已开票 Invoiced"
-    assert first[14] == "已到货 Delivered"
-    assert first[15] == ""
-    assert first[16] == ""
+    # Index by header so adding a column cannot silently invalidate these.
+    header_row = _ledger_row(first)
+    assert header_row["申请单号 PR No."] == pr.pr_number
+    assert header_row["申请标题 PR Title"] == pr.title
+    assert header_row["需求说明 Business Reason"] == "ledger export test"
+    assert header_row["申请人 Requester"] == actor.display_name
+    assert header_row["供应商 Supplier"] == supplier.name
+    assert header_row["合同流程号 Contract No."] == "JQPA202606008002 / JQPA202606009003"
+    assert header_row["品名 Item Name"] == "GPU A"
+    assert header_row["规格 Specification"] == ""
+    assert header_row["SKU 编码 SKU Code"] == ""
+    assert header_row["数量 Qty"] == pytest.approx(400.0)
+    assert header_row["单价 Unit Price"] == pytest.approx(129000.0)
+    assert header_row["总金额 Amount"] == pytest.approx(51600000.0)
+    assert header_row["币种 Currency"] == "CNY"
+    assert header_row["采购订单号 PO No."] == po.po_number
+    assert header_row["采购付款单号 Payment No."] == "PAY-A-001 / PAY-A-002"
+    assert header_row["开票状态 Invoice Status"] == "已开票 Invoiced"
+    assert header_row["到货状态 Delivery Status"] == "已到货 Delivered"
+    assert header_row["OA付款单号 OA Payment No."] == ""
+    assert header_row["备注 Notes"] == ""
 
-    second = rows[1]
-    assert second[0] == first[0] + 1
-    assert second[7] == pytest.approx(80.0)
-    assert second[13] == "未开票 Not Invoiced"
-    assert second[14] == "部分到货 Partially Delivered"
+    second_row = _ledger_row(rows[1])
+    assert second_row["序号 No."] == first[0] + 1
+    assert second_row["品名 Item Name"] == "GPU B"
+    assert second_row["数量 Qty"] == pytest.approx(80.0)
+    assert second_row["开票状态 Invoice Status"] == "未开票 Not Invoiced"
+    assert second_row["到货状态 Delivery Status"] == "部分到货 Partially Delivered"
 
     payments = [row for row in data.payment_rows if row[1] == po.po_number]
     assert len(payments) == 2
@@ -474,23 +483,23 @@ async def test_collect_procurement_ledger_applies_status_and_keyword_filters(see
     by_status = await svc.collect_procurement_ledger(
         db, actor=actor, statuses=[POStatus.CONFIRMED.value]
     )
-    status_numbers = {row[11] for row in by_status.ledger_rows}
+    status_numbers = {row[PO_COL] for row in by_status.ledger_rows}
     assert kept_po.po_number in status_numbers
     assert other_po.po_number not in status_numbers
 
     by_po_status = await svc.collect_procurement_ledger(
         db, actor=actor, statuses=[POStatus.CLOSED.value]
     )
-    closed_numbers = {row[11] for row in by_po_status.ledger_rows}
+    closed_numbers = {row[PO_COL] for row in by_po_status.ledger_rows}
     assert other_po.po_number in closed_numbers
     assert kept_po.po_number not in closed_numbers
 
     by_keyword = await svc.collect_procurement_ledger(db, actor=actor, keyword=kept_pr.pr_number)
-    assert {row[11] for row in by_keyword.ledger_rows} == {kept_po.po_number}
+    assert {row[PO_COL] for row in by_keyword.ledger_rows} == {kept_po.po_number}
 
     by_supplier = await svc.collect_procurement_ledger(db, actor=actor, supplier_id=supplier.id)
-    assert {row[5] for row in by_supplier.ledger_rows} == {supplier.name}
-    assert {row[11] for row in by_supplier.ledger_rows} == {
+    assert {row[SUPPLIER_COL] for row in by_supplier.ledger_rows} == {supplier.name}
+    assert {row[PO_COL] for row in by_supplier.ledger_rows} == {
         kept_po.po_number,
         other_po.po_number,
     }
@@ -533,10 +542,10 @@ async def test_collect_procurement_ledger_scopes_rows_for_dept_manager(seeded_db
     )
 
     scoped = await svc.collect_procurement_ledger(db, actor=bob, supplier_id=supplier.id)
-    assert [row[11] for row in scoped.ledger_rows] == [own_po.po_number]
+    assert [row[PO_COL] for row in scoped.ledger_rows] == [own_po.po_number]
 
     unscoped = await svc.collect_procurement_ledger(db, actor=alice, supplier_id=supplier.id)
-    assert {row[11] for row in unscoped.ledger_rows} == {own_po.po_number, hidden_po.po_number}
+    assert {row[PO_COL] for row in unscoped.ledger_rows} == {own_po.po_number, hidden_po.po_number}
 
 
 async def test_collect_procurement_ledger_blanks_amounts_when_field_denied(
@@ -573,10 +582,20 @@ async def test_collect_procurement_ledger_blanks_amounts_when_field_denied(
     monkeypatch.setattr(svc, "check_field_access", _deny_all)
     data = await svc.collect_procurement_ledger(db, actor=actor)
 
-    row = next(r for r in data.ledger_rows if r[11] == po.po_number)
-    assert row[8] == ""
-    assert row[9] == ""
-    assert row[12] == ""
+    row = next(
+        r
+        for r in data.ledger_rows
+        if r[svc.LEDGER_HEADERS.index("采购订单号 PO No.")] == po.po_number
+    )
+    denied = _ledger_row(row)
+    assert denied["单价 Unit Price"] == ""
+    assert denied["总金额 Amount"] == ""
+    assert denied["采购付款单号 Payment No."] == ""
+    # PR text is gated by a second kind, which the blanket denial also blocks.
+    assert denied["申请标题 PR Title"] == ""
+    assert denied["需求说明 Business Reason"] == ""
+    # Non-gated descriptive columns stay visible.
+    assert denied["品名 Item Name"] == "X"
     assert data.amount_visible is False
 
     payments = [r for r in data.payment_rows if r[1] == po.po_number]
@@ -647,11 +666,16 @@ async def test_ledger_to_xlsx_has_three_sheets_and_total_row(seeded_db_session):
 
     ledger = workbook[svc.LEDGER_SHEET_TITLE]
     assert ledger["A1"].value == "序号 No."
-    assert ledger["Q1"].value == "备注 Notes"
+    assert [cell.value for cell in ledger[1]] == svc.LEDGER_HEADERS
     assert ledger.freeze_panes == "A2"
     total_row = ledger.max_row
-    assert ledger[f"I{total_row}"].value == "合计 Total"
-    assert ledger[f"J{total_row}"].value == pytest.approx(450.25)
+    assert ledger.cell(row=total_row, column=svc.LEDGER_TOTAL_COLUMN).value == "合计 Total"
+    assert ledger.cell(row=total_row, column=svc.LEDGER_TOTAL_COLUMN + 1).value == pytest.approx(
+        450.25
+    )
+    assert ledger.cell(row=total_row, column=svc.LEDGER_TOTAL_COLUMN + 1).value == (
+        sum(row[svc.LEDGER_TOTAL_COLUMN] for row in data.ledger_rows)
+    )
 
     invoice_sheet = workbook[svc.INVOICE_SHEET_TITLE]
     assert invoice_sheet["E2"].value == po.po_number
@@ -684,6 +708,21 @@ def test_ledger_filename_uses_export_format():
     assert svc.ledger_filename("csv").endswith(".csv")
     assert svc.ledger_filename("xlsx").endswith(".xlsx")
     assert "procurement-ledger" in svc.ledger_filename("xlsx")
+
+
+# Ledger main-sheet column indices, resolved from the declaration itself.
+PO_COL = svc.LEDGER_HEADERS.index("采购订单号 PO No.")
+CONTRACT_COL = svc.LEDGER_HEADERS.index("合同流程号 Contract No.")
+SUPPLIER_COL = svc.LEDGER_HEADERS.index("供应商 Supplier")
+
+
+def _ledger_row(row: list) -> dict[str, object]:
+    """Map a ledger row to {header: value} so assertions survive column changes."""
+    assert len(row) == len(svc.LEDGER_COLUMNS), (
+        f"ledger row has {len(row)} values but LEDGER_COLUMNS declares "
+        f"{len(svc.LEDGER_COLUMNS)}: the row builder and the column list drifted"
+    )
+    return dict(zip(svc.LEDGER_HEADERS, row, strict=True))
 
 
 def _formula_cells(content: bytes) -> list[tuple[str, str, object]]:
@@ -752,8 +791,12 @@ async def test_ledger_xlsx_neutralizes_formula_like_text(seeded_db_session):
 
     workbook = load_workbook(BytesIO(content))
     ledger = workbook[svc.LEDGER_SHEET_TITLE]
-    supplier_cell = ledger.cell(row=2, column=6)
-    assert supplier_cell.value == "=cmd|'/C calc'!A0"
+    # row 2 is not necessarily ours (the export is unfiltered by supplier here)
+    supplier_cell = next(
+        ledger.cell(row=row, column=SUPPLIER_COL + 1)
+        for row in range(2, ledger.max_row + 1)
+        if ledger.cell(row=row, column=SUPPLIER_COL + 1).value == "=cmd|'/C calc'!A0"
+    )
     assert supplier_cell.data_type == "s"
 
     invoice_sheet = workbook[svc.INVOICE_SHEET_TITLE]
@@ -862,7 +905,7 @@ async def test_ledger_contract_cell_is_sorted_not_insertion_ordered(seeded_db_se
 
     data = await svc.collect_procurement_ledger(db, actor=actor, supplier_id=supplier.id)
 
-    assert data.ledger_rows[0][6] == "AAA-FIRST / ZZZ-LAST"
+    assert data.ledger_rows[0][CONTRACT_COL] == "AAA-FIRST / ZZZ-LAST"
 
 
 async def test_ledger_contract_cell_is_sorted_across_both_link_sources(seeded_db_session):
@@ -886,9 +929,9 @@ async def test_ledger_contract_cell_is_sorted_across_both_link_sources(seeded_db
     await db.flush()
 
     data = await svc.collect_procurement_ledger(db, actor=actor, supplier_id=supplier.id)
-    row = next(r for r in data.ledger_rows if r[11] == target_po.po_number)
+    row = next(r for r in data.ledger_rows if r[PO_COL] == target_po.po_number)
 
-    assert row[6] == "AAA-FIRST / ZZZ-LAST"
+    assert row[CONTRACT_COL] == "AAA-FIRST / ZZZ-LAST"
 
 
 async def test_ledger_contract_cell_order_is_stable_across_repeated_exports(seeded_db_session):
@@ -909,7 +952,7 @@ async def test_ledger_contract_cell_order_is_stable_across_repeated_exports(seed
     cells = {
         (
             await svc.collect_procurement_ledger(db, actor=actor, supplier_id=supplier.id)
-        ).ledger_rows[0][6]
+        ).ledger_rows[0][CONTRACT_COL]
         for _ in range(5)
     }
 
@@ -965,3 +1008,46 @@ async def test_payments_and_rfq_exports_neutralize_formulas(seeded_db_session):
 
     rfq_content, _ = await svc.render_rfq_sheet_xlsx(db, str(pr.id))
     assert _formula_cells(rfq_content) == []
+
+
+async def test_ledger_rows_match_the_declared_column_count(seeded_db_session):
+    """Guard against the row builder and LEDGER_COLUMNS drifting apart."""
+    db = seeded_db_session
+    actor = await _user(db)
+    supplier = await _ledger_supplier(db)
+    pr = await _ledger_pr(db, actor=actor, title="Column count")
+    po, items = await _ledger_po(
+        db,
+        actor=actor,
+        supplier=supplier,
+        pr=pr,
+        items=[
+            {
+                "name": "服务器",
+                "qty": Decimal("2"),
+                "price": Decimal("1000"),
+                "amount": Decimal("2000"),
+            }
+        ],
+    )
+    await _ledger_contract(db, po=po, number="CT-COUNT-1")
+    item = (await db.execute(__import__("sqlalchemy").select(Item).limit(1))).scalars().first()
+    if item is not None:
+        items[0].item_id = item.id
+        await db.flush()
+
+    data = await svc.collect_procurement_ledger(db, actor=actor, supplier_id=supplier.id)
+
+    assert len(svc.LEDGER_HEADERS) == len(svc.LEDGER_COLUMNS)
+    assert len(svc.LEDGER_COL_WIDTHS) == len(svc.LEDGER_COLUMNS)
+    assert data.ledger_rows, "expected at least one ledger row"
+    for row in data.ledger_rows:
+        assert len(row) == len(svc.LEDGER_COLUMNS)
+
+    # The newly requested columns are populated and readable.
+    mapped = _ledger_row(data.ledger_rows[0])
+    assert mapped["申请标题 PR Title"] == pr.title
+    assert mapped["需求说明 Business Reason"] == "ledger export test"
+    assert mapped["品名 Item Name"] == "服务器"
+    if item is not None:
+        assert mapped["SKU 编码 SKU Code"] == item.code

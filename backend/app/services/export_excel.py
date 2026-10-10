@@ -23,6 +23,7 @@ from app.models import (
     Contract,
     Invoice,
     InvoiceLine,
+    Item,
     PaymentRecord,
     POContractLink,
     PurchaseOrder,
@@ -301,25 +302,41 @@ LEDGER_SHEET_TITLE = "采购台账 Ledger"
 PAYMENT_SHEET_TITLE = "付款明细 Payments"
 INVOICE_SHEET_TITLE = "发票明细 Invoice Lines"
 
-LEDGER_HEADERS: list[str] = [
-    "序号 No.",
-    "申请单号 PR No.",
-    "申请人 Requester",
-    "成本中心 Cost Center",
-    "公司 Company",
-    "供应商 Supplier",
-    "合同流程号 Contract No.",
-    "数量 Qty",
-    "单价 Unit Price",
-    "总金额 Amount",
-    "币种 Currency",
-    "采购订单号 PO No.",
-    "采购付款单号 Payment No.",
-    "开票状态 Invoice Status",
-    "到货状态 Delivery Status",
-    "OA付款单号 OA Payment No.",
-    "备注 Notes",
+# Single source of truth for the ledger's main sheet:
+# (key, header_zh, header_en, column width). The row builder below appends
+# values in exactly this order, and a unit test asserts every row's length
+# equals ``len(LEDGER_COLUMNS)`` so the two cannot silently drift apart.
+LEDGER_COLUMNS: list[tuple[str, str, str, int]] = [
+    ("seq", "序号", "No.", 6),
+    ("pr_number", "申请单号", "PR No.", 16),
+    ("pr_title", "申请标题", "PR Title", 30),
+    ("business_reason", "需求说明", "Business Reason", 40),
+    ("requester", "申请人", "Requester", 18),
+    ("cost_center", "成本中心", "Cost Center", 14),
+    ("company", "公司", "Company", 28),
+    ("supplier", "供应商", "Supplier", 30),
+    ("contracts", "合同流程号", "Contract No.", 22),
+    ("item_name", "品名", "Item Name", 32),
+    ("specification", "规格", "Specification", 36),
+    ("sku_code", "SKU 编码", "SKU Code", 16),
+    ("qty", "数量", "Qty", 10),
+    ("unit_price", "单价", "Unit Price", 14),
+    ("amount", "总金额", "Amount", 16),
+    ("currency", "币种", "Currency", 8),
+    ("po_number", "采购订单号", "PO No.", 16),
+    ("payments", "采购付款单号", "Payment No.", 26),
+    ("invoice_status", "开票状态", "Invoice Status", 18),
+    ("delivery_status", "到货状态", "Delivery Status", 18),
+    ("oa_payment", "OA付款单号", "OA Payment No.", 18),
+    ("notes", "备注", "Notes", 30),
 ]
+
+# 0-based index of the 总金额 column; the 合计 label goes one cell to its left.
+LEDGER_TOTAL_COLUMN = next(
+    index for index, column in enumerate(LEDGER_COLUMNS) if column[0] == "amount"
+)
+
+LEDGER_HEADERS: list[str] = [f"{zh} {en}" for _, zh, en, _ in LEDGER_COLUMNS]
 
 PAYMENT_HEADERS: list[str] = [
     "序号 No.",
@@ -352,7 +369,7 @@ INVOICE_HEADERS: list[str] = [
     "行金额 Line Amount",
 ]
 
-LEDGER_COL_WIDTHS = [6, 16, 18, 14, 28, 30, 22, 10, 14, 16, 8, 16, 26, 16, 16, 18, 30]
+LEDGER_COL_WIDTHS = [width for _, _, _, width in LEDGER_COLUMNS]
 PAYMENT_COL_WIDTHS = [6, 16, 26, 22, 10, 14, 8, 12, 12, 12, 16, 22, 24]
 INVOICE_COL_WIDTHS = [6, 18, 20, 28, 16, 12, 14, 8, 12, 30, 12, 14]
 
@@ -366,6 +383,7 @@ _DELIVERY_STATUS_LABELS = (
 # Cerbos resource kind -> the fields whose read access gates ledger columns.
 # Keys are the policy actions that actually exist in deploy/cerbos-policies/*.yaml.
 _PO_GATE_FIELDS = ["total_amount"]
+_PR_GATE_FIELDS = ["title", "business_reason"]
 _PAYMENT_SHEET_FIELDS = [
     "payment_number",
     "amount",
@@ -576,6 +594,15 @@ async def collect_procurement_ledger(
     po_item_ids = [item.id for item in po_items]
     po_number_by_item: dict[UUID, str] = {item.id: po.po_number for po in pos for item in po.items}
 
+    # SKU code for each ordered line (POItem carries no ``item`` relationship).
+    sku_item_ids = {item.item_id for item in po_items if item.item_id is not None}
+    sku_code_by_item: dict[UUID, str] = {}
+    if sku_item_ids:
+        sku_rows = (
+            await db.execute(select(Item.id, Item.code).where(Item.id.in_(sku_item_ids)))
+        ).all()
+        sku_code_by_item = {row[0]: row[1] for row in sku_rows}
+
     invoice_lines: list[InvoiceLine] = []
     if po_item_ids:
         invoice_stmt = (
@@ -587,10 +614,11 @@ async def collect_procurement_ledger(
         invoice_lines = list((await db.execute(invoice_stmt)).scalars().all())
 
     # One Cerbos round-trip per resource kind, executed concurrently.
-    po_allowed, payment_allowed, invoice_allowed = await asyncio.gather(
+    po_allowed, payment_allowed, invoice_allowed, pr_allowed = await asyncio.gather(
         _allowed_fields(actor, "purchase_order", _PO_GATE_FIELDS),
         _allowed_fields(actor, "payment_record", [*_PAYMENT_SHEET_FIELDS, "payment_number"]),
         _allowed_fields(actor, "invoice", _INVOICE_SHEET_FIELDS),
+        _allowed_fields(actor, "purchase_requisition", _PR_GATE_FIELDS),
     )
     amount_visible = "total_amount" in po_allowed
     payment_number_visible = "payment_number" in payment_allowed
@@ -611,15 +639,21 @@ async def collect_procurement_ledger(
         )
         for item in po.items:
             ledger_total += item.amount or Decimal("0")
+            # Order must match LEDGER_COLUMNS (asserted by a unit test).
             ledger_rows.append(
                 [
                     len(ledger_rows) + 1,
                     pr.pr_number if pr else "",
+                    _gated(pr_allowed, "title", pr.title if pr else ""),
+                    _gated(pr_allowed, "business_reason", (pr.business_reason or "") if pr else ""),
                     requester_name,
                     cost_center,
                     company_name,
                     supplier_name,
                     contract_cell,
+                    item.item_name,
+                    item.specification or "",
+                    sku_code_by_item.get(item.item_id, "") if item.item_id else "",
                     _num(item.qty),
                     _num(item.unit_price) if amount_visible else "",
                     _num(item.amount) if amount_visible else "",
@@ -752,7 +786,7 @@ def ledger_to_xlsx(data: LedgerWorkbook) -> bytes:
         LEDGER_HEADERS,
         data.ledger_rows,
         LEDGER_COL_WIDTHS,
-        total_label_row=([total_label, total_value], 9),
+        total_label_row=([total_label, total_value], LEDGER_TOTAL_COLUMN),
     )
 
     payment_ws = wb.create_sheet(PAYMENT_SHEET_TITLE)
@@ -776,7 +810,13 @@ def ledger_to_csv(data: LedgerWorkbook) -> bytes:
     for row in data.ledger_rows:
         writer.writerow([_csv_safe(cell) for cell in row])
     if data.amount_visible:
-        writer.writerow(["", "", "", "", "", "", "", "", "合计 Total", float(data.ledger_total)])
+        writer.writerow(
+            [
+                "",
+            ]
+            * LEDGER_TOTAL_COLUMN
+            + ["合计 Total", float(data.ledger_total)]
+        )
     return buf.getvalue().encode("utf-8-sig")
 
 

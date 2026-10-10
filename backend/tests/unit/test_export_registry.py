@@ -302,7 +302,14 @@ COLUMN_CHECKS: dict[str, list[tuple[int, str, str]]] = {
     "sku_prices": [(0, "物料 Item", "sku"), (1, "物料 Item", "sku"), (2, "物料 Item", "sku")],
     "suppliers": [(0, "供应商编码 Code", "supplier_code"), (0, "名称 Name", "supplier")],
     "items": [(0, "物料编码 Code", "item"), (0, "名称 Name", "item_name")],
-    "procurement_ledger": [(0, "采购订单号 PO No.", "po")],
+    # The ledger gained PR title / business reason / item name / SKU so a row
+    # can be traced back to the requirement it fulfils.
+    "procurement_ledger": [
+        (0, "采购订单号 PO No.", "po"),
+        (0, "申请标题 PR Title", "pr_title"),
+        (0, "品名 Item Name", "item_name"),
+        (0, "SKU 编码 SKU Code", "item_code"),
+    ],
     "payments": [(0, "付款单号 Payment No.", "payment"), (0, "采购订单号 PO No.", "po")],
 }
 

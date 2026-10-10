@@ -129,8 +129,18 @@ async def test_export_ledger_returns_xlsx_attachment(seeded_db_session):
     workbook = load_workbook(BytesIO(resp.content))
     assert workbook.sheetnames == ["采购台账 Ledger", "付款明细 Payments", "发票明细 Invoice Lines"]
     ledger = workbook["采购台账 Ledger"]
-    po_numbers = [ledger.cell(row=row, column=12).value for row in range(2, ledger.max_row + 1)]
+    headers = [cell.value for cell in ledger[1]]
+    po_column = headers.index("采购订单号 PO No.") + 1
+    title_column = headers.index("申请标题 PR Title") + 1
+    item_column = headers.index("品名 Item Name") + 1
+    po_numbers = [
+        ledger.cell(row=row, column=po_column).value for row in range(2, ledger.max_row + 1)
+    ]
     assert po.po_number in po_numbers
+    # The requirement context requested by the buyer is present for that row.
+    row = po_numbers.index(po.po_number) + 2
+    assert ledger.cell(row=row, column=title_column).value == "Ledger API"
+    assert ledger.cell(row=row, column=item_column).value == "API item"
 
 
 async def test_export_ledger_returns_csv(seeded_db_session):
