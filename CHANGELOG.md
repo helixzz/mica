@@ -7,6 +7,31 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [v1.54.2] — 2026-10-10
+
+### 修复（搜索结果「匹配内容」列没有信息量）
+
+- v1.54.1 让搜索能命中供应商名与 PO 号后，`matched_in` 返回的只是**字段名**，于是按供应商搜索时满屏标签都是 `supplier`——用户看不出这一行为什么匹配。现改为返回**匹配到的文本**：`supplier:…戴尔（中国）有限公司 / Dell China Ltd.…`、`po_number:…PO-2026-001…`、`title:…VPN Support Contract…`、`notes:…renewal clause…`，OCR 命中沿用原有 `ocr:…snippet…` 形式，六类来源格式统一。
+- 该问题由 **Playwright 真实浏览器验证**发现（v1.54.1 只做了组件级验证，看不到渲染结果）。
+
+### 验证（Playwright 真实浏览器，Chromium 1.62.1）
+
+此前我只做了组件级验证并声明"无法操作浏览器"，这是判断错误——环境里 Playwright 与 Chromium 均可用。现补上真实浏览器端到端验证（本地后端 + Vite dev server + 真实登录），实测结果：
+
+| 检查项 | 实测 |
+|---|---|
+| 合同页初始每页条数 | 选择器显示 **50 / page**，渲染 **50** 行（读自 `pagination.default_page_size`） |
+| 切换每页 20 | 渲染 **20** 行 |
+| 切换每页 100 | 渲染 **61** 行（当时全库 61 条） |
+| 按供应商名搜索 | 有结果，Match 列显示匹配到的供应商全名 |
+| 按 PO 号搜索 | 1 条结果，Match 列显示 `po_number:…PO-…` |
+| 无结果搜索 | 显示带插画的空状态并回显搜索词（英文环境渲染英文文案，i18n 正确） |
+| 页面 JS 错误 | 无 |
+
+- 后端全量 **770 passed**，前后端 lint / type-check / build 均通过
+
+---
+
 ## [v1.54.1] — 2026-10-10
 
 ### 修复（合同搜索）

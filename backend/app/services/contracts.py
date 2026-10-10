@@ -179,6 +179,17 @@ async def list_contract_documents(
     return [(cd, d) for cd, d in rows]
 
 
+def _match_snippet(text: str, query: str, *, radius: int = 30, width: int = 200) -> str:
+    """Return a window around ``query`` inside ``text``, or "" when it is absent."""
+    if not text:
+        return ""
+    index = text.lower().find(query)
+    if index < 0:
+        return ""
+    start = max(0, index - radius)
+    return text[start : start + width]
+
+
 async def search_contracts(
     db: AsyncSession,
     query: str,
@@ -287,20 +298,19 @@ async def search_contracts(
         entry["_score"] = max(
             cast(float, entry["_score"]), float(contract_rank or 0), float(document_rank or 0)
         )
-        if lowered_query in (contract.title or "").lower():
-            matched_in.append("title")
-        if lowered_query in (contract.contract_number or "").lower():
-            matched_in.append("contract_number")
-        if lowered_query in (contract.notes or "").lower():
-            matched_in.append("notes")
-        if lowered_query in (supplier_name or "").lower():
-            matched_in.append("supplier")
-        if lowered_query in (po_number or "").lower():
-            matched_in.append("po_number")
-        if doc_link and doc_link.ocr_text and lowered_query in doc_link.ocr_text.lower():
-            snippet_start = max(0, doc_link.ocr_text.lower().find(lowered_query) - 30)
-            snippet = doc_link.ocr_text[snippet_start : snippet_start + 200]
-            matched_in.append(f"ocr:…{snippet}…")
+        # Report the matched *text*, not just the field name: a results list where
+        # every tag reads "supplier" tells the user nothing about why it matched.
+        for field, value in (
+            ("title", contract.title),
+            ("contract_number", contract.contract_number),
+            ("notes", contract.notes),
+            ("supplier", supplier_name),
+            ("po_number", po_number),
+            ("ocr", doc_link.ocr_text if doc_link else None),
+        ):
+            snippet = _match_snippet(value or "", lowered_query)
+            if snippet:
+                matched_in.append(f"{field}:…{snippet}…")
     return sorted(
         results.values(), key=lambda item: cast(float, item.get("_score", 0.0)), reverse=True
     )

@@ -266,8 +266,8 @@ async def test_search_contracts_matching_query_returns_title_number_and_ocr_matc
     assert result["status"] == ContractStatus.ACTIVE.value
     assert result["expiry_date"] == contract.expiry_date.isoformat()
     assert result["total_amount"] == "1000.00"
-    assert "title" in result["matched_in"]
-    assert "contract_number" in result["matched_in"]
+    assert any(str(m).startswith("title:") for m in result["matched_in"])
+    assert any(str(m).startswith("contract_number:") for m in result["matched_in"])
     assert any(str(match).startswith("ocr:…") for match in result["matched_in"])
 
 
@@ -566,14 +566,17 @@ async def test_search_contracts_matches_supplier_name_and_po_number(seeded_db_se
 
     by_supplier = await svc.search_contracts(db, "戴尔", actor=actor)
     assert [row["id"] for row in by_supplier] == [str(contract.id)]
-    assert "supplier" in by_supplier[0]["matched_in"]
+    assert any(m.startswith("supplier:") for m in by_supplier[0]["matched_in"])
+    # The tag shows the matched text, not just the field name.
+    assert "戴尔" in " ".join(by_supplier[0]["matched_in"])
 
     po_number = (
         await db.execute(select(PurchaseOrder.po_number).where(PurchaseOrder.id == contract.po_id))
     ).scalar_one()
     by_po = await svc.search_contracts(db, po_number, actor=actor)
     assert [row["id"] for row in by_po] == [str(contract.id)]
-    assert "po_number" in by_po[0]["matched_in"]
+    assert any(m.startswith("po_number:") for m in by_po[0]["matched_in"])
+    assert po_number in " ".join(by_po[0]["matched_in"])
 
     by_notes = await svc.search_contracts(db, "renewal clause", actor=actor)
     assert contract.id in {UUID(row["id"]) for row in by_notes}
