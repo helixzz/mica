@@ -21,7 +21,9 @@ import { api, type Contract, type ContractExpiring, type ContractSearchHit } fro
 import { extractError } from '@/api/client'
 import { useAuth } from '@/auth/useAuth'
 import { ContractFormModal } from '@/components/ContractFormModal'
+import { EmptyState } from '@/components/ui'
 import { ExportDrawer, canExport } from '@/components/Export'
+import { useTablePagination } from '@/hooks/useTablePagination'
 import { fmtAmountNode } from '@/utils/format'
 import { showUndoToast } from '@/utils/undo'
 import { MonoId } from '@/components/ui/Mono'
@@ -40,11 +42,15 @@ export function ContractsPage() {
   const [expiring, setExpiring] = useState<ContractExpiring[]>([])
   const [query, setQuery] = useState('')
   const [searchHits, setSearchHits] = useState<ContractSearchHit[]>([])
+  const [searchedQuery, setSearchedQuery] = useState('')
+  const [searching, setSearching] = useState(false)
   const [loading, setLoading] = useState(false)
   const [editing, setEditing] = useState<Contract | null>(null)
   const [scanCreateOpen, setScanCreateOpen] = useState(false)
   const [extractedData, setExtractedData] = useState<Record<string, unknown> | null>(null)
   const [exportOpen, setExportOpen] = useState(false)
+
+  const { pagination } = useTablePagination()
 
   const canExportData = canExport(user?.role)
 
@@ -75,12 +81,24 @@ export function ContractsPage() {
   }, [load])
 
   const doSearch = async () => {
-    if (!query.trim()) {
+    const term = query.trim()
+    if (!term) {
       setSearchHits([])
+      setSearchedQuery('')
       return
     }
-    const hits = await api.searchContracts(query)
-    setSearchHits(hits)
+    setSearching(true)
+    // Without this the panel showed nothing at all when a search failed or
+    // matched nothing, which read as "search is broken".
+    setSearchedQuery(term)
+    try {
+      setSearchHits(await api.searchContracts(term))
+    } catch (err) {
+      setSearchHits([])
+      void message.error(extractError(err).detail)
+    } finally {
+      setSearching(false)
+    }
   }
 
   const handleDelete = (contract: Contract) => {
@@ -264,13 +282,24 @@ export function ContractsPage() {
           onSearch={doSearch}
           size="large"
         />
-        {searchHits.length > 0 && (
+        {searchedQuery && (
           <Table
             style={{ marginTop: 16 }}
             rowKey="id"
             dataSource={searchHits}
+            loading={searching}
             pagination={false}
             size="small"
+            locale={{
+              emptyText: (
+                <EmptyState
+                  illustration="search"
+                  size="compact"
+                  title={t('contract.search_no_results', { query: searchedQuery })}
+                  description={t('contract.search_no_results_hint')}
+                />
+              ),
+            }}
             columns={[
               {
                 title: t('field.contract_number'),
@@ -323,7 +352,7 @@ export function ContractsPage() {
           dataSource={rows}
           columns={columns}
           loading={loading}
-          pagination={{ pageSize: 20 }}
+          pagination={pagination}
           scroll={{ x: 1100 }}
         />
       </Card>

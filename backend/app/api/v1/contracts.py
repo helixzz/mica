@@ -119,7 +119,8 @@ async def search(
     db: Annotated[AsyncSession, Depends(get_db)],
     q: Annotated[str, Query(min_length=1)],
 ):
-    return await svc.search_contracts(db, q)
+    # actor is required: search must respect the same row visibility as the list.
+    return await svc.search_contracts(db, q, actor=user)
 
 
 @router.get("/contracts-expiring", tags=["contracts"])

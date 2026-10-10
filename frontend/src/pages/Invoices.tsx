@@ -8,6 +8,7 @@ import { Link } from 'react-router-dom'
 import { api, type InvoiceListRow } from '@/api'
 import { useAuth } from '@/auth/useAuth'
 import { ExportDrawer, canExport } from '@/components/Export'
+import { useTablePagination } from '@/hooks/useTablePagination'
 import { fmtAmountNode } from '@/utils/format'
 import { MonoId } from '@/components/ui/Mono'
 
@@ -25,6 +26,7 @@ export function InvoicesPage() {
   const user = useAuth((s) => s.user)
   const [rows, setRows] = useState<InvoiceListRow[]>([])
   const [loading, setLoading] = useState(false)
+  const { pagination } = useTablePagination()
   const [exportOpen, setExportOpen] = useState(false)
 
   const canExportData = canExport(user?.role)
@@ -70,7 +72,7 @@ export function InvoicesPage() {
         open={exportOpen}
         onClose={() => setExportOpen(false)}
       />
-      <Table<InvoiceListRow> rowKey="id" dataSource={rows} columns={columns} loading={loading} pagination={{ pageSize: 20 }} scroll={{ x: 'max-content' }} />
+      <Table<InvoiceListRow> rowKey="id" dataSource={rows} columns={columns} loading={loading} pagination={pagination} scroll={{ x: 'max-content' }} />
     </Space>
   )
 }

@@ -2,7 +2,7 @@
 
 from datetime import UTC, date, datetime, timedelta
 from decimal import Decimal
-from uuid import uuid4
+from uuid import UUID, uuid4
 
 import pytest
 from fastapi import HTTPException
@@ -13,6 +13,7 @@ from app.models import (
     ContractDocument,
     ContractStatus,
     ContractVersion,
+    Department,
     Document,
     POStatus,
     PurchaseOrder,
@@ -45,6 +46,7 @@ async def _create_contract(
     expiry_date: date | None,
     status: str = ContractStatus.ACTIVE.value,
     notes: str | None = None,
+    department_id: UUID | None = None,
 ) -> Contract:
     pr = PurchaseRequisition(
         pr_number=f"PR-CT-{_suffix()}",
@@ -53,7 +55,7 @@ async def _create_contract(
         status="draft",
         requester_id=actor.id,
         company_id=actor.company_id,
-        department_id=actor.department_id,
+        department_id=department_id or actor.department_id,
         currency="CNY",
         total_amount=Decimal("1000.00"),
     )
@@ -545,3 +547,73 @@ async def test_get_contract_version_by_number(seeded_db_session):
 
     missing = await svc.get_contract_version(seeded_db_session, contract.id, 9999)
     assert missing is None
+
+
+async def test_search_contracts_matches_supplier_name_and_po_number(seeded_db_session):
+    """Buyers search by supplier and PO number; contracts.search_text has neither."""
+    db = seeded_db_session
+    actor = await _user(db)
+    supplier = await _supplier(db)
+    contract = await _create_contract(
+        db,
+        actor=actor,
+        supplier=supplier,
+        contract_number=f"CT-SUP-{_suffix()}",
+        title="Storage array maintenance",
+        expiry_date=date.today() + timedelta(days=90),
+        notes="renewal clause 9",
+    )
+
+    by_supplier = await svc.search_contracts(db, "戴尔", actor=actor)
+    assert [row["id"] for row in by_supplier] == [str(contract.id)]
+    assert "supplier" in by_supplier[0]["matched_in"]
+
+    po_number = (
+        await db.execute(select(PurchaseOrder.po_number).where(PurchaseOrder.id == contract.po_id))
+    ).scalar_one()
+    by_po = await svc.search_contracts(db, po_number, actor=actor)
+    assert [row["id"] for row in by_po] == [str(contract.id)]
+    assert "po_number" in by_po[0]["matched_in"]
+
+    by_notes = await svc.search_contracts(db, "renewal clause", actor=actor)
+    assert contract.id in {UUID(row["id"]) for row in by_notes}
+
+
+async def test_search_contracts_respects_row_visibility(seeded_db_session):
+    """Search must not be a way around the visibility the list endpoint applies."""
+    db = seeded_db_session
+    owner = await _user(db, "alice")
+    manager = await _user(db, "bob")
+    supplier = await _supplier(db)
+
+    # alice and bob share a department in the seed, so park the PR in a brand new
+    # department: bob is a dept_manager and may only see his own department.
+    other_department = Department(
+        company_id=owner.company_id,
+        code=f"DEP-SCOPE-{_suffix()}",
+        name_zh="范围测试部门",
+        name_en="Scope Test Dept",
+    )
+    db.add(other_department)
+    await db.flush()
+
+    contract = await _create_contract(
+        db,
+        actor=owner,
+        supplier=supplier,
+        contract_number=f"CT-SCOPE-{_suffix()}",
+        title="Scoped search target",
+        expiry_date=date.today() + timedelta(days=30),
+        department_id=other_department.id,
+    )
+
+    # alice is full-access, bob is scoped: same query, different visibility.
+    visible_to_owner = await svc.search_contracts(db, "Scoped search target", actor=owner)
+    assert contract.id in {UUID(row["id"]) for row in visible_to_owner}
+
+    hidden_from_manager = await svc.search_contracts(db, "Scoped search target", actor=manager)
+    assert contract.id not in {UUID(row["id"]) for row in hidden_from_manager}
+
+    # Without an actor there is no scoping (kept for internal callers).
+    unscoped = await svc.search_contracts(db, "Scoped search target")
+    assert contract.id in {UUID(row["id"]) for row in unscoped}

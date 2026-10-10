@@ -8,6 +8,7 @@ import { useTranslation } from 'react-i18next'
 import { api, type DeliveryPlan, type PurchaseOrder, type PurchaseOrderListItem, type Shipment } from '@/api'
 import { useAuth } from '@/auth/useAuth'
 import { ExportDrawer, canExport } from '@/components/Export'
+import { useTablePagination } from '@/hooks/useTablePagination'
 import { ShipmentActions } from '@/components/ShipmentActions'
 import { fmtAmount, fmtQtyNode } from '@/utils/format'
 import { MonoId } from '@/components/ui/Mono'
@@ -29,6 +30,7 @@ export function ShipmentsPage() {
   const [rows, setRows] = useState<Shipment[]>([])
   const [loading, setLoading] = useState(false)
   const [exportOpen, setExportOpen] = useState(false)
+  const { pagination } = useTablePagination()
 
   const canExportData = canExport(user?.role)
 
@@ -164,7 +166,7 @@ export function ShipmentsPage() {
         loading={loading}
         size="small"
         scroll={{ x: 'max-content' }}
-        pagination={{ pageSize: 20, showSizeChanger: true }}
+        pagination={pagination}
       />
 
       <Modal

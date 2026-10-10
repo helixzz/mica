@@ -394,6 +394,25 @@ backend ──(HTTP)──> cerbos sidecar (:3593)
 
 Cerbos 不可达时（如开发环境没启动 cerbos 容器），`cerbos_client.py` 自动降级到 `FIELD_PERMISSIONS` 静态 dict。零故障风险。
 
+## 表格分页（v1.54.1+）
+
+给 AntD Table 写 `pagination={{ pageSize: 20 }}` 会让**每页条数切换器彻底失效**：`usePagination` 用
+`extendsObject(innerPagination, paginationProp)` 合并，prop 里的 `pageSize` 每次渲染都会覆盖用户
+刚选中的值。客户端分页请统一用：
+
+```tsx
+import { useTablePagination } from '@/hooks/useTablePagination'
+
+const { pagination } = useTablePagination()   // 初始值取系统参数 pagination.default_page_size
+<Table pagination={pagination} ... />
+```
+
+该 hook 还会统一渲染"共 N 条"与切换器。服务端分页的页面（供应商 / 物料 / 审计日志）自己管理
+`page` + `pageSize`，不要混用。
+
+`pagination.default_page_size` 由 `GET /ui-config` 下发（`stores/uiConfig.ts` 在启动时加载），
+后台改这个参数会立即影响下次进入页面的默认条数。
+
 ## 数据导出框架（v1.53.0+）
 
 `GET /api/v1/exports` 返回数据集目录，`GET /api/v1/exports/{key}` 导出。前端导出抽屉由目录元数据驱动，**新增数据集不需要改前端**。

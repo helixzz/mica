@@ -31,10 +31,12 @@ from app.api.v1 import (
     sku,
     supplier_portal,
     system_params_admin,
+    ui_config,
     websocket,
 )
 
 api_router = APIRouter(prefix="/v1")
+api_router.include_router(ui_config.router)
 api_router.include_router(admin.router)
 api_router.include_router(activity_logs.router)
 api_router.include_router(auth.router)
@@ -70,6 +72,7 @@ api_router.include_router(exports.router)
 
 # v2 router — mirrors v1 for forward compatibility
 v2_router = APIRouter(prefix="/v2")
+v2_router.include_router(ui_config.router)
 v2_router.include_router(admin.router)
 v2_router.include_router(activity_logs.router)
 v2_router.include_router(auth.router)

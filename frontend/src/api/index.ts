@@ -2387,6 +2387,10 @@ export const api = {
     const { data } = await client.get('/insights/role-defaults')
     return data
   },
+  async getUiConfig(): Promise<{ default_page_size: number }> {
+    const { data } = await client.get<{ default_page_size: number }>('/ui-config')
+    return data
+  },
   async listExportDatasets(): Promise<ExportDataset[]> {
     const { data } = await client.get<{ datasets: ExportDataset[] }>('/exports')
     return data.datasets

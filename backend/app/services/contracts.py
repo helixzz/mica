@@ -12,11 +12,22 @@ from uuid import UUID
 
 from fastapi import HTTPException
 from sqlalchemy import Text, desc, func, literal_column, or_, select
+from sqlalchemy import cast as sql_cast
 from sqlalchemy.dialects import postgresql
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
-from app.models import AuditLog, Contract, ContractDocument, ContractVersion, Document, User
+from app.core.scoping import visible_po_id_subquery
+from app.models import (
+    AuditLog,
+    Contract,
+    ContractDocument,
+    ContractVersion,
+    Document,
+    PurchaseOrder,
+    Supplier,
+    User,
+)
 from app.services import contract_extract as extract_svc
 from app.services import documents as doc_svc
 from app.services.system_params import system_params
@@ -169,8 +180,18 @@ async def list_contract_documents(
 
 
 async def search_contracts(
-    db: AsyncSession, query: str, limit: int = 50
+    db: AsyncSession,
+    query: str,
+    limit: int = 50,
+    *,
+    actor: User | None = None,
 ) -> list[dict[str, object]]:
+    """Search contracts by number, title, notes, supplier, PO number or OCR text.
+
+    ``contracts.search_text`` only covers columns of the contract row itself, so
+    supplier names and PO numbers are matched here with explicit joins — those
+    are the two things buyers search by most often.
+    """
     if not query.strip():
         return []
     normalized_query = query.strip()
@@ -182,44 +203,73 @@ async def search_contracts(
         "contract_documents.search_vector", type_=postgresql.TSVECTOR()
     )
     tsquery = func.websearch_to_tsquery("simple", normalized_query)
+    supplier_score = func.similarity(
+        func.coalesce(sql_cast(Supplier.name, Text), ""), normalized_query
+    )
     contract_score = func.greatest(
         func.ts_rank_cd(contract_search_vector, tsquery),
         func.similarity(contract_search_text, normalized_query),
+        supplier_score,
     )
     document_score = func.greatest(
         func.ts_rank_cd(document_search_vector, tsquery),
         func.similarity(document_search_text, normalized_query),
     )
+    stmt = (
+        select(
+            Contract,
+            ContractDocument,
+            Supplier.name.label("supplier_name"),
+            PurchaseOrder.po_number.label("po_number"),
+            contract_score.label("contract_score"),
+            document_score.label("document_score"),
+        )
+        .outerjoin(ContractDocument, ContractDocument.contract_id == Contract.id)
+        .outerjoin(Supplier, Supplier.id == Contract.supplier_id)
+        .outerjoin(PurchaseOrder, PurchaseOrder.id == Contract.po_id)
+        .where(
+            or_(
+                contract_search_vector.op("@@")(tsquery),
+                contract_search_text.ilike(pattern),
+                document_search_vector.op("@@")(tsquery),
+                document_search_text.ilike(pattern),
+                Supplier.name.ilike(pattern),
+                PurchaseOrder.po_number.ilike(pattern),
+            )
+        )
+    )
+
+    # Row-level scoping: the list endpoint only shows contracts whose PO the
+    # actor can see, and search must not be a way around that.
+    if actor is not None:
+        visible_po_ids = await visible_po_id_subquery(db, actor)
+        if visible_po_ids is not None:
+            stmt = stmt.where(Contract.po_id.in_(visible_po_ids))
+
     rows = (
         await db.execute(
-            select(
-                Contract,
-                ContractDocument,
-                contract_score.label("contract_score"),
-                document_score.label("document_score"),
-            )
-            .outerjoin(ContractDocument, ContractDocument.contract_id == Contract.id)
-            .where(
-                or_(
-                    contract_search_vector.op("@@")(tsquery),
-                    contract_search_text.ilike(pattern),
-                    document_search_vector.op("@@")(tsquery),
-                    document_search_text.ilike(pattern),
-                )
-            )
-            .order_by(
+            stmt.order_by(
                 desc(func.greatest(contract_score, document_score)),
                 Contract.created_at.desc(),
-            )
-            .limit(limit)
+            ).limit(limit)
         )
     ).all()
     results: dict[UUID, dict[str, object]] = {}
     lowered_query = normalized_query.lower()
     typed_rows = cast(
-        list[tuple[Contract, ContractDocument | None, float | None, float | None]], rows
+        list[
+            tuple[
+                Contract,
+                ContractDocument | None,
+                str | None,
+                str | None,
+                float | None,
+                float | None,
+            ]
+        ],
+        rows,
     )
-    for contract, doc_link, contract_rank, document_rank in typed_rows:
+    for contract, doc_link, supplier_name, po_number, contract_rank, document_rank in typed_rows:
         entry = results.setdefault(
             contract.id,
             {
@@ -241,6 +291,12 @@ async def search_contracts(
             matched_in.append("title")
         if lowered_query in (contract.contract_number or "").lower():
             matched_in.append("contract_number")
+        if lowered_query in (contract.notes or "").lower():
+            matched_in.append("notes")
+        if lowered_query in (supplier_name or "").lower():
+            matched_in.append("supplier")
+        if lowered_query in (po_number or "").lower():
+            matched_in.append("po_number")
         if doc_link and doc_link.ocr_text and lowered_query in doc_link.ocr_text.lower():
             snippet_start = max(0, doc_link.ocr_text.lower().find(lowered_query) - 30)
             snippet = doc_link.ocr_text[snippet_start : snippet_start + 200]

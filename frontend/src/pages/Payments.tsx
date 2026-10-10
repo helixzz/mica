@@ -7,6 +7,7 @@ import { useTranslation } from 'react-i18next'
 import { api, type PaymentRecord } from '@/api'
 import { useAuth } from '@/auth/useAuth'
 import { ExportDrawer, canExport } from '@/components/Export'
+import { useTablePagination } from '@/hooks/useTablePagination'
 import { fmtAmountNode } from '@/utils/format'
 import { MonoId } from '@/components/ui/Mono'
 
@@ -15,6 +16,7 @@ export function PaymentsPage() {
   const user = useAuth((s) => s.user)
   const [rows, setRows] = useState<PaymentRecord[]>([])
   const [loading, setLoading] = useState(false)
+  const { pagination } = useTablePagination()
   const [exportOpen, setExportOpen] = useState(false)
 
   const canExportData = canExport(user?.role)
@@ -53,7 +55,7 @@ export function PaymentsPage() {
         open={exportOpen}
         onClose={() => setExportOpen(false)}
       />
-      <Table<PaymentRecord> rowKey="id" dataSource={rows} columns={columns} loading={loading} pagination={{ pageSize: 20 }} scroll={{ x: 'max-content' }} />
+      <Table<PaymentRecord> rowKey="id" dataSource={rows} columns={columns} loading={loading} pagination={pagination} scroll={{ x: 'max-content' }} />
     </Space>
   )
 }

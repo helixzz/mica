@@ -4,6 +4,7 @@ import { Navigate, Route, Routes, useLocation } from 'react-router-dom'
 
 import { AppLayout } from '@/components/Layout/AppLayout'
 import { useAuth } from '@/auth/useAuth'
+import { useUiConfig } from '@/stores/uiConfig'
 import { getToken } from '@/api/client'
 import { SkeletonPage } from '@/components/ui/SkeletonPage'
 import { NotFound } from '@/pages/NotFound'
@@ -110,6 +111,7 @@ function Protected({ children }: { children: React.ReactNode }) {
   useEffect(() => {
     if (!initialized && getToken()) void loadMe()
     if (!initialized && !getToken()) useAuth.setState({ initialized: true })
+    void useUiConfig.getState().load()
   }, [initialized, loadMe])
 
   if (!initialized) {

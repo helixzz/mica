@@ -8,6 +8,7 @@ import { Link, useNavigate } from 'react-router-dom'
 import { api, type PRListItem } from '@/api'
 import { useAuth } from '@/auth/useAuth'
 import { ExportDrawer, canExport } from '@/components/Export'
+import { useTablePagination } from '@/hooks/useTablePagination'
 import { fmtAmount, fmtAmountNode } from '@/utils/format'
 import { MonoId } from '@/components/ui/Mono'
 
@@ -39,6 +40,7 @@ export function PRListPage() {
   const [rows, setRows] = useState<PRListItem[]>([])
   const [loading, setLoading] = useState(false)
   const [exportOpen, setExportOpen] = useState(false)
+  const { pagination } = useTablePagination()
   const searchInput = useRef<any>(null)
 
   const canExportData = canExport(user?.role)
@@ -149,7 +151,7 @@ export function PRListPage() {
         dataSource={rows}
         columns={columns}
         loading={loading}
-        pagination={{ pageSize: 20, showSizeChanger: true, showTotal: (total) => t('item.total_count', { total }) }}
+        pagination={pagination}
         size="small"
         scroll={{ x: 'max-content' }}
       />

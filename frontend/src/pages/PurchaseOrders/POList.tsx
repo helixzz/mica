@@ -10,6 +10,7 @@ import { usePersistedColumns } from '@/hooks/usePersistedColumns'
 import { api, type PurchaseOrderListItem } from '@/api'
 import { useAuth } from '@/auth/useAuth'
 import { ExportDrawer, canExport } from '@/components/Export'
+import { useTablePagination } from '@/hooks/useTablePagination'
 import { fmtAmount, fmtAmountNode, fmtQty, fmtQtyNode } from '@/utils/format'
 import { MonoId } from '@/components/ui/Mono'
 
@@ -62,6 +63,7 @@ export function POListPage() {
   const [loading, setLoading] = useState(false)
   const [exportOpen, setExportOpen] = useState(false)
   const [statusFilter, setStatusFilter] = useState<string[]>([])
+  const { pagination } = useTablePagination()
   const cols = usePersistedColumns('po-list', DEFAULT_VISIBLE)
 
   const canExportLedger = canExport(user?.role)
@@ -218,11 +220,7 @@ export function POListPage() {
         onChange={(_, filters) => {
           setStatusFilter((filters[COLUMN_KEYS.status] ?? []).map(String))
         }}
-        pagination={{
-          pageSize: 20,
-          showSizeChanger: true,
-          showTotal: (total) => t('item.total_count', { total }),
-        }}
+        pagination={pagination}
         size="small"
         scroll={{ x: 'max-content' }}
       />

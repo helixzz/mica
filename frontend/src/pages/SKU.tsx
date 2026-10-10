@@ -42,6 +42,7 @@ import {
 import { extractError } from '@/api/client'
 import { useAuth } from '@/auth/useAuth'
 import { ExportDrawer, canExport } from '@/components/Export'
+import { useTablePagination } from '@/hooks/useTablePagination'
 import { fmtAmount, fmtAmountNode, fmtQty, fmtQtyNode, getCurrencySymbol } from '@/utils/format'
 import { MonoId } from '@/components/ui/Mono'
 
@@ -59,6 +60,7 @@ export function SKUPage() {
   const [categories, setCategories] = useState<ClassificationItem[]>([])
   const [categoryFilter, setCategoryFilter] = useState<string | null>(null)
   const [insights, setInsights] = useState<SKUInsights | null>(null)
+  const { pagination } = useTablePagination()
   const [exportOpen, setExportOpen] = useState(false)
 
   const canExportData = canExport(user?.role)
@@ -305,7 +307,7 @@ export function SKUPage() {
           rowKey="id"
           dataSource={prices}
           columns={priceCols}
-          pagination={{ pageSize: 20 }}
+          pagination={pagination}
           size="small"
         />
       </Card>

@@ -7,6 +7,31 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [v1.54.1] — 2026-10-10
+
+### 修复（合同搜索）
+
+采购同学反馈「合同界面的搜索是坏的」，定位出三个各自独立的问题：
+
+- **搜索在无结果时毫无反馈**：命中 0 条时该面板什么都不渲染（`searchHits.length > 0 && ...`），也不显示"没找到"，看起来就是点了没反应。现在会显示带「搜索」插画的空状态，并回显被搜索的词。
+- **搜索失败被静默吞掉**：`doSearch` 没有 try/catch，接口报错时既不提示也不改变界面。现在会弹出错误提示。
+- **搜索覆盖不到供应商与订单号**：`contracts.search_text` 生成列只由 `合同号 + 标题 + 备注` 组成，不含供应商名（在 `suppliers` 表）也不含 PO 号，因此**按供应商或订单号搜索必然 0 条**——这是最容易被当成"功能坏了"的原因。现在按供应商名与 PO 号匹配，并在结果里标注命中来源（`supplier` / `po_number` / `notes`）。
+- **顺带修掉一个行级越权**：`GET /contracts-search` 此前完全不传 actor、不做任何 scoping，任何登录用户（含 requester）都能搜到全部合同（`GET /contracts` 有 `visible_po_id_subquery`）。现在搜索与列表使用同一套可见性规则。
+
+### 修复（分页大小）
+
+- **所有客户端分页表格的「每页条数」切换器都是失效的**：表格写的是 `pagination={{ pageSize: 20 }}`，而 AntD 的 `usePagination` 用 `extendsObject(innerPagination, paginationProp)` 合并——prop 里的 `pageSize` 会在每次渲染覆盖用户刚选的值，于是选完立刻弹回 20。受影响：合同、付款、发票、SKU、到货、采购申请、采购订单 共 7 个页面。
+- 新增 `useTablePagination()` hook 把每页条数放进 React state，并统一提供切换器与"共 N 条"文案；上述 7 个页面全部改用它。
+- **`pagination.default_page_size` 系统参数此前无人读取**——admin 在后台改了「默认分页大小」不会有任何效果（全库仅一条 seed 迁移引用它）。新增 `GET /ui-config`（登录可见、白名单键、值域收敛到 5–200）下发该参数，前端启动时读取，表格据此决定初始每页条数；用户手动改过之后，晚到的配置不会再覆盖用户选择。生产当前配置为 50。
+
+### 验证
+
+- 后端全量 **770 passed**，`ruff check` / `ruff format --check` 通过；前端 `type-check` / `build` / `vitest` **14 files / 77 tests passed**
+- 新增用例：按供应商名/PO 号/备注命中并标注来源、搜索遵守行级可见性（同部门 dept_manager 可见、跨部门不可见）、`/ui-config` 未登录 401 与值域收敛、每页条数切换生効、初始条数取系统参数、晚到配置不覆盖用户选择、无结果空状态、搜索失败提示
+- 分页那条测试是**先复现后修复**：修复前断言 `expected 20 to be 50` 失败
+
+---
+
 ## [v1.54.0] — 2026-09-30
 
 ### 新增（采购台账补充需求背景与物料信息）
