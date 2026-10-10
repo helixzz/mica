@@ -194,7 +194,7 @@ export default function WorkflowKanbanPanel({ maxItemsPerColumn = 10, width, hei
                   hoverable 
                   onClick={() => navigate(item.url)}
                   style={{ cursor: 'pointer' }}
-                  bodyStyle={{ padding: '12px' }}
+                  styles={{ body: { padding: '12px' } }}
                 >
                   <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '8px' }}>
                     <Space>
@@ -224,7 +224,7 @@ export default function WorkflowKanbanPanel({ maxItemsPerColumn = 10, width, hei
 
   if (loading) {
     return (
-      <Card title={t('insights.workflow_kanban', '工作流看板')} bordered={false} style={{ height: '100%' }}>
+      <Card title={t('insights.workflow_kanban', '工作流看板')} variant="borderless" style={{ height: '100%' }}>
         <div style={{ textAlign: 'center', padding: '60px 0' }}>
           <Spin size="large" />
         </div>
@@ -233,7 +233,7 @@ export default function WorkflowKanbanPanel({ maxItemsPerColumn = 10, width, hei
   }
 
   return (
-    <Card title={t('insights.workflow_kanban', '工作流看板')} bordered={false} style={{ height: '100%', display: 'flex', flexDirection: 'column' }} bodyStyle={{ flex: 1, padding: '16px', overflow: 'hidden' }}>
+    <Card title={t('insights.workflow_kanban', '工作流看板')} variant="borderless" style={{ height: '100%', display: 'flex', flexDirection: 'column' }} styles={{ body: { flex: 1, padding: '16px', overflow: 'hidden' } }}>
       <Row gutter={[16, 16]} style={{ height: '100%' }}>
         {renderColumn(t('insights.todo', '待我处理'), columns.todo, 'var(--color-primary-500)')}
         {renderColumn(t('insights.in_progress', '进行中'), columns.inProgress, 'var(--color-viz-attention)')}

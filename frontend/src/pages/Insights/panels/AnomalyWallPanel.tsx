@@ -67,9 +67,9 @@ export default function AnomalyWallPanel({ width, height }: PanelProps) {
   return (
     <Card 
       title={title} 
-      bordered={false} 
+      variant="borderless"
       style={{ height: '100%', display: 'flex', flexDirection: 'column' }}
-      bodyStyle={{ flex: 1, overflow: 'auto', padding: '16px' }}
+      styles={{ body: { flex: 1, overflow: 'auto', padding: '16px' } }}
     >
       {loading ? (
         <Skeleton active paragraph={{ rows: 6 }} />

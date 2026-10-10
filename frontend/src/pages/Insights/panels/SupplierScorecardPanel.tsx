@@ -85,7 +85,7 @@ export default function SupplierScorecardPanel({ width, height }: PanelProps) {
 
   if (loading) {
     return (
-      <Card title={t('insights.supplier_scorecard')} bordered={false} style={{ height: '100%' }}>
+      <Card title={t('insights.supplier_scorecard')} variant="borderless" style={{ height: '100%' }}>
         <div style={{ textAlign: 'center', padding: '40px 0' }}>
           <Spin />
         </div>
@@ -95,14 +95,14 @@ export default function SupplierScorecardPanel({ width, height }: PanelProps) {
 
   if (data.length === 0) {
     return (
-      <Card title={t('insights.supplier_scorecard')} bordered={false} style={{ height: '100%' }}>
+      <Card title={t('insights.supplier_scorecard')} variant="borderless" style={{ height: '100%' }}>
         <Empty />
       </Card>
     );
   }
 
   return (
-    <Card title={t('insights.supplier_scorecard')} bordered={false} style={{ height: '100%' }} bodyStyle={{ height: 'calc(100% - 58px)', overflow: 'auto', padding: 0 }}>
+    <Card title={t('insights.supplier_scorecard')} variant="borderless" style={{ height: '100%' }} styles={{ body: { height: 'calc(100% - 58px)', overflow: 'auto', padding: 0 } }}>
       <Table 
         columns={columns} 
         dataSource={data} 

@@ -215,7 +215,7 @@ function CreateItemModal({ open, onCancel, onSuccess }: CreateItemModalProps) {
       okText={t('button.confirm')}
       cancelText={t('button.cancel')}
       width={560}
-      destroyOnClose
+      destroyOnHidden
     >
       <Typography.Paragraph type="secondary" style={{ fontSize: 12 }}>
         {t('item.create_modal_hint')}

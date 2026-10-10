@@ -127,7 +127,7 @@ export function AddSupplementaryFromPRModal({
       okText={t('button.confirm')}
       cancelText={t('button.cancel')}
       width={620}
-      destroyOnClose
+      destroyOnHidden
     >
       {prItem && (
         <>

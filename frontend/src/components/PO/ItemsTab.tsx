@@ -106,7 +106,7 @@ function EditPOItemModal({ open, poItem, currency, onClose, onSuccess }: EditPOI
       okText={t('button.confirm')}
       cancelText={t('button.cancel')}
       width={560}
-      destroyOnClose
+      destroyOnHidden
     >
       {poItem && (
         <Form

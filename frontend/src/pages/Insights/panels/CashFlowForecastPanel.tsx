@@ -68,9 +68,9 @@ export default function CashFlowForecastPanel({ width, height }: PanelProps) {
   return (
     <Card 
       title={t('insights.cash_flow', '现金流预测')} 
-      bordered={false} 
+      variant="borderless"
       style={{ height: '100%', display: 'flex', flexDirection: 'column' }}
-      bodyStyle={{ flex: 1, overflow: 'auto', display: 'flex', flexDirection: 'column' }}
+      styles={{ body: { flex: 1, overflow: 'auto', display: 'flex', flexDirection: 'column' } }}
     >
       {loading ? (
         <Skeleton active paragraph={{ rows: 8 }} />

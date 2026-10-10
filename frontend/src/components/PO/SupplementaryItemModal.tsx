@@ -77,7 +77,7 @@ export function SupplementaryItemModal({
       okText={t('button.confirm')}
       cancelText={t('button.cancel')}
       width={600}
-      destroyOnClose
+      destroyOnHidden
     >
       <Typography.Paragraph type="secondary">
         {t('fulfillment.add_supplementary_hint')}

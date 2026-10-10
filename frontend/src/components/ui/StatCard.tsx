@@ -73,7 +73,7 @@ export const StatCard: React.FC<StatCardProps> = ({
 
   return (
     <Card
-      bordered={false}
+      variant="borderless"
       onMouseEnter={() => setIsHovered(true)}
       onMouseLeave={() => setIsHovered(false)}
       style={{

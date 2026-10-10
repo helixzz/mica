@@ -394,6 +394,35 @@ backend ──(HTTP)──> cerbos sidecar (:3593)
 
 Cerbos 不可达时（如开发环境没启动 cerbos 容器），`cerbos_client.py` 自动降级到 `FIELD_PERMISSIONS` 静态 dict。零故障风险。
 
+## AntD 废弃属性（v1.54.3 起已清理）
+
+AntD 5.29 会对以下写法在**开发期**打印废弃告警（生产构建里被 `NODE_ENV` 包裹，不会出现），
+但它们已是从文档移除的 API，请一律用右列写法：
+
+| 组件 | 废弃 | 现在应写 |
+|---|---|---|
+| Card | `bodyStyle` | `styles={{ body: … }}` |
+| Card | `bordered={false}` / 裸 `bordered` | `variant="borderless"` / 不写（默认有边框） |
+| Modal / Drawer | `bodyStyle` | `styles={{ body: … }}` |
+| Modal / Drawer | `destroyOnClose` | `destroyOnHidden` |
+| Drawer | `headerStyle` / `footerStyle` / `maskStyle` / `drawerStyle` / `contentWrapperStyle` | `styles={{ header / footer / mask / content / wrapper: … }}` |
+
+`Descriptions` 与 `List` 的 `bordered` **未**废弃，不要跟着改。
+
+自查命令（改前改后都可跑）：
+
+```bash
+cd frontend && node -e "
+const ts=require('typescript'),fs=require('fs'),path=require('path');
+const bad=new Set(['bodyStyle','headStyle','destroyOnClose','maskStyle','drawerStyle','contentWrapperStyle','footerStyle']);
+const walk=d=>fs.readdirSync(d,{withFileTypes:true}).flatMap(e=>e.isDirectory()?walk(path.join(d,e.name)):(e.name.endsWith('.tsx')?[path.join(d,e.name)]:[]));
+for(const f of walk('src')){const sf=ts.createSourceFile(f,fs.readFileSync(f,'utf8'),ts.ScriptTarget.Latest,true,ts.ScriptKind.TSX);
+const v=n=>{if(ts.isJsxOpeningElement(n)||ts.isJsxSelfClosingElement(n)){const t=n.tagName.getText(sf);
+for(const a of n.attributes.properties)if(ts.isJsxAttribute(a)&&bad.has(a.name.getText(sf))&&['Card','Modal','Drawer'].includes(t))
+console.log(f+':'+(sf.getLineAndCharacterOfPosition(a.getStart(sf)).line+1),t,a.name.getText(sf));}ts.forEachChild(n,v)};v(sf)}
+"
+```
+
 ## 表格分页（v1.54.1+）
 
 给 AntD Table 写 `pagination={{ pageSize: 20 }}` 会让**每页条数切换器彻底失效**：`usePagination` 用

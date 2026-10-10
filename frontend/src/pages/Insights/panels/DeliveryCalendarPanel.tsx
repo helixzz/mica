@@ -135,7 +135,7 @@ export default function DeliveryCalendarPanel({ maxItems = 20, width, height }: 
 
   if (loading) {
     return (
-      <Card title={t('insights.delivery_calendar', '交付日历')} bordered={false} style={{ height: '100%' }}>
+      <Card title={t('insights.delivery_calendar', '交付日历')} variant="borderless" style={{ height: '100%' }}>
         <div style={{ textAlign: 'center', padding: '40px 0' }}>
           <Spin />
         </div>
@@ -145,7 +145,7 @@ export default function DeliveryCalendarPanel({ maxItems = 20, width, height }: 
 
   if (data.length === 0) {
     return (
-      <Card title={t('insights.delivery_calendar', '交付日历')} bordered={false} style={{ height: '100%' }}>
+      <Card title={t('insights.delivery_calendar', '交付日历')} variant="borderless" style={{ height: '100%' }}>
         <Empty description={t('insights.no_active_prs', '暂无进行中的采购申请')} />
       </Card>
     );
@@ -214,7 +214,7 @@ export default function DeliveryCalendarPanel({ maxItems = 20, width, height }: 
   ];
 
   return (
-    <Card title={t('insights.delivery_calendar', '交付日历')} bordered={false} style={{ height: '100%' }} bodyStyle={{ height: 'calc(100% - 58px)', overflow: 'auto' }}>
+    <Card title={t('insights.delivery_calendar', '交付日历')} variant="borderless" style={{ height: '100%' }} styles={{ body: { height: 'calc(100% - 58px)', overflow: 'auto' } }}>
       {screens.md ? (
         <Table 
           columns={columns} 
@@ -225,7 +225,7 @@ export default function DeliveryCalendarPanel({ maxItems = 20, width, height }: 
       ) : (
         <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
           {data.map(record => (
-            <Card key={record.key} size="small" type="inner" bordered>
+            <Card key={record.key} size="small" type="inner">
               <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '8px' }}>
                 <a onClick={() => navigate(`/purchase-requisitions/${record.pr.id}`)}>{record.pr.pr_number}</a>
                 <Tag color={getStatusColor(record.po ? record.po.status : record.pr.status)}>

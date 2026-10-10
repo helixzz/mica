@@ -37,7 +37,7 @@ export default function BudgetGaugePanel({ width, height }: PanelProps) {
 
   if (loading) {
     return (
-      <Card title={t('insights.budget_gauge')} bordered={false} style={{ height: '100%' }}>
+      <Card title={t('insights.budget_gauge')} variant="borderless" style={{ height: '100%' }}>
         <div style={{ textAlign: 'center', padding: '40px 0' }}>
           <Spin />
         </div>
@@ -47,14 +47,14 @@ export default function BudgetGaugePanel({ width, height }: PanelProps) {
 
   if (data.length === 0) {
     return (
-      <Card title={t('insights.budget_gauge')} bordered={false} style={{ height: '100%' }}>
+      <Card title={t('insights.budget_gauge')} variant="borderless" style={{ height: '100%' }}>
         <Empty description={t('insights.no_budgets')} />
       </Card>
     );
   }
 
   return (
-    <Card title={t('insights.budget_gauge')} bordered={false} style={{ height: '100%' }} bodyStyle={{ height: 'calc(100% - 58px)', overflow: 'auto' }}>
+    <Card title={t('insights.budget_gauge')} variant="borderless" style={{ height: '100%' }} styles={{ body: { height: 'calc(100% - 58px)', overflow: 'auto' } }}>
       <Space direction="vertical" size="large" style={{ width: '100%' }}>
         {data.map(item => (
           <div key={item.budget_id}>

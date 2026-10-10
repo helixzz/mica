@@ -7,6 +7,40 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [v1.54.3] — 2026-10-10
+
+### 重构（清理 AntD 5.29 已废弃属性）
+
+浏览器验证时控制台出现 `bodyStyle` 废弃告警，顺着把同一批废弃属性清干净。以 AntD 源码里的 `warning.deprecated` 清单为准（不凭记忆），共 **46 处 / 22 个文件**：
+
+| 废弃属性 | 数量 | 替换为 |
+|---|---|---|
+| `Card bodyStyle` | 14 | `styles={{ body: … }}` |
+| `Card bordered={false}` | 22 | `variant="borderless"` |
+| `Card bordered`（裸写，等于默认值） | 1 | 直接删除 |
+| `Drawer bodyStyle` | 1 | `styles={{ body: … }}` |
+| `Modal bodyStyle` | 1 | `styles={{ body: … }}` |
+| `Modal destroyOnClose` | 7 | `destroyOnHidden` |
+
+**确认未动**（这些并非废弃属性，误改会改变行为）：`Descriptions bordered` 13 处、`List bordered` 1 处、自定义组件 `SortableItem` 的 `visible`。
+
+### 验证（Playwright 真实浏览器）
+
+- **13 个页面逐一扫描控制台：AntD 废弃告警 0 条**（修复前合同页/搜索弹窗等处有告警）
+- **像素级回归对比**：改动前后对 dashboard / insights / contracts / admin / notifications 五个页面各截一张图做逐像素比对，前四个**差异 0 像素**；notifications 有 144 像素差异，但**同一份代码连拍两次得到完全相同的 144 像素差异**（对照实验），确认是该页内容本身的不确定性（未读标记/相对时间），与改动无关
+- 弹窗（交付计划）可正常打开、表单可用；`type-check` / `build` / `vitest`（14 files / 77 tests）/ 后端 770 passed 全通过
+
+### 说明
+
+- 这些告警都由 `process.env.NODE_ENV !== 'production'` 包裹，**仅开发期出现，生产用户看不到**；清理的意义在于这些属性后续 AntD 大版本会被移除，且它们已是文档标注的废弃 API。
+
+### 已知问题（本次未处理，另行评估）
+
+- `npm run lint` 实际上无法运行：仓库使用 ESLint 9，但没有 `eslint.config.js`（ESLint 9 起不再读取 `.eslintrc`）。CI 只跑 ruff / type-check / build，因此一直未被发现。
+- 10 个组件存在 `<Modal>` + `Form.useForm()` 模式，控制台会有一条 `Instance created by useForm is not connected to any Form element` 告警。已用 A/B 实验确认与本次改动无关（改动前后计数一致，且在页面加载时即出现），同为 dev-only。
+
+---
+
 ## [v1.54.2] — 2026-10-10
 
 ### 修复（搜索结果「匹配内容」列没有信息量）

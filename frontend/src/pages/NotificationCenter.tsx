@@ -187,7 +187,7 @@ export const NotificationCenter: React.FC = () => {
     <div style={{ padding: 24, maxWidth: 1000, margin: '0 auto' }}>
       <Title level={3} style={{ marginBottom: 24 }}>{t('notification.center')}</Title>
       
-      <Card bodyStyle={{ padding: 0 }}>
+      <Card styles={{ body: { padding: 0 } }}>
         <Tabs 
           activeKey={activeTab} 
           onChange={handleTabChange}

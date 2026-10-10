@@ -167,7 +167,7 @@ export const GlobalSearch: React.FC = () => {
           footer={null}
           closable={false}
           style={{ top: 20 }}
-          bodyStyle={{ padding: 0 }}
+          styles={{ body: { padding: 0 } }}
         >
           <div style={{ padding: 16 }}>
             <Input

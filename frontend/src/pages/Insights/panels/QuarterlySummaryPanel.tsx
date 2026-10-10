@@ -56,9 +56,9 @@ export default function QuarterlySummaryPanel({ width, height }: PanelProps) {
     <Card 
       title={t('insights.quarterly_summary', '季度摘要')} 
       extra={extra}
-      bordered={false} 
+      variant="borderless"
       style={{ height: '100%', display: 'flex', flexDirection: 'column' }}
-      bodyStyle={{ flex: 1, overflow: 'auto', display: 'flex', flexDirection: 'column' }}
+      styles={{ body: { flex: 1, overflow: 'auto', display: 'flex', flexDirection: 'column' } }}
     >
       {loading ? (
         <div style={{ flex: 1 }}>

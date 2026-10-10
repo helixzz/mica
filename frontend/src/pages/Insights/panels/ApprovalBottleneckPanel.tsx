@@ -29,7 +29,7 @@ export default function ApprovalBottleneckPanel({ width, height }: PanelProps) {
 
   if (loading) {
     return (
-      <Card title={t('insights.approval_bottleneck')} bordered={false} style={{ height: '100%' }}>
+      <Card title={t('insights.approval_bottleneck')} variant="borderless" style={{ height: '100%' }}>
         <div style={{ textAlign: 'center', padding: '40px 0' }}>
           <Spin />
         </div>
@@ -39,7 +39,7 @@ export default function ApprovalBottleneckPanel({ width, height }: PanelProps) {
 
   if (!data) {
     return (
-      <Card title={t('insights.approval_bottleneck')} bordered={false} style={{ height: '100%' }}>
+      <Card title={t('insights.approval_bottleneck')} variant="borderless" style={{ height: '100%' }}>
         <Empty />
       </Card>
     );
@@ -69,7 +69,7 @@ export default function ApprovalBottleneckPanel({ width, height }: PanelProps) {
   ];
 
   return (
-    <Card title={t('insights.approval_bottleneck')} bordered={false} style={{ height: '100%' }} bodyStyle={{ height: 'calc(100% - 58px)', overflow: 'auto' }}>
+    <Card title={t('insights.approval_bottleneck')} variant="borderless" style={{ height: '100%' }} styles={{ body: { height: 'calc(100% - 58px)', overflow: 'auto' } }}>
       <Row gutter={[16, 16]} style={{ marginBottom: 24 }}>
         <Col span={8}>
           <Statistic title={t('insights.pending_approvals')} value={data.total_pending} />

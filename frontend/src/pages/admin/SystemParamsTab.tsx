@@ -330,7 +330,7 @@ export const SystemParamsTab: React.FC = () => {
                   key={param.key}
                   size="small"
                   style={{ marginBottom: 8 }}
-                  bodyStyle={{ padding: '12px 16px' }}
+                  styles={{ body: { padding: '12px 16px' } }}
                 >
                   <Row align="middle" justify="space-between">
                     <Col span={12}>
@@ -413,7 +413,7 @@ export const SystemParamsTab: React.FC = () => {
         open={editModalVisible}
         onOk={handleSave}
         onCancel={() => setEditModalVisible(false)}
-        destroyOnClose
+        destroyOnHidden
       >
         {editingParam && (
           <Form form={form} layout="vertical">

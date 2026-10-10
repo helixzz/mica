@@ -23,14 +23,14 @@ export const Section: React.FC<SectionProps> = ({
 
   return (
     <Card
-      bordered={false}
+      variant="borderless"
       style={{
         marginBottom: isCompact ? token.marginMD : token.marginLG,
         backgroundColor: token.colorBgContainer,
         borderRadius: token.borderRadiusLG,
         boxShadow: token.boxShadowTertiary,
       }}
-      bodyStyle={{ padding: isCompact ? token.paddingMD : token.paddingLG }}
+      styles={{ body: { padding: isCompact ? token.paddingMD : token.paddingLG } }}
     >
       {(title || description || extra) && (
         <div

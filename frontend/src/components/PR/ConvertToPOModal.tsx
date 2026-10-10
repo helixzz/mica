@@ -267,7 +267,7 @@ export function ConvertToPOModal({
       okText={t('pr.convert_modal_confirm')}
       cancelText={t('button.cancel')}
       width={1280}
-      destroyOnClose
+      destroyOnHidden
     >
       <Tabs
         activeKey={activeTab}

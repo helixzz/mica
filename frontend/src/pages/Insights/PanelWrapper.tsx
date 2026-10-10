@@ -80,10 +80,10 @@ export default function PanelWrapper({ panelDef, config, isEditMode, onRemove }:
           border: isEditMode ? `1px dashed ${token.colorBorder}` : undefined,
           boxShadow: isDragging ? token.boxShadowSecondary : undefined,
         }}
-        bodyStyle={{
+        styles={{ body: {
           height: 'calc(100% - 56px)', // Subtract header height
           overflow: 'auto',
-        }}
+        } }}
       >
         <Suspense
           fallback={
