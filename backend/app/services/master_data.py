@@ -469,6 +469,7 @@ async def create_company(db: AsyncSession, actor: User, payload: CompanyCreate) 
     company = Company(
         code=payload.code,
         name_zh=payload.name_zh,
+        short_name=payload.short_name,
         name_en=payload.name_en,
         default_locale=payload.default_locale,
         default_currency=payload.default_currency,
@@ -485,6 +486,7 @@ async def create_company(db: AsyncSession, actor: User, payload: CompanyCreate) 
             "new": {
                 "code": payload.code,
                 "name_zh": payload.name_zh,
+                "short_name": payload.short_name,
                 "name_en": payload.name_en,
                 "default_locale": payload.default_locale,
                 "default_currency": payload.default_currency,
@@ -520,6 +522,9 @@ async def update_company(
     if "name_zh" in payload.model_fields_set and payload.name_zh is not None:
         _record_change(diff, "name_zh", company.name_zh, payload.name_zh)
         company.name_zh = payload.name_zh
+    if "short_name" in payload.model_fields_set:
+        _record_change(diff, "short_name", company.short_name, payload.short_name)
+        company.short_name = payload.short_name
     if "name_en" in payload.model_fields_set:
         _record_change(diff, "name_en", company.name_en, payload.name_en)
         company.name_en = payload.name_en

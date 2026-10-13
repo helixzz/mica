@@ -58,6 +58,8 @@ DETERMINISTIC_RESOLVERS: dict[re.Pattern[str], str] = {
     re.compile(r"^分期[_\-\s]?(编号|号|no)$", re.IGNORECASE): "schedule.installment_no",
     re.compile(r"^付款金额$"): "schedule.effective_amount",
     re.compile(r"^(付款方|采购方|采购)[_\-\s]?(公司)?(全(称|名)?|名称)?$"): "company.name",
+    # ``company.short_name`` is an explicitly maintained column; when it is empty the
+    # context falls back to the full legal name (see build_context).
     re.compile(
         r"^(付款方|采购方|采购)[_\-\s]?(公司)?(简称|short[_\-\s]?name)$"
     ): "company.short_name",
@@ -140,7 +142,13 @@ def build_context(
     company_short = ""
     if company is not None:
         company_name = company.name_zh or company.name_en or ""
-        company_short = (company.name_zh or company.name_en or "")[:4]
+        # Never derive the abbreviation by slicing the name. Distinct payers share a
+        # prefix ("上海佳期私募基金管理有限公司" / "上海佳期数据科技有限公司" both
+        # truncated to "上海佳期", producing indistinguishable payment-form filenames)
+        # and English names degrade to gibberish ("JQ Investments (HK) Limited" ->
+        # "JQ I"). Fall back to the full name so an unset abbreviation is verbose
+        # rather than ambiguous.
+        company_short = company.short_name or company_name
 
     actor_name = ""
     if actor is not None:

@@ -15,6 +15,14 @@ from app.models import JSONValue
 _MASTER_DATA_CODE_RE = re.compile(r"^[A-Z0-9_-]+$")
 
 
+def _normalize_optional_text(value: str | None) -> str | None:
+    """Trim optional free text and collapse a blank value to ``None``."""
+    if value is None:
+        return None
+    stripped = value.strip()
+    return stripped or None
+
+
 def _normalize_master_data_code(value: str) -> str:
     normalized = value.strip().upper()
     if not normalized:
@@ -56,6 +64,7 @@ class UserOut(BaseModel):
 class CompanyCreate(BaseModel):
     code: str = Field(..., min_length=1, max_length=32)
     name_zh: str = Field(..., min_length=1, max_length=255)
+    short_name: str | None = Field(default=None, max_length=64)
     name_en: str | None = Field(default=None, max_length=255)
     default_locale: str = Field(default="zh-CN", min_length=2, max_length=10)
     default_currency: str = Field(default="CNY", min_length=3, max_length=3)
@@ -65,10 +74,18 @@ class CompanyCreate(BaseModel):
     def validate_code(cls, value: str) -> str:
         return _normalize_master_data_code(value)
 
+    @field_validator("short_name")
+    @classmethod
+    def normalize_short_name(cls, value: str | None) -> str | None:
+        # A blank abbreviation must be stored as NULL, not "" — consumers treat only
+        # NULL/empty as "fall back to the full name".
+        return _normalize_optional_text(value)
+
 
 class CompanyUpdate(BaseModel):
     code: str | None = Field(default=None, min_length=1, max_length=32)
     name_zh: str | None = Field(default=None, min_length=1, max_length=255)
+    short_name: str | None = Field(default=None, max_length=64)
     name_en: str | None = Field(default=None, max_length=255)
     default_locale: str | None = Field(default=None, min_length=2, max_length=10)
     default_currency: str | None = Field(default=None, min_length=3, max_length=3)
@@ -81,12 +98,18 @@ class CompanyUpdate(BaseModel):
             return value
         return _normalize_master_data_code(value)
 
+    @field_validator("short_name")
+    @classmethod
+    def normalize_short_name(cls, value: str | None) -> str | None:
+        return _normalize_optional_text(value)
+
 
 class CompanyOut(BaseModel):
     model_config = ConfigDict(from_attributes=True)
     id: UUID
     code: str
     name_zh: str
+    short_name: str | None = None
     name_en: str | None = None
     default_locale: str
     default_currency: str

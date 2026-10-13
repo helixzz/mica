@@ -650,3 +650,138 @@ async def test_generate_payment_document_returns_xlsx_when_template_is_xlsx(monk
 
     assert payload == b"generated-xlsx"
     assert filename == "Form_PO-1.xlsx"
+
+
+# ---------------------------------------------------------------------------
+# Company abbreviation: it is deliberately maintained data, never a name slice.
+# ---------------------------------------------------------------------------
+
+
+def _company(name_zh, short_name=None, name_en=None):
+    return SimpleNamespace(name_zh=name_zh, name_en=name_en, short_name=short_name)
+
+
+def _company_context(company):
+    supplier = SimpleNamespace(
+        name="某供应商",
+        code="SUP-1",
+        tax_number=None,
+        contact_name=None,
+        contact_phone=None,
+        contact_email=None,
+        payee_name="某供应商有限公司",
+        payee_bank="中国工商银行上海分行",
+        payee_bank_account="6222 0000 1111 2222",
+    )
+    schedule = SimpleNamespace(
+        installment_no=1,
+        label="货款",
+        planned_amount=Decimal("1000"),
+        planned_date=None,
+        actual_amount=None,
+        actual_date=None,
+        status="planned",
+        trigger_type="fixed_date",
+        trigger_description=None,
+    )
+    po = SimpleNamespace(
+        po_number="PO-2026-0001",
+        currency="CNY",
+        total_amount=Decimal("1000"),
+        status="approved",
+    )
+    contract = SimpleNamespace(
+        contract_number="HT-2026-001",
+        title="年度框架合同",
+        total_amount=Decimal("1000"),
+        currency="CNY",
+        signed_date=None,
+        effective_date=None,
+        expiry_date=None,
+        status="signed",
+    )
+    return svc.build_context(po, contract, supplier, schedule, company=company)
+
+
+def test_build_context_prefers_the_configured_short_name():
+    context = _company_context(_company("上海佳期数据科技有限公司", short_name="佳期数据"))
+
+    assert context["company"]["name"] == "上海佳期数据科技有限公司"
+    assert context["company"]["short_name"] == "佳期数据"
+
+
+def test_build_context_falls_back_to_full_name_instead_of_a_prefix_slice():
+    """Regression: the first four characters of both 上海佳期 entities are identical."""
+    context = _company_context(_company("上海佳期私募基金管理有限公司"))
+
+    assert context["company"]["short_name"] == "上海佳期私募基金管理有限公司"
+    assert context["company"]["short_name"] != "上海佳期"
+
+
+def test_build_context_treats_blank_short_name_as_unset():
+    context = _company_context(_company("觅采演示公司", short_name=""))
+
+    assert context["company"]["short_name"] == "觅采演示公司"
+
+
+def test_build_context_falls_back_to_name_en_when_name_zh_is_empty():
+    context = _company_context(_company("", name_en="Seven Research LLC"))
+
+    assert context["company"]["name"] == "Seven Research LLC"
+    assert context["company"]["short_name"] == "Seven Research LLC"
+
+
+def test_short_name_placeholder_never_truncates_an_english_name():
+    context = _company_context(_company("JQ Investments (HK) Limited"))
+
+    resolved = svc.resolve_placeholder_deterministic("采购公司名的四字简称", context)
+
+    assert resolved == "JQ Investments (HK) Limited"
+
+
+def test_short_name_placeholder_uses_the_configured_abbreviation():
+    context = _company_context(_company("上海佳期数据科技有限公司", short_name="佳期数据"))
+
+    assert svc.resolve_placeholder_deterministic("采购公司名的四字简称", context) == "佳期数据"
+    assert svc.resolve_placeholder_deterministic("付款方公司简称", context) == "佳期数据"
+
+
+def test_full_name_placeholder_is_unaffected_by_the_short_name():
+    context = _company_context(_company("上海佳期数据科技有限公司", short_name="佳期数据"))
+
+    assert (
+        svc.resolve_placeholder_deterministic("付款方公司全名", context)
+        == "上海佳期数据科技有限公司"
+    )
+    assert (
+        svc.resolve_placeholder_deterministic("采购公司全称", context) == "上海佳期数据科技有限公司"
+    )
+
+
+def test_two_jiaqi_payers_produce_distinguishable_filenames():
+    """The reported bug: both 上海佳期 entities produced the same leading token."""
+    template = (
+        "[采购公司名的四字简称]_[收款公司全名]_[采购付款的性质简称（例如货款、服务费）]_[合同编号]"
+    )
+    placeholders = svc.extract_placeholders(None, template)
+
+    filenames = set()
+    for name_zh in ("上海佳期私募基金管理有限公司", "上海佳期数据科技有限公司"):
+        context = _company_context(_company(name_zh))
+        mapping = {
+            placeholder: svc.resolve_placeholder_deterministic(placeholder, context) or ""
+            for placeholder in placeholders
+        }
+        filenames.add(svc.render_filename(template, mapping))
+
+    assert filenames == {
+        "上海佳期私募基金管理有限公司_某供应商有限公司_货款_HT-2026-001",
+        "上海佳期数据科技有限公司_某供应商有限公司_货款_HT-2026-001",
+    }
+
+
+def test_two_jiaqi_payers_still_require_distinct_short_names_when_configured():
+    """A deliberate abbreviation stays in charge — and remains the operator's choice."""
+    context = _company_context(_company("上海佳期数据科技有限公司", short_name="上海佳期"))
+
+    assert svc.resolve_placeholder_deterministic("采购公司名的四字简称", context) == "上海佳期"

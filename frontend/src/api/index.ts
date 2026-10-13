@@ -38,6 +38,7 @@ export interface Company {
   id: string
   code: string
   name_zh: string
+  short_name: string | null
   name_en: string | null
   default_locale: string
   default_currency: string
@@ -1179,11 +1180,11 @@ export const api = {
     const { data } = await client.get<Company[]>('/companies', { params: includeDisabled ? { include_disabled: true } : {} })
     return data
   },
-  async createCompany(body: { code: string; name_zh: string; name_en?: string; default_currency?: string }): Promise<Company> {
+  async createCompany(body: { code: string; name_zh: string; short_name?: string | null; name_en?: string; default_currency?: string }): Promise<Company> {
     const { data } = await client.post<Company>('/companies', body)
     return data
   },
-  async updateCompany(id: string, body: { name_zh?: string; name_en?: string; default_currency?: string; is_enabled?: boolean }): Promise<Company> {
+  async updateCompany(id: string, body: { name_zh?: string; short_name?: string | null; name_en?: string; default_currency?: string; is_enabled?: boolean }): Promise<Company> {
     const { data } = await client.patch<Company>(`/companies/${id}`, body)
     return data
   },

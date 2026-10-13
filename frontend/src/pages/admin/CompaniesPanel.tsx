@@ -39,6 +39,7 @@ export function CompaniesPanel() {
     form.resetFields()
     form.setFieldsValue({
       name_zh: company.name_zh,
+      short_name: company.short_name ?? undefined,
       name_en: company.name_en,
       default_currency: company.default_currency,
     })
@@ -101,6 +102,7 @@ export function CompaniesPanel() {
       <Table dataSource={companies} rowKey="id" size="small" pagination={false} columns={[
         { title: t('admin.code_col'), dataIndex: 'code', width: 100 },
         { title: t('admin.name_zh_col'), dataIndex: 'name_zh' },
+        { title: t('admin.short_name_col'), dataIndex: 'short_name', width: 140, render: (v: string | null) => v || '-' },
         { title: t('admin.name_en_col'), dataIndex: 'name_en', render: (v: string | null) => v || '-' },
         { title: t('admin.default_currency'), dataIndex: 'default_currency', width: 80 },
         { title: t('admin.status_col'), dataIndex: 'is_enabled', width: 70, render: (v: boolean) => <span className={v !== false ? 'tag-state tag-state--success' : 'tag-state tag-state--neutral'}>{v !== false ? t('common.enabled') : t('common.disabled')}</span> },
@@ -126,6 +128,7 @@ export function CompaniesPanel() {
             <Form.Item name="code" label={t('admin.code_label')} help={t('admin.company_code_help')} rules={[{ required: true }]}><Input placeholder="DEMO" /></Form.Item>
           )}
           <Form.Item name="name_zh" label={t('admin.name_zh_label')} help={t('admin.company_name_zh_help')} rules={[{ required: true }]}><Input placeholder="觅采科技有限公司" /></Form.Item>
+          <Form.Item name="short_name" label={t('admin.short_name_label')} help={t('admin.company_short_name_help')}><Input placeholder="觅采科技" maxLength={64} /></Form.Item>
           <Form.Item name="name_en" label={t('admin.name_en_label')} help={t('admin.company_name_en_help')}><Input placeholder="Mica Technology Co., Ltd." /></Form.Item>
           <Form.Item name="default_currency" label={t('admin.currency_label')} initialValue="CNY">
             <Select options={[{ value: 'CNY' }, { value: 'USD' }, { value: 'EUR' }, { value: 'HKD' }, { value: 'JPY' }]} />

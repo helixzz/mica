@@ -146,6 +146,12 @@ class Company(Base, TimestampMixin):
     id: Mapped[UUID] = mapped_column(PGUUID(as_uuid=True), primary_key=True, default=new_uuid)
     code: Mapped[str] = mapped_column(String(32), unique=True, nullable=False)
     name_zh: Mapped[str] = mapped_column(String(255), nullable=False)
+    # Deliberately maintained abbreviation. Never derive one by slicing ``name_zh``:
+    # the first four characters of "上海佳期私募基金管理有限公司" and
+    # "上海佳期数据科技有限公司" are both "上海佳期", which made generated payment-form
+    # filenames indistinguishable. Consumers fall back to the full name when this is
+    # empty, so an unset abbreviation is verbose rather than ambiguous.
+    short_name: Mapped[str | None] = mapped_column(String(64))
     name_en: Mapped[str | None] = mapped_column(String(255))
     default_locale: Mapped[str] = mapped_column(String(10), default="zh-CN", nullable=False)
     default_currency: Mapped[str] = mapped_column(String(3), default="CNY", nullable=False)

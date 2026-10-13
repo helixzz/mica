@@ -20,6 +20,7 @@ from app.models import (
 )
 from app.schemas import (
     CompanyCreate,
+    CompanyOut,
     CompanyUpdate,
     DepartmentCreate,
     DepartmentUpdate,
@@ -606,6 +607,162 @@ async def test_update_company_success_updates_fields_and_audits_diff(seeded_db_s
     assert diff["name_en"] == {"old": "Original Co", "new": "Updated Co"}
     assert diff["default_currency"] == {"old": "CNY", "new": "USD"}
     assert diff["default_locale"] == {"old": "zh-CN", "new": "en-US"}
+
+
+async def test_create_company_persists_and_audits_short_name(seeded_db_session):
+    actor = await _user(seeded_db_session, "alice")
+    payload = CompanyCreate(
+        code=f"COMP-{_suffix()}",
+        name_zh="上海佳期私募基金管理有限公司",
+        short_name="佳期私募",
+        default_currency="CNY",
+        default_locale="zh-CN",
+    )
+
+    company = await svc.create_company(seeded_db_session, actor, payload)
+
+    assert company.short_name == "佳期私募"
+    persisted = (
+        await seeded_db_session.execute(select(Company).where(Company.code == company.code))
+    ).scalar_one()
+    assert persisted.short_name == "佳期私募"
+
+    audits = await _audit_logs(
+        seeded_db_session,
+        event_type="company.created",
+        resource_id=str(company.id),
+    )
+    assert audits[0].metadata_json["new"]["short_name"] == "佳期私募"
+
+
+async def test_company_out_serializes_short_name(seeded_db_session):
+    actor = await _user(seeded_db_session, "alice")
+    company = await svc.create_company(
+        seeded_db_session,
+        actor,
+        CompanyCreate(
+            code=f"COMP-{_suffix()}",
+            name_zh="上海佳期数据科技有限公司",
+            short_name="佳期数据",
+            default_currency="CNY",
+            default_locale="zh-CN",
+        ),
+    )
+
+    out = CompanyOut.model_validate(company)
+
+    assert out.short_name == "佳期数据"
+
+
+async def test_company_short_name_defaults_to_none(seeded_db_session):
+    actor = await _user(seeded_db_session, "alice")
+    company = await svc.create_company(
+        seeded_db_session,
+        actor,
+        CompanyCreate(
+            code=f"COMP-{_suffix()}",
+            name_zh="无简称公司",
+            default_currency="CNY",
+            default_locale="zh-CN",
+        ),
+    )
+
+    assert company.short_name is None
+    assert CompanyOut.model_validate(company).short_name is None
+
+
+async def test_update_company_records_short_name_diff(seeded_db_session):
+    actor = await _user(seeded_db_session, "alice")
+    company = await svc.create_company(
+        seeded_db_session,
+        actor,
+        CompanyCreate(
+            code=f"COMP-{_suffix()}",
+            name_zh="上海佳期数据科技有限公司",
+            short_name="佳期数据",
+            default_currency="CNY",
+            default_locale="zh-CN",
+        ),
+    )
+
+    updated = await svc.update_company(
+        seeded_db_session,
+        actor,
+        company.id,
+        CompanyUpdate(short_name="佳期数据科技"),
+    )
+
+    assert updated.short_name == "佳期数据科技"
+
+    audits = await _audit_logs(
+        seeded_db_session,
+        event_type="company.updated",
+        resource_id=str(company.id),
+    )
+    assert audits[0].metadata_json["diff"]["short_name"] == {
+        "old": "佳期数据",
+        "new": "佳期数据科技",
+    }
+
+
+async def test_update_company_blank_short_name_clears_it(seeded_db_session):
+    """A whitespace-only abbreviation must clear the column, not store a blank string:
+    consumers treat only an empty value as "fall back to the full name"."""
+    actor = await _user(seeded_db_session, "alice")
+    company = await svc.create_company(
+        seeded_db_session,
+        actor,
+        CompanyCreate(
+            code=f"COMP-{_suffix()}",
+            name_zh="上海佳期数据科技有限公司",
+            short_name="佳期数据",
+            default_currency="CNY",
+            default_locale="zh-CN",
+        ),
+    )
+
+    updated = await svc.update_company(
+        seeded_db_session,
+        actor,
+        company.id,
+        CompanyUpdate(short_name="   "),
+    )
+
+    assert updated.short_name is None
+
+    audits = await _audit_logs(
+        seeded_db_session,
+        event_type="company.updated",
+        resource_id=str(company.id),
+    )
+    assert audits[0].metadata_json["diff"]["short_name"] == {
+        "old": "佳期数据",
+        "new": None,
+    }
+
+
+async def test_update_company_without_short_name_leaves_it_untouched(seeded_db_session):
+    actor = await _user(seeded_db_session, "alice")
+    company = await svc.create_company(
+        seeded_db_session,
+        actor,
+        CompanyCreate(
+            code=f"COMP-{_suffix()}",
+            name_zh="上海佳期数据科技有限公司",
+            short_name="佳期数据",
+            default_currency="CNY",
+            default_locale="zh-CN",
+        ),
+    )
+
+    updated = await svc.update_company(
+        seeded_db_session,
+        actor,
+        company.id,
+        CompanyUpdate(name_zh="上海佳期数据科技有限公司（新）"),
+    )
+
+    assert updated.short_name == "佳期数据"
 
 
 async def test_update_company_not_found_returns_404(seeded_db_session):
