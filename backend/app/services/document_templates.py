@@ -4,6 +4,7 @@ import io
 import json
 import logging
 import re
+import zipfile
 from datetime import UTC, datetime
 from decimal import Decimal
 from typing import Any
@@ -73,6 +74,26 @@ DETERMINISTIC_RESOLVERS: dict[re.Pattern[str], str] = {
 }
 
 
+def detect_ooxml_kind(content_bytes: bytes) -> str | None:
+    """Return ``"docx"``, ``"xlsx"`` or ``None`` by inspecting the package members.
+
+    Trying ``python-docx`` first and catching its failure works, but for an .xlsx
+    template it raises on every single generation and logs a full ERROR traceback,
+    which buries real problems in the log. Deciding up front is both quieter and
+    cheaper (the wrong parser is never started).
+    """
+    try:
+        with zipfile.ZipFile(io.BytesIO(content_bytes)) as archive:
+            names = set(archive.namelist())
+    except (zipfile.BadZipFile, OSError):
+        return None
+    if "word/document.xml" in names:
+        return "docx"
+    if any(name.startswith("xl/") for name in names):
+        return "xlsx"
+    return None
+
+
 def extract_placeholders(content_bytes: bytes | None, filename_template: str) -> list[str]:
     found: list[str] = []
     seen: set[str] = set()
@@ -87,30 +108,40 @@ def extract_placeholders(content_bytes: bytes | None, filename_template: str) ->
     _add(filename_template)
 
     if content_bytes:
-        try:
-            from docx import Document as DocxDocument
+        kind = detect_ooxml_kind(content_bytes)
 
-            doc = DocxDocument(io.BytesIO(content_bytes))
-            for para in doc.paragraphs:
-                _add(para.text)
-            for table in doc.tables:
-                for row in table.rows:
-                    for cell in row.cells:
-                        _add(cell.text)
-        except Exception:
-            logger.exception("template: failed to parse docx for placeholder extraction")
+        if kind == "docx":
+            try:
+                from docx import Document as DocxDocument
 
-        try:
-            from openpyxl import load_workbook
+                doc = DocxDocument(io.BytesIO(content_bytes))
+                for para in doc.paragraphs:
+                    _add(para.text)
+                for table in doc.tables:
+                    for row in table.rows:
+                        for cell in row.cells:
+                            _add(cell.text)
+            except Exception:
+                logger.exception("template: failed to parse docx for placeholder extraction")
 
-            workbook = load_workbook(io.BytesIO(content_bytes))
-            for sheet in workbook.worksheets:
-                for row in sheet.iter_rows():
-                    for cell in row:
-                        if isinstance(cell.value, str):
-                            _add(cell.value)
-        except Exception:
-            logger.debug("template: content is not a readable xlsx workbook", exc_info=True)
+        elif kind == "xlsx":
+            try:
+                from openpyxl import load_workbook
+
+                workbook = load_workbook(io.BytesIO(content_bytes))
+                for sheet in workbook.worksheets:
+                    for row in sheet.iter_rows():
+                        for cell in row:
+                            if isinstance(cell.value, str):
+                                _add(cell.value)
+            except Exception:
+                logger.exception("template: failed to parse xlsx for placeholder extraction")
+
+        else:
+            logger.debug(
+                "template: content is neither a docx nor an xlsx package; "
+                "only filename placeholders are available"
+            )
 
     return found
 

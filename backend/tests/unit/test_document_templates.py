@@ -68,6 +68,84 @@ def test_extract_placeholders_from_xlsx_cells():
     assert placeholders == ["付款日期YYYYMMDD", "PO编号", "本期付款金额(大写)"]
 
 
+def _xlsx_bytes() -> bytes:
+    from io import BytesIO
+
+    from openpyxl import Workbook
+
+    workbook = Workbook()
+    workbook.active["A1"] = "[PO编号]"
+    buf = BytesIO()
+    workbook.save(buf)
+    return buf.getvalue()
+
+
+def _docx_bytes() -> bytes:
+    from io import BytesIO
+
+    from docx import Document as DocxDocument
+
+    document = DocxDocument()
+    document.add_paragraph("收款方：[收款单位名称]")
+    buf = BytesIO()
+    document.save(buf)
+    return buf.getvalue()
+
+
+def test_detect_ooxml_kind_distinguishes_the_package_types():
+    assert svc.detect_ooxml_kind(_xlsx_bytes()) == "xlsx"
+    assert svc.detect_ooxml_kind(_docx_bytes()) == "docx"
+
+
+def test_detect_ooxml_kind_rejects_non_packages():
+    assert svc.detect_ooxml_kind(b"") is None
+    assert svc.detect_ooxml_kind(b"not a zip at all") is None
+
+
+def test_detect_ooxml_kind_rejects_an_unrelated_zip():
+    from io import BytesIO
+    from zipfile import ZipFile
+
+    buf = BytesIO()
+    with ZipFile(buf, "w") as archive:
+        archive.writestr("readme.txt", "hello")
+    assert svc.detect_ooxml_kind(buf.getvalue()) is None
+
+
+def test_extract_placeholders_from_xlsx_does_not_log_an_error(caplog):
+    """An .xlsx template must not log a docx parse failure on every generation."""
+    import logging
+
+    with caplog.at_level(logging.DEBUG, logger="app.services.document_templates"):
+        placeholders = svc.extract_placeholders(_xlsx_bytes(), "Form_[付款期次]")
+
+    assert placeholders == ["付款期次", "PO编号"]
+    errors = [r for r in caplog.records if r.levelno >= logging.ERROR]
+    assert errors == [], [r.getMessage() for r in errors]
+
+
+def test_extract_placeholders_from_docx_uses_the_docx_parser(caplog):
+    import logging
+
+    with caplog.at_level(logging.DEBUG, logger="app.services.document_templates"):
+        placeholders = svc.extract_placeholders(_docx_bytes(), "[PO编号]")
+
+    assert placeholders == ["PO编号", "收款单位名称"]
+    errors = [r for r in caplog.records if r.levelno >= logging.ERROR]
+    assert errors == [], [r.getMessage() for r in errors]
+
+
+def test_extract_placeholders_from_unknown_bytes_keeps_filename_only(caplog):
+    import logging
+
+    with caplog.at_level(logging.DEBUG, logger="app.services.document_templates"):
+        placeholders = svc.extract_placeholders(b"\x00\x01 not ooxml", "[PO编号]")
+
+    assert placeholders == ["PO编号"]
+    errors = [r for r in caplog.records if r.levelno >= logging.ERROR]
+    assert errors == [], [r.getMessage() for r in errors]
+
+
 def test_render_filename_substitutes_known_placeholders():
     result = svc.render_filename(
         "财务付款表_[PO编号]_[付款期次]",

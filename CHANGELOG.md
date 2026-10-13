@@ -7,6 +7,24 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [v1.55.1] — 2026-10-13
+
+### 修复（`.xlsx` 单据模板每次生成都刷一段 ERROR 堆栈）
+
+`extract_placeholders()` 原本无条件先用 `python-docx` 解析模板，解析失败后再尝试 `openpyxl`。生产的财务付款表模板是 `.xlsx`，于是**每一次**生成付款表都会抛一次 `ValueError: … is not a Word file`，并以 ERROR 级别打出完整 traceback——功能本身正常，但日志被噪音淹没，真正的问题反而难发现。
+
+改为先按 OOXML 包成员判断类型（`word/document.xml` → docx，`xl/` → xlsx），只调用匹配的解析器：
+
+- `.xlsx` 模板不再产生任何 ERROR 记录
+- 真正损坏的 docx / xlsx 仍然以 ERROR + traceback 报出，不再被正常路径掩盖
+- 顺带省掉一次注定失败的解析
+
+### 验证
+
+- 新增 6 个用例：包类型识别、非包与无关 zip 的拒绝、`.xlsx` 不得产生 ERROR、`.docx` 走 docx 解析器、未知字节仅保留文件名占位符
+- **反向验证用例的鉴别力**：把类型判定强制为 docx 后，同一输入立刻复现 1 条 `failed to parse docx` ERROR——即这些用例确实抓得住回归，而不是恒真
+- 后端 `pytest` 791 passed / 12 skipped；`ruff check app` + `ruff format --check app` 通过
+
 ## [v1.55.0] — 2026-10-13
 
 ### 修复（付款表文件名把不同付款公司混成同一个名字）
