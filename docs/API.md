@@ -380,7 +380,7 @@ def retry_after_seconds(response, default: float = 5.0) -> float:
 
 ### 全量参考
 
-上述 6 个端点只是令牌管理本身。**所有现有业务端点（v1 及 `/api/v2` 镜像）都自动支持 PAT**，无需逐个适配。完整端点清单、请求体 schema、响应模型请直接看：
+上述 6 个端点只是令牌管理本身。**所有现有业务端点（全部位于 `/api/v1`）都自动支持 PAT**，无需逐个适配。完整端点清单、请求体 schema、响应模型请直接看：
 
 - Swagger UI：`/api/docs` — 点 **Authorize**，在 `Value` 里填 `mica_pat_<prefix>_<secret>`（**不要**加 `Bearer ` 前缀，Swagger 会自己加），即可在页面上直接调试
 - ReDoc：`/api/redoc`
@@ -477,9 +477,9 @@ Mica 当前**不提供 MCP server**，Agent 侧直接读 OpenAPI 契约即可：
 保守承诺：
 
 - **自本功能发布起 6 个月内，不对上述稳定面做破坏性变更。**
-- 破坏性变更（改名、改语义、移除字段、改状态码）**不会**在 v1 上原地发生，而是走 **`/api/v2`**：v2 是 v1 的镜像路由，新语义在 v2 生效，v1 保持兼容期。
+- **当前只有一个前缀：`/api/v1`。** v1.56.3 移除了此前无人使用、且已经与 v1 不一致的空壳 `/api/v2` 镜像（见 [ADR 0005](./adr/0005-drop-the-empty-v2-mirror.md)）。若你的集成里写死了 `/api/v2`，请改回 `/api/v1`——两边的端点是同一份实现，改动只是路径。
+- 破坏性变更（改名、改语义、移除字段、改状态码）**不会**在 v1 上原地发生。Mica **不预先维护空的版本前缀**：等第一个真正的破坏性变更出现时，才会先记录 ADR、再引入新前缀，届时 v1 进入兼容期。
 - **非破坏性变更随时可能发生**：新增端点、新增可选请求字段、新增响应字段。客户端必须**忽略未知字段**，不要用"字段数固定"的严格解析。
-- 弃用流程：先在 v2 提供新形态并在 CHANGELOG / 本文档标注，再择期下线 v1 的旧形态。
 
 ---
 
@@ -508,6 +508,7 @@ Mica 当前**不提供 MCP server**，Agent 侧直接读 OpenAPI 契约即可：
 ## 相关文档
 
 - [ADR 0004 — 对外 API 认证：Personal Access Token](./adr/0004-api-personal-access-tokens.md)：为什么是 PAT、为什么只改一个认证入口、被否决的方案
-- [开发者指南](./DEVELOPMENT.md)：新增对外 API 的约定（`CurrentUser` 注入、v2 变更流程、系统参数、i18n）
+- [ADR 0005 — 撤掉空壳 `/api/v2`](./adr/0005-drop-the-empty-v2-mirror.md)：版本前缀什么时候才该存在
+- [开发者指南](./DEVELOPMENT.md)：新增对外 API 的约定（`CurrentUser` 注入、版本演进规则、系统参数、i18n）
 - [系统管理控制台](./user-manual/admin/03-system-console.md)：Admin → 系统参数界面说明
 - [快速开始](./QUICKSTART.md)：把服务跑起来、拿到种子账号
