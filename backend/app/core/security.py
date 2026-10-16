@@ -5,8 +5,8 @@ from datetime import UTC, datetime, timedelta
 from typing import Annotated
 from uuid import UUID
 
-from fastapi import Depends, HTTPException, status
-from fastapi.security import OAuth2PasswordBearer
+from fastapi import Depends, HTTPException, Request, status
+from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 from jose import JWTError, jwt
 from passlib.context import CryptContext
 from sqlalchemy import select
@@ -15,12 +15,24 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.config import get_settings
 from app.db import get_db
 from app.models import User
+from app.services import api_tokens as api_token_svc
 
 settings = get_settings()
 
 pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 
-oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/api/v1/auth/login", auto_error=False)
+# One header carries two credential kinds: a PAT (``mica_pat_...``) or a login
+# JWT. Documented as a plain HTTP bearer scheme so ``/api/docs`` can authorize
+# with either one.
+bearer_scheme = HTTPBearer(
+    auto_error=False,
+    scheme_name="bearerAuth",
+    bearerFormat="PAT or JWT",
+    description=(
+        "Personal access token (``mica_pat_...``) or a login JWT, "
+        "sent as ``Authorization: Bearer <token>``."
+    ),
+)
 
 
 def hash_password(password: str) -> str:
@@ -61,16 +73,32 @@ def decode_token(token: str) -> dict:
 
 
 async def get_current_user(
-    token: Annotated[str | None, Depends(oauth2_scheme)],
+    request: Request,
     db: Annotated[AsyncSession, Depends(get_db)],
+    credentials: Annotated[HTTPAuthorizationCredentials | None, Depends(bearer_scheme)] = None,
 ) -> User:
-    if not token:
+    """Resolve the request principal from a PAT or a login JWT.
+
+    Both credential kinds end in the same ``User`` row, so every role guard,
+    field policy and row-level filter downstream stays untouched.
+    """
+    raw_token = credentials.credentials if credentials else None
+    if not raw_token:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="not_authenticated",
             headers={"WWW-Authenticate": "Bearer"},
         )
-    payload = decode_token(token)
+
+    if api_token_svc.looks_like_pat(raw_token):
+        client_ip = request.client.host if request.client else None
+        user, token_row = await api_token_svc.authenticate(db, raw_token, client_ip=client_ip)
+        await api_token_svc.guard_request(db, request, token_row, user)
+        request.state.api_token = token_row
+        request.state.api_token_scopes = list(token_row.scopes or [])
+        return user
+
+    payload = decode_token(raw_token)
     user_id = payload.get("sub")
     if not user_id:
         raise HTTPException(status_code=401, detail="auth.invalid_token_payload")

@@ -21,6 +21,18 @@
     "invalid_token_payload": "Invalid token payload",
     "user_not_found_or_inactive": "User not found or inactive"
   },
+  "api_token": {
+    "invalid": "API token is invalid, expired or revoked",
+    "rate_limited": "Too many requests for this API token, please try again later",
+    "path_forbidden": "API tokens cannot access admin, identity or token-management endpoints",
+    "read_only": "This API token is read-only and cannot perform write operations",
+    "not_found": "API token not found",
+    "invalid_name": "Token name is required and must be at most 64 characters",
+    "invalid_scope": "Invalid scope; only read and write are supported",
+    "scope_escalation": "A read-only token cannot create or rotate a higher-privilege token",
+    "invalid_expiry": "Invalid lifetime; check the maximum allowed number of days",
+    "too_many": "Token limit reached; revoke tokens you no longer use first"
+  },
   "saml": {
     "not_enabled": "saml not enabled",
     "misconfigured": "saml misconfigured",
