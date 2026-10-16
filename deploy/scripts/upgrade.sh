@@ -88,6 +88,25 @@ log_info "[1/7] git fetch + checkout ${TAG}"
 ( cd "${REPO_DIR}" && git fetch origin --tags && git checkout "${TAG}" -- . )
 log_ok "source updated to ${TAG}"
 
+# Compose names the images `mica-backend:${APP_VERSION}` / `mica-frontend:...`,
+# and APP_VERSION lives only in .env — nothing in this script used to touch it.
+# Left stale, every build re-tags the *same* name: the previous image is
+# orphaned into a dangling `<none>` layer forever, and the running containers
+# end up labelled with an old version (v1.57.0 was served by
+# `mica-frontend:1.55.1`). Aligning it with the tag being deployed makes each
+# release a distinct, identifiable image that can actually be pruned.
+NEW_VERSION="${TAG#v}"
+CURRENT_VERSION="$(grep -E '^APP_VERSION=' "${DEPLOY_DIR}/.env" 2>/dev/null | head -1 | cut -d= -f2- || true)"
+if [[ "${CURRENT_VERSION}" == "${NEW_VERSION}" ]]; then
+  log_ok "APP_VERSION already ${NEW_VERSION}"
+elif grep -qE '^APP_VERSION=' "${DEPLOY_DIR}/.env" 2>/dev/null; then
+  sed -i "s|^APP_VERSION=.*|APP_VERSION=${NEW_VERSION}|" "${DEPLOY_DIR}/.env"
+  log_ok "APP_VERSION: ${CURRENT_VERSION:-<unset>} -> ${NEW_VERSION}"
+else
+  printf '\nAPP_VERSION=%s\n' "${NEW_VERSION}" >> "${DEPLOY_DIR}/.env"
+  log_ok "APP_VERSION: <unset> -> ${NEW_VERSION}"
+fi
+
 if (( ! SKIP_BACKUP )); then
   log_info "[2/7] pre-upgrade backup"
   BACKUP_ARCHIVE="$("${SCRIPT_DIR}/backup.sh" 2>&1 | tee /dev/stderr | grep -oE "${DEPLOY_DIR}/backups/mica-[^ ]*\.tar\.gz" | head -1 || true)"
