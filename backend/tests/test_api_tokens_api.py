@@ -279,9 +279,8 @@ async def test_expiry_defaults_and_limits(seeded_client: AsyncClient) -> None:
     assert too_long.json()["code"] == "api_token.invalid_expiry"
 
 
-async def test_v2_path_also_accepts_pat(seeded_client: AsyncClient) -> None:
-    await _purge_test_tokens(seeded_client)
-    _jwt, created = await _issue(seeded_client, name="pytest-v2")
-    resp = await seeded_client.get("/api/v2/auth/me", headers=_auth(created["token"]))
-    assert resp.status_code == 200, resp.text
-    assert resp.json()["username"] == "alice"
+async def test_the_v2_prefix_is_gone(seeded_client: AsyncClient) -> None:
+    """ADR 0005 removed the empty `/v2` mirror — do not quietly add it back."""
+    # The path is what matters here, not the credential: nothing is routed there.
+    assert (await seeded_client.get("/api/v2/auth/me")).status_code == 404
+    assert (await seeded_client.get("/api/v2/purchase-requisitions")).status_code == 404

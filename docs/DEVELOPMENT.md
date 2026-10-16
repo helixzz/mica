@@ -133,7 +133,7 @@ pytest -m integration
 
 ## 新增对外 API 的约定
 
-自 PAT（Personal Access Token）认证起，所有**对外** REST 端点（`/api/v1/*` 及 `/api/v2` 镜像）需遵守以下约定。背景与取舍见 [ADR 0004](./adr/0004-api-personal-access-tokens.md)，对外契约见 [docs/API.md](./API.md)。
+自 PAT（Personal Access Token）认证起，所有**对外** REST 端点（全部在 `/api/v1/*` 之下）需遵守以下约定。背景与取舍见 [ADR 0004](./adr/0004-api-personal-access-tokens.md)，对外契约见 [docs/API.md](./API.md)。
 
 ### 1. 必须注入 `CurrentUser`
 
@@ -175,12 +175,16 @@ async def list_widgets(
 
 新增配额、TTL、限流类参数时沿用同一 category，Admin 控制台的"系统参数"页会自动显示。
 
-### 5. 破坏性变更走 v2
+### 5. 版本前缀只在真有破坏性变更时才加
 
 `/api/v1` 是对外稳定契约（对外承诺见 [docs/API.md](./API.md#对外稳定面)）：
 
-- **非破坏性变更**（新增端点、新增可选字段、新增响应字段）→ 直接进 v1
-- **破坏性变更**（改名、改语义、移除字段、改状态码）→ 在 `/api/v2` 落地（`api/__init__.py` 的 `v2_router` 镜像 include），v1 保留兼容期，不原地破坏
+- **非破坏性变更**（新增端点、新增可选字段、新增响应字段）→ 直接进 v1，随时可以
+- **破坏性变更**（改名、改语义、移除字段、改状态码）→ **不会**在 v1 上原地发生；但也不要预先建一个空的 `/v2` 镜像
+- 只有第一个真实的破坏性变更出现时，才**先写 ADR、再引入新前缀**，届时 v1 进入兼容期
+- 新前缀落地时记得改 `services/api_tokens.py::relative_path()`（它按前缀剥离路径做 PAT 边界判定），否则新前缀下的请求会绕过硬边界
+
+历史教训：v1.3.0 曾把整份 v1 路由镜像成 `/api/v2`，没有任何 ADR、没有消费者，而且很快就漏挂了 `insights`（204 vs 191 条路径）。结果只带来双份 OpenAPI（473 KB）与"复制两份 include 列表"的漏挂风险，v1.56.3 移除了它——见 [ADR 0005](./adr/0005-drop-the-empty-v2-mirror.md)。
 
 ### 6. 错误响应与 i18n
 

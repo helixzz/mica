@@ -227,10 +227,14 @@ def client_ip(request: Request) -> str | None:
 
 
 def relative_path(path: str) -> str:
-    """Strip the ``/api/v1`` (or ``/api/v2``) mount point for policy checks."""
-    for base in (f"{settings.api_prefix}/v1", f"{settings.api_prefix}/v2"):
-        if path.startswith(base):
-            return path[len(base) :] or "/"
+    """Strip the ``/api/v1`` mount point for policy checks.
+
+    A future version prefix must be added here too, otherwise its paths would
+    skip the boundary checks below.
+    """
+    base = f"{settings.api_prefix}/v1"
+    if path.startswith(base):
+        return path[len(base) :] or "/"
     return path
 
 

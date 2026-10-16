@@ -37,6 +37,11 @@ from app.api.v1 import (
     websocket,
 )
 
+# One prefix, one router list. A `/v2` mirror used to be included here as a second
+# copy of this list; it had no consumer, no recorded rationale, and had already
+# drifted (the insights router was never added to it). See ADR 0005 — if a real
+# breaking change ever needs a new prefix, create it then, with the decision
+# written down.
 api_router = APIRouter(prefix="/v1")
 api_router.include_router(ui_config.router)
 api_router.include_router(admin.router)
@@ -74,40 +79,3 @@ api_router.include_router(websocket.router)
 api_router.include_router(supplier_portal.router)
 api_router.include_router(insights.router)
 api_router.include_router(exports.router)
-
-# v2 router — mirrors v1 for forward compatibility
-v2_router = APIRouter(prefix="/v2")
-v2_router.include_router(ui_config.router)
-v2_router.include_router(admin.router)
-v2_router.include_router(activity_logs.router)
-v2_router.include_router(auth.router)
-v2_router.include_router(api_tokens.router)
-v2_router.include_router(api_tokens.admin_router)
-v2_router.include_router(saml.router)
-v2_router.include_router(master_data.router)
-v2_router.include_router(purchase.router)
-v2_router.include_router(delivery_addresses.router)
-v2_router.include_router(flow.router)
-v2_router.include_router(contracts.router)
-v2_router.include_router(search.router)
-v2_router.include_router(sku.router)
-v2_router.include_router(approval.router)
-v2_router.include_router(approval_rules.router)
-v2_router.include_router(approval_delegations.router)
-v2_router.include_router(approval_delegations.admin_router)
-v2_router.include_router(authz.router)
-v2_router.include_router(ai.router)
-v2_router.include_router(documents.router)
-v2_router.include_router(notifications.router)
-v2_router.include_router(system_params_admin.router)
-v2_router.include_router(dashboard.router)
-v2_router.include_router(delivery_plans.router)
-v2_router.include_router(payment_schedule.router)
-v2_router.include_router(classification.router)
-v2_router.include_router(import_excel.router)
-v2_router.include_router(rfq.router)
-v2_router.include_router(recycle_bin.router)
-v2_router.include_router(document_templates.router)
-v2_router.include_router(feishu_webhook.router)
-v2_router.include_router(supplier_portal.router)
-v2_router.include_router(exports.router)
