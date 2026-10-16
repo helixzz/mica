@@ -124,7 +124,7 @@ export const SearchResults: React.FC = () => {
 
   if (!query) {
     return (
-      <div style={{ padding: '24px' }}>
+      <div style={{ padding: '24px 0' }}>
         <Empty description={t('search.enterQuery')} />
       </div>
     );

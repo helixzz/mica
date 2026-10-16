@@ -184,7 +184,10 @@ export const NotificationCenter: React.FC = () => {
   });
 
   return (
-    <div style={{ padding: 24, maxWidth: 1000, margin: '0 auto' }}>
+    // Bounded on purpose: a notification is a single-column reading list, and
+    // running its text the full width of a 2.8K display makes each line hard to
+    // track. The shell supplies the page margin, so no padding is added here.
+    <div style={{ maxWidth: 1000, margin: '0 auto' }}>
       <Title level={3} style={{ marginBottom: 24 }}>{t('notification.center')}</Title>
       
       <Card styles={{ body: { padding: 0 } }}>

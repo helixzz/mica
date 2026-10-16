@@ -81,9 +81,9 @@ export function RoutingsPanel() {
       loading={loading}
       pagination={false}
       columns={[
-        { title: t('admin.feature_col'), dataIndex: 'feature_code' },
+        { title: t('admin.feature_col'), dataIndex: 'feature_code', width: 220 },
         {
-          title: t('admin.primary_model'), dataIndex: 'primary_model_id',
+          title: t('admin.primary_model'), dataIndex: 'primary_model_id', width: 300,
           render: (v: string | null, r) => (
             <Select style={{ width: 240 }} value={v || undefined}
               onChange={async (val) => {
@@ -99,9 +99,9 @@ export function RoutingsPanel() {
             />
           ),
         },
-        { title: t('admin.temperature_col'), dataIndex: 'temperature' },
+        { title: t('admin.temperature_col'), dataIndex: 'temperature', width: 110 },
         {
-          title: t('admin.max_tokens_col'), dataIndex: 'max_tokens',
+          title: t('admin.max_tokens_col'), dataIndex: 'max_tokens', width: 260,
           render: (v: number | null, r) => (
             <Select
               style={{ width: 220 }}
