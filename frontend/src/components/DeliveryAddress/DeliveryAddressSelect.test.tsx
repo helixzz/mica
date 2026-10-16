@@ -48,6 +48,44 @@ describe('<DeliveryAddressSelect />', () => {
     listMock().mockResolvedValue([BASE, PRIVATE])
   })
 
+  // The collapsed control has room for one truncated line, so it leads with the
+  // label the user gave the entry — the street address would be cut off into
+  // something unrecognisable.
+  it('leads the collapsed value with the label, not the street address', async () => {
+    renderWithProviders(<DeliveryAddressSelect value="shared" onChange={() => {}} />)
+
+    await waitFor(() =>
+      expect(document.querySelector('.ant-select-selection-item')).toHaveAttribute(
+        'title',
+        '张江机房 A 区 · 张伟',
+      ),
+    )
+  })
+
+  it('falls back to recipient and street when an entry has no label', async () => {
+    renderWithProviders(<DeliveryAddressSelect value="private" onChange={() => {}} />)
+
+    await waitFor(() =>
+      expect(document.querySelector('.ant-select-selection-item')).toHaveAttribute(
+        'title',
+        '李娜 · 北京市海淀区中关村大街 1 号',
+      ),
+    )
+  })
+
+  // Changing what the control displays must not narrow what can be searched.
+  it('still finds an entry by its phone number or street address', async () => {
+    const user = userEvent.setup()
+    renderWithProviders(<DeliveryAddressSelect value={null} onChange={() => {}} />)
+
+    const box = screen.getByRole('combobox')
+    await user.click(box)
+    await user.type(box, '139 0000')
+
+    expect(await screen.findByText('李娜')).toBeInTheDocument()
+    await waitFor(() => expect(screen.queryByText('张伟')).not.toBeInTheDocument())
+  })
+
   it('renders the name, the phone and the whole address in one option row', async () => {
     const user = userEvent.setup()
     renderWithProviders(<DeliveryAddressSelect value={null} onChange={() => {}} />)
