@@ -17,6 +17,7 @@ import { useTranslation } from 'react-i18next'
 
 import { api } from '@/api'
 import { useAuth } from '@/auth/useAuth'
+import { MonoNum } from '@/components/ui'
 
 export function UsersPanel() {
   const { t } = useTranslation()
@@ -144,16 +145,17 @@ export function UsersPanel() {
         loading={loading}
         pagination={{ pageSize: 20 }}
         size="small"
+        scroll={{ x: 'max-content' }}
         columns={[
-          { title: t('admin.username_col'), dataIndex: 'username' },
-          { title: t('admin.display_name_col'), dataIndex: 'display_name' },
-          { title: t('admin.role_col'), dataIndex: 'role', render: (v: string) => <Tag color="orange">{v}</Tag> },
-          { title: t('admin.email_col'), dataIndex: 'email' },
-          { title: t('admin.department_col'), dataIndex: 'department_id', render: (v: string, r: any) => r?.department_name_zh || deptMap[v] || v || '-' },
-          { title: t('admin.locale_col'), dataIndex: 'preferred_locale' },
-          { title: t('admin.active_col'), dataIndex: 'is_active', render: (v: boolean) => <Tag color={v ? 'success' : 'default'}>{v ? t('common.enabled') : t('common.disabled')}</Tag> },
-          { title: t('admin.auth_provider_col'), dataIndex: 'auth_provider' },
-          { title: t('admin.last_login_col'), dataIndex: 'last_login_at', render: (v?: string) => v ? new Date(v).toLocaleString() : '-' },
+          { title: t('admin.username_col'), dataIndex: 'username', width: 110 },
+          { title: t('admin.display_name_col'), dataIndex: 'display_name', width: 140 },
+          { title: t('admin.role_col'), dataIndex: 'role', width: 140, render: (v: string) => <Tag color="orange">{v}</Tag> },
+          { title: t('admin.email_col'), dataIndex: 'email', width: 240 },
+          { title: t('admin.department_col'), dataIndex: 'department_id', width: 110, render: (v: string, r: any) => r?.department_name_zh || deptMap[v] || v || '-' },
+          { title: t('admin.locale_col'), dataIndex: 'preferred_locale', width: 90 },
+          { title: t('admin.active_col'), dataIndex: 'is_active', width: 90, render: (v: boolean) => <Tag color={v ? 'success' : 'default'}>{v ? t('common.enabled') : t('common.disabled')}</Tag> },
+          { title: t('admin.auth_provider_col'), dataIndex: 'auth_provider', width: 120 },
+          { title: t('admin.last_login_col'), dataIndex: 'last_login_at', width: 190, render: (v?: string) => v ? <MonoNum>{new Date(v).toLocaleString()}</MonoNum> : '-' },
           {
             title: t('common.actions'),
             width: 340,

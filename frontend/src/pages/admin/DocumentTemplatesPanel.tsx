@@ -109,6 +109,7 @@ export function DocumentTemplatesPanel() {
         columns={[
           {
             title: t('admin.document_template.name'),
+            width: 240,
             render: (_, r) => (
               <Space direction="vertical" size={0}>
                 <Typography.Text strong>{r.name}</Typography.Text>
@@ -120,6 +121,7 @@ export function DocumentTemplatesPanel() {
           },
           {
             title: t('admin.document_template.template_file'),
+            width: 260,
             render: (_, r) =>
               r.template_filename ? (
                 <Space direction="vertical" size={0}>
@@ -137,6 +139,7 @@ export function DocumentTemplatesPanel() {
           {
             title: t('admin.document_template.filename_template'),
             dataIndex: 'filename_template',
+            width: 380,
             render: (v: string) => (
               <Typography.Text code style={{ fontSize: 12 }}>
                 {v}

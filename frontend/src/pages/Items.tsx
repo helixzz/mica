@@ -164,17 +164,17 @@ export default function ItemsPage() {
                 onChange: (p, ps) => { setPage(p); setPageSize(ps) },
               }}
               columns={[
-                { title: t('item.code'), dataIndex: 'code', width: 140, sorter: (a, b) => a.code.localeCompare(b.code), render: (v: string) => <MonoId>{v}</MonoId> },
-                { title: t('field.item_name'), dataIndex: 'name', sorter: (a, b) => a.name.localeCompare(b.name) },
+                { title: t('item.code'), dataIndex: 'code', width: 160, sorter: (a, b) => a.code.localeCompare(b.code), render: (v: string) => <MonoId>{v}</MonoId> },
+                { title: t('field.item_name'), dataIndex: 'name', width: 260, sorter: (a, b) => a.name.localeCompare(b.name) },
                 {
-                  title: t('item.category_label'), dataIndex: 'category_id',
+                  title: t('item.category_label'), dataIndex: 'category_id', width: 140,
                   render: (v: string | null) => {
                     if (!v) return <Tag>{t('item.uncategorized')}</Tag>
                     const cat = categoryMap[v]
                     return cat ? <Tag color="blue">{cat.label_zh}</Tag> : '-'
                   },
                 },
-                { title: t('field.uom'), dataIndex: 'uom', width: 60 },
+                { title: t('field.uom'), dataIndex: 'uom', width: 100 },
                 { title: t('field.specification'), dataIndex: 'specification', ellipsis: true },
                 {
                   title: t('item.status_col'), dataIndex: 'is_enabled', width: 70,
