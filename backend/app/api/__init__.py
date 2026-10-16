@@ -13,6 +13,7 @@ from app.api.v1 import (
     classification,
     contracts,
     dashboard,
+    delivery_addresses,
     delivery_plans,
     document_templates,
     documents,
@@ -46,6 +47,7 @@ api_router.include_router(api_tokens.admin_router)
 api_router.include_router(saml.router)
 api_router.include_router(master_data.router)
 api_router.include_router(purchase.router)
+api_router.include_router(delivery_addresses.router)
 api_router.include_router(flow.router)
 api_router.include_router(contracts.router)
 api_router.include_router(search.router)
@@ -84,6 +86,7 @@ v2_router.include_router(api_tokens.admin_router)
 v2_router.include_router(saml.router)
 v2_router.include_router(master_data.router)
 v2_router.include_router(purchase.router)
+v2_router.include_router(delivery_addresses.router)
 v2_router.include_router(flow.router)
 v2_router.include_router(contracts.router)
 v2_router.include_router(search.router)

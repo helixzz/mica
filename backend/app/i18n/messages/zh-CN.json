@@ -56,6 +56,11 @@
     "internal_error": "服务器内部错误",
     "conflict": "资源冲突"
   },
+  "address": {
+    "not_found": "收货地址不存在，或对当前账号不可见",
+    "shared_requires_role": "只有管理员或采购经理可以维护公司共享地址",
+    "not_owner": "只能修改自己创建的收货地址"
+  },
   "pr": {
     "not_found": "pr不存在",
     "cannot_edit_submitted": "pr cannot edit submitted",

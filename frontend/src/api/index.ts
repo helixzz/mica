@@ -62,6 +62,31 @@ export interface SchedulerJob {
   enabled: boolean
 }
 
+export interface DeliveryAddress {
+  id: string
+  label: string | null
+  contact_name: string
+  contact_phone: string
+  detail: string
+  /** null means a company-wide entry maintained by admins / procurement managers. */
+  owner_id: string | null
+  company_id: string | null
+  is_shared: boolean
+  usage_count: number
+  last_used_at: string | null
+  is_active: boolean
+  created_at: string
+  updated_at: string
+}
+
+export interface DeliveryAddressInput {
+  label?: string | null
+  contact_name: string
+  contact_phone: string
+  detail: string
+  is_shared?: boolean
+}
+
 export interface Supplier {
   id: string
   code: string
@@ -127,6 +152,9 @@ export interface PurchaseRequisition {
   total_amount: string
   required_date: string | null
   delivery_address: string | null
+  delivery_contact_name: string | null
+  delivery_contact_phone: string | null
+  delivery_address_id: string | null
   expected_delivery_date: string | null
   submitted_at: string | null
   decided_at: string | null
@@ -201,6 +229,9 @@ export interface PurchaseOrder {
   source_type: string
   source_ref: string | null
   delivery_address?: string | null
+  delivery_contact_name?: string | null
+  delivery_contact_phone?: string | null
+  delivery_address_id?: string | null
   expected_delivery_date?: string | null
   created_by_id: string
   created_at: string
@@ -1391,6 +1422,9 @@ export const api = {
     currency: string
     required_date?: string | null
     delivery_address?: string | null
+    delivery_contact_name?: string | null
+    delivery_contact_phone?: string | null
+    delivery_address_id?: string | null
     expected_delivery_date: string
     requester_id?: string | null
     preferred_first_approver_id?: string | null
@@ -1416,6 +1450,26 @@ export const api = {
       { reason },
     )
     return data
+  },
+  async listDeliveryAddresses(includeInactive = false): Promise<DeliveryAddress[]> {
+    const { data } = await client.get<DeliveryAddress[]>('/delivery-addresses', {
+      params: includeInactive ? { include_inactive: true } : undefined,
+    })
+    return data
+  },
+  async createDeliveryAddress(payload: DeliveryAddressInput): Promise<DeliveryAddress> {
+    const { data } = await client.post<DeliveryAddress>('/delivery-addresses', payload)
+    return data
+  },
+  async updateDeliveryAddress(
+    id: string,
+    payload: Partial<DeliveryAddressInput> & { is_active?: boolean },
+  ): Promise<DeliveryAddress> {
+    const { data } = await client.patch<DeliveryAddress>(`/delivery-addresses/${id}`, payload)
+    return data
+  },
+  async deleteDeliveryAddress(id: string): Promise<void> {
+    await client.delete(`/delivery-addresses/${id}`)
   },
   async deletePO(id: string): Promise<void> {
     await client.delete(`/purchase-orders/${id}`)

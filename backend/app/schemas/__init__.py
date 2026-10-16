@@ -272,6 +272,39 @@ class ItemOut(BaseModel):
     updated_at: datetime
 
 
+class DeliveryAddressIn(BaseModel):
+    label: str | None = Field(default=None, max_length=64)
+    contact_name: str = Field(..., min_length=1, max_length=64)
+    contact_phone: str = Field(..., min_length=1, max_length=32)
+    detail: str = Field(..., min_length=1)
+    is_shared: bool = False
+
+
+class DeliveryAddressUpdateIn(BaseModel):
+    label: str | None = Field(default=None, max_length=64)
+    contact_name: str | None = Field(default=None, min_length=1, max_length=64)
+    contact_phone: str | None = Field(default=None, min_length=1, max_length=32)
+    detail: str | None = Field(default=None, min_length=1)
+    is_active: bool | None = None
+
+
+class DeliveryAddressOut(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+    id: UUID
+    label: str | None = None
+    contact_name: str
+    contact_phone: str
+    detail: str
+    owner_id: UUID | None = None
+    company_id: UUID | None = None
+    is_shared: bool = False
+    usage_count: int = 0
+    last_used_at: datetime | None = None
+    is_active: bool = True
+    created_at: datetime
+    updated_at: datetime
+
+
 class PRItemIn(BaseModel):
     line_no: int = Field(..., ge=1)
     item_id: UUID | None = None
@@ -303,6 +336,9 @@ class PRCreateIn(BaseModel):
     currency: str = "CNY"
     required_date: date | None = None
     delivery_address: str | None = None
+    delivery_contact_name: str | None = Field(default=None, max_length=64)
+    delivery_contact_phone: str | None = Field(default=None, max_length=32)
+    delivery_address_id: UUID | None = None
     expected_delivery_date: date = Field(...)
     requester_id: UUID | None = None
     preferred_first_approver_id: UUID | None = None
@@ -320,6 +356,9 @@ class PRUpdateIn(BaseModel):
     currency: str | None = None
     required_date: date | None = None
     delivery_address: str | None = None
+    delivery_contact_name: str | None = Field(default=None, max_length=64)
+    delivery_contact_phone: str | None = Field(default=None, max_length=32)
+    delivery_address_id: UUID | None = None
     expected_delivery_date: date | None = None
     preferred_first_approver_id: UUID | None = None
     items: list[PRItemIn] | None = None
@@ -355,6 +394,9 @@ class PROut(BaseModel):
     total_amount: Decimal
     required_date: date | None
     delivery_address: str | None = None
+    delivery_contact_name: str | None = None
+    delivery_contact_phone: str | None = None
+    delivery_address_id: UUID | None = None
     expected_delivery_date: date | None = None
     submitted_at: datetime | None
     decided_at: datetime | None
@@ -481,6 +523,9 @@ class POOut(BaseModel):
     source_type: str
     source_ref: str | None
     delivery_address: str | None = None
+    delivery_contact_name: str | None = None
+    delivery_contact_phone: str | None = None
+    delivery_address_id: UUID | None = None
     expected_delivery_date: date | None = None
     created_by_id: UUID
     created_at: datetime

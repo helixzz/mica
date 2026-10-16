@@ -34,6 +34,7 @@ from app.models import (
 )
 from app.schemas import PRCreateIn, PRDecisionIn, PRUpdateIn
 from app.services import approval as approval_svc
+from app.services.delivery_addresses import touch_usage
 
 logger = logging.getLogger("mica.purchase")
 
@@ -52,6 +53,13 @@ def _as_decimal(v: Decimal | int | float | str) -> Decimal:
 
 def _compute_line_amount(qty: Decimal, unit_price: Decimal) -> Decimal:
     return (_as_decimal(qty) * _as_decimal(unit_price)).quantize(Decimal("0.0001"))
+
+
+def _clean_text(value: str | None) -> str | None:
+    """Trim optional free text; a blank value means the field was cleared."""
+    if value is None:
+        return None
+    return value.strip() or None
 
 
 async def _next_pr_number(db: AsyncSession) -> str:
@@ -157,6 +165,9 @@ async def create_pr(db: AsyncSession, actor: User, payload: PRCreateIn) -> Purch
         currency=payload.currency,
         required_date=payload.required_date,
         delivery_address=payload.delivery_address,
+        delivery_contact_name=payload.delivery_contact_name,
+        delivery_contact_phone=payload.delivery_contact_phone,
+        delivery_address_id=payload.delivery_address_id,
         expected_delivery_date=payload.expected_delivery_date,
         preferred_first_approver_id=payload.preferred_first_approver_id,
     )
@@ -194,6 +205,8 @@ async def create_pr(db: AsyncSession, actor: User, payload: PRCreateIn) -> Purch
         str(pr.id),
         metadata=audit_meta,
     )
+    # Same transaction as the insert, so a failed save cannot inflate the count.
+    await touch_usage(db, payload.delivery_address_id)
     await db.commit()
     await db.refresh(pr)
 
@@ -298,8 +311,21 @@ async def update_pr(
         pr.currency = payload.currency
     if payload.required_date is not None:
         pr.required_date = payload.required_date
-    if payload.delivery_address is not None:
-        pr.delivery_address = payload.delivery_address
+    # Delivery details gate on ``model_fields_set`` rather than ``is not None``.
+    # The edit form sends an explicit null when the user clears the address, and
+    # the old gate silently ignored that, so a cleared address reappeared on the
+    # next reload.
+    provided = payload.model_fields_set
+    if "delivery_address" in provided:
+        pr.delivery_address = _clean_text(payload.delivery_address)
+    if "delivery_contact_name" in provided:
+        pr.delivery_contact_name = _clean_text(payload.delivery_contact_name)
+    if "delivery_contact_phone" in provided:
+        pr.delivery_contact_phone = _clean_text(payload.delivery_contact_phone)
+    if "delivery_address_id" in provided:
+        # Provenance only; the three text fields above carry the actual content
+        # and are deliberately left untouched when the id changes on its own.
+        pr.delivery_address_id = payload.delivery_address_id
     if payload.expected_delivery_date is not None:
         pr.expected_delivery_date = payload.expected_delivery_date
     if payload.preferred_first_approver_id is not None:
@@ -824,6 +850,9 @@ async def _create_pos_for_specs(
             total_amount=subtotal,
             source_type="manual",
             delivery_address=pr.delivery_address,
+            delivery_contact_name=pr.delivery_contact_name,
+            delivery_contact_phone=pr.delivery_contact_phone,
+            delivery_address_id=pr.delivery_address_id,
             expected_delivery_date=pr.expected_delivery_date,
             created_by_id=actor.id,
         )
@@ -971,6 +1000,9 @@ async def _create_pos_for_pr_items(
             total_amount=subtotal,
             source_type="manual",
             delivery_address=pr.delivery_address,
+            delivery_contact_name=pr.delivery_contact_name,
+            delivery_contact_phone=pr.delivery_contact_phone,
+            delivery_address_id=pr.delivery_address_id,
             expected_delivery_date=pr.expected_delivery_date,
             created_by_id=actor.id,
         )
@@ -1535,6 +1567,9 @@ async def add_supplementary_for_pr_item(
             total_amount=amount,
             source_type="manual",
             delivery_address=pr.delivery_address,
+            delivery_contact_name=pr.delivery_contact_name,
+            delivery_contact_phone=pr.delivery_contact_phone,
+            delivery_address_id=pr.delivery_address_id,
             expected_delivery_date=pr.expected_delivery_date,
             created_by_id=actor.id,
         )

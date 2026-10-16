@@ -639,3 +639,72 @@ body {
     animation: none;
   }
 }
+
+/* ---- Delivery address dropdown ----------------------------------------- */
+/* A three-tier type scale, because an address is structured data, not a label:
+   the contact name carries the row, the phone sits in mono so digits line up,
+   and the address wraps to at most two clamped lines. A single-line marquee
+   would scroll a long address out of view exactly while the user scans the
+   list, which is the opposite of what is needed here. */
+.address-option {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: 2px 0;
+  max-width: 420px;
+}
+
+.address-option__head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: var(--space-3);
+}
+
+.address-option__name {
+  display: inline-flex;
+  align-items: baseline;
+  gap: var(--space-2);
+  min-width: 0;
+  overflow: hidden;
+  font-size: 14px;
+  font-weight: 500;
+  color: var(--color-text-primary);
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+.address-option__label {
+  flex: none;
+  font-size: 12px;
+  font-weight: 400;
+  color: var(--color-text-tertiary);
+}
+
+.address-option__shared {
+  flex: none;
+  padding: 0 6px;
+  border: 1px solid var(--color-border-hairline);
+  border-radius: var(--radius-sm);
+  font-size: 12px;
+  font-weight: 400;
+  line-height: 18px;
+  color: var(--color-text-tertiary);
+}
+
+.address-option__phone {
+  flex: none;
+  font-size: 12px;
+  color: var(--color-text-secondary);
+}
+
+.address-option__detail {
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+  font-size: 12px;
+  line-height: 1.45;
+  color: var(--color-text-tertiary);
+  overflow-wrap: anywhere;
+}

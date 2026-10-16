@@ -29,7 +29,7 @@ import { ActivityTimeline } from '@/components/ActivityTimeline'
 import { ConvertToPOModal } from '@/components/PR/ConvertToPOModal'
 import { AddSupplementaryFromPRModal } from '@/components/PR/AddSupplementaryFromPRModal'
 import { fmtAmount, fmtAmountNode, fmtQty, fmtQtyNode } from '@/utils/format'
-import { MonoId } from '@/components/ui/Mono'
+import { MonoId, MonoNum } from '@/components/ui/Mono'
 import { useAuth } from '@/auth/useAuth'
 
 const statusStateClass: Record<string, string> = {
@@ -287,6 +287,12 @@ export function PRDetailPage() {
               </Descriptions.Item>
               <Descriptions.Item label={t('field.expected_delivery_date')}>
                 {pr.expected_delivery_date ? <span className="mono-num">{pr.expected_delivery_date}</span> : '-'}
+              </Descriptions.Item>
+              <Descriptions.Item label={t('field.delivery_contact_name')}>
+                {pr.delivery_contact_name || '-'}
+              </Descriptions.Item>
+              <Descriptions.Item label={t('field.delivery_contact_phone')}>
+                {pr.delivery_contact_phone ? <MonoNum>{pr.delivery_contact_phone}</MonoNum> : '-'}
               </Descriptions.Item>
               <Descriptions.Item label={t('field.delivery_address')} span={2}>
                 {pr.delivery_address || '-'}
