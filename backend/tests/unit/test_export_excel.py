@@ -391,8 +391,8 @@ async def test_collect_procurement_ledger_groups_one_row_per_po_item(seeded_db_s
             },
         ],
     )
-    await _ledger_contract(db, po=po, number="JQPA202606008002")
-    await _ledger_contract(db, po=po, number="JQPA202606009003")
+    await _ledger_contract(db, po=po, number="ACME202606008002")
+    await _ledger_contract(db, po=po, number="ACME202606009003")
     for index, number in enumerate(["PAY-A-001", "PAY-A-002"], start=1):
         db.add(
             PaymentRecord(
@@ -418,7 +418,7 @@ async def test_collect_procurement_ledger_groups_one_row_per_po_item(seeded_db_s
     assert header_row["需求说明 Business Reason"] == "ledger export test"
     assert header_row["申请人 Requester"] == actor.display_name
     assert header_row["供应商 Supplier"] == supplier.name
-    assert header_row["合同流程号 Contract No."] == "JQPA202606008002 / JQPA202606009003"
+    assert header_row["合同流程号 Contract No."] == "ACME202606008002 / ACME202606009003"
     assert header_row["品名 Item Name"] == "GPU A"
     assert header_row["规格 Specification"] == ""
     assert header_row["SKU 编码 SKU Code"] == ""
@@ -443,7 +443,7 @@ async def test_collect_procurement_ledger_groups_one_row_per_po_item(seeded_db_s
     payments = [row for row in data.payment_rows if row[1] == po.po_number]
     assert len(payments) == 2
     assert payments[0][2] == "PAY-A-001"
-    assert payments[0][3] == "JQPA202606008002 / JQPA202606009003"
+    assert payments[0][3] == "ACME202606008002 / ACME202606009003"
 
     await _ledger_invoice_line(db, po_item=items[0], supplier_id=supplier.id)
     data = await svc.collect_procurement_ledger(db, actor=actor)
