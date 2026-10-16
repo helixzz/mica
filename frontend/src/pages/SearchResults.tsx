@@ -161,7 +161,9 @@ export const SearchResults: React.FC = () => {
   ];
 
   return (
-    <div style={{ padding: '24px', maxWidth: '1200px', margin: '0 auto' }}>
+    // No width cap and no extra padding: the shell already supplies the page
+    // margin, and the hit list is a table that benefits from the full width.
+    <div>
       <Title level={2} style={{ marginBottom: '24px' }}>
         {t('search.resultsFor', { query })}
       </Title>

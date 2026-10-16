@@ -41,6 +41,23 @@ import { NotificationBell } from '@/components/NotificationBell';
 export const SearchSlot: React.FC = () => <GlobalSearch />;
 export const NotificationSlot: React.FC = () => <NotificationBell />;
 
+/**
+ * Pages that are a *form*: a single narrow column of fields.
+ *
+ * Everything else is a list or a detail view, whose tables get wider — and stop
+ * wrapping their cells — when given more room, so those take all the width
+ * available. Letting a form run the full width of a 2.8K display instead
+ * stretches one input across ~2600px and makes it harder to fill in, so forms
+ * keep a bounded reading width.
+ */
+const FORM_PAGE_PATTERNS = [
+  /^\/purchase-requisitions\/new(\/|$)/,
+  /^\/purchase-requisitions\/[^/]+\/edit$/,
+  /^\/rfqs\/new(\/|$)/,
+  /^\/rfqs\/[^/]+\/edit$/,
+];
+const FORM_PAGE_MAX_WIDTH = 1440;
+
 export function AppLayout() {
   const { t } = useTranslation();
   const { user, logout } = useAuth();
@@ -135,6 +152,7 @@ export function AppLayout() {
 
   const roleTag = user ? t(`role.${user.role}` as 'role.admin') : '';
   const currentKey = '/' + (location.pathname.split('/')[1] || 'dashboard');
+  const isFormPage = FORM_PAGE_PATTERNS.some((pattern) => pattern.test(location.pathname));
 
   const Logo = ({ collapsed: hideText = false }: { collapsed?: boolean } = {}) => (
     <Link to="/dashboard" style={{ textDecoration: 'none', display: 'flex', alignItems: 'center' }}>
@@ -294,8 +312,10 @@ export function AppLayout() {
 
         <Content
           style={{
-            padding: `${token.paddingLG}px`,
-            maxWidth: 1440,
+            // space-4, per the "list card" density rule; the page margin does not
+            // need 24px on top of the shell's own padding.
+            padding: `${token.padding}px`,
+            maxWidth: isFormPage ? FORM_PAGE_MAX_WIDTH : undefined,
             margin: '0 auto',
             width: '100%',
             overflow: 'hidden',
