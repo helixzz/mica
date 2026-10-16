@@ -7,6 +7,19 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [v1.57.3] — 2026-10-16
+
+### 修复（v1.57.2 的 `APP_VERSION` 同步没有在当次部署生效）
+
+v1.57.2 让 `upgrade.sh` 把正在部署的 tag 写进 `.env`，但**当次 build 仍然打了旧 tag**：脚本开头的 `load_env` 用 `set -a; . .env` 把 `APP_VERSION` 导出成了**环境变量**，而 `docker compose` 对已导出的变量优先级高于 `.env` 文件。只改文件、不改环境，这一轮就等于没改。
+
+- 三处分支（值已一致 / 覆盖旧值 / 追加新键）在写文件之外都补上 `export APP_VERSION`
+- 之所以没能一次发现：日志确实打印了 `APP_VERSION: 1.55.1 -> 1.57.2`，看起来成功了——直到核对 `docker images` 才发现 tag 仍是 `1.55.1`
+
+### 验证
+
+- 部署 v1.57.3 后逐项核对：`.env` 的值、`docker images` 的 tag、容器实际引用的 tag，三者一致
+
 ## [v1.57.2] — 2026-10-16
 
 ### 修复（部署脚本让镜像 tag 永远不变，生产根分区被撑到 90%）
