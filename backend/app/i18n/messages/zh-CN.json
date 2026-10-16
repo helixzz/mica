@@ -21,6 +21,18 @@
     "invalid_token_payload": "无效的令牌载荷",
     "user_not_found_or_inactive": "用户不存在或已停用"
   },
+  "api_token": {
+    "invalid": "API 令牌无效、已过期或已撤销",
+    "rate_limited": "该 API 令牌请求过于频繁，请稍后再试",
+    "path_forbidden": "API 令牌不能访问管理、身份认证或令牌管理端点",
+    "read_only": "该 API 令牌为只读，不能执行写操作",
+    "not_found": "API 令牌不存在",
+    "invalid_name": "令牌名称不能为空，且不超过 64 个字符",
+    "invalid_scope": "权限范围无效，仅支持 read 与 write",
+    "scope_escalation": "只读令牌不能创建或轮换权限更高的令牌",
+    "invalid_expiry": "有效期无效，请检查是否超过允许的最大天数",
+    "too_many": "未撤销的令牌数量已达上限，请先撤销不再使用的令牌"
+  },
   "saml": {
     "not_enabled": "saml not enabled",
     "misconfigured": "saml misconfigured",

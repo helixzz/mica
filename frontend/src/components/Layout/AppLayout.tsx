@@ -10,6 +10,7 @@ import {
   DesktopOutlined,
   DollarOutlined,
   FileTextOutlined,
+  KeyOutlined,
   LogoutOutlined,
   MoonOutlined,
   SettingOutlined,
@@ -126,6 +127,7 @@ export function AppLayout() {
       { key: '/rfqs', icon: <SolutionOutlined />, label: <Link to="/rfqs" onClick={() => setMobileMenuOpen(false)}>{t('nav.rfqs')}</Link> },
       { key: '/suppliers', icon: <BankOutlined />, label: <Link to="/suppliers" onClick={() => setMobileMenuOpen(false)}>{t('nav.suppliers')}</Link> },
     ]),
+    { key: '/settings', icon: <KeyOutlined />, label: <Link to="/settings/api-tokens" onClick={() => setMobileMenuOpen(false)}>{t('nav.api_tokens')}</Link> },
     ...(user?.role === 'admin'
       ? [{ key: '/admin', icon: <SettingOutlined />, label: <Link to="/admin" onClick={() => setMobileMenuOpen(false)}>{t('admin.admin_console')}</Link> }]
       : []),

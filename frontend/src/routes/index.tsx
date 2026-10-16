@@ -13,6 +13,11 @@ import { ErrorBoundary } from '@/components/ErrorBoundary'
 const AdminPage = lazy(() =>
   import('@/pages/Admin').then((m) => ({ default: m.AdminPage })),
 )
+const ApiTokensSettingsPage = lazy(() =>
+  import('@/pages/Settings/ApiTokens').then((m) => ({
+    default: m.ApiTokensPage,
+  })),
+)
 const ApprovalsPage = lazy(() =>
   import('@/pages/Approvals').then((m) => ({ default: m.ApprovalsPage })),
 )
@@ -204,6 +209,7 @@ export function AppRoutes() {
             <Route path="/admin/import" element={<AdminPage />} />
             <Route path="/admin/document-templates" element={<AdminPage />} />
             <Route path="/admin/scheduler" element={<AdminPage />} />
+            <Route path="/settings/api-tokens" element={<ApiTokensSettingsPage />} />
             <Route path="/search" element={<SearchResults />} />
             <Route path="/notifications" element={<NotificationCenter />} />
             <Route path="*" element={<NotFound />} />

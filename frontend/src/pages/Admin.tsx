@@ -1,10 +1,11 @@
-import { ApartmentOutlined, AuditOutlined, BarChartOutlined, BranchesOutlined, ClockCircleOutlined, CloudOutlined, DatabaseOutlined, DeleteOutlined, FileTextOutlined, ImportOutlined, RobotOutlined, SettingOutlined, TeamOutlined, ThunderboltOutlined } from '@ant-design/icons'
+import { ApartmentOutlined, AuditOutlined, BarChartOutlined, BranchesOutlined, ClockCircleOutlined, CloudOutlined, DatabaseOutlined, DeleteOutlined, FileTextOutlined, ImportOutlined, KeyOutlined, RobotOutlined, SettingOutlined, TeamOutlined, ThunderboltOutlined } from '@ant-design/icons'
 import { Card, Col, Row, Typography, theme } from 'antd'
 import { useTranslation } from 'react-i18next'
 import { useNavigate, useLocation } from 'react-router-dom'
 import { useAuth } from '@/auth/useAuth'
 import { AIModelPanel } from './admin/AIModelPanel'
 import { AILogsPanel } from './admin/AILogsPanel'
+import { ApiTokensTab } from './admin/ApiTokensTab'
 import { ApprovalRulesTab } from './admin/ApprovalRulesTab'
 import { AuditLogsTab } from './admin/AuditLogsTab'
 import { CompaniesPanel } from './admin/CompaniesPanel'
@@ -47,6 +48,7 @@ export function AdminPage() {
         case 'ai-logs': return <AILogsPanel />
         case 'ai-routing': return <RoutingsPanel />
         case 'audit-logs': return <AuditLogsTab />
+        case 'api-tokens': return <ApiTokensTab />
         case 'import': return <ImportTab />
         case 'document-templates': return <DocumentTemplatesPanel />
         case 'scheduler': return <SchedulerTab />
@@ -72,6 +74,7 @@ export function AdminPage() {
     { key: '/admin/ai-routing', icon: <BranchesOutlined />, label: t('admin.ai_routing'), desc: t('admin.ai_routing_desc') },
     { key: '/admin/ai-logs', icon: <BarChartOutlined />, label: t('admin.ai_logs'), desc: t('admin.ai_logs_desc') },
     { key: '/admin/audit-logs', icon: <AuditOutlined />, label: t('admin.tab.audit_logs'), desc: t('admin.audit_logs_desc') },
+    { key: '/admin/api-tokens', icon: <KeyOutlined />, label: t('admin.api_tokens'), desc: t('admin.api_tokens_desc') },
     { key: '/admin/import', icon: <ImportOutlined />, label: t('admin.tab.import'), desc: t('admin.import_desc') },
     { key: '/admin/document-templates', icon: <FileTextOutlined />, label: t('admin.document_templates'), desc: t('admin.document_templates_desc') },
     { key: '/admin/scheduler', icon: <ClockCircleOutlined />, label: t('admin.scheduler_tab'), desc: t('admin.scheduler_help') },

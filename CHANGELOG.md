@@ -7,6 +7,28 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [v1.56.0] — 2026-10-16
+
+### 新增（用用户身份调用 Mica 的对外 API：Personal Access Token）
+
+其他系统、脚本与 AI Agent 现在可以**以某个用户的身份**调用 Mica 的 REST API：在「API 令牌」页自助创建 PAT（`mica_pat_...`），再以 `Authorization: Bearer <token>` 调用任何现有端点。令牌的权限等于其创建者本人的权限。
+
+- **一套认证入口覆盖全部端点**：只在 `core/security.py::get_current_user` 增加 PAT 分支，30+ 业务端点（含 `/api/v2` 镜像）自动生效。角色校验（`require_roles`）、Cerbos 字段级策略、行级可见性过滤全部照旧——没有第二套权限体系
+- **只存哈希**：库中仅保存 `sha256(secret)`，明文只在创建响应里出现一次；非密文的 `prefix` 用于展示与索引定位，比对使用 `hmac.compare_digest`（PAT 是高熵随机串，故用快哈希而非 bcrypt——它要在每次请求上校验）
+- **两档作用域**：`read` / `write`。只读令牌的写方法返回 403，而查询语义的 POST（`/search`、`/exports`、`/insights`、`/ai`、`/dashboard`）仍然放行，白名单可配
+- **三条硬边界**：PAT 不能访问 `/admin/**`、`/saml/**`、`/auth/**`（仅放行 `GET /auth/me`），也不能创建、轮换或撤销令牌——凭据管理必须由人类在 UI 完成，否则一个泄露的令牌可以比它被撤销更快地换新
+- **端点**：`GET/POST /me/tokens`、`POST /me/tokens/{id}/rotate`、`DELETE /me/tokens/{id}`；管理员视图 `GET /admin/api-tokens`、`DELETE /admin/api-tokens/{id}`
+- **限流与审计**：每个令牌默认 600 请求/分钟（超限 429 + `Retry-After`）；创建/轮换/撤销写入 `audit_logs`（`/admin/audit-logs` 可见）；`last_used_at` / `last_used_ip` 以 60 秒节流更新，用于判断令牌是否仍在使用
+- **界面**：侧边栏「API 令牌」自助页（创建时一次性展示明文、轮换、撤销、状态与最近使用），Admin 控制台新增「API 令牌」页可查看并撤销任意用户的令牌
+- **文档**：[docs/API.md](docs/API.md) 对外接入指南、[ADR 0004](docs/adr/0004-api-personal-access-tokens.md)、用户手册「API 接入」中英双语页；`/api/docs` 现在声明 `bearerAuth` 并说明 PAT 用法，可直接在 Swagger 里粘贴令牌调试
+- **可配置项**：`system_parameters` 新增 category `api` 的六项——`api.token.max_per_user`(10) / `api.token.default_ttl_days`(90) / `api.token.max_ttl_days`(365) / `api.rate_limit_per_minute`(600) / `api.audit_requests`(false) / `api.read_only_post_allowlist`（查询语义 POST 白名单）
+
+### 验证
+
+- 新增 39 个用例：服务层单测（哈希存储、伪造/撤销/过期令牌、作用域与提权、轮换保留到期时间、限流窗口、管理员过滤）与真实 HTTP 集成测试（身份等同、只读越权 403、硬边界 403、撤销/轮换后旧令牌失效 401、`/api/v2` 路径、admin 列表与撤销）
+- 端到端：本机启动服务后 curl 走完整流程（登录 → 创建 → 调用 → 边界 403 → 轮换 → 撤销 → 401），并核对六个 `api.*` 参数与 `api_token.created` 审计记录落库
+- 后端全量 `pytest`：830 passed / 12 skipped / 1 xfailed / 1 xpassed；`ruff check app` 与 `ruff format --check app` 通过
+
 ## [v1.55.1] — 2026-10-13
 
 ### 修复（`.xlsx` 单据模板每次生成都刷一段 ERROR 堆栈）

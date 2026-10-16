@@ -1010,6 +1010,40 @@ class DocumentDownloadToken(Base):
     )
 
 
+class ApiToken(Base, TimestampMixin):
+    """Personal access token (PAT) — long-lived user credential for API access.
+
+    Used by scripts, other systems and AI agents. Only ``sha256(secret)`` is
+    stored: the plaintext is returned exactly once, at creation time.
+    ``token_prefix`` is not a secret by itself — it is shown in the UI and used
+    to locate the row before the constant-time hash comparison.
+    """
+
+    __tablename__ = "api_tokens"
+
+    id: Mapped[UUID] = mapped_column(PGUUID(as_uuid=True), primary_key=True, default=new_uuid)
+    user_id: Mapped[UUID] = mapped_column(
+        PGUUID(as_uuid=True),
+        ForeignKey("users.id", ondelete="CASCADE"),
+        nullable=False,
+        index=True,
+    )
+    name: Mapped[str] = mapped_column(String(64), nullable=False)
+    token_prefix: Mapped[str] = mapped_column(String(32), nullable=False, index=True)
+    token_hash: Mapped[str] = mapped_column(String(64), nullable=False)
+    scopes: Mapped[list[str]] = mapped_column(JSONB, nullable=False, default=list)
+    expires_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    revoked_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    last_used_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    last_used_ip: Mapped[str | None] = mapped_column(String(64))
+    created_by_id: Mapped[UUID | None] = mapped_column(PGUUID(as_uuid=True), ForeignKey("users.id"))
+
+    __table_args__ = (
+        UniqueConstraint("token_hash"),
+        Index("ix_api_tokens_user_revoked", "user_id", "revoked_at"),
+    )
+
+
 class SKUPriceRecord(Base, TimestampMixin):
     __tablename__ = "sku_price_records"
 
@@ -1284,6 +1318,7 @@ class SystemParameterCategory(StrEnum):
     SYSTEM = "system"
     FULFILLMENT = "fulfillment"
     EXPORT = "export"
+    API = "api"
 
 
 class SystemParameter(Base, TimestampMixin):

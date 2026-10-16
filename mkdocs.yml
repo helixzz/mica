@@ -65,6 +65,8 @@ nav:
       - 备份与恢复: admin/06-backup-restore.md
       - 故障排查与升级: admin/07-troubleshooting-and-upgrade.md
       - 飞书集成: admin/08-feishu-integration.md
+    - API 接入:
+      - 概览与令牌: API.md
     - 附录:
       - 流程图集: _diagrams.md
   - English:
@@ -86,6 +88,8 @@ nav:
       - Backup and Restore: en/admin/06-backup-restore.md
       - Troubleshooting and Upgrade: en/admin/07-troubleshooting-and-upgrade.md
       - Feishu Integration: en/admin/08-feishu-integration.md
+    - API Access:
+      - Overview and Tokens: en/API.md
 
 markdown_extensions:
   - admonition

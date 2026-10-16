@@ -4,6 +4,7 @@ from app.api.v1 import (
     activity_logs,
     admin,
     ai,
+    api_tokens,
     approval,
     approval_delegations,
     approval_rules,
@@ -40,6 +41,8 @@ api_router.include_router(ui_config.router)
 api_router.include_router(admin.router)
 api_router.include_router(activity_logs.router)
 api_router.include_router(auth.router)
+api_router.include_router(api_tokens.router)
+api_router.include_router(api_tokens.admin_router)
 api_router.include_router(saml.router)
 api_router.include_router(master_data.router)
 api_router.include_router(purchase.router)
@@ -76,6 +79,8 @@ v2_router.include_router(ui_config.router)
 v2_router.include_router(admin.router)
 v2_router.include_router(activity_logs.router)
 v2_router.include_router(auth.router)
+v2_router.include_router(api_tokens.router)
+v2_router.include_router(api_tokens.admin_router)
 v2_router.include_router(saml.router)
 v2_router.include_router(master_data.router)
 v2_router.include_router(purchase.router)

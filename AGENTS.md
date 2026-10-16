@@ -120,6 +120,7 @@ cd deploy
 - 角色检查走 `Depends(require_roles("admin", "procurement_mgr"))`
 - 字段级读权限：`core/field_authz.py` 的 `FIELD_PERMISSIONS` 字典
 - 行级过滤：在 service 层显式 where 条件，依据 `user.role` 和 `user.department_id`
+- **PAT 自动生效（v1.56.0+）**：`get_current_user` 同时接受登录 JWT 与 `mica_pat_...` 令牌，PAT 的硬边界（`/admin/**`、`/saml/**`、`/auth/**`）、作用域与按令牌限流都在那里判定。**端点里不要自己解析 `Authorization` 头**——那是第二套判定路径；也不要为某个端点单独放行 PAT（先按 ADR 流程讨论）。详见 [docs/API.md](./docs/API.md)、[ADR 0004](./docs/adr/0004-api-personal-access-tokens.md)
 
 ### 5.3 i18n
 - 后端消息加到 `backend/app/i18n/messages/{zh-CN,en-US}.json`，代码里 `raise HTTPException(400, detail=t("pr.no_items", locale))`
@@ -374,9 +375,11 @@ docker compose up -d && sleep 15
 | [CHANGELOG.md](./CHANGELOG.md) | 按版本归档变更（Keep-a-Changelog 风格） |
 | [docs/QUICKSTART.md](./docs/QUICKSTART.md) | 3 分钟启动 + v0.5 功能速览 |
 | [docs/DEVELOPMENT.md](./docs/DEVELOPMENT.md) | 非 Docker 开发、添加 API / 系统参数 / 审批规则 / 通知类型 |
+| [docs/API.md](./docs/API.md) | 对外 API 接入指南（PAT 认证、令牌端点速查、稳定面承诺） |
 | [docs/adr/0001-technology-stack.md](./docs/adr/0001-technology-stack.md) | 技术栈锁定 + 实施偏差记录 |
 | [docs/adr/0002-search-pg-trgm-over-zhparser.md](./docs/adr/0002-search-pg-trgm-over-zhparser.md) | 全文检索选型决策 |
 | [docs/adr/0003-system-parameters.md](./docs/adr/0003-system-parameters.md) | 系统参数集中配置决策 |
+| [docs/adr/0004-api-personal-access-tokens.md](./docs/adr/0004-api-personal-access-tokens.md) | 对外 API 认证：PAT 选型 + 硬边界 |
 | [docs/user-manual/](./docs/user-manual/) | 业务用户手册（已部署到 GitHub Pages） |
 | [deploy/scripts/README.md](./deploy/scripts/README.md) | 运维脚本用法 + cron 示例 + 故障排查 |
 

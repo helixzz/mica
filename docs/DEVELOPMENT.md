@@ -131,6 +131,65 @@ pytest -m integration
 4. 数据模型放 `backend/app/models/`（现在单一 `__init__.py`，未来按领域拆分）
 5. 前端 `src/api/index.ts` 增加对应调用
 
+## 新增对外 API 的约定
+
+自 PAT（Personal Access Token）认证起，所有**对外** REST 端点（`/api/v1/*` 及 `/api/v2` 镜像）需遵守以下约定。背景与取舍见 [ADR 0004](./adr/0004-api-personal-access-tokens.md)，对外契约见 [docs/API.md](./API.md)。
+
+### 1. 必须注入 `CurrentUser`
+
+```python
+from app.core.security import CurrentUser
+
+@router.get("/widgets", response_model=list[WidgetOut], tags=["widgets"])
+async def list_widgets(
+    user: CurrentUser,
+    db: Annotated[AsyncSession, Depends(get_db)],
+):
+    return await svc.list_widgets_for_user(db, user)
+```
+
+`core/security.py:get_current_user` 是**唯一**认证入口：JWT 与 PAT 都在那里分流，PAT 的硬边界、作用域（`read`/`write`）、按令牌限流也都在那里判定。**不要在端点里解析 `Authorization` 头或写 PAT 分支**——那是第二套判定路径，且必然被后来新增的端点漏掉。
+
+### 2. PAT 自动生效，无需为它写专门代码
+
+注入 `CurrentUser` 后，端点自动获得：PAT 认证、硬边界（`/admin/**`、`/saml/**`、`/auth/**`）、作用域收窄、限流、`last_used_at` 更新。v2 镜像路由同理，不需要分别处理。
+
+若某个端点**需要**只给 JWT 用（例如内部管理类），那是一条设计变更——不要用 `if` 绕过，先按 ADR 流程讨论（现有唯一先例是 `/api/v1/ws/notifications`）。
+
+### 3. 权限只用 `require_roles`，不要隐式判定
+
+| 层 | 正确写法 |
+|---|---|
+| 角色 | `Depends(require_roles("admin", "procurement_mgr"))` |
+| 字段级 | `core/cerbos_client.py` 的 `check_field_access` / `filter_dict_via_cerbos` |
+| 行级 | service 层复用 `core/scoping.py` 的 `visible_*_id_subquery` |
+
+不要写 `if user.role == "admin"` 这类散落在端点里的隐式权限判断：它既绕过了 `require_roles` 的集中审计，也会让 PAT 与 JWT 走出不同行为。
+
+### 4. 阈值走系统参数，不要硬编码
+
+见 [ADR 0003](./adr/0003-system-parameters.md)。PAT 相关参数统一放 category `api`：
+
+- `api.token.max_per_user` / `api.token.default_ttl_days` / `api.token.max_ttl_days`
+- `api.rate_limit_per_minute` / `api.audit_requests` / `api.read_only_post_allowlist`
+
+新增配额、TTL、限流类参数时沿用同一 category，Admin 控制台的"系统参数"页会自动显示。
+
+### 5. 破坏性变更走 v2
+
+`/api/v1` 是对外稳定契约（对外承诺见 [docs/API.md](./API.md#对外稳定面)）：
+
+- **非破坏性变更**（新增端点、新增可选字段、新增响应字段）→ 直接进 v1
+- **破坏性变更**（改名、改语义、移除字段、改状态码）→ 在 `/api/v2` 落地（`api/__init__.py` 的 `v2_router` 镜像 include），v1 保留兼容期，不原地破坏
+
+### 6. 错误响应与 i18n
+
+统一返回 `detail` / `code` / `request_id` 三字段，`code` 用 `<domain>.<reason>` 命名（例如 `api_token.read_only`、`pr.no_items`）。`detail` 文本走 i18n：`backend/app/i18n/messages/{zh-CN,en-US}.json` **双语同步**（见上文"添加新语言 / 新翻译 Key"）。客户端按 `code` 分支，不解析自然语言。
+
+### 7. 同步对外文档
+
+新增或变更对外端点时，同步更新 [docs/API.md](./API.md) 的端点速查表与字段示例——外部接入方、脚本与 AI Agent 都照它写代码。端点字段名一旦出现在该文档里，就进入稳定面。
+
 ## 添加系统参数（v0.5+）
 
 当需要新增一个 **可配置阈值** 时，不要直接硬编码常量：
