@@ -7,6 +7,20 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [v1.57.1] — 2026-10-16
+
+### 变更（撤掉空壳 `/api/v2`，回到单一版本前缀）
+
+`/api/v2` 是 v1.3.0 把整份 v1 路由列表**手工复制**出来的镜像：没有 ADR，commit message 只有一行 `API v2: mirror all v1 routes under /v2/ prefix`；没有消费者（前端 `baseURL` 始终是 `/api/v1`，仓库里只有测试引用它）；而且已经静默漂移——`insights` 的 13 条路径从未被镜像进去（v1 204 条 vs v2 191 条，且漏挂不报错）。
+
+保留它的代价是实打实的：每新增一个业务域都要写两遍 `include_router`（漂移已经证明这不可靠），OpenAPI 变成 473 KB / 509 个 operation，其中一半是同义重复——而这份 schema 正是给脚本与 AI Agent 读的。
+
+- **破坏性变更**：`/api/v2/**` 不再注册路由，一律 404。若有集成写死了该前缀，请改回 `/api/v1`（同一份实现，只是路径）
+- **新规则**：版本前缀只在**真有破坏性变更**时引入，且必须先写 ADR；详见 [ADR 0005](docs/adr/0005-drop-the-empty-v2-mirror.md)
+- OpenAPI：473 KB → **310 KB**（operation 数 509 → 262）
+- 守护测试：`test_the_v2_prefix_is_gone` 断言 `/api/v2/**` 返回 404，防止被"顺手"加回来
+- 同步更新：`docs/API.md` 的稳定面承诺、`docs/DEVELOPMENT.md` 的版本演进规则与教训、ADR 0004 中的相关表述
+
 ## [v1.57.0] — 2026-10-16
 
 ### 新增（收货地址改为地址簿下拉，并拆成收件人 / 电话 / 详细地址三个字段）
