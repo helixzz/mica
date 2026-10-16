@@ -1,7 +1,11 @@
 FROM node:20-alpine AS build
 WORKDIR /app
-COPY package.json ./
-RUN npm install --no-audit --no-fund
+# Both files, and `npm ci`: the image must resolve the same dependency tree every
+# time. Without the lockfile npm re-resolved everything from the registry on each
+# build, which is not reproducible and, with npm 10.8.2, failed outright with
+# "Cannot read properties of null (reading 'edgesOut')" (v1.56.0 deploy).
+COPY package.json package-lock.json ./
+RUN npm ci --no-audit --no-fund
 COPY . .
 RUN npm run build
 
