@@ -109,7 +109,8 @@
     "suppliers": "Suppliers",
     "items": "Items",
     "logout": "Log out",
-    "rfqs": "RFQ Management"
+    "rfqs": "RFQ Management",
+    "api_tokens": "API Tokens"
   },
   "button": {
     "submit": "Submit",
@@ -812,6 +813,43 @@
     "collaborator_added": "Collaborator added",
     "no_collaborators": "No collaborators yet"
   },
+  "apiTokens": {
+    "title": "API Tokens",
+    "subtitle": "Create credentials for scripts, other systems or AI agents to access Mica; a token acts as you and carries your own permissions.",
+    "create": "New Token",
+    "name": "Name",
+    "name_placeholder": "e.g. n8n-prod / claude-agent",
+    "scopes": "Scopes",
+    "scope_read": "Read-only",
+    "scope_write": "Read & write",
+    "expires_in": "Expires in",
+    "days": "{{count}} days",
+    "prefix": "Token prefix",
+    "status": "Status",
+    "status_active": "Active",
+    "status_expired": "Expired",
+    "status_revoked": "Revoked",
+    "last_used": "Last used",
+    "never_used": "Never used",
+    "never_expires": "Never expires",
+    "created_at": "Created",
+    "actions": "Actions",
+    "rotate": "Rotate",
+    "rotate_confirm": "Rotating invalidates the old token immediately. Continue?",
+    "revoke": "Revoke",
+    "revoke_confirm": "Calls using this token will fail immediately once revoked. Revoke it?",
+    "empty": "No API tokens yet",
+    "created_title": "Token created",
+    "created_warning": "This is the only time the full token is shown. Copy and store it now — it cannot be viewed again after closing.",
+    "copy": "Copy",
+    "copied": "Copied",
+    "usage_title": "How to use",
+    "usage_hint": "Send the token in the Authorization: Bearer <token> request header to call Mica's REST API. See /api/docs for the API reference.",
+    "loading_error": "Failed to load tokens",
+    "owner": "Owner",
+    "user_id": "User ID",
+    "show_revoked": "Show revoked"
+  },
   "admin": {
     "departments": "Departments",
     "new_department": "New Department",
@@ -1093,7 +1131,9 @@
     "feishu_union_id_help": "Auto-populated from SAML login. Tenant-level unique, preferred for message delivery.",
     "feishu_user_id_label": "Feishu User ID (auto)",
     "feishu_user_id_help": "Auto-populated from SAML login.",
-    "ai_routing_desc": "AI feature routing configuration"
+    "ai_routing_desc": "AI feature routing configuration",
+    "api_tokens": "API Tokens",
+    "api_tokens_desc": "Review and revoke API tokens across all users"
   },
   "validation": {
     "select_company": "Please select company",

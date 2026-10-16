@@ -109,7 +109,8 @@
     "suppliers": "供应商",
     "items": "物料管理",
     "logout": "退出登录",
-    "rfqs": "询价管理"
+    "rfqs": "询价管理",
+    "api_tokens": "API 令牌"
   },
   "button": {
     "submit": "提交",
@@ -824,6 +825,43 @@
     "collaborator_added": "已添加协作者",
     "no_collaborators": "暂无协作者"
   },
+  "apiTokens": {
+    "title": "API 令牌",
+    "subtitle": "为脚本、其他系统或 AI Agent 创建访问 Mica 的凭据；令牌以你的身份行事，权限与你相同。",
+    "create": "新建令牌",
+    "name": "名称",
+    "name_placeholder": "例如 n8n-prod / claude-agent",
+    "scopes": "权限范围",
+    "scope_read": "只读",
+    "scope_write": "读写",
+    "expires_in": "有效期",
+    "days": "{{count}} 天",
+    "prefix": "令牌前缀",
+    "status": "状态",
+    "status_active": "有效",
+    "status_expired": "已过期",
+    "status_revoked": "已撤销",
+    "last_used": "最近使用",
+    "never_used": "未使用",
+    "never_expires": "永不过期",
+    "created_at": "创建时间",
+    "actions": "操作",
+    "rotate": "轮换",
+    "rotate_confirm": "轮换后旧令牌立即失效，确认继续？",
+    "revoke": "撤销",
+    "revoke_confirm": "撤销后使用该令牌的调用会立即失败，确认撤销？",
+    "empty": "还没有 API 令牌",
+    "created_title": "令牌已创建",
+    "created_warning": "这是唯一一次显示完整令牌，请立即复制保存；关闭后无法再次查看。",
+    "copy": "复制",
+    "copied": "已复制",
+    "usage_title": "如何使用",
+    "usage_hint": "在请求头中携带 Authorization: Bearer <令牌>，即可调用 Mica 的 REST API。接口文档见 /api/docs。",
+    "loading_error": "加载令牌失败",
+    "owner": "所属用户",
+    "user_id": "用户 ID",
+    "show_revoked": "显示已撤销"
+  },
   "admin": {
     "departments": "部门管理",
     "new_department": "新增部门",
@@ -1105,7 +1143,9 @@
     "feishu_union_id_help": "用户 SAML 登录时自动填充，租户级唯一，优先用于消息推送",
     "feishu_user_id_label": "飞书 User ID（自动）",
     "feishu_user_id_help": "用户 SAML 登录时自动填充",
-    "ai_routing_desc": "AI 功能场景路由配置"
+    "ai_routing_desc": "AI 功能场景路由配置",
+    "api_tokens": "API 令牌",
+    "api_tokens_desc": "查看并撤销全部用户的 API 令牌"
   },
   "validation": {
     "select_company": "请选择公司主体",

@@ -1101,6 +1101,45 @@ function filenameFromDisposition(disposition: string | null, fallback: string): 
   return plain?.[1]?.trim() || fallback
 }
 
+export type ApiTokenScope = 'read' | 'write'
+
+export interface ApiToken {
+  id: string
+  name: string
+  prefix: string
+  scopes: string[]
+  expires_at: string | null
+  revoked_at: string | null
+  last_used_at: string | null
+  last_used_ip: string | null
+  created_at: string
+  is_expired: boolean
+  is_active: boolean
+}
+
+/** Returned by create/rotate only — ``token`` (the plaintext secret) is shown once. */
+export interface ApiTokenCreated {
+  id: string
+  name: string
+  prefix: string
+  scopes: string[]
+  expires_at: string | null
+  created_at: string
+  token: string
+}
+
+export interface AdminApiToken extends ApiToken {
+  user_id: string
+  username: string
+  user_display_name: string
+}
+
+export interface ApiTokenCreate {
+  name: string
+  scopes?: ApiTokenScope[]
+  expires_in_days?: number
+}
+
 /**
  * Fetch a dataset export and save it as a blob (same pattern as
  * ``POList``'s ledger export). Resolves with the saved filename; rejects with
@@ -2395,5 +2434,32 @@ export const api = {
   async listExportDatasets(): Promise<ExportDataset[]> {
     const { data } = await client.get<{ datasets: ExportDataset[] }>('/exports')
     return data.datasets
+  },
+  async listMyApiTokens(): Promise<ApiToken[]> {
+    const { data } = await client.get<ApiToken[]>('/me/tokens')
+    return data
+  },
+  async createApiToken(body: ApiTokenCreate): Promise<ApiTokenCreated> {
+    const { data } = await client.post<ApiTokenCreated>('/me/tokens', body)
+    return data
+  },
+  async rotateApiToken(id: string): Promise<ApiTokenCreated> {
+    const { data } = await client.post<ApiTokenCreated>(`/me/tokens/${id}/rotate`)
+    return data
+  },
+  async revokeApiToken(id: string): Promise<void> {
+    await client.delete(`/me/tokens/${id}`)
+  },
+  async listAdminApiTokens(params: {
+    user_id?: string
+    include_revoked?: boolean
+    limit?: number
+    offset?: number
+  } = {}): Promise<{ items: AdminApiToken[]; total: number }> {
+    const { data } = await client.get<{ items: AdminApiToken[]; total: number }>('/admin/api-tokens', { params })
+    return data
+  },
+  async revokeAdminApiToken(id: string): Promise<void> {
+    await client.delete(`/admin/api-tokens/${id}`)
   },
 }
