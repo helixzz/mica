@@ -185,14 +185,3 @@ async def test_unauthenticated_requests_are_rejected(seeded_db_session):
 
     assert listed.status_code == 401
     assert created.status_code == 401
-
-
-async def test_v2_mirror_serves_the_same_resource(seeded_db_session):
-    db = seeded_db_session
-    alice = await _user(db, "alice")
-
-    async with _client(db) as client:
-        resp = await client.get("/api/v2/delivery-addresses", headers=_auth_headers(alice))
-
-    assert resp.status_code == 200
-    assert resp.json() == []

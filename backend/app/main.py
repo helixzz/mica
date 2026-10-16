@@ -9,7 +9,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 from starlette.exceptions import HTTPException as StarletteHTTPException
 
-from app.api import api_router, v2_router
+from app.api import api_router
 from app.config import get_settings
 from app.db import AsyncSessionLocal
 from app.i18n import detect_locale, t
@@ -66,7 +66,7 @@ PAT 以创建者的身份行事，权限与其本人完全一致；但凭据类�
 * 每个 PAT 默认限流 600 请求/分钟（`api.rate_limit_per_minute`），超限返回
   `429` 与 `Retry-After`。
 * 排障时请记录响应里的 `request_id`，它同时出现在后端日志中。
-* 存在 `/api/v1` 与 `/api/v2` 两套等价路径；新集成建议使用 `/api/v1`。
+* 所有端点都在 `/api/v1` 之下（v1.56.3 起 `/api/v2` 已移除，见 ADR 0005）。
 
 更完整的接入说明（创建令牌、作用域、错误处理、AI Agent 建议）见仓库
 `docs/API.md`。
@@ -202,4 +202,3 @@ async def root() -> dict:
 
 
 app.include_router(api_router, prefix=settings.api_prefix)
-app.include_router(v2_router, prefix=settings.api_prefix)

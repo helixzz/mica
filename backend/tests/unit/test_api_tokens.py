@@ -182,7 +182,6 @@ async def test_guard_blocks_admin_and_identity_paths(seeded_db_session: AsyncSes
 
     for method, path in (
         ("GET", "/api/v1/admin/users"),
-        ("GET", "/api/v2/admin/api-tokens"),
         ("POST", "/api/v1/auth/login/json"),
         ("GET", "/api/v1/saml/metadata"),
         ("POST", "/api/v1/me/tokens"),
