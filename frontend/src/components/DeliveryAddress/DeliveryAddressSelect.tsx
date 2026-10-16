@@ -9,6 +9,8 @@ import { MonoNum } from '@/components/ui'
 import { DeliveryAddressModal } from './DeliveryAddressModal'
 
 export interface DeliveryAddressSelectProps {
+  /** Injected by the enclosing ``Form.Item`` so its label can target the input. */
+  id?: string
   /** Bound to ``delivery_address_id`` by the enclosing ``Form.Item``. */
   value?: string | null
   onChange?: (addressId: string | null) => void
@@ -54,6 +56,7 @@ function AddressOptionRow({ address, sharedLabel }: { address: DeliveryAddress; 
  * the caller copies the text into the requisition and keeps it editable.
  */
 export function DeliveryAddressSelect({
+  id,
   value,
   onChange,
   onPick,
@@ -99,6 +102,7 @@ export function DeliveryAddressSelect({
   return (
     <>
       <Select<string, AddressSelectOption>
+        id={id}
         style={{ width: '100%', ...style }}
         value={value ?? undefined}
         onChange={handleChange}
@@ -110,11 +114,11 @@ export function DeliveryAddressSelect({
         optionFilterProp="label"
         placeholder={t('address.select_placeholder')}
         popupMatchSelectWidth={false}
-        dropdownStyle={{ minWidth: 420 }}
+        styles={{ popup: { root: { minWidth: 420 } } }}
         optionRender={(option) => (
           <AddressOptionRow address={option.data.address} sharedLabel={t('address.shared_badge')} />
         )}
-        dropdownRender={(menu) => (
+        popupRender={(menu) => (
           <>
             {menu}
             <Divider style={{ margin: '4px 0' }} />

@@ -73,6 +73,9 @@ export function DeliveryAddressModal({
   return (
     <Modal
       open={open}
+      // The Form instance exists before the modal is ever opened; without this
+      // antd warns that the form is not connected to any Form element.
+      forceRender
       title={t('address.create_title')}
       onCancel={onCancel}
       onOk={() => void submit()}

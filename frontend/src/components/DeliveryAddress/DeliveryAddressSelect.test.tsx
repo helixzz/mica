@@ -118,4 +118,21 @@ describe('<DeliveryAddressSelect />', () => {
 
     await waitFor(() => expect(onPick).toHaveBeenCalledWith(null))
   })
+
+  // antd 5.29 deprecates `dropdownRender` and `dropdownStyle`, and an unconnected
+  // `useForm` instance warns too. Both were caught in a browser run, so pin them.
+  it('emits no antd deprecation or unconnected-form warning', async () => {
+    const spy = vi.spyOn(console, 'error').mockImplementation(() => {})
+    const user = userEvent.setup()
+    renderWithProviders(<DeliveryAddressSelect value={null} onChange={() => {}} />)
+
+    await user.click(screen.getByRole('combobox'))
+    await screen.findByText('张伟')
+
+    const emitted = spy.mock.calls.map((call) => String(call[0])).join('\n')
+    spy.mockRestore()
+
+    expect(emitted).not.toMatch(/deprecated/i)
+    expect(emitted).not.toMatch(/not connected to any Form/)
+  })
 })
