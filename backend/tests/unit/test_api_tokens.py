@@ -234,6 +234,56 @@ async def test_write_scope_allows_writes(seeded_db_session: AsyncSession) -> Non
     )
 
 
+def test_client_ip_prefers_forwarded_for_behind_a_private_peer() -> None:
+    request = Request(
+        {
+            "type": "http",
+            "method": "GET",
+            "path": "/api/v1/auth/me",
+            "headers": [(b"x-forwarded-for", b"203.0.113.9, 172.18.0.2")],
+            "client": ("172.18.0.5", 4321),
+        }
+    )
+    assert svc.client_ip(request) == "203.0.113.9"
+
+
+def test_client_ip_ignores_forwarded_for_from_a_public_peer() -> None:
+    """A publicly reachable backend port must not let anyone forge the IP.
+
+    ``8.8.8.8`` on purpose: ``ipaddress`` also counts the documentation ranges
+    (198.51.100.0/24, 203.0.113.0/24) as private, so they cannot express
+    "direct peer is on the internet" here.
+    """
+    request = Request(
+        {
+            "type": "http",
+            "method": "GET",
+            "path": "/api/v1/auth/me",
+            "headers": [(b"x-forwarded-for", b"1.2.3.4")],
+            "client": ("8.8.8.8", 4321),
+        }
+    )
+    assert svc.client_ip(request) == "8.8.8.8"
+
+
+def test_client_ip_without_forwarding_or_peer() -> None:
+    plain = Request(
+        {
+            "type": "http",
+            "method": "GET",
+            "path": "/api/v1/auth/me",
+            "headers": [],
+            "client": ("172.18.0.5", 4321),
+        }
+    )
+    assert svc.client_ip(plain) == "172.18.0.5"
+
+    anonymous = Request(
+        {"type": "http", "method": "GET", "path": "/api/v1/auth/me", "headers": [], "client": None}
+    )
+    assert svc.client_ip(anonymous) is None
+
+
 def test_rate_limit_window() -> None:
     key = "unit-rate-limit"
     svc.check_rate_limit(key, 2)

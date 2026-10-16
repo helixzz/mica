@@ -7,28 +7,30 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
-## [v1.57.0] — 2026-10-16
+## [v1.56.2] — 2026-10-16
 
-### 新增（收货地址改为地址簿下拉，并拆成收件人 / 电话 / 详细地址三个字段）
+### 修复（令牌使用记录从未落库 + CI 长期红灯挡住了构建闸门）
 
-采购申请与采购订单的收货信息原本是单个自由文本框，写法因人而异、无法复用。现在改为「地址簿 + 三个结构化字段」：创建或编辑申请时可以从下拉里挑一个存过的地址，也可以直接手输。
+**1. `last_used_at` / `last_used_ip` 永远是 NULL——用真实令牌实测才发现的**
 
-- **地址簿表 `delivery_addresses`**：`owner_id IS NULL` 是公司共享条目（管理员与采购经理维护），非空则是个人私有条目，两者都按读自己公司过滤。列表按 `usage_count` → `last_used_at DESC NULLS LAST` 排序，常用地址自动浮到前面（不用 `NULLS LAST` 的话，Postgres 的 `DESC` 会把从没用过的排在前面）
-- **PR / PO 各加三列**：`delivery_contact_name`、`delivery_contact_phone`、`delivery_address_id`。原有 `delivery_address` **不改名、不迁移数据**，语义收窄为「详细地址」——因此历史单据、导出列与三处 PR→PO 透传逻辑全部保持不动
-- **申请单存快照，不存引用**：三个文本字段在保存时复制，`delivery_address_id` 只是溯源信息且 `ON DELETE SET NULL`。修改或删除地址簿条目**不会**改写任何历史单据，有专门的回归测试守着这条不变量
-- **下拉是三行式自定义样式**（AntD `optionRender`）：收件人 14px/500、电话 12px 等宽、详细地址 12px 三级色且最多折两行并带 `title` 全文——长地址不再被压成一行省略号。下拉面板固定 420px 与触发框宽度解耦。地址是结构化文本，故没有沿用单行滚动的 `MarqueeOption`（它在 hover 时才滚动，恰好在用户扫视列表时看不清）
-- **选中的地址仍可微调**：挑一个条目后三个字段是副本，用户可继续改门牌号；手动改动任一字段会把 `delivery_address_id` 置空，标记为「自定义」。该逻辑挂在各输入框自己的 `onChange` 上而非 `Form.onValuesChange`——后者会被回填时的 `setFieldsValue` 触发，把刚设好的 id 立刻清掉
-- **修复既有缺陷**：`update_pr` 原先对每个字段都用 `if payload.x is not None`，导致表单清空地址后传的 `null` 被静默忽略、刷新后又冒出来。收货相关四个字段改用 `model_fields_set` 判断，现在能真正清空
-- **权限**：任何人都能读自己可见的条目并维护自己的私有条目；共享条目只有 `admin` / `procurement_mgr` 能增删改。别人的私有条目返回 404 而非 403，避免确认 id 是否存在
-- **顺带**：`field.delivery_address` 文案由「收货地址」改为「详细地址」；电话号码只限长度不校验格式（分机号、境外号都必须能存，符合「宁可 admin 兜底，也不要让流程卡死」）
+拿一个真实只读令牌打生产 API，全部调用都正常，但令牌列表里「最近使用」始终为空。根因：`_touch_last_used()` 只 `flush()` 不 `commit()`，而只读请求自己从不提交事务，会话收尾时回滚，使用记录随之消失。单元测试看不见这个问题——它只检查内存里的对象属性（`flush` 之后就已经是 `None` 以外的值了）。
 
-### 验证
+- 改为提交（best-effort：记录失败只写 warning，绝不影响请求结果）
+- 顺带修正来源地址：后端容器启动没有 `--proxy-headers`，`request.client.host` 只会是 nginx 容器 IP。现在**直连对端为私有地址时**才采信 `X-Forwarded-For` 第一跳，否则忽略该头——公网可达的后端端口不能用来伪造记录的 IP
+- 新增 4 个用例守护：3 个 `client_ip` 分支 + 1 个「使用记录必须落库」的集成测试。**反向验证过**：把 `commit` 改回 `flush`，该用例立刻失败
 
-- 新增 25 个用例：地址簿服务层（共享/私有可见性、权限边界、排序、`model_fields_set` 清空语义、删除后快照不变、保存申请单时 usage 自增）、真实 HTTP 层（完整增删改查往返、403 / 404 / 401、`/api/v2` 镜像）、PR→PO 三字段透传
-- 迁移 0060 在测试库实跑 `upgrade → downgrade → upgrade` 往返，表结构、索引与命名约束逐项核对通过
-- 前端组件测试覆盖三行式渲染、选择回填三个字段、共享标记、空地址簿提示、清空回传 `null`
-- 后端全量 `pytest`：841 passed / 12 skipped / 1 xfailed / 1 xpassed；`ruff check app` 与 `ruff format --check app` 通过
-- 前端 `npm run type-check`、`npm run build`、`vitest run`（82 passed）通过
+**2. CI 自 2026-10-10 起一直红，并且因此跳过了 `docker compose build` 检查**
+
+两处既有问题（与本次功能无关，`git stash` 对照确认过基线一样）：
+
+- `Contracts.test.tsx` 在慢速 runner 上超时（`waitFor` 默认 1 秒、单个用例默认 5 秒）：本地 9.5 秒跑完、CI 需要 20.5 秒。改为 `testTimeout` / `hookTimeout` 30 秒、`asyncUtilTimeout` 5 秒——是环境差异，断言本身没问题
+- 覆盖率长期低于阈值（语句 58.1%、分支 49.2%）：补测 `utils/undo.tsx`、`stores/uiConfig.ts`、`components/ui/Mono.tsx`，现在 60.58% / 50.79% 达标，新增 10 个用例
+
+前端 job 失败会让 CI 的构建检查整段跳过——**这正是 v1.56.0 的镜像构建问题没能被 CI 提前发现的原因**。第 2 条修好后闸门才算恢复。
+
+### 文档
+
+- `AGENTS.md` §8 新增「多人 / 多 Agent 并行」五条：一功能一分支一 worktree、版本号只由发版提交 bump、发版串行且 tag 不可变、不要直接编辑生产服务器上的代码、共享工作目录里不要切分支
 
 ## [v1.56.1] — 2026-10-16
 
