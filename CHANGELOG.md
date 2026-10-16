@@ -7,6 +7,31 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [v1.56.2] — 2026-10-16
+
+### 修复（令牌使用记录从未落库 + CI 长期红灯挡住了构建闸门）
+
+**1. `last_used_at` / `last_used_ip` 永远是 NULL——用真实令牌实测才发现的**
+
+拿一个真实只读令牌打生产 API，全部调用都正常，但令牌列表里「最近使用」始终为空。根因：`_touch_last_used()` 只 `flush()` 不 `commit()`，而只读请求自己从不提交事务，会话收尾时回滚，使用记录随之消失。单元测试看不见这个问题——它只检查内存里的对象属性（`flush` 之后就已经是 `None` 以外的值了）。
+
+- 改为提交（best-effort：记录失败只写 warning，绝不影响请求结果）
+- 顺带修正来源地址：后端容器启动没有 `--proxy-headers`，`request.client.host` 只会是 nginx 容器 IP。现在**直连对端为私有地址时**才采信 `X-Forwarded-For` 第一跳，否则忽略该头——公网可达的后端端口不能用来伪造记录的 IP
+- 新增 4 个用例守护：3 个 `client_ip` 分支 + 1 个「使用记录必须落库」的集成测试。**反向验证过**：把 `commit` 改回 `flush`，该用例立刻失败
+
+**2. CI 自 2026-10-10 起一直红，并且因此跳过了 `docker compose build` 检查**
+
+两处既有问题（与本次功能无关，`git stash` 对照确认过基线一样）：
+
+- `Contracts.test.tsx` 在慢速 runner 上超时（`waitFor` 默认 1 秒、单个用例默认 5 秒）：本地 9.5 秒跑完、CI 需要 20.5 秒。改为 `testTimeout` / `hookTimeout` 30 秒、`asyncUtilTimeout` 5 秒——是环境差异，断言本身没问题
+- 覆盖率长期低于阈值（语句 58.1%、分支 49.2%）：补测 `utils/undo.tsx`、`stores/uiConfig.ts`、`components/ui/Mono.tsx`，现在 60.58% / 50.79% 达标，新增 10 个用例
+
+前端 job 失败会让 CI 的构建检查整段跳过——**这正是 v1.56.0 的镜像构建问题没能被 CI 提前发现的原因**。第 2 条修好后闸门才算恢复。
+
+### 文档
+
+- `AGENTS.md` §8 新增「多人 / 多 Agent 并行」五条：一功能一分支一 worktree、版本号只由发版提交 bump、发版串行且 tag 不可变、不要直接编辑生产服务器上的代码、共享工作目录里不要切分支
+
 ## [v1.56.1] — 2026-10-16
 
 ### 修复（前端镜像构建不可复现，v1.56.0 首次部署被它挡住）
