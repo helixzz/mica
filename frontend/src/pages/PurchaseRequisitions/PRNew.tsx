@@ -19,10 +19,11 @@ import { useEffect, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { useNavigate, useParams } from 'react-router-dom'
 
-import { api, type ApprovalPreviewCandidate, type ClassificationItem, type Department, flattenCategoryTree, type Item, type PRItem, type Supplier, type ProxyCandidate } from '@/api'
+import { api, type ApprovalPreviewCandidate, type ClassificationItem, type DeliveryAddress, type Department, flattenCategoryTree, type Item, type PRItem, type Supplier, type ProxyCandidate } from '@/api'
 import { client, extractError } from '@/api/client'
 import { useAuth } from '@/auth/useAuth'
 import { AIStreamButton } from '@/components/AIStreamButton'
+import { DeliveryAddressSelect } from '@/components/DeliveryAddress'
 import { ItemPickerWithCreate } from '@/components/ItemPickerWithCreate'
 import { AutosaveBanner, AutosaveUnavailableBanner } from '@/components/AutosaveBanner'
 import ApprovalPreview from '@/components/PR/ApprovalPreview'
@@ -64,6 +65,7 @@ export function PRNewPage() {
   const { user } = useAuth()
   const isRequester = user?.role === 'requester'
   const canProxy = ['admin', 'procurement_mgr', 'it_buyer'].includes(user?.role ?? '')
+  const canMaintainShared = ['admin', 'procurement_mgr'].includes(user?.role ?? '')
   const [proxyCandidates, setProxyCandidates] = useState<ProxyCandidate[]>([])
   const autosave = useAutosave(`pr-new-${user?.id || 'anon'}`)
   const [autosaveDismissed, setAutosaveDismissed] = useState(false)
@@ -100,6 +102,9 @@ export function PRNewPage() {
           currency: pr.currency,
           required_date: pr.required_date ? dayjs(pr.required_date) : undefined,
           delivery_address: pr.delivery_address || '',
+          delivery_contact_name: pr.delivery_contact_name || '',
+          delivery_contact_phone: pr.delivery_contact_phone || '',
+          delivery_address_id: pr.delivery_address_id || undefined,
           expected_delivery_date: pr.expected_delivery_date
             ? dayjs(pr.expected_delivery_date)
             : undefined,
@@ -229,6 +234,27 @@ export function PRNewPage() {
     return departments.filter((d) => d.company_id === companyId)
   })()
 
+  // Picking an entry copies its text into the requisition. The three fields
+  // stay editable afterwards, so the id is provenance rather than the source of
+  // the content — editing the entry later must not change this requisition.
+  const applyPickedAddress = (address: DeliveryAddress | null) => {
+    form.setFieldsValue({
+      delivery_contact_name: address?.contact_name ?? '',
+      delivery_contact_phone: address?.contact_phone ?? '',
+      delivery_address: address?.detail ?? '',
+    })
+  }
+
+  // Typing by hand detaches the entry, so the saved row stops claiming it came
+  // from the address book. Deliberately bound to each input's own onChange:
+  // setFieldsValue also fires Form.onValuesChange, which would clear the id the
+  // pick handler just set.
+  const detachPickedAddress = () => {
+    if (form.getFieldValue('delivery_address_id')) {
+      form.setFieldValue('delivery_address_id', null)
+    }
+  }
+
   const onFinish = async (saveOnly: boolean) => {
     try {
       const values = await form.validateFields()
@@ -240,6 +266,9 @@ export function PRNewPage() {
         currency: values.currency || 'CNY',
         required_date: values.required_date ? values.required_date.format('YYYY-MM-DD') : null,
         delivery_address: values.delivery_address?.trim() || null,
+        delivery_contact_name: values.delivery_contact_name?.trim() || null,
+        delivery_contact_phone: values.delivery_contact_phone?.trim() || null,
+        delivery_address_id: values.delivery_address_id || null,
         expected_delivery_date: values.expected_delivery_date.format('YYYY-MM-DD'),
         requester_id: canProxy ? (values.requester_id || null) : null,
         company_id: values.company_id || null,
@@ -388,9 +417,40 @@ export function PRNewPage() {
                 <DatePicker style={{ width: '100%' }} />
               </Form.Item>
             </Col>
-            <Col xs={24} md={18}>
+            <Col xs={24} sm={12} md={6}>
+              <Form.Item label={t('field.delivery_contact_name')} name="delivery_contact_name">
+                <Input
+                  maxLength={64}
+                  placeholder={t('address.contact_name_placeholder')}
+                  onChange={detachPickedAddress}
+                />
+              </Form.Item>
+            </Col>
+            <Col xs={24} sm={12} md={6}>
+              <Form.Item label={t('field.delivery_contact_phone')} name="delivery_contact_phone">
+                <Input
+                  maxLength={32}
+                  placeholder={t('address.contact_phone_placeholder')}
+                  onChange={detachPickedAddress}
+                />
+              </Form.Item>
+            </Col>
+            <Col xs={24} sm={12} md={6}>
+              <Form.Item label={t('field.address_book')} name="delivery_address_id">
+                <DeliveryAddressSelect
+                  canMaintainShared={canMaintainShared}
+                  onPick={applyPickedAddress}
+                />
+              </Form.Item>
+            </Col>
+          </Row>
+          <Row gutter={16}>
+            <Col xs={24}>
               <Form.Item label={t('field.delivery_address')} name="delivery_address">
-                <Input placeholder={t('pr.delivery_address_placeholder')} />
+                <Input
+                  placeholder={t('pr.delivery_address_placeholder')}
+                  onChange={detachPickedAddress}
+                />
               </Form.Item>
             </Col>
           </Row>

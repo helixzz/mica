@@ -56,6 +56,11 @@
     "internal_error": "Internal server error",
     "conflict": "Resource conflict"
   },
+  "address": {
+    "not_found": "Delivery address not found, or not visible to this account",
+    "shared_requires_role": "Only an admin or procurement manager can maintain shared company addresses",
+    "not_owner": "You can only edit delivery addresses you created"
+  },
   "pr": {
     "not_found": "Pr not found",
     "cannot_edit_submitted": "pr cannot edit submitted",

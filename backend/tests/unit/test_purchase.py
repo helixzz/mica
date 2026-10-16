@@ -518,12 +518,16 @@ async def test_create_pr_stores_delivery_fields(seeded_db_session):
         currency="CNY",
         expected_delivery_date=date(2026, 9, 30),
         delivery_address="上海市浦东新区张江高科技园区 88 号 5 层机房",
+        delivery_contact_name="张伟",
+        delivery_contact_phone="138 0000 0000",
         items=[_pr_item(1, "Widget", "1", "100", supplier_id=supplier.id)],
     )
     pr = await purchase_svc.create_pr(db, actor, payload)
 
     assert pr.expected_delivery_date == date(2026, 9, 30)
     assert pr.delivery_address == "上海市浦东新区张江高科技园区 88 号 5 层机房"
+    assert pr.delivery_contact_name == "张伟"
+    assert pr.delivery_contact_phone == "138 0000 0000"
 
 
 async def test_create_pr_requires_expected_delivery_date():
@@ -564,6 +568,8 @@ async def test_convert_pr_to_po_propagates_delivery_fields(seeded_db_session):
         currency="CNY",
         expected_delivery_date=date(2026, 10, 1),
         delivery_address="广州市天河区体育西路 191 号",
+        delivery_contact_name="李娜",
+        delivery_contact_phone="139 0000 0000",
         items=[_pr_item(1, "Widget", "2", "50", supplier_id=supplier.id)],
     )
     pr = await purchase_svc.create_pr(db, actor, payload)
@@ -573,6 +579,8 @@ async def test_convert_pr_to_po_propagates_delivery_fields(seeded_db_session):
 
     assert len(pos) == 1
     assert pos[0].delivery_address == "广州市天河区体育西路 191 号"
+    assert pos[0].delivery_contact_name == "李娜"
+    assert pos[0].delivery_contact_phone == "139 0000 0000"
     assert pos[0].expected_delivery_date == date(2026, 10, 1)
 
 

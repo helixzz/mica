@@ -2,6 +2,7 @@ import { Card, Descriptions } from 'antd'
 import { useTranslation } from 'react-i18next'
 
 import { type PurchaseOrder } from '@/api'
+import { MonoNum } from '@/components/ui'
 import { fmtAmount } from '@/utils/format'
 
 interface POInfoCardProps {
@@ -28,7 +29,7 @@ export function POInfoCard({ po }: POInfoCardProps) {
         <Descriptions.Item label={t('field.amount_paid')}>
           {fmtAmount(po.amount_paid, po.currency)}
         </Descriptions.Item>
-        {(po.expected_delivery_date || po.delivery_address) && (
+        {(po.expected_delivery_date || po.delivery_address || po.delivery_contact_name) && (
           <>
             <Descriptions.Item label={t('field.expected_delivery_date')}>
               {po.expected_delivery_date ? (
@@ -37,7 +38,17 @@ export function POInfoCard({ po }: POInfoCardProps) {
                 '-'
               )}
             </Descriptions.Item>
-            <Descriptions.Item label={t('field.delivery_address')} span={2}>
+            <Descriptions.Item label={t('field.delivery_contact_name')}>
+              {po.delivery_contact_name || '-'}
+            </Descriptions.Item>
+            <Descriptions.Item label={t('field.delivery_contact_phone')}>
+              {po.delivery_contact_phone ? (
+                <MonoNum>{po.delivery_contact_phone}</MonoNum>
+              ) : (
+                '-'
+              )}
+            </Descriptions.Item>
+            <Descriptions.Item label={t('field.delivery_address')} span={3}>
               {po.delivery_address || '-'}
             </Descriptions.Item>
           </>

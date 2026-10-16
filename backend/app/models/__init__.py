@@ -408,6 +408,47 @@ class Item(Base, TimestampMixin):
     procurement_category: Mapped[ProcurementCategory | None] = relationship()
 
 
+class DeliveryAddress(Base, TimestampMixin):
+    """A reusable delivery address book entry.
+
+    ``owner_id IS NULL`` marks a company-wide address maintained by admins and
+    procurement managers; a non-null ``owner_id`` is a private entry. Both are
+    scoped to the reader's company. Requisitions and orders keep a *snapshot* of
+    the chosen address, so editing or deleting an entry never rewrites history.
+    """
+
+    __tablename__ = "delivery_addresses"
+
+    id: Mapped[UUID] = mapped_column(PGUUID(as_uuid=True), primary_key=True, default=new_uuid)
+    label: Mapped[str | None] = mapped_column(String(64))
+    contact_name: Mapped[str] = mapped_column(String(64), nullable=False)
+    contact_phone: Mapped[str] = mapped_column(String(32), nullable=False)
+    detail: Mapped[str] = mapped_column(Text, nullable=False)
+    owner_id: Mapped[UUID | None] = mapped_column(
+        PGUUID(as_uuid=True), ForeignKey("users.id", ondelete="CASCADE")
+    )
+    company_id: Mapped[UUID | None] = mapped_column(
+        PGUUID(as_uuid=True), ForeignKey("companies.id", ondelete="CASCADE")
+    )
+    usage_count: Mapped[int] = mapped_column(Integer, default=0, nullable=False)
+    last_used_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    is_active: Mapped[bool] = mapped_column(default=True, nullable=False)
+
+    owner: Mapped[User | None] = relationship(foreign_keys=[owner_id])
+    company: Mapped[Company | None] = relationship()
+
+    @property
+    def is_shared(self) -> bool:
+        """A null owner marks a company-wide entry; see the class docstring."""
+        return self.owner_id is None
+
+    __table_args__ = (
+        Index("ix_delivery_addresses_owner_id", "owner_id"),
+        Index("ix_delivery_addresses_company_id", "company_id"),
+        Index("ix_delivery_addresses_last_used_at", desc("last_used_at")),
+    )
+
+
 class PurchaseRequisition(Base, TimestampMixin):
     __tablename__ = "purchase_requisitions"
 
@@ -431,6 +472,11 @@ class PurchaseRequisition(Base, TimestampMixin):
     )
     required_date: Mapped[date | None] = mapped_column(Date)
     delivery_address: Mapped[str | None] = mapped_column(Text)
+    delivery_contact_name: Mapped[str | None] = mapped_column(String(64))
+    delivery_contact_phone: Mapped[str | None] = mapped_column(String(32))
+    delivery_address_id: Mapped[UUID | None] = mapped_column(
+        PGUUID(as_uuid=True), ForeignKey("delivery_addresses.id", ondelete="SET NULL")
+    )
     expected_delivery_date: Mapped[date | None] = mapped_column(Date)
     submitted_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
     decided_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
@@ -541,6 +587,11 @@ class PurchaseOrder(Base, TimestampMixin):
     source_ref: Mapped[str | None] = mapped_column(String(128))
     pr_title: Mapped[str | None] = mapped_column(String(255), nullable=True)
     delivery_address: Mapped[str | None] = mapped_column(Text)
+    delivery_contact_name: Mapped[str | None] = mapped_column(String(64))
+    delivery_contact_phone: Mapped[str | None] = mapped_column(String(32))
+    delivery_address_id: Mapped[UUID | None] = mapped_column(
+        PGUUID(as_uuid=True), ForeignKey("delivery_addresses.id", ondelete="SET NULL")
+    )
     expected_delivery_date: Mapped[date | None] = mapped_column(Date)
     created_by_id: Mapped[UUID] = mapped_column(
         PGUUID(as_uuid=True), ForeignKey("users.id"), nullable=False
