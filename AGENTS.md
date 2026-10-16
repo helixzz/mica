@@ -398,6 +398,16 @@ docker compose up -d && sleep 15
 - commit body 解释 **why**，不只是 **what**
 - **不要**在 commit message 里写"由某某工具/助手生成"之类的元信息
 
+### 多人 / 多 Agent 并行（v1.56.2+）
+
+同一个仓库可能同时有多个 Agent（或人）在改。以下五条是并行时不互相踩的底线：
+
+- **一个功能 = 一个分支 = 一个 worktree**：`git worktree add ../mica-feat-xxx -b feat/xxx`。**不要**多人共用同一个工作目录——`git checkout`、构建产物、未提交改动会互相覆盖，一次并行写入就把别人的文件改坏了。
+- **版本号只在发版时 bump**：`chore(release): bump version to X.Y.Z` 必须是独立提交，功能分支不碰 §9 那四处版本号，否则两个分支必然冲突。
+- **发版串行**：`git fetch` → 合并 main（`--no-ff`）→ push main → `gh release create` → `./deploy/scripts/upgrade.sh --tag vX.Y.Z`。**tag 不可变**：已发布的版本只通过新版本修复（v1.56.0 构建失败 → v1.56.1），不改老 tag。
+- **不要直接在生产服务器上编辑代码**：`upgrade.sh` 用 `git checkout <tag> -- .` 覆盖工作区，游离文件既不受版本控制、也不会被部署带走。改动一律走 分支 → main → tag。
+- **在共享工作目录里不要一边改一边切分支**：会打断别人正在进行的中途状态；各自 worktree 内构建与测试。
+
 ## 9. 版本发布流程（强制规定，不可跳过）
 
 **每次代码修改（包括 bugfix 和 new feature）必须执行完整发布流程：**

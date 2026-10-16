@@ -243,6 +243,28 @@ async def test_non_admin_cannot_list_all_tokens(seeded_client: AsyncClient) -> N
     assert resp.status_code == 403
 
 
+async def test_token_usage_is_recorded(seeded_client: AsyncClient) -> None:
+    """Usage bookkeeping must survive the request.
+
+    It used to be flushed but never committed, and a read-only request never
+    commits on its own - so `last_used_at` stayed NULL for every token. The unit
+    tests missed it because they only inspected the in-memory object; it showed
+    up when a real token was used against the production API.
+    """
+    await _purge_test_tokens(seeded_client)
+    _jwt, created = await _issue(seeded_client, name="pytest-usage")
+
+    assert (
+        await seeded_client.get("/api/v1/auth/me", headers=_auth(created["token"]))
+    ).status_code == 200
+
+    admin_jwt = await _login(seeded_client, "admin")
+    listed = await seeded_client.get("/api/v1/admin/api-tokens?limit=200", headers=_auth(admin_jwt))
+    row = next(item for item in listed.json()["items"] if item["id"] == created["id"])
+    assert row["last_used_at"] is not None, "usage timestamp was not persisted"
+    assert row["last_used_ip"], "usage source address was not persisted"
+
+
 async def test_expiry_defaults_and_limits(seeded_client: AsyncClient) -> None:
     await _purge_test_tokens(seeded_client)
     jwt, created = await _issue(seeded_client, name="pytest-ttl", expires_in_days=30)

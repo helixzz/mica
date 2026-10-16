@@ -17,6 +17,8 @@ from __future__ import annotations
 
 import hashlib
 import hmac
+import ipaddress
+import logging
 import secrets
 import time
 from datetime import UTC, datetime, timedelta
@@ -30,6 +32,8 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.config import get_settings
 from app.models import ApiToken, AuditLog, User
 from app.services.system_params import system_params
+
+logger = logging.getLogger(__name__)
 
 settings = get_settings()
 
@@ -184,10 +188,42 @@ async def _touch_last_used(
     token_row.last_used_at = now
     if client_ip:
         token_row.last_used_ip = client_ip[:64]
-    await db.flush()
+    try:
+        # Committed, not flushed: a read-only request never commits on its own, so
+        # a flushed usage record was rolled back when the session closed and
+        # `last_used_at` stayed NULL forever (found by testing a real token in
+        # production). Bookkeeping must not fail the request either way.
+        await db.commit()
+    except Exception:  # pragma: no cover - usage tracking is best effort
+        logger.warning("could not record usage for API token %s", token_row.id, exc_info=True)
+        await db.rollback()
 
 
 # ── request guardrails ───────────────────────────────────────────────────────
+
+
+def _is_private_address(host: str) -> bool:
+    try:
+        return ipaddress.ip_address(host).is_private
+    except ValueError:
+        return False
+
+
+def client_ip(request: Request) -> str | None:
+    """Best-effort source address for usage bookkeeping.
+
+    Behind the bundled nginx the socket peer is the proxy container, so the first
+    ``X-Forwarded-For`` hop is what the token owner wants to see. That header is
+    only trusted when the direct peer is a private address, so a publicly
+    reachable backend port cannot be used to forge the recorded IP.
+    """
+    direct = request.client.host if request.client else None
+    if direct and _is_private_address(direct):
+        forwarded = request.headers.get("x-forwarded-for", "")
+        first = forwarded.split(",")[0].strip()
+        if first:
+            return first[:64]
+    return direct[:64] if direct else None
 
 
 def relative_path(path: str) -> str:

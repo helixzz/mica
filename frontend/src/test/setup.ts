@@ -1,6 +1,11 @@
 import '@testing-library/jest-dom/vitest'
 import { afterEach, vi } from 'vitest'
-import { cleanup } from '@testing-library/react'
+import { cleanup, configure } from '@testing-library/react'
+
+// `waitFor` defaults to a 1s ceiling, which is not enough on a slow CI runner:
+// it gave up mid-render and asserted against a stale DOM ("expected 60 to be
+// 20" in Contracts.test.tsx) even though the assertions themselves were fine.
+configure({ asyncUtilTimeout: 5000 })
 
 afterEach(() => {
   cleanup()

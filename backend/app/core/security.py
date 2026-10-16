@@ -91,8 +91,9 @@ async def get_current_user(
         )
 
     if api_token_svc.looks_like_pat(raw_token):
-        client_ip = request.client.host if request.client else None
-        user, token_row = await api_token_svc.authenticate(db, raw_token, client_ip=client_ip)
+        user, token_row = await api_token_svc.authenticate(
+            db, raw_token, client_ip=api_token_svc.client_ip(request)
+        )
         await api_token_svc.guard_request(db, request, token_row, user)
         request.state.api_token = token_row
         request.state.api_token_scopes = list(token_row.scopes or [])

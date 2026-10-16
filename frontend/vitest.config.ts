@@ -19,6 +19,11 @@ export default defineConfig({
     environment: 'jsdom',
     setupFiles: ['./src/test/setup.ts'],
     include: ['src/**/*.{test,spec}.{ts,tsx}'],
+    // A CI runner is several times slower than a laptop, and these are DOM
+    // rendering tests: the 5s default made whole files time out on `main` while
+    // passing locally (Contracts.test.tsx, since 2026-10-10).
+    testTimeout: 30000,
+    hookTimeout: 30000,
     coverage: {
       provider: 'v8',
       reporter: ['text', 'html', 'lcov'],
