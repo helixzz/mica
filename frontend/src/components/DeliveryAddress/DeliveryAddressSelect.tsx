@@ -88,7 +88,13 @@ export function DeliveryAddressSelect({
     () =>
       addresses.map((a) => ({
         value: a.id,
-        label: `${a.contact_name} · ${a.detail}`,
+        // What the collapsed control shows. The entry's own label comes first:
+        // it is the name the user gave this address, so it identifies the entry
+        // at a glance — whereas the full street address is far too long to read
+        // in a single-line control and just gets truncated into uselessness.
+        label: a.label
+          ? `${a.label} · ${a.contact_name}`
+          : `${a.contact_name} · ${a.detail}`,
         address: a,
       })),
     [addresses],
@@ -111,7 +117,18 @@ export function DeliveryAddressSelect({
         disabled={disabled}
         allowClear
         showSearch
-        optionFilterProp="label"
+        // Match against the whole entry rather than only what the control
+        // displays: finding an address by its street or its phone number has to
+        // keep working even though the collapsed value now leads with the label.
+        filterOption={(input, option) => {
+          const a = option?.address
+          if (!a) return false
+          const haystack = [a.label, a.contact_name, a.contact_phone, a.detail]
+            .filter(Boolean)
+            .join(' ')
+            .toLowerCase()
+          return haystack.includes(input.trim().toLowerCase())
+        }}
         placeholder={t('address.select_placeholder')}
         popupMatchSelectWidth={false}
         styles={{ popup: { root: { minWidth: 420 } } }}
