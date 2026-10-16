@@ -7,6 +7,29 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [v1.57.0] — 2026-10-16
+
+### 新增（收货地址改为地址簿下拉，并拆成收件人 / 电话 / 详细地址三个字段）
+
+采购申请与采购订单的收货信息原本是单个自由文本框，写法因人而异、无法复用。现在改为「地址簿 + 三个结构化字段」：创建或编辑申请时可以从下拉里挑一个存过的地址，也可以直接手输。
+
+- **地址簿表 `delivery_addresses`**：`owner_id IS NULL` 是公司共享条目（管理员与采购经理维护），非空则是个人私有条目，两者都按读自己公司过滤。列表按 `usage_count` → `last_used_at DESC NULLS LAST` 排序，常用地址自动浮到前面（不用 `NULLS LAST` 的话，Postgres 的 `DESC` 会把从没用过的排在前面）
+- **PR / PO 各加三列**：`delivery_contact_name`、`delivery_contact_phone`、`delivery_address_id`。原有 `delivery_address` **不改名、不迁移数据**，语义收窄为「详细地址」——因此历史单据、导出列与三处 PR→PO 透传逻辑全部保持不动
+- **申请单存快照，不存引用**：三个文本字段在保存时复制，`delivery_address_id` 只是溯源信息且 `ON DELETE SET NULL`。修改或删除地址簿条目**不会**改写任何历史单据，有专门的回归测试守着这条不变量
+- **下拉是三行式自定义样式**：收件人 14px/500、电话 12px 等宽、详细地址 12px 三级色且最多折两行并带 `title` 全文——长地址不再被压成一行省略号（浏览器实测 computed style 已验证）。下拉面板固定 420px 与触发框宽度解耦。地址是结构化文本，故没有沿用单行滚动的 `MarqueeOption`
+- **选中的地址仍可微调**：挑一个条目后三个字段是副本，用户可继续改门牌号；手动改动任一字段会把 `delivery_address_id` 置空，标记为「自定义」
+- **修复既有缺陷**：`update_pr` 原先对每个字段都用 `if payload.x is not None`，导致表单清空地址后传的 `null` 被静默忽略、刷新后又冒出来。收货相关四个字段改用 `model_fields_set` 判断，现在能真正清空
+- **权限**：任何人都能读自己可见的条目并维护自己的私有条目；共享条目只有 `admin` / `procurement_mgr` 能增删改。别人的私有条目返回 404 而非 403，避免确认 id 是否存在
+- **顺带**：`field.delivery_address` 文案由「收货地址」改为「详细地址」；电话号码只限长度不校验格式（分机号、境外号都必须能存）
+
+### 验证
+
+- 新增 26 个用例：地址簿服务层（共享/私有可见性、权限边界、排序、`model_fields_set` 清空语义、删除后快照不变、保存申请单时 usage 自增）、真实 HTTP 层（完整增删改查往返、403 / 404 / 401、`/api/v2` 镜像）、PR→PO 三字段透传、前端组件（三行式渲染、选择回填、共享标记、空态、清空回传 `null`、无 antd 弃用警告）
+- 迁移 0060 在测试库实跑 `upgrade → downgrade → upgrade` 往返，表结构、索引与命名约束逐项核对通过
+- 浏览器 E2E 在独立栈（独立库 + 8013/5179）跑通完整流程：登录 → 新建申请 → 打开地址簿空态 → 下拉内新建地址 → 三个字段回填 → 重开下拉 → 手改字段解除绑定。实测 computed style 确认三行式字号与两行截断
+- 后端全量 `pytest`：852 passed / 12 skipped / 1 xfailed / 1 xpassed；`ruff check app` 与 `ruff format --check app` 通过
+- 前端 `npm run type-check`、`npm run build`、`vitest run`（93 passed）通过
+
 ## [v1.56.2] — 2026-10-16
 
 ### 修复（令牌使用记录从未落库 + CI 长期红灯挡住了构建闸门）
