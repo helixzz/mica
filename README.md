@@ -10,7 +10,7 @@
 </p>
 
 <p align="center">
-  <a href="https://github.com/helixzz/mica/releases/tag/v1.55.1"><img src="https://img.shields.io/badge/version-1.55.1-8B5E3C?style=flat-square" alt="Version" /></a>
+  <a href="https://github.com/helixzz/mica/releases/tag/v1.56.0"><img src="https://img.shields.io/badge/version-1.56.0-8B5E3C?style=flat-square" alt="Version" /></a>
   <a href="https://github.com/helixzz/mica/actions/workflows/ci.yml"><img src="https://img.shields.io/github/actions/workflow/status/helixzz/mica/ci.yml?branch=main&style=flat-square&label=CI" alt="CI" /></a>
   <a href="LICENSE"><img src="https://img.shields.io/badge/license-Apache%202.0-blue?style=flat-square" alt="License" /></a>
   <img src="https://img.shields.io/badge/python-3.12-3776AB?style=flat-square&logo=python&logoColor=white" alt="Python" />
@@ -76,6 +76,7 @@
 - **Cerbos 策略引擎**：字段级 + 行级细粒度权限，YAML 热加载，不可达时自动降级
 - **6 种角色**：管理员 / 采购经理 / 采购员 / 部门负责人 / 财务审核 / 需求方
 - **审计日志**：全操作留痕，Admin 控制台可查
+- **对外 API 与 PAT**：脚本、其他系统与 AI Agent 可用「API 令牌」（`mica_pat_...`）以**用户本人身份**调用任意端点——只存哈希、可设有效期、可限定只读、可随时撤销；限流与审计齐备，接入指南见 [docs/API.md](./docs/API.md)
 - **供应商门户**：token 只读访问（PO / 合同 / 付款 / 到货），90 天自动过期 + 限流
 
 ### 🌐 国际化 & 品牌
@@ -181,9 +182,10 @@ mica/
 | 文档 | 说明 |
 |---|---|
 | [用户手册](https://helixzz.github.io/mica/) | 业务操作指南（GitHub Pages） |
+| [API 接入指南](docs/API.md) | PAT 认证 · 令牌生命周期 · 端点速查 · 稳定面承诺 |
 | [Quickstart](docs/QUICKSTART.md) | 3 分钟启动 |
 | [开发指南](docs/DEVELOPMENT.md) | 添加 API / 参数 / 审批规则 / 通知类型 |
-| [ADR](docs/adr/) | 架构决策记录（技术栈 · 搜索选型 · 系统参数） |
+| [ADR](docs/adr/) | 架构决策记录（技术栈 · 搜索选型 · 系统参数 · 对外 API 认证） |
 | [运维手册](deploy/scripts/README.md) | 脚本用法 · cron 示例 · 故障排查 |
 
 ## 许可
