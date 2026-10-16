@@ -407,6 +407,9 @@ docker compose up -d && sleep 15
 - **发版串行**：`git fetch` → 合并 main（`--no-ff`）→ push main → `gh release create` → `./deploy/scripts/upgrade.sh --tag vX.Y.Z`。**tag 不可变**：已发布的版本只通过新版本修复（v1.56.0 构建失败 → v1.56.1），不改老 tag。
 - **不要直接在生产服务器上编辑代码**：`upgrade.sh` 用 `git checkout <tag> -- .` 覆盖工作区，游离文件既不受版本控制、也不会被部署带走。改动一律走 分支 → main → tag。
 - **在共享工作目录里不要一边改一边切分支**：会打断别人正在进行的中途状态；各自 worktree 内构建与测试。
+- **发版是独占操作，动手前先确认版本号没被占用**：`git fetch --tags` 后检查 `git rev-parse "v$VERSION"` 是否已存在，并确认此刻没有别人在发版。真实事故（2026-10-16）：两个 Agent 同一天各自 bump 到 **v1.57.1**，一个 `gh release create` 成功、另一个失败，但**两者的提交都已进 main**，于是同一个版本号对应两个不同的 bump 提交。`gh release create` 会在 tag 已存在时报错——可惜那通常发生在你已经部署之后。
+- **部署前先看生产当前是什么版本**：`ssh` 进去先跑 `./scripts/health.sh`，`Alembic head` 反映的是最后一个真正跑过迁移的部署。如果别人已部署更新的版本，**不要**用旧 tag 覆盖它：代码会比数据库旧（真实事故同上——v1.57.1 覆盖掉已迁移到 0060 的 v1.57.2，只能靠再部署一次 v1.57.2 收场）。
+- **运维脚本会 `git checkout` 自己**：`upgrade.sh` 在运行中替换了自己所在的文件，bash 按字节偏移续读，**本次新增的代码段不会在这一轮执行**（v1.57.2 的 `APP_VERSION` 同步就是这么被跳过的，它的日志里一行都没有）。改 `deploy/scripts/*` 时，要预期"下次部署才生效"。
 
 ## 9. 版本发布流程（强制规定，不可跳过）
 
