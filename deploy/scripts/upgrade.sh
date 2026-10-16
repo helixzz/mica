@@ -95,15 +95,23 @@ log_ok "source updated to ${TAG}"
 # end up labelled with an old version (v1.57.0 was served by
 # `mica-frontend:1.55.1`). Aligning it with the tag being deployed makes each
 # release a distinct, identifiable image that can actually be pruned.
+#
+# `load_env` above did `set -a; . .env`, so APP_VERSION is already exported into
+# this process — and docker compose prefers an exported variable over the .env
+# file. Editing the file alone therefore changes nothing for *this* run's build;
+# the variable has to be re-exported too.
 NEW_VERSION="${TAG#v}"
 CURRENT_VERSION="$(grep -E '^APP_VERSION=' "${DEPLOY_DIR}/.env" 2>/dev/null | head -1 | cut -d= -f2- || true)"
 if [[ "${CURRENT_VERSION}" == "${NEW_VERSION}" ]]; then
+  export APP_VERSION="${NEW_VERSION}"
   log_ok "APP_VERSION already ${NEW_VERSION}"
 elif grep -qE '^APP_VERSION=' "${DEPLOY_DIR}/.env" 2>/dev/null; then
   sed -i "s|^APP_VERSION=.*|APP_VERSION=${NEW_VERSION}|" "${DEPLOY_DIR}/.env"
+  export APP_VERSION="${NEW_VERSION}"
   log_ok "APP_VERSION: ${CURRENT_VERSION:-<unset>} -> ${NEW_VERSION}"
 else
   printf '\nAPP_VERSION=%s\n' "${NEW_VERSION}" >> "${DEPLOY_DIR}/.env"
+  export APP_VERSION="${NEW_VERSION}"
   log_ok "APP_VERSION: <unset> -> ${NEW_VERSION}"
 fi
 
