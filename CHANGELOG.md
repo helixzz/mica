@@ -7,6 +7,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [v1.58.2] — 2026-10-16
+
+### 修复（`Tenant-name denylist` 是 CI 上最后一个红灯）
+
+`backend/tests/unit/test_export_excel.py` 拿早期租户的 4 字母合同号前缀当测试数据——那是 `contract.number_prefix` 变成可配置之前的历史遗留，被仓库根目录的 `.denylist` 政策明令禁止。这个 job 自 2026-10-10 起一直红，而且它失败在前面，CI 里的 `docker compose build` 检查整段被跳过——**v1.56.0 的镜像构建问题正是因此没能被 CI 提前发现**（见 v1.56.1 与 v1.56.2）。
+
+- 4 处测试数据改用 `.denylist` 推荐的占位符 `ACME`（保持合同号长度与格式），两处断言同步更新
+- 验证：CI 等价扫描（干净 checkout，不含被 gitignore 的本地素材）**0 命中**；`test_export_excel.py` 19 passed
+- 至此 CI 全绿：8 个 job 无红灯（此前长期为 `Frontend tests` + `Tenant-name denylist` 两项红）
+
 ## [v1.58.1] — 2026-10-16
 
 ### 修复（地址簿折叠态显示被截断成认不出的内容）
