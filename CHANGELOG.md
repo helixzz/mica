@@ -30,6 +30,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - 后端全量 `pytest`：841 passed / 12 skipped / 1 xfailed / 1 xpassed；`ruff check app` 与 `ruff format --check app` 通过
 - 前端 `npm run type-check`、`npm run build`、`vitest run`（82 passed）通过
 
+## [v1.56.1] — 2026-10-16
+
+### 修复（前端镜像构建不可复现，v1.56.0 首次部署被它挡住）
+
+`frontend/Dockerfile` 只 `COPY package.json`，且用 `npm install` —— 构建时**没有 lockfile**，每次都要向 registry 重新解析整棵依赖树。这本来只是"不可复现"，这次直接变成构建失败：`npm install` 在 `node:20-alpine` 自带的 npm 10.8.2 下抛 `Cannot read properties of null (reading 'edgesOut')`，升级流程在 `[3/7] docker compose build` 中止（exit 4），重试稳定复现。
+
+- 改为 `COPY package.json package-lock.json` + `npm ci`：依赖树固定为仓库中的 lockfile，构建可复现
+- 对照实验（同一基础镜像、同一 npm 版本）：`npm ci` 27 秒装好 490 个包，`npm install` 必崩——根因是缺失 lockfile，不是仓库代码
+- 升级中止发生在建镜像阶段：容器未停止、迁移未执行、**服务无中断**（数据库仍在 0058，`health.sh` Overall ✓），失败前的自动备份 `deploy/backups/mica-20261016-161833-*.tar.gz` 保留完好
+
 ## [v1.56.0] — 2026-10-16
 
 ### 新增（用用户身份调用 Mica 的对外 API：Personal Access Token）
