@@ -21,6 +21,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - 超收仍受 `fulfillment.over_receipt_tolerance` 约束（默认 `1`）
 - 批次编辑只允许修改**发货**数量，不再能移动收货量
 - 迁移 `0063` 把已有的批次收货量回填为收货记录，**升级前后聚合值一致**
+- **收货通知**：登记或撤销收货时通知订单创建者、PR 申请人与本公司采购经理（操作者本人除外），开关 `notification.receipt_recorded_enabled`（默认开启）；通知失败不影响收货本身
 
 ### 修复
 

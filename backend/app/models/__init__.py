@@ -1453,6 +1453,9 @@ class NotificationCategory(StrEnum):
     CONTRACT_EXPIRING = "contract_expiring"
     PRICE_ANOMALY = "price_anomaly"
     SYSTEM = "system"
+    # Goods arriving is the requester's news to the procurement side, and the
+    # reverse: it is its own category so it can be muted independently.
+    RECEIPT_RECORDED = "receipt_recorded"
     FEISHU_PR_SUBMITTED = "feishu_pr_submitted"
     FEISHU_APPROVAL_DECIDED = "feishu_approval_decided"
     FEISHU_PO_CREATED = "feishu_po_created"

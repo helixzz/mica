@@ -16,7 +16,7 @@
 1. 能看到该订单的 `requester` 即可收货（不限定申请人本人）；
 2. 收货可随时撤销（记录人本人，或 admin / it_buyer / procurement_mgr），全部写审计；
 3. 不做"实收差异"标记，只记数量；
-4. **未接通知**——`receipt.created` / `receipt.deleted` 只落审计，没有给采购员发通知（与设计稿的默认相反，留作后续）；
+4. **通知已接入**：`receipt.created` / `receipt.deleted` 除审计外，还会通知订单创建者、PR 申请人与本公司采购经理（操作者本人除外），开关 `notification.receipt_recorded_enabled`（默认开启），通知失败不阻塞收货；
 5. 状态中文文案按需求全局替换（见下方"已知影响"）。
 
 验证：后端 **865 passed**（含 12 个收货用例）、`ruff check app` / `ruff format --check app` 通过、迁移 `0063` 在 PostgreSQL 16 上执行通过；前端 `type-check` / `build` 通过、Vitest **96 passed**、i18n 中英 parity 干净。

@@ -1020,6 +1020,70 @@ _RECEIPT_MANAGER_ROLES = frozenset(
 )
 
 
+async def _notify_receipt_event(
+    db: AsyncSession, actor: User, po_id: UUID, *, action: str, summary: str
+) -> None:
+    """Tell the people who care that goods arrived (or that it was undone).
+
+    Receiving is usually the requester's act, so the signal has to travel the
+    other way: to whoever runs the order and to the procurement managers of the
+    same company. Failures never block the receipt itself.
+    """
+    try:
+        from app.db import AsyncSessionLocal
+        from app.models import NotificationCategory
+        from app.services.notifications import create_notification
+        from app.services.system_params import notification_enabled
+
+        async with AsyncSessionLocal() as notif_db:
+            if not await notification_enabled(notif_db, "receipt_recorded"):
+                return
+            po = await notif_db.get(PurchaseOrder, po_id)
+            if po is None:
+                return
+
+            recipients: set[UUID] = set()
+            if po.created_by_id:
+                recipients.add(po.created_by_id)
+            pr = await notif_db.get(PurchaseRequisition, po.pr_id)
+            if pr and pr.requester_id:
+                recipients.add(pr.requester_id)
+            manager_rows = await notif_db.execute(
+                select(User.id).where(
+                    User.role == UserRole.PROCUREMENT_MGR.value,
+                    User.is_active.is_(True),
+                    User.company_id == po.company_id,
+                )
+            )
+            recipients.update(manager_rows.scalars().all())
+            # Whoever just performed the action does not need telling.
+            recipients.discard(actor.id)
+            if not recipients:
+                return
+
+            title = f"PO {po.po_number} {action}"
+            body = (
+                f"**PO**: {po.po_number}\n"
+                f"**PR**: {po.pr_title or '—'}\n"
+                f"{summary}\n"
+                f"**By**: {actor.display_name}"
+            )
+            for user_id in sorted(recipients):
+                await create_notification(
+                    notif_db,
+                    user_id=user_id,
+                    category=NotificationCategory.RECEIPT_RECORDED,
+                    title=title,
+                    body=body,
+                    link_url=f"/purchase-orders/{po_id}",
+                    biz_type="purchase_order",
+                    biz_id=po_id,
+                )
+            await notif_db.commit()
+    except Exception:
+        logger.warning("Failed to send receipt notification for po=%s", po_id, exc_info=True)
+
+
 async def list_receipts(db: AsyncSession, po_id: UUID) -> list[Receipt]:
     rows = await db.execute(
         select(Receipt)
@@ -1100,6 +1164,17 @@ async def create_receipts(
     )
     await db.commit()
 
+    await _notify_receipt_event(
+        db,
+        actor,
+        po_id,
+        action="goods received",
+        summary=(
+            f"**Lines**: {len(created)} | **Qty**: {total_qty}\n"
+            f"**Received at**: {when.strftime('%Y-%m-%d %H:%M')}"
+        ),
+    )
+
     # Re-read with the relation loaded: serialising the ORM objects created
     # above would trigger a lazy load outside the async greenlet context.
     receipt_ids = [receipt.id for receipt in created]
@@ -1121,18 +1196,27 @@ async def delete_receipt(db: AsyncSession, actor: User, receipt_id: UUID) -> Non
         raise HTTPException(403, "insufficient_role")
 
     po_id = receipt.po_id
+    qty_text = str(receipt.qty)
     await _audit_write(
         db,
         actor,
         "receipt.deleted",
         "purchase_order",
         str(po_id),
-        meta={"receipt_id": str(receipt_id), "qty": str(receipt.qty)},
+        meta={"receipt_id": str(receipt_id), "qty": qty_text},
     )
     await db.delete(receipt)
     await db.flush()
     await recompute_po_receipt(db, po_id)
     await db.commit()
+
+    await _notify_receipt_event(
+        db,
+        actor,
+        po_id,
+        action="receipt revoked",
+        summary=f"**Qty**: {qty_text}",
+    )
 
 
 async def _apply_shipment_item_quantities(
