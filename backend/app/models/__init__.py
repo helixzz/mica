@@ -383,6 +383,11 @@ class Supplier(Base, TimestampMixin):
     payee_name: Mapped[str | None] = mapped_column(String(255))
     payee_bank: Mapped[str | None] = mapped_column(String(255))
     payee_bank_account: Mapped[str | None] = mapped_column(String(64))
+    # "先票" (invoice before payment) or "后票". A default per supplier, overridable
+    # per payment execution.
+    default_invoice_timing: Mapped[str] = mapped_column(
+        String(16), default="postpaid", nullable=False
+    )
     notes: Mapped[str | None] = mapped_column(Text)
     access_token: Mapped[str | None] = mapped_column(String(64), unique=True)
     token_expires_at: Mapped[datetime | None] = mapped_column(
@@ -998,6 +1003,13 @@ class PaymentRecord(Base, TimestampMixin):
         String(32), default=PaymentStatus.PENDING.value, nullable=False
     )
     notes: Mapped[str | None] = mapped_column(Text)
+    # 先票 / 后票, plus the invoice that backs a 先票 payment and the deadline
+    # for a 后票 one to catch up.
+    invoice_timing: Mapped[str | None] = mapped_column(String(16))
+    invoice_due_date: Mapped[date | None] = mapped_column(Date)
+    invoice_id: Mapped[UUID | None] = mapped_column(
+        PGUUID(as_uuid=True), ForeignKey("invoices.id", ondelete="SET NULL")
+    )
     schedule_item_id: Mapped[UUID | None] = mapped_column(
         PGUUID(as_uuid=True),
         ForeignKey("payment_schedules.id", ondelete="SET NULL"),

@@ -108,6 +108,7 @@ async def execute_contract_schedule_item(
         transaction_ref=body.transaction_ref,
         invoice_id=body.invoice_id,
         amount_override=body.amount,
+        invoice_timing=body.invoice_timing,
         contract_id=contract_id,
     )
     await db.commit()
@@ -208,6 +209,7 @@ async def execute_po_schedule_item(
         transaction_ref=body.transaction_ref,
         invoice_id=body.invoice_id,
         amount_override=body.amount,
+        invoice_timing=body.invoice_timing,
         po_id=po_id,
     )
     await db.commit()

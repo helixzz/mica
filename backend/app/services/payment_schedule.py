@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
-from datetime import date
+from datetime import date, timedelta
 from decimal import Decimal
 from uuid import UUID
 
@@ -23,7 +23,9 @@ from app.models import (
     POStatus,
     PurchaseOrder,
     ScheduleItemStatus,
+    Supplier,
 )
+from app.services.system_params import system_params
 
 
 @dataclass(frozen=True)
@@ -289,6 +291,7 @@ async def execute_schedule_item(
     *,
     contract_id: UUID | None = None,
     po_id: UUID | None = None,
+    invoice_timing: str | None = None,
 ) -> PaymentSchedule:
     parent = await _resolve_parent(db, contract_id=contract_id, po_id=po_id)
 
@@ -311,6 +314,21 @@ async def execute_schedule_item(
     ).scalar_one()
 
     pay_amount = amount_override if amount_override is not None else item.planned_amount
+
+    # 先票 / 后票: the supplier's habit by default, overridable per execution.
+    supplier_timing = (
+        await db.execute(
+            select(Supplier.default_invoice_timing).where(Supplier.id == po.supplier_id)
+        )
+    ).scalar_one_or_none() or "postpaid"
+    resolved_timing = invoice_timing or supplier_timing
+    if resolved_timing == "prepaid" and invoice_id is None:
+        # Chosen deliberately over the supplier default, so insisting is fair.
+        raise HTTPException(409, "payment.invoice_required")
+    invoice_due_date = None
+    if resolved_timing == "postpaid":
+        grace_days = await system_params.get_int_or(db, "payment.invoice_grace_days", 30)
+        invoice_due_date = date.today() + timedelta(days=grace_days)
 
     prefix = f"PAY-{parent.number}-"
     existing_numbers = await db.scalars(
@@ -341,6 +359,9 @@ async def execute_schedule_item(
         transaction_ref=transaction_ref,
         status=PaymentStatus.CONFIRMED.value,
         schedule_item_id=item.id,
+        invoice_timing=resolved_timing,
+        invoice_id=invoice_id,
+        invoice_due_date=invoice_due_date,
     )
     db.add(payment)
 
