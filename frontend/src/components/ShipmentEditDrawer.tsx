@@ -122,7 +122,6 @@ export function ShipmentEditDrawer({ shipment, open, onClose, onSaved }: Props) 
         items: qtyLines.map((line) => ({
           shipment_item_id: line.shipment_item_id,
           qty_shipped: line.qty_shipped,
-          qty_received: line.qty_received,
         })),
       })
       void message.success(t('shipment.updated'))
@@ -241,24 +240,13 @@ export function ShipmentEditDrawer({ shipment, open, onClose, onSaved }: Props) 
                 ),
               },
               {
+                // Derived from receipts: what this batch has actually been
+                // accepted for. Editable only by recording or revoking a
+                // receipt, not from the batch form.
                 title: t('field.qty_received'),
                 width: 110,
-                render: (_: unknown, r: QtyLine) => (
-                  <InputNumber
-                    min={0}
-                    value={r.qty_received}
-                    style={{ width: '100%' }}
-                    onChange={(value) =>
-                      setQtyLines((lines) =>
-                        lines.map((line) =>
-                          line.shipment_item_id === r.shipment_item_id
-                            ? { ...line, qty_received: Number(value ?? 0) }
-                            : line
-                        )
-                      )
-                    }
-                  />
-                ),
+                align: 'right',
+                render: (_: unknown, r: QtyLine) => fmtQtyNode(r.qty_received),
               },
             ]}
           />

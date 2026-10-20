@@ -6,6 +6,7 @@ from uuid import uuid4
 import pytest
 from fastapi import HTTPException
 from sqlalchemy import select
+from sqlalchemy.orm import selectinload
 
 from app.db import new_uuid
 from app.models import (
@@ -18,6 +19,7 @@ from app.models import (
     PurchaseOrder,
     PurchaseRequisition,
     ScheduleItemStatus,
+    Shipment,
     Supplier,
     User,
 )
@@ -690,7 +692,8 @@ async def test_delete_contract_removes_contract_and_versions(seeded_db_session):
     assert remaining is None
 
 
-async def test_create_shipment_creates_items_and_updates_po_partially_received(seeded_db_session):
+async def test_create_shipment_creates_items_and_moves_po_to_shipped(seeded_db_session):
+    """Shipping is not receiving: a batch moves the order to `shipped` only."""
     db = seeded_db_session
     user, _supplier, _pr, po = await _create_confirmed_po(db)
 
@@ -702,7 +705,6 @@ async def test_create_shipment_creates_items_and_updates_po_partially_received(s
             {
                 "po_item_id": po.items[0].id,
                 "qty_shipped": Decimal("3"),
-                "qty_received": Decimal("2"),
             },
             {"po_item_id": po.items[1].id, "qty_shipped": Decimal("1")},
         ],
@@ -717,15 +719,17 @@ async def test_create_shipment_creates_items_and_updates_po_partially_received(s
     assert shipment.is_default is True
     assert shipment.status == "in_transit"
     assert len(shipment.items) == 2
-    assert shipment.items[0].qty_received == Decimal("2")
-    assert shipment.items[1].qty_received == Decimal("1")
-    assert refreshed_po.items[0].qty_received == Decimal("2")
-    assert refreshed_po.items[1].qty_received == Decimal("1")
-    assert refreshed_po.qty_received == Decimal("3")
-    assert refreshed_po.status == "partially_received"
+    assert shipment.items[0].qty_shipped == Decimal("3.0000")
+    # Nothing has been accepted yet, so no line counts as received.
+    assert shipment.items[0].qty_received == Decimal("0.0000")
+    assert refreshed_po.items[0].qty_received == Decimal("0")
+    assert refreshed_po.items[1].qty_received == Decimal("0")
+    assert refreshed_po.qty_received == Decimal("0")
+    assert refreshed_po.status == "shipped"
 
 
-async def test_create_shipment_marks_po_fully_received_when_complete(seeded_db_session):
+async def test_receipts_take_po_from_shipped_to_received(seeded_db_session):
+    """The full path: ship everything, then accept it in two passes."""
     db = seeded_db_session
     user, _supplier, _pr, po = await _create_confirmed_po(db)
 
@@ -739,11 +743,35 @@ async def test_create_shipment_marks_po_fully_received_when_complete(seeded_db_s
         ],
         actual_date=date(2026, 4, 11),
     )
-
-    refreshed_po = await purchase_svc.get_po(db, po.id)
     assert shipment.status == "arrived"
-    assert refreshed_po.qty_received == Decimal("10")
-    assert refreshed_po.status == "fully_received"
+    shipped_po = await purchase_svc.get_po(db, po.id)
+    assert shipped_po.status == "shipped"
+    assert shipped_po.qty_received == Decimal("0")
+
+    # First pass: part of the first line only.
+    await flow_svc.create_receipts(
+        db,
+        user,
+        po.id,
+        [{"po_item_id": po.items[0].id, "qty": Decimal("2"), "shipment_id": shipment.id}],
+    )
+    partial_po = await purchase_svc.get_po(db, po.id)
+    assert partial_po.status == "partially_received"
+    assert partial_po.items[0].qty_received == Decimal("2")
+
+    # Second pass: the rest of line 1 and all of line 2.
+    await flow_svc.create_receipts(
+        db,
+        user,
+        po.id,
+        [
+            {"po_item_id": po.items[0].id, "qty": Decimal("4")},
+            {"po_item_id": po.items[1].id, "qty": Decimal("4")},
+        ],
+    )
+    done_po = await purchase_svc.get_po(db, po.id)
+    assert done_po.status == "fully_received"
+    assert done_po.qty_received == Decimal("10")
 
 
 async def test_create_shipment_increments_batch_number(seeded_db_session):
@@ -1411,7 +1439,6 @@ async def test_create_shipment_success(seeded_db_session):
             {
                 "po_item_id": po.items[0].id,
                 "qty_shipped": Decimal("2"),
-                "qty_received": Decimal("1"),
             }
         ],
         carrier="SF Express",
@@ -1428,9 +1455,9 @@ async def test_create_shipment_success(seeded_db_session):
     assert len(shipment.items) == 1
     assert shipment.items[0].po_item_id == po.items[0].id
     assert shipment.items[0].qty_shipped == Decimal("2.0000")
-    assert shipment.items[0].qty_received == Decimal("1.0000")
+    assert shipment.items[0].qty_received == Decimal("0.0000")
     await db.refresh(po.items[0])
-    assert po.items[0].qty_received == Decimal("1.0000")
+    assert po.items[0].qty_received == Decimal("0.0000")
 
 
 async def test_update_shipment_changes_status_carrier_tracking(seeded_db_session):
@@ -1545,195 +1572,224 @@ async def test_confirm_payment_changes_status(seeded_db_session):
     assert po.amount_paid == Decimal("300.0000")
 
 
-# ── shipment quantity corrections (v1.58.3) ──────────────────────────────────
-# Receipts used to be increment-only: deleting a batch never gave its quantities
-# back, and the line quantities were not editable at all. Correcting a mistyped
-# batch therefore meant delete + re-create, which counted the same goods twice
-# (reported as "200% received" on PO-2026-0080).
+# ── receipts: receiving as its own act (v1.58.4) ─────────────────────────────
+# Receiving used to be folded into the batch (qty_received lived on ShipmentItem
+# and the buyer filled it). It now has its own rows, so a line can be accepted in
+# several passes and editing a batch can no longer move the received total.
 
 
-async def test_delete_shipment_gives_back_received_quantities(seeded_db_session):
+async def test_receipt_can_be_recorded_in_several_passes(seeded_db_session):
+    db = seeded_db_session
+    user, _supplier, _pr, po = await _create_confirmed_po(db)
+
+    first = await flow_svc.create_receipts(
+        db, user, po.id, [{"po_item_id": po.items[0].id, "qty": Decimal("2")}]
+    )
+    second = await flow_svc.create_receipts(
+        db, user, po.id, [{"po_item_id": po.items[0].id, "qty": Decimal("3")}]
+    )
+
+    assert len(first) == 1
+    assert len(second) == 1
+    after = await purchase_svc.get_po(db, po.id)
+    assert after.items[0].qty_received == Decimal("5")
+    assert after.status == "partially_received"
+    assert len(await flow_svc.list_receipts(db, po.id)) == 2
+
+
+async def test_delete_receipt_rolls_po_back(seeded_db_session):
+    db = seeded_db_session
+    user, _supplier, _pr, po = await _create_confirmed_po(db)
+
+    receipts = await flow_svc.create_receipts(
+        db, user, po.id, [{"po_item_id": po.items[0].id, "qty": Decimal("2")}]
+    )
+    assert (await purchase_svc.get_po(db, po.id)).status == "partially_received"
+
+    await flow_svc.delete_receipt(db, user, receipts[0].id)
+
+    after = await purchase_svc.get_po(db, po.id)
+    assert after.items[0].qty_received == Decimal("0")
+    # No receipts and no batch: back to the pre-shipment state.
+    assert after.status == "confirmed"
+
+
+async def test_deleting_a_batch_keeps_its_receipts(seeded_db_session):
+    """Removing a batch must not erase the fact that goods were accepted."""
     db = seeded_db_session
     user, _supplier, _pr, po = await _create_confirmed_po(db)
 
     shipment = await flow_svc.create_shipment(
+        db, user, po.id, items_in=[{"po_item_id": po.items[0].id, "qty_shipped": Decimal("3")}]
+    )
+    await flow_svc.create_receipts(
         db,
         user,
         po.id,
-        items_in=[
-            {"po_item_id": po.items[0].id, "qty_shipped": Decimal("6")},
-            {"po_item_id": po.items[1].id, "qty_shipped": Decimal("4")},
-        ],
+        [{"po_item_id": po.items[0].id, "qty": Decimal("3"), "shipment_id": shipment.id}],
     )
-    received = await purchase_svc.get_po(db, po.id)
-    assert received.qty_received == Decimal("10")
+    assert (await purchase_svc.get_po(db, po.id)).items[0].qty_received == Decimal("3")
 
     await flow_svc.delete_shipment(db, user, shipment.id)
 
     after = await purchase_svc.get_po(db, po.id)
-    assert after.qty_received == Decimal("0")
-    assert after.items[0].qty_received == Decimal("0")
-    assert after.items[1].qty_received == Decimal("0")
-    # With every batch gone the PO must stop claiming it was received.
-    assert after.status == "confirmed"
-
-
-async def test_delete_then_recreate_does_not_double_count(seeded_db_session):
-    """The reported flow: wrong batch → delete → corrected batch → not 200%."""
-    db = seeded_db_session
-    user, _supplier, _pr, po = await _create_confirmed_po(db)
-
-    wrong = await flow_svc.create_shipment(
-        db,
-        user,
-        po.id,
-        items_in=[
-            {"po_item_id": po.items[0].id, "qty_shipped": Decimal("6")},
-            {"po_item_id": po.items[1].id, "qty_shipped": Decimal("4")},
-        ],
-    )
-    await flow_svc.delete_shipment(db, user, wrong.id)
-    await flow_svc.create_shipment(
-        db,
-        user,
-        po.id,
-        items_in=[
-            {"po_item_id": po.items[0].id, "qty_shipped": Decimal("3")},
-            {"po_item_id": po.items[1].id, "qty_shipped": Decimal("2")},
-        ],
-    )
-
-    after = await purchase_svc.get_po(db, po.id)
-    assert after.qty_received == Decimal("5")  # not 15
     assert after.items[0].qty_received == Decimal("3")
-    assert after.status == "partially_received"
+    receipts = await flow_svc.list_receipts(db, po.id)
+    assert receipts[0].shipment_id is None
 
 
-async def test_update_shipment_can_correct_received_quantity(seeded_db_session):
-    """Correction in place, instead of the delete-and-recreate workaround."""
+async def test_batch_quantity_edit_does_not_move_received_total(seeded_db_session):
+    """The batch edit path only touches what was shipped."""
     db = seeded_db_session
     user, _supplier, _pr, po = await _create_confirmed_po(db)
 
     shipment = await flow_svc.create_shipment(
+        db, user, po.id, items_in=[{"po_item_id": po.items[0].id, "qty_shipped": Decimal("6")}]
+    )
+    await flow_svc.create_receipts(
         db,
         user,
         po.id,
-        items_in=[{"po_item_id": po.items[0].id, "qty_shipped": Decimal("6")}],
-    )
-    item_id = shipment.items[0].id
-
-    updated = await flow_svc.update_shipment(
-        db,
-        user,
-        shipment.id,
-        ShipmentUpdate(
-            items=[ShipmentItemQtyIn(shipment_item_id=item_id, qty_received=Decimal("2"))]
-        ),
-    )
-
-    assert updated.items[0].qty_received == Decimal("2")
-    after = await purchase_svc.get_po(db, po.id)
-    assert after.items[0].qty_received == Decimal("2")
-    assert after.qty_received == Decimal("2")
-    assert after.status == "partially_received"
-
-
-async def test_update_shipment_keeps_other_batches(seeded_db_session):
-    """Recompute must sum every batch, not just the one being edited."""
-    db = seeded_db_session
-    user, _supplier, _pr, po = await _create_confirmed_po(db)
-
-    first = await flow_svc.create_shipment(
-        db,
-        user,
-        po.id,
-        items_in=[{"po_item_id": po.items[0].id, "qty_shipped": Decimal("2")}],
-    )
-    await flow_svc.create_shipment(
-        db,
-        user,
-        po.id,
-        items_in=[{"po_item_id": po.items[0].id, "qty_shipped": Decimal("3")}],
+        [{"po_item_id": po.items[0].id, "qty": Decimal("2"), "shipment_id": shipment.id}],
     )
 
     await flow_svc.update_shipment(
         db,
         user,
-        first.id,
+        shipment.id,
         ShipmentUpdate(
-            items=[ShipmentItemQtyIn(shipment_item_id=first.items[0].id, qty_received=Decimal("1"))]
+            items=[
+                ShipmentItemQtyIn(shipment_item_id=shipment.items[0].id, qty_shipped=Decimal("1"))
+            ]
         ),
     )
 
+    refreshed = (
+        await db.execute(
+            select(Shipment).where(Shipment.id == shipment.id).options(selectinload(Shipment.items))
+        )
+    ).scalar_one()
+    assert refreshed.items[0].qty_shipped == Decimal("1")
     after = await purchase_svc.get_po(db, po.id)
-    assert after.items[0].qty_received == Decimal("4")  # 1 + 3, not 1
+    assert after.items[0].qty_received == Decimal("2")  # untouched
 
 
-async def test_create_shipment_rejects_over_receipt(seeded_db_session):
-    """A line may not receive more than ordered (tolerance defaults to 1)."""
+async def test_batch_cache_shows_what_that_batch_contributed(seeded_db_session):
     db = seeded_db_session
     user, _supplier, _pr, po = await _create_confirmed_po(db)
 
+    first = await flow_svc.create_shipment(
+        db, user, po.id, items_in=[{"po_item_id": po.items[0].id, "qty_shipped": Decimal("3")}]
+    )
+    second = await flow_svc.create_shipment(
+        db, user, po.id, items_in=[{"po_item_id": po.items[0].id, "qty_shipped": Decimal("3")}]
+    )
+    await flow_svc.create_receipts(
+        db,
+        user,
+        po.id,
+        [{"po_item_id": po.items[0].id, "qty": Decimal("1"), "shipment_id": first.id}],
+    )
+    await flow_svc.create_receipts(
+        db,
+        user,
+        po.id,
+        [{"po_item_id": po.items[0].id, "qty": Decimal("2"), "shipment_id": second.id}],
+    )
+
+    rows = (
+        (
+            await db.execute(
+                select(Shipment)
+                .where(Shipment.id.in_([first.id, second.id]))
+                .options(selectinload(Shipment.items))
+            )
+        )
+        .scalars()
+        .all()
+    )
+    by_id = {s.id: s.items[0].qty_received for s in rows}
+    assert by_id[first.id] == Decimal("1")
+    assert by_id[second.id] == Decimal("2")
+    assert (await purchase_svc.get_po(db, po.id)).items[0].qty_received == Decimal("3")
+
+
+async def test_create_receipt_rejects_over_receipt(seeded_db_session):
+    """Receiving into a line may not exceed ordered qty x tolerance."""
+    db = seeded_db_session
+    user, _supplier, _pr, po = await _create_confirmed_po(db)
+
+    await flow_svc.create_receipts(
+        db, user, po.id, [{"po_item_id": po.items[0].id, "qty": Decimal("5")}]
+    )
+
     with pytest.raises(HTTPException) as excinfo:
-        await flow_svc.create_shipment(
-            db,
-            user,
-            po.id,
-            items_in=[{"po_item_id": po.items[0].id, "qty_shipped": Decimal("7")}],
+        # 5 + 2 > 6 ordered
+        await flow_svc.create_receipts(
+            db, user, po.id, [{"po_item_id": po.items[0].id, "qty": Decimal("2")}]
         )
 
     assert excinfo.value.status_code == 409
     assert "over_receipt" in str(excinfo.value.detail)
 
 
-async def test_update_shipment_rejects_over_receipt(seeded_db_session):
-    """Editing a quantity is held to the same ceiling as creating a batch."""
+async def test_create_receipt_rejects_terminal_po(seeded_db_session):
     db = seeded_db_session
     user, _supplier, _pr, po = await _create_confirmed_po(db)
-
-    shipment = await flow_svc.create_shipment(
-        db,
-        user,
-        po.id,
-        items_in=[{"po_item_id": po.items[0].id, "qty_shipped": Decimal("2")}],
-    )
+    po.status = "cancelled"
+    await db.commit()
 
     with pytest.raises(HTTPException) as excinfo:
-        await flow_svc.update_shipment(
-            db,
-            user,
-            shipment.id,
-            ShipmentUpdate(
-                items=[
-                    ShipmentItemQtyIn(
-                        shipment_item_id=shipment.items[0].id, qty_received=Decimal("7")
-                    )
-                ]
-            ),
+        await flow_svc.create_receipts(
+            db, user, po.id, [{"po_item_id": po.items[0].id, "qty": Decimal("1")}]
         )
 
     assert excinfo.value.status_code == 409
+    assert "receipt.po_not_receivable" in str(excinfo.value.detail)
 
 
-async def test_recompute_po_receipt_ignores_deleted_shipments(seeded_db_session):
-    """The recompute reads shipment rows, so a stale aggregate cannot survive."""
+async def test_create_receipt_rejects_non_positive_qty(seeded_db_session):
     db = seeded_db_session
     user, _supplier, _pr, po = await _create_confirmed_po(db)
 
-    shipment = await flow_svc.create_shipment(
-        db,
-        user,
-        po.id,
-        items_in=[{"po_item_id": po.items[0].id, "qty_shipped": Decimal("6")}],
+    with pytest.raises(HTTPException) as excinfo:
+        await flow_svc.create_receipts(
+            db, user, po.id, [{"po_item_id": po.items[0].id, "qty": Decimal("0")}]
+        )
+
+    assert excinfo.value.status_code == 422
+
+
+async def test_delete_receipt_needs_owner_or_manager(seeded_db_session):
+    """Someone else's receipt is not another requester's to undo."""
+    db = seeded_db_session
+    owner = await _get_user(db, "alice")
+    other = await _get_user(db, "bob")
+    _u, _supplier, _pr, po = await _create_confirmed_po(db, username="alice")
+
+    receipts = await flow_svc.create_receipts(
+        db, owner, po.id, [{"po_item_id": po.items[0].id, "qty": Decimal("1")}]
     )
-    # Simulate the corruption the old path could leave behind.
-    po.items[0].qty_received = Decimal("99")
-    po.qty_received = Decimal("99")
+
+    with pytest.raises(HTTPException) as excinfo:
+        await flow_svc.delete_receipt(db, other, receipts[0].id)
+
+    assert excinfo.value.status_code == 403
+    assert (await purchase_svc.get_po(db, po.id)).items[0].qty_received == Decimal("1")
+
+
+async def test_terminal_states_survive_recompute(seeded_db_session):
+    """A cancelled order with a leftover batch must stay cancelled."""
+    db = seeded_db_session
+    user, _supplier, _pr, po = await _create_confirmed_po(db)
+
+    await flow_svc.create_shipment(
+        db, user, po.id, items_in=[{"po_item_id": po.items[0].id, "qty_shipped": Decimal("3")}]
+    )
+    po.status = "cancelled"
+    await db.commit()
+    await flow_svc.recompute_po_receipt(db, po.id)
     await db.commit()
 
-    await flow_svc.delete_shipment(db, user, shipment.id)
-    await flow_svc.recompute_po_receipt(db, po.id)
-
     after = await purchase_svc.get_po(db, po.id)
-    assert after.items[0].qty_received == Decimal("0")
-    assert after.qty_received == Decimal("0")
+    assert after.status == "cancelled"

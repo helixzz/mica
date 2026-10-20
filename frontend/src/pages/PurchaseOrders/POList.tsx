@@ -26,6 +26,7 @@ const PO_STATUSES = [
 const poStatusStateClass: Record<string, string> = {
   draft: 'tag-state tag-state--neutral',
   confirmed: 'tag-state tag-state--success',
+  shipped: 'tag-state tag-state--info',
   partially_received: 'tag-state tag-state--progress',
   fully_received: 'tag-state tag-state--success',
   closed: 'tag-state tag-state--neutral',

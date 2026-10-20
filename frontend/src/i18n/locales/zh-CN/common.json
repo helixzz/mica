@@ -96,6 +96,7 @@
     "bulk_created": "已创建 {{count}} 个交货计划"
   },
   "nav": {
+    "receipts": "收货",
     "dashboard": "仪表盘",
     "purchase_requisitions": "采购申请",
     "purchase_orders": "采购订单",
@@ -113,6 +114,8 @@
     "api_tokens": "API 令牌"
   },
   "button": {
+    "confirm_receipt": "确认收货",
+    "revoke": "撤销",
     "submit": "提交",
     "save": "保存",
     "cancel": "取消",
@@ -171,6 +174,10 @@
     "shared_badge": "共享"
   },
   "field": {
+    "date": "日期",
+    "qty_recv": "收货数量",
+    "qty_pending": "待收数量",
+    "received_by": "收货人",
     "username": "用户名",
     "password": "密码",
     "email": "邮箱",
@@ -266,15 +273,16 @@
     "cancelled": "已取消",
     "partially_converted": "部分生成订单",
     "converted": "已生成订单",
-    "confirmed": "已确认",
+    "confirmed": "待发货",
+    "shipped": "已发货",
     "closed": "已关闭",
     "pending": "待处理",
     "in_transit": "在途",
     "arrived": "已到货",
     "accepted": "已验收",
     "partially_accepted": "部分验收",
-    "partially_received": "部分到货",
-    "fully_received": "完全到货",
+    "partially_received": "部分收货",
+    "fully_received": "已完成",
     "verified": "已核对",
     "paid": "已支付",
     "pending_match": "待匹配",
@@ -719,6 +727,17 @@
     "deleted": "供应商已删除",
     "updated": "供应商已更新",
     "status": "状态"
+  },
+  "receipt": {
+    "title": "确认收货",
+    "help": "收货是申请人的动作：到了多少就登记多少，可以分多次。",
+    "modal_help": "填写本次实际收到的数量；还没到的行留 0，下次到货再登记。",
+    "fill_remaining": "全部填入待收数量",
+    "empty": "暂无收货记录",
+    "need_qty": "请至少填写一行的收货数量",
+    "recorded": "收货已登记",
+    "revoked": "收货记录已撤销",
+    "confirm_revoke": "撤销这条收货记录？该订单的收货量会随之回退。"
   },
   "shipment": {
     "new": "新增交货批次",

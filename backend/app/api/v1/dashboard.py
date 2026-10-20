@@ -438,6 +438,7 @@ async def invoice_match_summary(
             PurchaseOrder.status.in_(
                 [
                     POStatus.CONFIRMED.value,
+                    POStatus.SHIPPED.value,
                     POStatus.PARTIALLY_RECEIVED.value,
                     POStatus.FULLY_RECEIVED.value,
                 ]

@@ -230,11 +230,34 @@ async def test_patch_shipment_accepts_line_quantities(seeded_client):
 
 @pytest.mark.asyncio
 async def test_patch_shipment_rejects_negative_quantities(seeded_client):
+    """Only the shipped side is editable here — and it still refuses negatives."""
     auth = await _login_as(seeded_client, "admin")
 
     r = await seeded_client.patch(
         f"/api/v1/shipments/{uuid4()}",
         headers=auth,
-        json={"items": [{"shipment_item_id": str(uuid4()), "qty_received": "-1"}]},
+        json={"items": [{"shipment_item_id": str(uuid4()), "qty_shipped": "-1"}]},
+    )
+    assert r.status_code == 422, r.text
+
+
+@pytest.mark.asyncio
+async def test_receipts_endpoint_requires_authentication(seeded_client):
+    """Receiving is the requester's act, but never an anonymous one."""
+    r = await seeded_client.post(
+        f"/api/v1/purchase-orders/{uuid4()}/receipts",
+        json={"items": [{"po_item_id": str(uuid4()), "qty": "1"}]},
+    )
+    assert r.status_code == 401, r.text
+
+
+@pytest.mark.asyncio
+async def test_receipts_reject_negative_quantity_payload(seeded_client):
+    auth = await _login_as(seeded_client, "admin")
+
+    r = await seeded_client.post(
+        f"/api/v1/purchase-orders/{uuid4()}/receipts",
+        headers=auth,
+        json={"items": [{"po_item_id": str(uuid4()), "qty": "-1"}]},
     )
     assert r.status_code == 422, r.text

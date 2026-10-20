@@ -7,6 +7,7 @@ import {
   DollarOutlined, 
   CalendarOutlined, 
   AlertOutlined, 
+  InboxOutlined,
   NotificationOutlined,
   SettingOutlined
 } from '@ant-design/icons';
@@ -34,6 +35,8 @@ export const getCategoryIconAndColor = (category: string, token: any) => {
       return { icon: <CalendarOutlined />, color: token.colorWarning };
     case 'price_anomaly':
       return { icon: <AlertOutlined />, color: token.colorError };
+    case 'receipt_recorded':
+      return { icon: <InboxOutlined />, color: token.colorSuccess };
     case 'FEISHU_PR_SUBMITTED':
     case 'FEISHU_APPROVAL_DECIDED':
     case 'FEISHU_PO_CREATED':

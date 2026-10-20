@@ -272,6 +272,8 @@ async def workflow_kanban(
             PurchaseOrder.status.in_(
                 [
                     POStatus.CONFIRMED.value,
+                    # Shipped but not yet received is precisely "awaiting".
+                    POStatus.SHIPPED.value,
                     POStatus.PARTIALLY_RECEIVED.value,
                 ]
             )
