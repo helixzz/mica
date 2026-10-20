@@ -174,6 +174,7 @@
     "shared_badge": "Shared"
   },
   "field": {
+    "invoice_amount": "Invoice amount",
     "date": "Date",
     "qty_recv": "Received",
     "qty_pending": "Outstanding",

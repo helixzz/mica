@@ -115,7 +115,6 @@ export function PaymentScheduleTab({
     received: number
     ordered: number
   } | null>(null)
-  const [supplierId, setSupplierId] = useState<string | null>(null)
   const [executing, setExecuting] = useState<PaymentScheduleItem | null>(null)
 
   useEffect(() => {
@@ -126,7 +125,6 @@ export function PaymentScheduleTab({
           const po = await api.getPO(poId)
           if (cancelled) return
           setBaseAmount(Number(po.total_amount || 0))
-          setSupplierId(po.supplier_id ?? null)
           const ordered = (po.items || []).reduce((sum, item) => sum + Number(item.qty || 0), 0)
           setReceiptProgress({ received: Number(po.qty_received || 0), ordered })
         } else if (contractId) {
@@ -235,16 +233,56 @@ export function PaymentScheduleTab({
 
   const submitExecution = async ({
     invoice_timing,
-    invoice_id,
+    file,
+    invoice_number,
+    invoice_date,
+    amount,
   }: {
     invoice_timing: InvoiceTiming
-    invoice_id: string | null
+    file: File | null
+    invoice_number?: string
+    invoice_date?: string
+    amount?: number
   }) => {
     if (!executing) return
+
+    let invoiceId: string | undefined
+    if (invoice_timing === 'prepaid' && file) {
+      // A schedule can hang off an order or off a contract, and only the contract
+      // carries its own supplier — resolving here covers both, which is exactly
+      // what a preloaded value got wrong.
+      let supplierId: string | null | undefined
+      if (contractId) {
+        supplierId = (await api.getContract(contractId)).supplier_id
+      } else if (poId) {
+        supplierId = (await api.getPO(poId)).supplier_id
+      }
+      if (!supplierId) {
+        throw new Error(t('pay.supplier_missing'))
+      }
+
+      const document = await api.uploadDocument(file, 'invoice')
+      const created = await api.createInvoice({
+        supplier_id: supplierId,
+        invoice_number: invoice_number ?? '',
+        invoice_date: invoice_date ?? new Date().toISOString().slice(0, 10),
+        attachment_document_ids: [document.id],
+        lines: [
+          {
+            line_type: 'note',
+            item_name: executing.label || t('pay.execution_line'),
+            qty: 1,
+            unit_price: amount ?? Number(executing.planned_amount),
+          },
+        ],
+      })
+      invoiceId = created.invoice.id
+    }
+
     const payload = {
       payment_method: 'bank_transfer',
       invoice_timing,
-      invoice_id: invoice_id ?? undefined,
+      invoice_id: invoiceId,
     }
     if (contractId) {
       await api.executeScheduleItem(contractId, executing.installment_no, payload)
@@ -499,7 +537,6 @@ export function PaymentScheduleTab({
         open={executing !== null}
         item={executing}
         currency={currency}
-        supplierId={supplierId}
         defaultTiming="postpaid"
         onCancel={() => setExecuting(null)}
         onSubmit={submitExecution}
