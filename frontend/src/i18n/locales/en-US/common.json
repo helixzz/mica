@@ -1756,5 +1756,25 @@
     "kind_new": "New",
     "kind_fix": "Fix",
     "kind_improvement": "Improved"
+  },
+  "pay": {
+    "execute_title": "Execute payment: {{name}}",
+    "execute_amount": "Amount: {{amount}}",
+    "execute_ok": "Execute",
+    "invoice_timing": "Invoice timing",
+    "timing_prepaid": "Invoice first",
+    "timing_postpaid": "Invoice later",
+    "prepaid_help": "Invoice first: upload it below. It is filed on the invoice page automatically.",
+    "postpaid_help": "Invoice later: recorded as owed, due within 30 days by default. Upload it from the payment list.",
+    "invoice_file": "Invoice file",
+    "invoice_upload": "Upload invoice (PDF / image)",
+    "invoice_file_required": "An invoice is required when paying before invoice",
+    "supplier_missing": "Supplier missing — cannot file the invoice",
+    "execution_line": "Payment invoice",
+    "outstanding_invoice": "Invoice owed",
+    "invoice_settled": "Invoiced",
+    "invoice_due_in": "{{days}} days left",
+    "invoice_overdue": "{{days}} days overdue",
+    "attach_invoice": "Attach invoice"
   }
 }

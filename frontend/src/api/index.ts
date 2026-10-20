@@ -401,6 +401,9 @@ export interface PaymentRecord {
   payment_date: string | null
   payment_method: string
   transaction_ref: string | null
+  invoice_timing?: string | null
+  invoice_id?: string | null
+  invoice_due_date?: string | null
   status: string
   notes: string | null
   created_at: string
@@ -1799,6 +1802,12 @@ export const api = {
     const { data } = await client.post<Receipt[]>(`/purchase-orders/${poId}/receipts`, payload)
     return data
   },
+  async attachPaymentInvoice(paymentId: string, invoiceId: string): Promise<PaymentRecord> {
+    const { data } = await client.patch<PaymentRecord>(`/payments/${paymentId}/invoice`, {
+      invoice_id: invoiceId,
+    })
+    return data
+  },
   async deleteReceipt(receiptId: string): Promise<void> {
     await client.delete(`/receipts/${receiptId}`)
   },
@@ -2238,7 +2247,13 @@ export const api = {
   async executeScheduleItem(
     contractId: string,
     installmentNo: number,
-    body: { payment_method: string; transaction_ref?: string; invoice_id?: string; amount?: number },
+    body: {
+      payment_method: string
+      transaction_ref?: string
+      invoice_id?: string
+      amount?: number
+      invoice_timing?: 'prepaid' | 'postpaid'
+    },
   ): Promise<PaymentScheduleItem> {
     const { data } = await client.post<PaymentScheduleItem>(
       `/contracts/${contractId}/payment-schedule/${installmentNo}/execute`,
@@ -2285,7 +2300,13 @@ export const api = {
   async executePOScheduleItem(
     poId: string,
     installmentNo: number,
-    body: { payment_method: string; transaction_ref?: string; invoice_id?: string; amount?: number },
+    body: {
+      payment_method: string
+      transaction_ref?: string
+      invoice_id?: string
+      amount?: number
+      invoice_timing?: 'prepaid' | 'postpaid'
+    },
   ): Promise<PaymentScheduleItem> {
     const { data } = await client.post<PaymentScheduleItem>(
       `/purchase-orders/${poId}/payment-schedule/${installmentNo}/execute`,

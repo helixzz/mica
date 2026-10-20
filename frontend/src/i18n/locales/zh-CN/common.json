@@ -1768,5 +1768,25 @@
     "kind_new": "新增",
     "kind_fix": "修复",
     "kind_improvement": "优化"
+  },
+  "pay": {
+    "execute_title": "执行付款：{{name}}",
+    "execute_amount": "本次执行金额 {{amount}}",
+    "execute_ok": "确认执行",
+    "invoice_timing": "票据时点",
+    "timing_prepaid": "先票（付款前开票）",
+    "timing_postpaid": "后票（付款后补票）",
+    "prepaid_help": "先票必须在下方上传发票；发票会自动归档到发票页面。",
+    "postpaid_help": "后票会记为待补票，默认 30 天内补齐；可在付款记录页面补传。",
+    "invoice_file": "发票文件",
+    "invoice_upload": "上传发票（PDF / 图片）",
+    "invoice_file_required": "先票必须上传发票文件",
+    "supplier_missing": "缺少供应商信息，无法归档发票",
+    "execution_line": "付款发票",
+    "outstanding_invoice": "待补票",
+    "invoice_settled": "已开票",
+    "invoice_due_in": "还剩 {{days}} 天",
+    "invoice_overdue": "已超期 {{days}} 天",
+    "attach_invoice": "补传发票"
   }
 }
