@@ -14,11 +14,16 @@ interface Props {
   open: boolean
   item: PaymentScheduleItem | null
   currency: string
-  supplierId?: string | null
   /** The supplier's usual arrangement; the default the buyer can override. */
   defaultTiming: InvoiceTiming
   onCancel: () => void
-  onSubmit: (payload: { invoice_timing: InvoiceTiming; invoice_id: string | null }) => Promise<void>
+  onSubmit: (payload: {
+    invoice_timing: InvoiceTiming
+    file: File | null
+    invoice_number?: string
+    invoice_date?: string
+    amount?: number
+  }) => Promise<void>
 }
 
 /**
@@ -33,7 +38,6 @@ export function PaymentExecuteModal({
   open,
   item,
   currency,
-  supplierId,
   defaultTiming,
   onCancel,
   onSubmit,
@@ -56,39 +60,24 @@ export function PaymentExecuteModal({
   }, [open, defaultTiming, item, form])
 
   const submit = async () => {
-    if (timing === 'prepaid') {
-      if (!file) {
-        void message.warning(t('pay.invoice_file_required'))
-        return
-      }
-      if (!supplierId) {
-        void message.error(t('pay.supplier_missing'))
-        return
-      }
+    if (timing === 'prepaid' && !file) {
+      void message.warning(t('pay.invoice_file_required'))
+      return
     }
-    const values = await form.validateFields()
+    const values = timing === 'prepaid' ? await form.validateFields() : {}
     setSubmitting(true)
     try {
-      let invoiceId: string | null = null
-      if (timing === 'prepaid' && file) {
-        const document = await api.uploadDocument(file, 'invoice')
-        const created = await api.createInvoice({
-          supplier_id: supplierId!,
-          invoice_number: values.invoice_number,
-          invoice_date: (values.invoice_date as dayjs.Dayjs).format('YYYY-MM-DD'),
-          attachment_document_ids: [document.id],
-          lines: [
-            {
-              line_type: 'note',
-              item_name: item ? item.label : t('pay.execution_line'),
-              qty: 1,
-              unit_price: Number(values.amount ?? item?.planned_amount ?? 0),
-            },
-          ],
-        })
-        invoiceId = created.invoice.id
-      }
-      await onSubmit({ invoice_timing: timing, invoice_id: invoiceId })
+      // Filing the invoice needs the supplier, which only the parent knows (the
+      // schedule may belong to an order or to a contract), so hand the pieces up.
+      await onSubmit({
+        invoice_timing: timing,
+        file: timing === 'prepaid' ? file : null,
+        invoice_number: values.invoice_number,
+        invoice_date: values.invoice_date
+          ? (values.invoice_date as dayjs.Dayjs).format('YYYY-MM-DD')
+          : undefined,
+        amount: values.amount === undefined ? undefined : Number(values.amount),
+      })
     } catch (e) {
       void message.error(extractError(e).detail)
     } finally {
