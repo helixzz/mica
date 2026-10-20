@@ -1313,6 +1313,14 @@
     "item_name_tooltip_after_pick": "选中 SKU 后会自动填入名称，但你仍可调整为 PO 上要写的实际描述。"
   },
   "contract": {
+    "tpl_title": "常用模板（一键填写期次，也可自行调整）",
+    "tpl_prepay": "预付款",
+    "tpl_acceptance": "验收尾款",
+    "tpl_prepay_100": "预付 100%",
+    "tpl_acceptance_100": "验收尾款 100%",
+    "tpl_prepay_30_70": "预付 30% + 验收尾款 70%",
+    "tpl_prepay_50_50": "预付 50% + 验收尾款 50%",
+    "receipt_progress": "订单收货进度：{{received}} / {{ordered}}",
     "scan_archive": "合同扫描件归档",
     "upload_scan": "上传扫描件（自动 OCR）",
     "no_scans": "暂无扫描件",

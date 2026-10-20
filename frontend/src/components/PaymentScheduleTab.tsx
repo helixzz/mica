@@ -47,6 +47,44 @@ function StatusTag({ status }: { status: string }) {
   return <Tag color={colorMap[status] || 'default'}>{t(`status.${status}` as 'status.pending')}</Tag>
 }
 
+interface ScheduleTemplate {
+  key: string
+  labelKey: string
+  rows: { labelKey: string; ratio: number; trigger: string }[]
+}
+
+// The splits the procurement team actually uses, so a schedule is one click
+// instead of four typed installments. Anything else remains "custom": the form
+// is never locked to a template.
+const SCHEDULE_TEMPLATES: ScheduleTemplate[] = [
+  {
+    key: 'prepay_100',
+    labelKey: 'contract.tpl_prepay_100',
+    rows: [{ labelKey: 'contract.tpl_prepay', ratio: 1, trigger: 'fixed_date' }],
+  },
+  {
+    key: 'acceptance_100',
+    labelKey: 'contract.tpl_acceptance_100',
+    rows: [{ labelKey: 'contract.tpl_acceptance', ratio: 1, trigger: 'acceptance' }],
+  },
+  {
+    key: 'prepay_30_70',
+    labelKey: 'contract.tpl_prepay_30_70',
+    rows: [
+      { labelKey: 'contract.tpl_prepay', ratio: 0.3, trigger: 'fixed_date' },
+      { labelKey: 'contract.tpl_acceptance', ratio: 0.7, trigger: 'acceptance' },
+    ],
+  },
+  {
+    key: 'prepay_50_50',
+    labelKey: 'contract.tpl_prepay_50_50',
+    rows: [
+      { labelKey: 'contract.tpl_prepay', ratio: 0.5, trigger: 'fixed_date' },
+      { labelKey: 'contract.tpl_acceptance', ratio: 0.5, trigger: 'acceptance' },
+    ],
+  },
+]
+
 export interface PaymentScheduleTabProps {
   contractId?: string
   poId?: string
@@ -68,6 +106,50 @@ export function PaymentScheduleTab({
   const [drawerOpen, setDrawerOpen] = useState(false)
   const [editingItem, setEditingItem] = useState<PaymentScheduleItem | null>(null)
   const [form] = Form.useForm()
+
+  // What the buyer needs in front of them when deciding how to split payments:
+  // how far the order has been received, and the amount a template applies to.
+  const [baseAmount, setBaseAmount] = useState<number | null>(null)
+  const [receiptProgress, setReceiptProgress] = useState<{
+    received: number
+    ordered: number
+  } | null>(null)
+
+  useEffect(() => {
+    let cancelled = false
+    const loadContext = async () => {
+      try {
+        if (poId) {
+          const po = await api.getPO(poId)
+          if (cancelled) return
+          setBaseAmount(Number(po.total_amount || 0))
+          const ordered = (po.items || []).reduce((sum, item) => sum + Number(item.qty || 0), 0)
+          setReceiptProgress({ received: Number(po.qty_received || 0), ordered })
+        } else if (contractId) {
+          const contract = await api.getContract(contractId)
+          if (cancelled) return
+          setBaseAmount(Number(contract.total_amount || 0))
+        }
+      } catch {
+        // Context only: the form still works without it.
+      }
+    }
+    void loadContext()
+    return () => {
+      cancelled = true
+    }
+  }, [poId, contractId])
+
+  const applyTemplate = (template: ScheduleTemplate) => {
+    form.setFieldsValue({
+      items: template.rows.map((row) => ({
+        label: t(row.labelKey),
+        planned_amount:
+          baseAmount != null ? Number((baseAmount * row.ratio).toFixed(2)) : undefined,
+        trigger_type: row.trigger,
+      })),
+    })
+  }
 
   if ((contractId == null) === (poId == null)) {
     throw new Error('PaymentScheduleTab requires exactly one of contractId or poId')
@@ -317,6 +399,16 @@ export function PaymentScheduleTab({
 
   return (
     <Space direction="vertical" size="large" style={{ width: '100%' }}>
+      {receiptProgress && receiptProgress.ordered > 0 && (
+        <Alert
+          type={receiptProgress.received >= receiptProgress.ordered ? 'success' : 'info'}
+          showIcon
+          message={t('contract.receipt_progress', {
+            received: receiptProgress.received,
+            ordered: receiptProgress.ordered,
+          })}
+        />
+      )}
       {schedule && hasItems && (
         <>
            <Row gutter={16}>
@@ -436,6 +528,18 @@ export function PaymentScheduleTab({
           }
           style={{ marginBottom: 16 }}
         />
+        {!editingItem && (
+          <div style={{ marginBottom: 16 }}>
+            <Typography.Text type="secondary">{t('contract.tpl_title')}</Typography.Text>
+            <Space wrap style={{ marginTop: 8, display: 'flex' }}>
+              {SCHEDULE_TEMPLATES.map((template) => (
+                <Button key={template.key} size="small" onClick={() => applyTemplate(template)}>
+                  {t(template.labelKey)}
+                </Button>
+              ))}
+            </Space>
+          </div>
+        )}
         <Form form={form} layout="vertical">
           <Form.List name="items" initialValue={[{}]}>
             {(fields, { add, remove }) => (
