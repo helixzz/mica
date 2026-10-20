@@ -144,6 +144,40 @@ export function PRDetailPage() {
     })
   }, [pr])
 
+  // Whether *this* user is the one who may act on this PR right now. A role
+  // check alone is not enough: the API accepts only the current task's
+  // assignee (or an admin), so a role-only test hid the approve buttons from
+  // the assignee whenever their role was not in the hard-coded pair, and
+  // showed them to people who would get a 403.
+  const [canDecideNow, setCanDecideNow] = useState(false)
+
+  useEffect(() => {
+    // Mirrors the roles accepted by POST /purchase-requisitions/{id}/decide, so
+    // requesters and buyers do not fire a 403-answering request on every visit.
+    const deciderRoles = ['admin', 'dept_manager', 'procurement_mgr']
+    if (!pr || pr.status !== 'submitted' || !user || !deciderRoles.includes(user.role)) {
+      setCanDecideNow(false)
+      return
+    }
+    let cancelled = false
+    api
+      .myPendingApprovals()
+      .then((tasks) => {
+        if (cancelled) return
+        const pending = tasks.filter((task) => task.status === 'pending' && task.biz_id === pr.id)
+        setCanDecideNow(
+          pending.some((task) => task.assignee_id === user.id) ||
+            (user.role === 'admin' && pending.length > 0)
+        )
+      })
+      .catch(() => {
+        if (!cancelled) setCanDecideNow(false)
+      })
+    return () => {
+      cancelled = true
+    }
+  }, [pr, user])
+
   if (!pr) return <div>{t('message.loading')}</div>
 
   const isOwnerOrElevated = user?.id === pr.requester_id || user?.role === 'admin' || user?.role === 'procurement_mgr' || user?.role === 'it_buyer'
@@ -156,8 +190,7 @@ export function PRDetailPage() {
     isOwnerOrElevated &&
     downstreamLoaded &&
     downstream.purchase_orders.length === 0
-  const canDecide =
-    pr.status === 'submitted' && (user?.role === 'dept_manager' || user?.role === 'admin')
+  const canDecide = pr.status === 'submitted' && canDecideNow
   const isBuyer = user?.role === 'it_buyer' || user?.role === 'procurement_mgr' || user?.role === 'admin'
   const canSupplementQuote = pr.status === 'approved' && isBuyer
   const hasIncompleteItems = (pr.items || []).some((item: any) => !item.unit_price || Number(item.unit_price) === 0 || !item.supplier_id)

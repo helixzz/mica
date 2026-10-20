@@ -812,6 +812,18 @@ class ShipmentOut(BaseModel):
     items: list[ShipmentItemOut]
 
 
+class ShipmentItemQtyIn(BaseModel):
+    """A corrected per-line quantity for an existing shipment item.
+
+    Quantities used to be immutable through the API, so a mistyped receipt could
+    only be fixed by deleting the batch and re-creating it.
+    """
+
+    shipment_item_id: UUID
+    qty_shipped: Decimal | None = Field(default=None, ge=0)
+    qty_received: Decimal | None = Field(default=None, ge=0)
+
+
 class ShipmentUpdate(BaseModel):
     status: str | None = None
     carrier: str | None = None
@@ -820,6 +832,7 @@ class ShipmentUpdate(BaseModel):
     actual_date: date | None = None
     notes: str | None = None
     contract_id: UUID | None = None
+    items: list[ShipmentItemQtyIn] | None = None
 
 
 class ShipmentAttachIn(BaseModel):

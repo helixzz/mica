@@ -7,6 +7,38 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [v1.58.3] — 2026-10-20
+
+### 修复（交货批次：改不了到货数量，删掉重建会算出 200% 到货）
+
+采购反馈的两条现象是同一个缺陷的两面——**收货量只增不减，而批次数量根本改不了**。
+
+- `DELETE /shipments/{id}` 只删批次记录，从不把该批次贡献的数量还回去。于是"登记错了 → 删掉 → 重新登记"把同一批货算两次（PO-2026-0080 因此显示 200% 到货）
+- `ShipmentUpdate` 压根没有数量字段，所以只能删了重建——正好踩中上面那条
+
+修法是让批次行成为**唯一事实来源**：新增 `recompute_po_receipt()`，在批次新增 / 修改 / 删除后**按批次行重算**（而不是增量加减）`POItem.qty_received`、`PO.qty_received` 与 `PO.status`。
+
+- `ShipmentUpdate` 新增 `items`，可逐行更正 `qty_shipped` / `qty_received`；编辑抽屉给出可编辑的数量表格，并显示订购量作参考
+- 新增超收校验：单行收货量不得超过订购量 × `fulfillment.over_receipt_tolerance`（默认 `1`，需要容忍供应商多送时可在后台调高，无需改代码）
+- 批次全部删除后 PO 状态**回退**为 `confirmed`，不再继续声称"已收货"
+- 迁移 `0062` 一次性重算历史数据，把已经虚高的收货量修正为真实值（仅在值确有差异时更新）
+- 顺带修掉 `update_shipment` 对 `shipment.items` 的隐式懒加载（异步上下文下会 `MissingGreenlet`）
+
+### 修复（采购经理看不到 PR 审批按钮）
+
+PR 详情页的审批按钮此前只认 `dept_manager` 和 `admin`，而 `POST /purchase-requisitions/{id}/decide` 的白名单是 `admin / dept_manager / procurement_mgr`——**采购经理被前端漏掉了**，表现出来就是"待办里有单子、却没有审批选项"。
+
+- 判定改为与后端一致：先按端点白名单过滤角色，再确认该 PR 当前**确实有待我处理的审批任务**（`assignee_id` 是我，或我是 admin）。按钮显示即点击成功，不再出现"看得见、点下去 403"
+- `requester` / `it_buyer` 不再发起注定 403 的待办查询
+
+### 验证
+
+- 后端全量 **860 passed**, 12 skipped, 1 xfailed, 1 xpassed；`ruff check app` 与 `ruff format --check app` 通过
+- 新增 7 个单元测试锁定数量一致性：删除批次归还数量、删除后重建不翻倍（复现 200% 场景）、可就地更正、多批次求和、创建与修改两条路径都拒绝超收、重算忽略已删除批次
+- 新增 2 个集成测试锁定线上载荷契约：`PATCH /shipments/{id}` 接受 `items`（批次不存在时 404 而非 422）、拒绝负数数量（422）
+- 迁移 `0061` / `0062` 在真实 PostgreSQL 16 上随测试套件执行通过
+- 前端 `type-check` / `build` 通过，Vitest **96 passed**，i18n 中英 parity 干净
+
 ## [v1.58.2] — 2026-10-16
 
 ### 修复（`Tenant-name denylist` 是 CI 上最后一个红灯）

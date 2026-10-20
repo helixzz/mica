@@ -683,6 +683,84 @@ async def delete_contract(
     await db.commit()
 
 
+async def _receipt_tolerance(db: AsyncSession) -> Decimal:
+    """Over-receipt allowance for one PO line, as a multiplier of ordered qty.
+
+    ``1`` means "never accept more than ordered". The value lives in
+    ``system_parameters`` so a business that tolerates a supplier over-shipping
+    can raise it without a code change.
+    """
+    from app.services.system_params import system_params
+
+    raw = await system_params.get(db, "fulfillment.over_receipt_tolerance", "1")
+    try:
+        tolerance = _as_decimal(raw)
+    except (ArithmeticError, ValueError):
+        return Decimal("1")
+    return tolerance if tolerance >= Decimal("1") else Decimal("1")
+
+
+def _assert_within_tolerance(po_item: POItem, projected: Decimal, tolerance: Decimal) -> None:
+    """Reject a receipt that would push one PO line past ordered qty × tolerance."""
+    ordered = _as_decimal(po_item.qty or 0)
+    if ordered <= 0:
+        return
+    if projected > ordered * tolerance:
+        raise HTTPException(
+            409,
+            f"shipment.over_receipt:{po_item.item_name}:ordered={ordered}:projected={projected}",
+        )
+
+
+async def recompute_po_receipt(db: AsyncSession, po_id: UUID) -> None:
+    """Re-derive POItem.qty_received, PO.qty_received and PO.status from shipments.
+
+    Shipment rows are the single source of truth for what a PO has received, so
+    every create / update / delete of a shipment *recomputes* the aggregates
+    instead of nudging them. The previous increment-only path left deleted
+    quantities in the totals: deleting a wrong batch and re-adding a corrected
+    one pushed a PO past 100% received.
+
+    Also rolls the status *back* when the last batch disappears — a PO whose
+    shipments were all deleted must stop claiming it was (partially) received.
+    """
+    po = await _load_po(db, po_id)
+    if po is None:
+        return
+
+    rows = (
+        await db.execute(
+            select(
+                ShipmentItem.po_item_id,
+                func.coalesce(func.sum(ShipmentItem.qty_received), 0),
+            )
+            .join(Shipment, ShipmentItem.shipment_id == Shipment.id)
+            .where(Shipment.po_id == po_id)
+            .group_by(ShipmentItem.po_item_id)
+        )
+    ).all()
+    received_by_item = {row[0]: _as_decimal(row[1]) for row in rows}
+
+    for item in po.items:
+        item.qty_received = received_by_item.get(item.id, Decimal("0"))
+
+    total_received = sum((_as_decimal(i.qty_received or 0) for i in po.items), start=Decimal("0"))
+    total_qty = sum((_as_decimal(i.qty or 0) for i in po.items), start=Decimal("0"))
+    po.qty_received = total_received
+    po.status = _receipt_status(po.status, total_received, total_qty)
+
+
+def _receipt_status(current: str, total_received: Decimal, total_qty: Decimal) -> str:
+    """Map received quantities onto POStatus, leaving non-receipt states alone."""
+    if total_qty > 0 and total_received >= total_qty:
+        return POStatus.FULLY_RECEIVED.value
+    if total_received > 0:
+        return POStatus.PARTIALLY_RECEIVED.value
+    if current in (POStatus.FULLY_RECEIVED.value, POStatus.PARTIALLY_RECEIVED.value):
+        return POStatus.CONFIRMED.value
+    return current
+
+
 async def create_shipment(
     db: AsyncSession,
     actor: User,
@@ -727,6 +805,7 @@ async def create_shipment(
     await db.flush()
 
     po_item_map = {str(i.id): i for i in po.items}
+    tolerance = await _receipt_tolerance(db)
     for idx, item_in in enumerate(items_in, start=1):
         po_item_id = item_in["po_item_id"]
         po_item = po_item_map.get(str(po_item_id))
@@ -734,6 +813,13 @@ async def create_shipment(
             raise HTTPException(422, "shipment.invalid_po_item")
         qty_shipped = _as_decimal(item_in["qty_shipped"])
         qty_received = _as_decimal(item_in.get("qty_received", qty_shipped))
+        # qty_received still holds the sum of every *other* batch at this point,
+        # so the projection is exact.
+        _assert_within_tolerance(
+            po_item,
+            _as_decimal(po_item.qty_received or 0) + qty_received,
+            tolerance,
+        )
         db.add(
             ShipmentItem(
                 shipment_id=shipment.id,
@@ -745,15 +831,9 @@ async def create_shipment(
                 unit_price=po_item.unit_price,
             )
         )
-        po_item.qty_received = (po_item.qty_received or Decimal("0")) + qty_received
 
-    total_received = sum((i.qty_received for i in po.items), start=Decimal("0"))
-    po.qty_received = total_received
-    total_qty = sum((i.qty for i in po.items), start=Decimal("0"))
-    if total_received >= total_qty and total_qty > 0:
-        po.status = POStatus.FULLY_RECEIVED.value
-    elif total_received > 0:
-        po.status = POStatus.PARTIALLY_RECEIVED.value
+    await db.flush()
+    await recompute_po_receipt(db, po_id)
 
     await _audit_write(
         db,
@@ -778,6 +858,7 @@ async def create_shipment(
                     if po.status == POStatus.FULLY_RECEIVED.value
                     else "partially received"
                 )
+                ordered_qty = sum((_as_decimal(i.qty or 0) for i in po.items), start=Decimal("0"))
                 recipients = {actor.id, po.created_by_id}
                 pr = await notif_db.get(PurchaseRequisition, po.pr_id)
                 if pr and pr.requester_id:
@@ -807,7 +888,7 @@ async def create_shipment(
                             f"**PO**: {po.po_number}\n"
                             f"**PR**: {po.pr_title or '—'}\n"
                             f"**Shipment**: {shipment.shipment_number} (Batch {shipment.batch_no})\n"
-                            f"**Status**: {status_label} ({po.qty_received}/{total_qty} received)\n"
+                            f"**Status**: {status_label} ({po.qty_received}/{ordered_qty} received)\n"
                             f"**Carrier**: {shipment.carrier or '—'} | **Tracking**: {shipment.tracking_number or '—'}\n"
                             f"**Created by**: {actor.display_name}"
                         ),
@@ -881,22 +962,88 @@ async def list_shipments(
     return list((await db.execute(stmt)).scalars().all())
 
 
+async def _apply_shipment_item_quantities(
+    db: AsyncSession, shipment: Shipment, rows: list
+) -> dict[str, object]:
+    """Apply edited per-line quantities and keep the PO aggregates consistent.
+
+    Quantities were previously not editable at all: ``ShipmentUpdate`` had no
+    item fields, so correcting a mistyped receipt meant deleting the batch and
+    re-creating it — which the increment-only aggregate turned into >100%
+    received.
+    """
+    tolerance = await _receipt_tolerance(db)
+    by_id = {str(i.id): i for i in shipment.items}
+    changes: dict[str, object] = {}
+    for row in rows:
+        si = by_id.get(str(row.shipment_item_id))
+        if si is None:
+            raise HTTPException(422, "shipment.invalid_item")
+        po_item = await db.get(POItem, si.po_item_id)
+        if po_item is None:
+            raise HTTPException(422, "shipment.invalid_po_item")
+
+        new_received = (
+            _as_decimal(row.qty_received)
+            if row.qty_received is not None
+            else _as_decimal(si.qty_received or 0)
+        )
+        # What every *other* batch already contributed to this PO line.
+        other_batches = _as_decimal(po_item.qty_received or 0) - _as_decimal(si.qty_received or 0)
+        _assert_within_tolerance(po_item, other_batches + new_received, tolerance)
+
+        if row.qty_shipped is not None:
+            new_shipped = _as_decimal(row.qty_shipped)
+            if new_shipped != si.qty_shipped:
+                changes[f"{si.id}.qty_shipped"] = {
+                    "old": str(si.qty_shipped),
+                    "new": str(new_shipped),
+                }
+                si.qty_shipped = new_shipped
+        if new_received != si.qty_received:
+            changes[f"{si.id}.qty_received"] = {
+                "old": str(si.qty_received),
+                "new": str(new_received),
+            }
+            si.qty_received = new_received
+
+    if changes:
+        await db.flush()
+        await recompute_po_receipt(db, shipment.po_id)
+    return changes
+
+
 async def update_shipment(
     db: AsyncSession, actor: User, shipment_id: UUID, payload: object
 ) -> Shipment:
     from app.schemas import ShipmentUpdate
 
-    shipment = await db.get(Shipment, shipment_id)
+    # ``items`` is eager-loaded: editing quantities reads the collection, and a
+    # lazy load would fire outside the async greenlet context (MissingGreenlet).
+    shipment = (
+        await db.execute(
+            select(Shipment).where(Shipment.id == shipment_id).options(selectinload(Shipment.items))
+        )
+    ).scalar_one_or_none()
     if shipment is None:
         raise HTTPException(404, "shipment.not_found")
     assert isinstance(payload, ShipmentUpdate)
     changes: dict[str, object] = {}
-    for field_name in payload.model_fields_set:
+    # ``items`` carries per-line quantities and is applied separately below; it
+    # is not a scalar attribute of Shipment, so touching it through setattr
+    # would assign over the relationship.
+    for field_name in payload.model_fields_set - {"items"}:
         new_val = getattr(payload, field_name)
         old_val = getattr(shipment, field_name)
         if old_val != new_val:
             changes[field_name] = {"old": str(old_val), "new": str(new_val)}
             setattr(shipment, field_name, new_val)
+
+    if payload.items:
+        item_changes = await _apply_shipment_item_quantities(db, shipment, payload.items)
+        if item_changes:
+            changes["items"] = item_changes
+
     if changes:
         await _audit_write(db, actor, "shipment.updated", "shipment", str(shipment_id), changes)
         await db.commit()
@@ -969,6 +1116,7 @@ async def delete_shipment(db: AsyncSession, actor: User, shipment_id: UUID) -> N
     shipment = await db.get(Shipment, shipment_id)
     if shipment is None:
         raise HTTPException(404, "shipment.not_found")
+    po_id = shipment.po_id
     await _audit_write(
         db,
         actor,
@@ -978,6 +1126,11 @@ async def delete_shipment(db: AsyncSession, actor: User, shipment_id: UUID) -> N
         {"shipment_number": shipment.shipment_number},
     )
     await db.delete(shipment)
+    await db.flush()
+    # A deleted batch must also give back the quantities it contributed,
+    # otherwise the PO keeps counting a shipment that no longer exists — the
+    # delete-then-recreate flow used to end up at 200% received.
+    await recompute_po_receipt(db, po_id)
     await db.commit()
 
 
