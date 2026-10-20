@@ -65,6 +65,8 @@ def _contract_to_out(c: Contract, linked_pos: list[PurchaseOrder] | None = None)
     data.po_number = c.po.po_number if c.po else None
     data.po_status = c.po.status if c.po else None
     data.supplier_name = c.supplier.name if c.supplier else None
+    # Company stores name_zh / name_en, not a bare `name`.
+    data.company_name = c.company.name_zh if c.company else None
     if linked_pos is not None:
         data.linked_pos = [
             {

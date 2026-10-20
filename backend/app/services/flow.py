@@ -142,6 +142,7 @@ async def create_contract(
         contract_number=number,
         po_id=po.id,
         supplier_id=po.supplier_id,
+        company_id=po.company_id,
         title=title,
         currency=po.currency,
         total_amount=_as_decimal(total_amount),
@@ -236,7 +237,11 @@ async def list_contracts(
     stmt = (
         select(Contract)
         .order_by(Contract.created_at.desc())
-        .options(selectinload(Contract.po), selectinload(Contract.supplier))
+        .options(
+            selectinload(Contract.po),
+            selectinload(Contract.supplier),
+            selectinload(Contract.company),
+        )
     )
     if po_id:
         linked_ids = (
@@ -406,7 +411,11 @@ async def get_contract(db: AsyncSession, contract_id: UUID, actor: User | None =
     stmt = (
         select(Contract)
         .where(Contract.id == contract_id)
-        .options(selectinload(Contract.po), selectinload(Contract.supplier))
+        .options(
+            selectinload(Contract.po),
+            selectinload(Contract.supplier),
+            selectinload(Contract.company),
+        )
     )
     contract = (await db.execute(stmt)).scalar_one_or_none()
     if contract is None:

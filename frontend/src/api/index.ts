@@ -314,6 +314,8 @@ export interface Contract {
   po_status?: string | null
   supplier_id: string
   supplier_name?: string | null
+  company_id?: string | null
+  company_name?: string | null
   title: string
   current_version: number
   status: string

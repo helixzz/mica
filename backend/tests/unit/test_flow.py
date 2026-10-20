@@ -23,7 +23,14 @@ from app.models import (
     Supplier,
     User,
 )
-from app.schemas import POOut, PRCreateIn, PRItemIn, ShipmentItemQtyIn, ShipmentUpdate
+from app.schemas import (
+    ContractOut,
+    POOut,
+    PRCreateIn,
+    PRItemIn,
+    ShipmentItemQtyIn,
+    ShipmentUpdate,
+)
 from app.services import flow as flow_svc
 from app.services import purchase as purchase_svc
 
@@ -1805,3 +1812,17 @@ async def test_po_response_carries_the_purchasing_entity(seeded_db_session):
 
     assert out.company_id == loaded.company_id
     assert out.company_name
+
+
+async def test_contract_inherits_the_ordering_entity(seeded_db_session):
+    """A contract belongs to the entity that placed the order it came from."""
+    db = seeded_db_session
+    user, _supplier, _pr, po = await _create_confirmed_po(db)
+
+    contract = await flow_svc.create_contract(
+        db, user, po.id, title="主体继承合同", total_amount=Decimal("800")
+    )
+
+    assert contract.company_id == po.company_id
+    out = ContractOut.model_validate(contract)
+    assert out.company_id == po.company_id

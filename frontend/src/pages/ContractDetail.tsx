@@ -291,6 +291,9 @@ export function ContractDetailPage() {
                 <Descriptions.Item label={t('field.supplier')}>
                   {contract.supplier_name || '-'}
                 </Descriptions.Item>
+                <Descriptions.Item label={t('contract.company_label')}>
+                  {contract.company_name || '-'}
+                </Descriptions.Item>
               </Descriptions>
               <Table
                 rowKey="id"
