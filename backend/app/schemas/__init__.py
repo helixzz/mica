@@ -518,6 +518,8 @@ class POOut(BaseModel):
     pr_title: str | None = None
     supplier_id: UUID
     company_id: UUID
+    # "Our purchasing entity" — inherited from the requisition at creation time.
+    company_name: str | None = None
     status: str
     currency: str
     total_amount: Decimal
@@ -535,6 +537,24 @@ class POOut(BaseModel):
     created_at: datetime
     updated_at: datetime
     items: list[POItemOut]
+
+    @model_validator(mode="before")
+    @classmethod
+    def _fill_company_name(cls, value):
+        """The company name sits on the relationship, not on the order row.
+
+        Rewriting to a dict keeps ``from_attributes`` working for every other
+        field while letting ``company_name`` come from the joined company.
+        """
+        if isinstance(value, dict):
+            return value
+        # Company carries name_zh / name_en, never a bare "name".
+        name = getattr(getattr(value, "company", None), "name_zh", None)
+        if name is None:
+            return value
+        data = {field: getattr(value, field, None) for field in cls.model_fields}
+        data["company_name"] = name
+        return data
 
 
 class POListOut(BaseModel):
@@ -572,6 +592,7 @@ class POListOut(BaseModel):
             "supplier_id": value.supplier_id,
             "supplier_name": getattr(getattr(value, "supplier", None), "name", None),
             "supplier_code": getattr(getattr(value, "supplier", None), "code", None),
+            "company_name": getattr(getattr(value, "company", None), "name_zh", None),
             "status": value.status,
             "currency": value.currency,
             "total_amount": value.total_amount,

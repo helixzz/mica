@@ -54,6 +54,11 @@ export function POHeader({
         <span className={poStatusStateClass[po.status] ?? 'tag-state tag-state--neutral'}>
           {t(`status.${statusTag(po.status)}` as 'status.confirmed')}
         </span>
+        {po.company_name && (
+          <Typography.Text type="secondary">
+            {t('po.company_label', { name: po.company_name })}
+          </Typography.Text>
+        )}
       </Space>
       <Space>
         {canAddSupplementary && (

@@ -220,6 +220,7 @@ export interface PurchaseOrder {
   supplier_name?: string | null
   supplier_code?: string | null
   company_id: string
+  company_name?: string | null
   status: string
   currency: string
   total_amount: string

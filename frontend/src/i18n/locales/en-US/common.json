@@ -1451,6 +1451,7 @@
     "deleted": "Invoice deleted"
   },
   "po": {
+    "company_label": "Purchasing entity: {{name}}",
     "ai_source": "AI Source",
     "confidence": "Confidence",
     "ai_failed": "AI Failed",
