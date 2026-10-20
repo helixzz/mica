@@ -74,13 +74,14 @@ export async function loginViaApi(page: Page, account: TestAccountKey): Promise<
 export async function loginViaToken(page: Page, account: TestAccountKey): Promise<void> {
   const token = await loginViaApi(page, account);
 
-  // Navigate to the app first to set the origin, then inject the token
-  await page.goto('/');
-  await page.evaluate((t) => {
-    localStorage.setItem('auth_token', t);
+  // Navigate to the app first to set the origin, then inject the token.
+  // The key must match TOKEN_KEY in src/api/client.ts ('mica.token'); it used to
+  // write 'auth_token', which the app never reads, so this helper silently
+  // landed on the login page.
+  await page.addInitScript((t) => {
+    localStorage.setItem('mica.token', t);
   }, token);
 
-  // Reload to pick up the token
   await page.goto('/dashboard');
   await page.waitForLoadState('networkidle');
 }
