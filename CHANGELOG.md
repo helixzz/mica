@@ -7,6 +7,22 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [v1.63.1] — 2026-10-20
+
+### 修复（飞书回调可绕过验签，而它会改写付款状态）
+
+`/feishu/webhook` 的签名校验写在 `if timestamp and nonce and signature:` 条件下——**不携带签名头就完全不校验**；`app_secret` 未配置时同样放行。这个端点会依据回调改写付款状态，等于留了一个可伪造的写入口（`docs/PERMISSIONS.md` 记的 R6）。
+
+- 开启验签时（`feishu.webhook_require_signature`，默认 true）**必须**带三个 `x-lark-*` 头，缺失即 `401 feishu.missing_signature`
+- 未配置 `app_secret` 时返回 `503`，不再接受无法验证的回调
+- 保留开关作为救急通道：万一线上的回调被代理剥离了请求头，把该参数改成 false 即恢复旧行为，**不需要发版**
+- 顺带修掉端点里的裸 `AsyncSession()`：它没有 bind，导致**这个端点此前完全无法被测试覆盖**；改为标准的 `Depends(get_db)` 后才有下面这条测试
+
+### 验证
+
+- 后端 **881 passed**（新增：未配置密钥的回调被拒）
+- 迁移 `0068` 在 PostgreSQL 16 上执行通过
+
 ## [v1.63.0] — 2026-10-20
 
 ### 新增（先票 / 后票）
