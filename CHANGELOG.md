@@ -7,6 +7,33 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [v1.61.0] — 2026-10-20
+
+### 新增（合同显示我司采购主体）
+
+- `contracts` 新增 `company_id`（单值）：合同是法律文件，只有一家主体签约
+- 新建合同时从订单继承主体；关联其它订单时的**跨主体校验本来就有**（`link_po_contract` 已拒绝过），此前只是没把主体存下来、页面说不清谁签的
+- 合同详情显示签约主体；迁移 `0064` 从主单回填历史合同，主单缺失时回退到任一关联单
+
+### 新增（What's new：让每个人看见 Mica 在变）
+
+- 顶栏新增「更新」按钮（礼物图标），右侧抽屉按版本列出面向用户的变更，分 **新增 / 修复 / 优化** 三类，中英双语随界面语言切换
+- 未读最新版本时按钮带红点，点开即记为已读
+- 条目以数据形式维护（`frontend/src/components/WhatsNew/releases.ts`），从 CHANGELOG 提炼用户视角表述，不写迁移与测试细节
+
+### 新增（E2E 验收沉淀）
+
+- `e2e/tests/receipts.spec.ts`：收货页签、付款计划模板、部分收货 + 撤销，共 3 条
+- `e2e/tests/whats-new.spec.ts`：顶栏按钮打开更新日志
+- 修 `e2e/tests/helpers/auth.ts::loginViaToken` —— 它把 token 写在 `auth_token` 下，而应用读的是 `mica.token`，该 helper 此前从未真正登录成功
+
+### 验证
+
+- 后端 **873 passed**, 12 skipped, 1 xfailed, 1 xpassed；`ruff check/format` 通过
+- 前端 `type-check` / `build` 通过，Vitest **96 passed**，i18n 中英 parity 干净
+- Playwright 新增 4 条用例本地验证通过（其余既有用例为 smoke，由 CI 全量复跑）
+- 迁移 `0064` 在 PostgreSQL 16 上执行通过（含回填）
+
 ## [v1.60.1] — 2026-10-20
 
 ### 修复（收货功能在生产完全不可用）
