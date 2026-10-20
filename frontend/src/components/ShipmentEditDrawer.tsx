@@ -1,15 +1,37 @@
-import { Button, DatePicker, Drawer, Form, Input, Select, Space, message } from 'antd'
+import {
+  Button,
+  DatePicker,
+  Drawer,
+  Form,
+  Input,
+  InputNumber,
+  Select,
+  Space,
+  Table,
+  Typography,
+  message,
+} from 'antd'
 import dayjs from 'dayjs'
 import { useEffect, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 
-import { api, type DeliveryPlan, type Shipment } from '@/api'
+import { api, type DeliveryPlan, type PurchaseOrder, type Shipment } from '@/api'
+import { fmtQtyNode } from '@/utils/format'
 
 interface Props {
   shipment: Shipment | null
   open: boolean
   onClose: () => void
   onSaved: () => void
+}
+
+interface QtyLine {
+  shipment_item_id: string
+  po_item_id: string
+  line_no: number
+  item_name: string
+  qty_shipped: number
+  qty_received: number
 }
 
 export function ShipmentEditDrawer({ shipment, open, onClose, onSaved }: Props) {
@@ -19,6 +41,12 @@ export function ShipmentEditDrawer({ shipment, open, onClose, onSaved }: Props) 
   const [loadingPlans, setLoadingPlans] = useState(false)
   const [selectedPlanId, setSelectedPlanId] = useState<string | undefined>(undefined)
   const [saving, setSaving] = useState(false)
+  // Line quantities are kept in their own state rather than in `form`: they are
+  // a list keyed by shipment item id, and correcting them is the whole point of
+  // this drawer — before v1.58.3 the only way to fix a mistyped receipt was to
+  // delete the batch and record it again.
+  const [qtyLines, setQtyLines] = useState<QtyLine[]>([])
+  const [po, setPo] = useState<PurchaseOrder | null>(null)
 
   useEffect(() => {
     if (open && shipment) {
@@ -31,19 +59,35 @@ export function ShipmentEditDrawer({ shipment, open, onClose, onSaved }: Props) 
         actual_date: shipment.actual_date ? dayjs(shipment.actual_date) : null,
         notes: shipment.notes,
       })
+      setQtyLines(
+        (shipment.items || []).map((item) => ({
+          shipment_item_id: item.id,
+          po_item_id: item.po_item_id,
+          line_no: item.line_no,
+          item_name: item.item_name,
+          qty_shipped: Number(item.qty_shipped || 0),
+          qty_received: Number(item.qty_received || 0),
+        }))
+      )
+      setPo(null)
       setDeliveryPlans([])
       setSelectedPlanId(undefined)
       if (shipment.po_id) {
+        // Ordered quantities put the edit in context: a receipt above the
+        // ordered quantity is refused by the API.
+        api
+          .getPO(shipment.po_id)
+          .then(setPo)
+          .catch(() => {})
         setLoadingPlans(true)
-        api.getPODeliveryPlan(shipment.po_id)
+        api
+          .getPODeliveryPlan(shipment.po_id)
           .then((summary) => {
             const plans = summary.po_plans || []
             setDeliveryPlans(plans)
             // Auto-select matching plan
             if (shipment.expected_date) {
-              const matched = plans.find(
-                (dp) => dp.planned_date === shipment.expected_date
-              )
+              const matched = plans.find((dp) => dp.planned_date === shipment.expected_date)
               if (matched) setSelectedPlanId(matched.id)
             }
           })
@@ -63,6 +107,9 @@ export function ShipmentEditDrawer({ shipment, open, onClose, onSaved }: Props) 
     }
   }
 
+  const orderedQtyOf = (poItemId: string) =>
+    po?.items.find((item) => item.id === poItemId)?.qty
+
   const handleSave = async () => {
     if (!shipment) return
     setSaving(true)
@@ -72,6 +119,11 @@ export function ShipmentEditDrawer({ shipment, open, onClose, onSaved }: Props) 
         ...values,
         expected_date: values.expected_date ? values.expected_date.format('YYYY-MM-DD') : null,
         actual_date: values.actual_date ? values.actual_date.format('YYYY-MM-DD') : null,
+        items: qtyLines.map((line) => ({
+          shipment_item_id: line.shipment_item_id,
+          qty_shipped: line.qty_shipped,
+          qty_received: line.qty_received,
+        })),
       })
       void message.success(t('shipment.updated'))
       onSaved()
@@ -87,7 +139,7 @@ export function ShipmentEditDrawer({ shipment, open, onClose, onSaved }: Props) 
   return (
     <Drawer
       title={shipment ? t('shipment.edit', { number: shipment.shipment_number }) : ''}
-      width={420}
+      width={640}
       open={open}
       onClose={onClose}
       footer={
@@ -146,6 +198,72 @@ export function ShipmentEditDrawer({ shipment, open, onClose, onSaved }: Props) 
           <Input.TextArea rows={3} />
         </Form.Item>
       </Form>
+
+      {qtyLines.length > 0 && (
+        <Space direction="vertical" style={{ width: '100%' }}>
+          <Typography.Text type="secondary">{t('shipment.quantity_help')}</Typography.Text>
+          <Table
+            rowKey="shipment_item_id"
+            size="small"
+            pagination={false}
+            dataSource={qtyLines}
+            columns={[
+              { title: t('field.line_no'), dataIndex: 'line_no', width: 60 },
+              { title: t('field.item_name'), dataIndex: 'item_name', ellipsis: true },
+              {
+                title: t('field.qty'),
+                width: 90,
+                align: 'right',
+                render: (_: unknown, r: QtyLine) => (
+                  <Typography.Text type="secondary">
+                    {fmtQtyNode(orderedQtyOf(r.po_item_id) ?? '—')}
+                  </Typography.Text>
+                ),
+              },
+              {
+                title: t('field.qty_shipped'),
+                width: 110,
+                render: (_: unknown, r: QtyLine) => (
+                  <InputNumber
+                    min={0}
+                    value={r.qty_shipped}
+                    style={{ width: '100%' }}
+                    onChange={(value) =>
+                      setQtyLines((lines) =>
+                        lines.map((line) =>
+                          line.shipment_item_id === r.shipment_item_id
+                            ? { ...line, qty_shipped: Number(value ?? 0) }
+                            : line
+                        )
+                      )
+                    }
+                  />
+                ),
+              },
+              {
+                title: t('field.qty_received'),
+                width: 110,
+                render: (_: unknown, r: QtyLine) => (
+                  <InputNumber
+                    min={0}
+                    value={r.qty_received}
+                    style={{ width: '100%' }}
+                    onChange={(value) =>
+                      setQtyLines((lines) =>
+                        lines.map((line) =>
+                          line.shipment_item_id === r.shipment_item_id
+                            ? { ...line, qty_received: Number(value ?? 0) }
+                            : line
+                        )
+                      )
+                    }
+                  />
+                ),
+              },
+            ]}
+          />
+        </Space>
+      )}
     </Drawer>
   )
 }

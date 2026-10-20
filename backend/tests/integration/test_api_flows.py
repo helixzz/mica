@@ -200,3 +200,41 @@ async def test_user_crud_with_cost_center_ids(seeded_client):
     assert isinstance(user["cost_center_ids"], list)
     assert "department_ids" in user
     assert isinstance(user["department_ids"], list)
+
+
+@pytest.mark.asyncio
+async def test_patch_shipment_accepts_line_quantities(seeded_client):
+    """The item-quantity payload is part of the wire contract, not just the service.
+
+    A missing shipment must answer 404 — i.e. the body was parsed and the route
+    ran. A 422 here would mean the new ``items`` shape is rejected before the
+    handler, which is how the old payload (no quantity fields at all) behaved.
+    """
+    auth = await _login_as(seeded_client, "admin")
+
+    r = await seeded_client.patch(
+        f"/api/v1/shipments/{uuid4()}",
+        headers=auth,
+        json={
+            "items": [
+                {
+                    "shipment_item_id": str(uuid4()),
+                    "qty_shipped": "3",
+                    "qty_received": "2",
+                }
+            ]
+        },
+    )
+    assert r.status_code == 404, r.text
+
+
+@pytest.mark.asyncio
+async def test_patch_shipment_rejects_negative_quantities(seeded_client):
+    auth = await _login_as(seeded_client, "admin")
+
+    r = await seeded_client.patch(
+        f"/api/v1/shipments/{uuid4()}",
+        headers=auth,
+        json={"items": [{"shipment_item_id": str(uuid4()), "qty_received": "-1"}]},
+    )
+    assert r.status_code == 422, r.text

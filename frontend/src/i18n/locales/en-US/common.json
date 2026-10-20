@@ -710,6 +710,7 @@
   },
   "shipment": {
     "new": "New Shipment",
+    "quantity_help": "Correct this batch's shipped / received quantities here. The ordered quantity is for reference; a receipt may not exceed it.",
     "select_po": "Select Purchase Order",
     "edit": "Edit Shipment: {{number}}",
     "count": "shipments",
