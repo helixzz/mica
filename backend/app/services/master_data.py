@@ -159,10 +159,41 @@ async def _validate_department_parent(
         current = next_parent
 
 
+SUPPLIER_CODE_PREFIX = "JQSUP"
+SUPPLIER_CODE_WIDTH = 5
+
+
+def format_supplier_code(seq: int) -> str:
+    return f"{SUPPLIER_CODE_PREFIX}{seq:0{SUPPLIER_CODE_WIDTH}d}"
+
+
+async def next_supplier_code_seq(db: AsyncSession) -> int:
+    """One past the highest existing supplier number.
+
+    The manual sequence had already reached JQSUP00035, so the prefix and width
+    are kept as-is to stay comparable with codes people typed by hand. Like the
+    PR/PO numbers this is MAX(code) + 1; the unique index is the backstop if two
+    creations race, and bulk imports walk the sequence in memory so a batch
+    cannot hand out the same number twice.
+    """
+    max_code = (
+        await db.execute(
+            select(func.max(Supplier.code)).where(Supplier.code.startswith(SUPPLIER_CODE_PREFIX))
+        )
+    ).scalar_one_or_none()
+    suffix = max_code[len(SUPPLIER_CODE_PREFIX) :] if max_code else ""
+    try:
+        return int(suffix) + 1
+    except ValueError:
+        # Codes that do not follow the pattern (or none at all) start the run.
+        return 1
+
+
 async def create_supplier(db: AsyncSession, actor: User, payload: SupplierCreate) -> Supplier:
-    await _ensure_unique_code(db, model=Supplier, entity_name="supplier", code=payload.code)
+    code = payload.code or format_supplier_code(await next_supplier_code_seq(db))
+    await _ensure_unique_code(db, model=Supplier, entity_name="supplier", code=code)
     supplier = Supplier(
-        code=payload.code,
+        code=code,
         name=payload.name,
         tax_number=payload.tax_number,
         contact_name=payload.contact_name,
@@ -183,7 +214,7 @@ async def create_supplier(db: AsyncSession, actor: User, payload: SupplierCreate
         resource_id=str(supplier.id),
         metadata={
             "new": {
-                "code": payload.code,
+                "code": code,
                 "name": payload.name,
                 "tax_number": payload.tax_number,
                 "contact_name": payload.contact_name,

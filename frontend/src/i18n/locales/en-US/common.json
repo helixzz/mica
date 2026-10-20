@@ -688,6 +688,7 @@
     "delete_confirm_content": "Are you sure you want to delete RFQ {{number}}? This action cannot be undone."
   },
   "supplier": {
+    "code_auto_hint": "Leave empty to generate the next number automatically",
     "back_to_list": "Back to List",
     "title": "Suppliers",
     "detail": "Supplier Detail",

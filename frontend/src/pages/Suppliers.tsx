@@ -618,7 +618,7 @@ export default function SuppliersPage() {
           <Form.Item
             name="code"
             label={t("supplier.code")}
-            rules={[{ required: true }]}
+            extra={!editingSupplier ? t("supplier.code_auto_hint") : undefined}
           >
             <Input disabled={!!editingSupplier} />
           </Form.Item>

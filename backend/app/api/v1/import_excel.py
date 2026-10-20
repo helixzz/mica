@@ -14,6 +14,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.core.security import CurrentUser, require_roles
 from app.db import get_db, new_uuid
 from app.models import Item, SKUPriceRecord, Supplier
+from app.services import master_data as master_data_svc
 
 router = APIRouter(tags=["import"])
 
@@ -47,6 +48,9 @@ async def import_suppliers(
     content = await file.read()
     rows = _read_rows(content)
     created, skipped, errors = 0, 0, []
+    # Walked in memory: rows added during this loop are not visible to
+    # MAX(code) yet, so re-reading it per row would hand out duplicates.
+    next_seq = await master_data_svc.next_supplier_code_seq(db)
     for i, row in enumerate(rows, start=2):
         name = row.get("name", "") or row.get("名称", "") or row.get("supplier_name", "")
         code = row.get("code", "") or row.get("编码", "") or row.get("supplier_code", "")
@@ -59,7 +63,12 @@ async def import_suppliers(
         if existing:
             skipped += 1
             continue
-        s = Supplier(id=new_uuid(), name=name, code=code or name[:16])
+        if not code:
+            # Used to fall back to name[:16], which put arbitrary prefixes into
+            # the same field people keep a JQSUP sequence in.
+            code = master_data_svc.format_supplier_code(next_seq)
+            next_seq += 1
+        s = Supplier(id=new_uuid(), name=name, code=code)
         if row.get("contact_name") or row.get("联系人"):
             s.contact_name = row.get("contact_name") or row.get("联系人", "")
         if row.get("contact_phone") or row.get("电话"):
