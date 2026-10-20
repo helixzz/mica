@@ -764,6 +764,9 @@ class ContractOut(BaseModel):
     po_status: str | None = None
     supplier_id: UUID
     supplier_name: str | None = None
+    company_id: UUID | None = None
+    # "Our entity" — inherited from the order the contract was raised from.
+    company_name: str | None = None
     title: str
     current_version: int
     status: str

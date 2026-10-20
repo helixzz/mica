@@ -37,9 +37,11 @@ const { Text } = Typography;
 import { GlobalSearch } from '@/components/GlobalSearch';
 
 import { NotificationBell } from '@/components/NotificationBell';
+import { WhatsNewButton } from '@/components/WhatsNew/WhatsNewButton';
 
 export const SearchSlot: React.FC = () => <GlobalSearch />;
 export const NotificationSlot: React.FC = () => <NotificationBell />;
+export const WhatsNewSlot: React.FC = () => <WhatsNewButton />;
 
 /**
  * Pages that are a *form*: a single narrow column of fields.
@@ -227,6 +229,7 @@ export function AppLayout() {
         )}
 
         <Space size="middle" style={{ marginLeft: 'auto' }}>
+          <WhatsNewSlot />
           <NotificationSlot />
           <LanguageSwitcher />
           <Button

@@ -1302,6 +1302,7 @@
     "item_name_tooltip_after_pick": "Picking a SKU auto-fills the name. You can still adjust it to whatever should appear on the PO."
   },
   "contract": {
+    "company_label": "Contracting entity",
     "tpl_title": "Common templates (fill the installments in one click, still editable)",
     "tpl_prepay": "Advance payment",
     "tpl_acceptance": "Acceptance balance",
@@ -1748,5 +1749,12 @@
     "deviation_rate_explainer": "Deviated links (downgraded + substitute) / total fulfillment links",
     "approval_pending": "Deviation pending review",
     "approval_threshold_hint": "Downgrades or substitutes above {{amount}} trigger an approval flow"
+  },
+  "whats_new": {
+    "title": "What's new",
+    "tooltip": "See what changed in Mica",
+    "kind_new": "New",
+    "kind_fix": "Fix",
+    "kind_improvement": "Improved"
   }
 }

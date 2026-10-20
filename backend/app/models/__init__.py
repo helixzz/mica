@@ -702,6 +702,12 @@ class Contract(Base, TimestampMixin):
     supplier_id: Mapped[UUID] = mapped_column(
         PGUUID(as_uuid=True), ForeignKey("suppliers.id"), nullable=False
     )
+    # The contracting entity. A contract is a legal document, so exactly one of
+    # our companies signs it; the check that every linked order belongs to that
+    # company lives in link_po_contract.
+    company_id: Mapped[UUID | None] = mapped_column(
+        PGUUID(as_uuid=True), ForeignKey("companies.id"), nullable=True, index=True
+    )
     title: Mapped[str] = mapped_column(String(255), nullable=False)
     current_version: Mapped[int] = mapped_column(Integer, default=1, nullable=False)
     status: Mapped[str] = mapped_column(
@@ -716,6 +722,7 @@ class Contract(Base, TimestampMixin):
 
     po: Mapped[PurchaseOrder] = relationship()
     supplier: Mapped[Supplier] = relationship()
+    company: Mapped[Company | None] = relationship()
     schedules: Mapped[list[PaymentSchedule]] = relationship(
         back_populates="contract",
         cascade="all, delete-orphan",
