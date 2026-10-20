@@ -1301,6 +1301,14 @@
     "item_name_tooltip_after_pick": "Picking a SKU auto-fills the name. You can still adjust it to whatever should appear on the PO."
   },
   "contract": {
+    "tpl_title": "Common templates (fill the installments in one click, still editable)",
+    "tpl_prepay": "Advance payment",
+    "tpl_acceptance": "Acceptance balance",
+    "tpl_prepay_100": "Advance 100%",
+    "tpl_acceptance_100": "Acceptance balance 100%",
+    "tpl_prepay_30_70": "Advance 30% + balance 70%",
+    "tpl_prepay_50_50": "Advance 50% + balance 50%",
+    "receipt_progress": "Order received: {{received}} / {{ordered}}",
     "scan_archive": "Contract Scan Archive",
     "upload_scan": "Upload Scan (Auto OCR)",
     "no_scans": "No scans yet",
