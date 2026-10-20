@@ -288,3 +288,19 @@ async def test_receipts_list_reaches_the_handler(seeded_client):
 
     r = await seeded_client.get(f"/api/v1/purchase-orders/{uuid4()}/receipts", headers=auth)
     assert r.status_code == 404, r.text
+
+
+@pytest.mark.asyncio
+async def test_feishu_webhook_refuses_when_no_secret_is_configured(seeded_client):
+    """The callback writes payment state, so it must not accept unverifiable calls.
+
+    It used to be accepted when no secret was configured, and even with a secret,
+    omitting the x-lark-* headers skipped verification entirely.
+    """
+    response = await seeded_client.post(
+        "/api/v1/feishu/webhook",
+        json={"event": {"type": "approval_instance", "status": "APPROVED"}},
+    )
+
+    assert response.status_code == 503, response.text
+    assert "feishu.webhook_not_configured" in response.text

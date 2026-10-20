@@ -2,11 +2,12 @@ from __future__ import annotations
 
 import json
 import logging
-from typing import Any
+from typing import Annotated, Any
 
-from fastapi import APIRouter, HTTPException, Request
+from fastapi import APIRouter, Depends, HTTPException, Request
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.db import get_db
 from app.services.feishu.webhooks import (
     parse_approval_callback,
     parse_url_verification,
@@ -20,7 +21,10 @@ router = APIRouter(prefix="/feishu", tags=["feishu"])
 
 
 @router.post("/webhook")
-async def feishu_webhook(request: Request) -> dict[str, Any]:
+async def feishu_webhook(
+    request: Request,
+    db: Annotated[AsyncSession, Depends(get_db)],
+) -> dict[str, Any]:
     body_bytes = await request.body()
     try:
         body: dict[str, Any] = json.loads(body_bytes)
@@ -31,24 +35,33 @@ async def feishu_webhook(request: Request) -> dict[str, Any]:
     if challenge:
         return {"challenge": challenge}
 
-    async with AsyncSession() as db:  # type: ignore[var-annotated]
-        try:
-            app_secret_raw = await system_params.get(db, "auth.feishu.app_secret", "")
-            app_secret = str(app_secret_raw) if app_secret_raw else ""
-            if app_secret:
-                timestamp = request.headers.get("x-lark-request-timestamp", "")
-                nonce = request.headers.get("x-lark-request-nonce", "")
-                signature = request.headers.get("x-lark-signature", "")
-                if timestamp and nonce and signature:
-                    if not verify_signature(timestamp, nonce, body_bytes, signature, app_secret):
-                        logger.warning("feishu: webhook signature verification failed")
-                        raise HTTPException(401, "feishu.invalid_signature")
+    app_secret_raw = await system_params.get(db, "auth.feishu.app_secret", "")
+    app_secret = str(app_secret_raw) if app_secret_raw else ""
+    require_signature = await system_params.get_bool_or(
+        db, "feishu.webhook_require_signature", True
+    )
+    if require_signature:
+        if not app_secret:
+            # Nothing to verify against, and this endpoint can flip payment state,
+            # so refuse rather than accept unverifiable callbacks.
+            logger.error("feishu: webhook received but app_secret is not configured")
+            raise HTTPException(503, "feishu.webhook_not_configured")
 
-            parsed = parse_approval_callback(body)
-            if parsed:
-                await _handle_approval_callback(db, parsed)
-        finally:
-            await db.close()
+        timestamp = request.headers.get("x-lark-request-timestamp", "")
+        nonce = request.headers.get("x-lark-request-nonce", "")
+        signature = request.headers.get("x-lark-signature", "")
+        if not (timestamp and nonce and signature):
+            # These headers used to be optional, so omitting them skipped
+            # verification entirely — and this endpoint writes payment state.
+            logger.warning("feishu: webhook rejected, signature headers missing")
+            raise HTTPException(401, "feishu.missing_signature")
+        if not verify_signature(timestamp, nonce, body_bytes, signature, app_secret):
+            logger.warning("feishu: webhook signature verification failed")
+            raise HTTPException(401, "feishu.invalid_signature")
+
+    parsed = parse_approval_callback(body)
+    if parsed:
+        await _handle_approval_callback(db, parsed)
 
     return {"code": 0}
 
