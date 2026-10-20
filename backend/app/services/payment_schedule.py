@@ -540,6 +540,9 @@ async def invoice_forecast(
 
     active_po_statuses = [
         POStatus.CONFIRMED.value,
+        # A shipped order is still inside its payment cycle; leaving it out would
+        # drop it from the payment calendar.
+        POStatus.SHIPPED.value,
         POStatus.PARTIALLY_RECEIVED.value,
         POStatus.FULLY_RECEIVED.value,
         POStatus.CLOSED.value,

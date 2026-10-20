@@ -58,6 +58,10 @@ class PRStatus(StrEnum):
 class POStatus(StrEnum):
     DRAFT = "draft"
     CONFIRMED = "confirmed"
+    # A shipment exists but nothing has been received against it yet. Receiving
+    # is a separate act from shipping, so the order needs a state that says
+    # "on its way" rather than claiming goods arrived.
+    SHIPPED = "shipped"
     PARTIALLY_RECEIVED = "partially_received"
     FULLY_RECEIVED = "fully_received"
     CLOSED = "closed"
@@ -927,6 +931,45 @@ class SerialNumberEntry(Base, TimestampMixin):
     warranty_expiry: Mapped[date | None] = mapped_column(Date)
     asset_id: Mapped[str | None] = mapped_column(String(64))
     asset_system: Mapped[str | None] = mapped_column(String(32))
+
+
+class Receipt(Base, TimestampMixin):
+    """One act of receiving goods against a purchase order line.
+
+    Receiving used to be folded into the shipment record (``ShipmentItem``
+    carried both ``qty_shipped`` and ``qty_received``), which made "the supplier
+    shipped it" and "we accepted it" the same event and left no room for several
+    partial receipts. Receipts are their own rows so a line can be received in
+    as many steps as reality needs, each one attributable to a person and a
+    moment.
+    """
+
+    __tablename__ = "receipts"
+
+    id: Mapped[UUID] = mapped_column(PGUUID(as_uuid=True), primary_key=True, default=new_uuid)
+    po_id: Mapped[UUID] = mapped_column(
+        PGUUID(as_uuid=True), ForeignKey("purchase_orders.id", ondelete="CASCADE"), nullable=False
+    )
+    po_item_id: Mapped[UUID] = mapped_column(
+        PGUUID(as_uuid=True), ForeignKey("po_items.id", ondelete="CASCADE"), nullable=False
+    )
+    # Which batch this receipt belongs to, when the receiver can tell. Nullable
+    # and SET NULL on delete: removing a batch must not erase the fact that the
+    # goods were received.
+    shipment_id: Mapped[UUID | None] = mapped_column(
+        PGUUID(as_uuid=True), ForeignKey("shipments.id", ondelete="SET NULL")
+    )
+    qty: Mapped[Decimal] = mapped_column(Numeric(18, 4), nullable=False)
+    received_by_id: Mapped[UUID | None] = mapped_column(
+        PGUUID(as_uuid=True), ForeignKey("users.id", ondelete="SET NULL")
+    )
+    received_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
+    notes: Mapped[str | None] = mapped_column(Text)
+
+    po: Mapped[PurchaseOrder] = relationship()
+    po_item: Mapped[POItem] = relationship()
+    shipment: Mapped[Shipment | None] = relationship()
+    received_by: Mapped[User | None] = relationship()
 
 
 class PaymentRecord(Base, TimestampMixin):

@@ -813,15 +813,15 @@ class ShipmentOut(BaseModel):
 
 
 class ShipmentItemQtyIn(BaseModel):
-    """A corrected per-line quantity for an existing shipment item.
+    """A corrected shipped quantity for an existing shipment item.
 
-    Quantities used to be immutable through the API, so a mistyped receipt could
-    only be fixed by deleting the batch and re-creating it.
+    Only the shipped side is editable: received quantities are ``receipts``,
+    which have their own endpoints, so correcting a batch can no longer move the
+    received total as a side effect.
     """
 
     shipment_item_id: UUID
     qty_shipped: Decimal | None = Field(default=None, ge=0)
-    qty_received: Decimal | None = Field(default=None, ge=0)
 
 
 class ShipmentUpdate(BaseModel):
@@ -833,6 +833,37 @@ class ShipmentUpdate(BaseModel):
     notes: str | None = None
     contract_id: UUID | None = None
     items: list[ShipmentItemQtyIn] | None = None
+
+
+class ReceiptLineIn(BaseModel):
+    """One PO line's quantity in a single act of receiving."""
+
+    po_item_id: UUID
+    qty: Decimal = Field(gt=0)
+    shipment_id: UUID | None = None
+
+
+class ReceiptCreateIn(BaseModel):
+    """Goods arriving: one or more lines, optionally pinned to a batch."""
+
+    items: list[ReceiptLineIn] = Field(min_length=1)
+    received_at: datetime | None = None
+    notes: str | None = None
+
+
+class ReceiptOut(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
+    id: UUID
+    po_id: UUID
+    po_item_id: UUID
+    shipment_id: UUID | None = None
+    qty: Decimal
+    received_by_id: UUID | None = None
+    received_by_name: str | None = None
+    received_at: datetime
+    notes: str | None = None
+    created_at: datetime
 
 
 class ShipmentAttachIn(BaseModel):

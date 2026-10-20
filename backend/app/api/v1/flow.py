@@ -9,7 +9,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.security import CurrentUser, require_roles
 from app.db import get_db
-from app.models import Contract, PurchaseOrder
+from app.models import Contract, PurchaseOrder, Receipt
 from app.schemas import (
     ContractCreateIn,
     ContractOut,
@@ -25,6 +25,8 @@ from app.schemas import (
     PaymentUpdateIn,
     POAttachIn,
     POProgressOut,
+    ReceiptCreateIn,
+    ReceiptOut,
     SerialNumberIn,
     ShipmentAttachIn,
     ShipmentCreateIn,
@@ -36,6 +38,26 @@ from app.services import export_excel, flow
 router = APIRouter()
 
 _PAYMENT_WRITE_ROLES = ("admin", "it_buyer", "procurement_mgr", "finance_auditor")
+
+# Receiving is the requester's act — they are the ones who see the goods — with
+# the procurement side able to record it on their behalf. Finance and department
+# managers stay out of it.
+_RECEIPT_WRITE_ROLES = ("requester", "admin", "it_buyer", "procurement_mgr")
+
+
+def _receipt_to_out(receipt: Receipt) -> ReceiptOut:
+    return ReceiptOut(
+        id=receipt.id,
+        po_id=receipt.po_id,
+        po_item_id=receipt.po_item_id,
+        shipment_id=receipt.shipment_id,
+        qty=receipt.qty,
+        received_by_id=receipt.received_by_id,
+        received_by_name=receipt.received_by.display_name if receipt.received_by else None,
+        received_at=receipt.received_at,
+        notes=receipt.notes,
+        created_at=receipt.created_at,
+    )
 
 
 def _contract_to_out(c: Contract, linked_pos: list[PurchaseOrder] | None = None) -> ContractOut:
@@ -362,6 +384,55 @@ async def remove_po_attachment(
     db: Annotated[AsyncSession, Depends(get_db)],
 ) -> Response:
     await flow.remove_po_document(db, po_id, document_id)
+    return Response(status_code=status.HTTP_204_NO_CONTENT)
+
+
+@router.post(
+    "/purchase-orders/{po_id}/receipts",
+    response_model=list[ReceiptOut],
+    status_code=status.HTTP_201_CREATED,
+    tags=["flow"],
+)
+async def create_receipts(
+    po_id: UUID,
+    payload: ReceiptCreateIn,
+    user: CurrentUser,
+    db: Annotated[AsyncSession, Depends(get_db)],
+    _role: Annotated[None, Depends(require_roles(*_RECEIPT_WRITE_ROLES))],
+):
+    # Visibility first: a requester may only receive against orders derived from
+    # their own requisitions.
+    await flow.get_po(db, po_id, actor=user)
+    receipts = await flow.create_receipts(
+        db,
+        user,
+        po_id,
+        [line.model_dump() for line in payload.items],
+        received_at=payload.received_at,
+        notes=payload.notes,
+    )
+    return [_receipt_to_out(receipt) for receipt in receipts]
+
+
+@router.get("/purchase-orders/{po_id}/receipts", response_model=list[ReceiptOut], tags=["flow"])
+async def list_receipts(
+    po_id: UUID,
+    user: CurrentUser,
+    db: Annotated[AsyncSession, Depends(get_db)],
+):
+    await flow.get_po(db, po_id, actor=user)
+    return [_receipt_to_out(receipt) for receipt in await flow.list_receipts(db, po_id)]
+
+
+@router.delete("/receipts/{receipt_id}", status_code=status.HTTP_204_NO_CONTENT, tags=["flow"])
+async def delete_receipt(
+    receipt_id: UUID,
+    user: CurrentUser,
+    db: Annotated[AsyncSession, Depends(get_db)],
+) -> Response:
+    # Roles and ownership are checked in the service: the recorder may undo their
+    # own entry, procurement roles may undo anyone's.
+    await flow.delete_receipt(db, user, receipt_id)
     return Response(status_code=status.HTTP_204_NO_CONTENT)
 
 
