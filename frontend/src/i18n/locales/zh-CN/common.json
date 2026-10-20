@@ -700,6 +700,7 @@
     "delete_confirm_content": "确定要删除询价单 {{number}} 吗？此操作不可撤销。"
   },
   "supplier": {
+    "code_auto_hint": "留空则自动生成下一个编号（JQSUP 序列）",
     "back_to_list": "返回列表",
     "title": "供应商",
     "detail": "供应商详情",

@@ -161,7 +161,9 @@ class DepartmentOut(BaseModel):
 
 
 class SupplierCreate(BaseModel):
-    code: str = Field(..., min_length=1, max_length=32)
+    # Optional: leaving it out generates the next JQSUP sequence number, so the
+    # code stops depending on whoever types it (and never becomes a name prefix).
+    code: str | None = Field(default=None, max_length=32)
     name: str = Field(..., min_length=1, max_length=255)
     tax_number: str | None = Field(default=None, max_length=64)
     contact_name: str | None = Field(default=None, max_length=128)
@@ -174,7 +176,9 @@ class SupplierCreate(BaseModel):
 
     @field_validator("code")
     @classmethod
-    def validate_code(cls, value: str) -> str:
+    def validate_code(cls, value: str | None) -> str | None:
+        if value is None or not value.strip():
+            return None
         return _normalize_master_data_code(value)
 
 

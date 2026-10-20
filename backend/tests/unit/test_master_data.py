@@ -978,3 +978,57 @@ async def test_get_item_not_found_raises_404(seeded_db_session):
 
     assert exc.value.status_code == 404
     assert exc.value.detail == "Item not found"
+
+
+# ── supplier code generation (v1.59.1) ───────────────────────────────────────
+# The code used to be typed by hand (the sequence had reached JQSUP00035) and
+# bulk imports filled the same field with name[:16]. It is now generated unless
+# someone explicitly supplies one.
+
+
+async def test_create_supplier_generates_code_when_omitted(seeded_db_session):
+    db = seeded_db_session
+    actor = await _user(db, "alice")
+    expected_seq = await svc.next_supplier_code_seq(db)
+
+    supplier = await svc.create_supplier(db, actor, SupplierCreate(name="自动编码供应商"))
+
+    assert supplier.code == svc.format_supplier_code(expected_seq)
+    assert supplier.code.startswith("JQSUP")
+    assert len(supplier.code) == len("JQSUP") + 5
+
+
+async def test_generated_supplier_codes_advance(seeded_db_session):
+    db = seeded_db_session
+    actor = await _user(db, "alice")
+
+    first = await svc.create_supplier(db, actor, SupplierCreate(name="顺序甲"))
+    second = await svc.create_supplier(db, actor, SupplierCreate(name="顺序乙"))
+
+    assert second.code != first.code
+    assert (
+        int(second.code[len(svc.SUPPLIER_CODE_PREFIX) :])
+        == int(first.code[len(svc.SUPPLIER_CODE_PREFIX) :]) + 1
+    )
+
+
+async def test_blank_supplier_code_falls_back_to_generated(seeded_db_session):
+    """Whitespace is treated as "not provided", not as a code."""
+    db = seeded_db_session
+    actor = await _user(db, "alice")
+
+    supplier = await svc.create_supplier(db, actor, SupplierCreate(code="   ", name="空白编码"))
+
+    assert supplier.code.startswith(svc.SUPPLIER_CODE_PREFIX)
+
+
+async def test_create_supplier_keeps_explicit_code(seeded_db_session):
+    """Typing a code still works — it is just no longer required."""
+    db = seeded_db_session
+    actor = await _user(db, "alice")
+
+    supplier = await svc.create_supplier(
+        db, actor, SupplierCreate(code="manual-a1", name="手工编码供应商")
+    )
+
+    assert supplier.code == "MANUAL-A1"
