@@ -371,6 +371,19 @@ export interface Shipment {
   items: ShipmentItem[]
 }
 
+export interface Receipt {
+  id: string
+  po_id: string
+  po_item_id: string
+  shipment_id: string | null
+  qty: string
+  received_by_id: string | null
+  received_by_name: string | null
+  received_at: string
+  notes: string | null
+  created_at: string
+}
+
 export interface PaymentRecord {
   id: string
   payment_number: string
@@ -1767,6 +1780,24 @@ export const api = {
   },
   async removeShipmentAttachment(shipmentId: string, documentId: string): Promise<void> {
     await client.delete(`/shipments/${shipmentId}/attachments/${documentId}`)
+  },
+  async listReceipts(poId: string): Promise<Receipt[]> {
+    const { data } = await client.get<Receipt[]>(`/purchase-orders/${poId}/receipts`)
+    return data
+  },
+  async createReceipts(
+    poId: string,
+    payload: {
+      items: { po_item_id: string; qty: number | string; shipment_id?: string | null }[]
+      received_at?: string | null
+      notes?: string | null
+    }
+  ): Promise<Receipt[]> {
+    const { data } = await client.post<Receipt[]>(`/purchase-orders/${poId}/receipts`, payload)
+    return data
+  },
+  async deleteReceipt(receiptId: string): Promise<void> {
+    await client.delete(`/receipts/${receiptId}`)
   },
   async attachPODocument(poId: string, documentId: string, role: string = 'attachment'): Promise<{ po_id: string; document_id: string; role: string }> {
     const { data } = await client.post(`/purchase-orders/${poId}/attachments`, { document_id: documentId, role })

@@ -96,6 +96,7 @@
     "bulk_created": "Created {{count}} delivery plans"
   },
   "nav": {
+    "receipts": "Receipts",
     "dashboard": "Dashboard",
     "purchase_requisitions": "Purchase Requisitions",
     "purchase_orders": "Purchase Orders",
@@ -113,6 +114,8 @@
     "api_tokens": "API Tokens"
   },
   "button": {
+    "confirm_receipt": "Receive Goods",
+    "revoke": "Revoke",
     "submit": "Submit",
     "save": "Save",
     "cancel": "Cancel",
@@ -171,6 +174,10 @@
     "shared_badge": "Shared"
   },
   "field": {
+    "date": "Date",
+    "qty_recv": "Received",
+    "qty_pending": "Outstanding",
+    "received_by": "Received By",
     "username": "Username",
     "password": "Password",
     "email": "Email",
@@ -266,7 +273,8 @@
     "cancelled": "Cancelled",
     "partially_converted": "Partially converted",
     "converted": "Converted to PO",
-    "confirmed": "Confirmed",
+    "confirmed": "Awaiting Shipment",
+    "shipped": "Shipped",
     "closed": "Closed",
     "pending": "Pending",
     "in_transit": "In Transit",
@@ -274,7 +282,7 @@
     "accepted": "Accepted",
     "partially_accepted": "Partially Accepted",
     "partially_received": "Partially Received",
-    "fully_received": "Fully Received",
+    "fully_received": "Completed",
     "verified": "Verified",
     "paid": "Paid",
     "pending_match": "Pending Match",
@@ -707,6 +715,17 @@
     "deleted": "Supplier deleted",
     "updated": "Supplier updated",
     "status": "Status"
+  },
+  "receipt": {
+    "title": "Confirm Receipt",
+    "help": "Receiving is the requester's act: record what actually arrived, in as many passes as needed.",
+    "modal_help": "Enter the quantity that actually arrived. Leave a line at 0 to receive it later.",
+    "fill_remaining": "Fill outstanding quantities",
+    "empty": "No receipts yet",
+    "need_qty": "Enter a received quantity for at least one line",
+    "recorded": "Receipt recorded",
+    "revoked": "Receipt revoked",
+    "confirm_revoke": "Revoke this receipt? The order's received quantity will drop accordingly."
   },
   "shipment": {
     "new": "New Shipment",

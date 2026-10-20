@@ -9,6 +9,7 @@ import { POAttachmentsTab } from '@/components/PO/POAttachmentsTab'
 import { InvoicesTab } from '@/components/PO/InvoicesTab'
 import { ItemsTab } from '@/components/PO/ItemsTab'
 import { PaymentsTab } from '@/components/PO/PaymentsTab'
+import { ReceiptsPanel } from '@/components/PO/ReceiptsPanel'
 import { ShipmentsTab } from '@/components/PO/ShipmentsTab'
 
 interface POTabsProps {
@@ -93,6 +94,11 @@ children: (
               currency={po.currency}
             />
           ),
+        },
+        {
+          key: 'receipts',
+          label: t('nav.receipts'),
+          children: <ReceiptsPanel po={po} loadAll={loadAll} />,
         },
         {
           key: 'payments',
