@@ -20,6 +20,7 @@ from app.schemas import (
     InvoiceOut,
     PaymentConfirmIn,
     PaymentCreateIn,
+    PaymentInvoiceIn,
     PaymentListOut,
     PaymentOut,
     PaymentUpdateIn,
@@ -488,6 +489,20 @@ async def delete_payment(
 ) -> Response:
     await flow.delete_payment(db, user, payment_id)
     return Response(status_code=status.HTTP_204_NO_CONTENT)
+
+
+@router.patch("/payments/{payment_id}/invoice", response_model=PaymentOut, tags=["flow"])
+async def attach_payment_invoice(
+    payment_id: UUID,
+    payload: PaymentInvoiceIn,
+    user: CurrentUser,
+    db: Annotated[AsyncSession, Depends(get_db)],
+    _role: Annotated[None, Depends(require_roles(*_PAYMENT_WRITE_ROLES))],
+):
+    """Attach the invoice a 后票 payment still owes, clearing its deadline."""
+    payment = await flow.attach_payment_invoice(db, user, payment_id, payload.invoice_id)
+    await db.commit()
+    return PaymentOut.model_validate(payment)
 
 
 @router.post("/payments/{payment_id}/confirm", response_model=PaymentOut, tags=["flow"])

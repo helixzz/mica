@@ -172,6 +172,9 @@ class SupplierCreate(BaseModel):
     payee_name: str | None = Field(default=None, max_length=255)
     payee_bank: str | None = Field(default=None, max_length=255)
     payee_bank_account: str | None = Field(default=None, max_length=64)
+    # 先票 (prepaid) or 后票 (postpaid): the usual arrangement, prefilled
+    # when a payment is executed and overridable there.
+    default_invoice_timing: str | None = Field(default=None, pattern="^(prepaid|postpaid)$")
     notes: str | None = None
 
     @field_validator("code")
@@ -220,6 +223,7 @@ class SupplierOut(BaseModel):
     payee_name: str | None = None
     payee_bank: str | None = None
     payee_bank_account: str | None = None
+    default_invoice_timing: str = "postpaid"
     notes: str | None = None
     is_enabled: bool
     is_deleted: bool
@@ -957,6 +961,10 @@ class PaymentListOut(PaymentOut):
     contract_number: str | None = None
 
 
+class PaymentInvoiceIn(BaseModel):
+    invoice_id: UUID
+
+
 class PaymentConfirmIn(BaseModel):
     payment_date: date | None = None
     transaction_ref: str | None = None
@@ -1415,6 +1423,9 @@ class PaymentScheduleExecuteIn(BaseModel):
     transaction_ref: str | None = None
     invoice_id: UUID | None = None
     amount: Decimal | None = None
+    # "prepaid" (invoice first) or "postpaid"; omitted means "use the supplier's
+    # default". A prepaid execution without an invoice is refused by the service.
+    invoice_timing: str | None = Field(default=None, pattern="^(prepaid|postpaid)$")
 
 
 class PaymentScheduleLinkInvoiceIn(BaseModel):

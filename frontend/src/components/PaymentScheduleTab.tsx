@@ -32,6 +32,7 @@ import { useTranslation } from 'react-i18next'
 import dayjs from 'dayjs'
 
 import { api, type PaymentScheduleItem, type PaymentScheduleSummary } from '@/api'
+import { PaymentExecuteModal, type InvoiceTiming } from '@/components/PaymentExecuteModal'
 import { extractError } from '@/api/client'
 import { fmtAmount, fmtAmountNode, getCurrencySymbol } from '@/utils/format'
 
@@ -114,6 +115,8 @@ export function PaymentScheduleTab({
     received: number
     ordered: number
   } | null>(null)
+  const [supplierId, setSupplierId] = useState<string | null>(null)
+  const [executing, setExecuting] = useState<PaymentScheduleItem | null>(null)
 
   useEffect(() => {
     let cancelled = false
@@ -123,6 +126,7 @@ export function PaymentScheduleTab({
           const po = await api.getPO(poId)
           if (cancelled) return
           setBaseAmount(Number(po.total_amount || 0))
+          setSupplierId(po.supplier_id ?? null)
           const ordered = (po.items || []).reduce((sum, item) => sum + Number(item.qty || 0), 0)
           setReceiptProgress({ received: Number(po.qty_received || 0), ordered })
         } else if (contractId) {
@@ -224,31 +228,32 @@ export function PaymentScheduleTab({
       onExecutePayment(item)
       return
     }
-    Modal.confirm({
-      title: t('contract.execute_title', { name: item.label }),
-      content: t('contract.confirm_execute', {
-        amount: fmtAmount(item.planned_amount, currency),
-      }),
-      okText: t('contract.confirm_execute_ok'),
-      cancelText: t('button.cancel'),
-      onOk: async () => {
-        try {
-          if (contractId) {
-            await api.executeScheduleItem(contractId, item.installment_no, {
-              payment_method: 'bank_transfer',
-            })
-          } else {
-            await api.executePOScheduleItem(poId!, item.installment_no, {
-              payment_method: 'bank_transfer',
-            })
-          }
-          void message.success(t('contract.payment_executed'))
-          void load()
-        } catch (e) {
-          void message.error(extractError(e).detail)
-        }
-      },
-    })
+    // The dialog collects 先票/后票 (and the invoice, when prepaid) before the
+    // money moves; the backend refuses a prepaid payment without one.
+    setExecuting(item)
+  }
+
+  const submitExecution = async ({
+    invoice_timing,
+    invoice_id,
+  }: {
+    invoice_timing: InvoiceTiming
+    invoice_id: string | null
+  }) => {
+    if (!executing) return
+    const payload = {
+      payment_method: 'bank_transfer',
+      invoice_timing,
+      invoice_id: invoice_id ?? undefined,
+    }
+    if (contractId) {
+      await api.executeScheduleItem(contractId, executing.installment_no, payload)
+    } else {
+      await api.executePOScheduleItem(poId!, executing.installment_no, payload)
+    }
+    void message.success(t('contract.payment_executed'))
+    setExecuting(null)
+    void load()
   }
 
   const handleDelete = (item: PaymentScheduleItem) => {
@@ -489,6 +494,16 @@ export function PaymentScheduleTab({
           <Typography.Text type="secondary">{t('contract.no_schedule_hint')}</Typography.Text>
         )}
       </Card>
+
+      <PaymentExecuteModal
+        open={executing !== null}
+        item={executing}
+        currency={currency}
+        supplierId={supplierId}
+        defaultTiming="postpaid"
+        onCancel={() => setExecuting(null)}
+        onSubmit={submitExecution}
+      />
 
       <Drawer
         title={

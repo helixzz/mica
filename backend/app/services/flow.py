@@ -1103,6 +1103,35 @@ async def list_receipts(db: AsyncSession, po_id: UUID) -> list[Receipt]:
     return list(rows.scalars().all())
 
 
+async def attach_payment_invoice(
+    db: AsyncSession, actor: User, payment_id: UUID, invoice_id: UUID
+) -> PaymentRecord:
+    """Record the invoice that a 后票 payment was waiting for."""
+    payment = await db.get(PaymentRecord, payment_id)
+    if payment is None:
+        raise HTTPException(404, "payment.not_found")
+    invoice = await db.get(Invoice, invoice_id)
+    if invoice is None:
+        raise HTTPException(404, "invoice.not_found")
+
+    payment.invoice_id = invoice_id
+    # The debt is settled; the deadline only exists while the invoice is missing.
+    payment.invoice_due_date = None
+    if payment.invoice_timing is None:
+        payment.invoice_timing = "postpaid"
+    await _audit_write(
+        db,
+        actor,
+        "payment.invoice_attached",
+        "payment",
+        str(payment_id),
+        meta={"invoice_id": str(invoice_id)},
+    )
+    await db.flush()
+    refreshed = await db.execute(select(PaymentRecord).where(PaymentRecord.id == payment_id))
+    return refreshed.scalar_one()
+
+
 async def create_receipts(
     db: AsyncSession,
     actor: User,

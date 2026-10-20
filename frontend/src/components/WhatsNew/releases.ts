@@ -24,6 +24,54 @@ export interface Release {
 
 export const RELEASES: Release[] = [
   {
+    version: '1.63.0',
+    date: '2026-10-20',
+    items: [
+      {
+        kind: 'new',
+        zh: '执行付款时可选「先票」或「后票」，默认沿用该供应商的常见做法，单笔可改',
+        en: 'Choose invoice-first or invoice-later when executing a payment — prefilled from the supplier, changeable per payment',
+      },
+      {
+        kind: 'new',
+        zh: '选「先票」必须当场上传发票，发票自动归档到发票页面',
+        en: 'Invoice-first requires uploading the invoice right there; it is filed on the invoice page automatically',
+      },
+      {
+        kind: 'new',
+        zh: '「后票」会在付款记录里标出待补票和剩余天数，超期标红，可就地补传',
+        en: 'Invoice-later shows as owed in the payment list with days remaining, turns red when overdue, and can be completed there',
+      },
+    ],
+  },
+  {
+    version: '1.62.1',
+    date: '2026-10-20',
+    items: [
+      {
+        kind: 'improvement',
+        zh: '合同扫描件压缩默认提高到 200 dpi，文字更清楚（仍省约 87%）',
+        en: 'Contract scans now compress at 200 dpi — crisper text, still ~87% smaller',
+      },
+      {
+        kind: 'fix',
+        zh: '压缩绝不把合同转成灰度（红章会丢色）',
+        en: 'Compression never turns a contract grayscale (red seals would lose their colour)',
+      },
+    ],
+  },
+  {
+    version: '1.62.0',
+    date: '2026-10-20',
+    items: [
+      {
+        kind: 'new',
+        zh: '上传上限提到 50 MB，扫描件自动压缩后再存',
+        en: 'Uploads up to 50 MB; scans are compressed before being stored',
+      },
+    ],
+  },
+  {
     version: '1.61.0',
     date: '2026-10-20',
     items: [

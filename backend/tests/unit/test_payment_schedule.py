@@ -1,13 +1,18 @@
+from datetime import date, timedelta
 from decimal import Decimal
 from uuid import uuid4
 
 import pytest
+from fastapi import HTTPException
 from sqlalchemy import func, select
 
 from app.db import new_uuid
 from app.models import (
     Contract,
     ContractStatus,
+    Invoice,
+    InvoiceStatus,
+    PaymentRecord,
     POStatus,
     PurchaseOrder,
     PurchaseRequisition,
@@ -15,6 +20,7 @@ from app.models import (
     Supplier,
     User,
 )
+from app.services import flow as flow_svc
 from app.services import payment_schedule as svc
 
 
@@ -1022,3 +1028,102 @@ async def test_payment_forecast_includes_contract_remaining(seeded_db_session):
 
     assert "grand_contract_remaining" in result
     assert Decimal(str(result["grand_contract_remaining"])) >= Decimal("50000")
+
+
+async def _schedule_one_installment(db, contract):
+    await svc.replace_schedule(
+        db,
+        [
+            {
+                "installment_no": 1,
+                "label": "exec",
+                "planned_amount": Decimal("5000"),
+                "planned_date": "2026-06-01",
+            }
+        ],
+        contract_id=contract.id,
+    )
+
+
+async def test_prepaid_execution_requires_an_invoice(seeded_db_session):
+    """Choosing 先票 over the supplier's default has to be honoured."""
+    db = seeded_db_session
+    contract = await _ensure_contract(db)
+    await _schedule_one_installment(db, contract)
+
+    with pytest.raises(HTTPException) as excinfo:
+        await svc.execute_schedule_item(
+            db,
+            1,
+            contract_id=contract.id,
+            payment_method="bank_transfer",
+            transaction_ref=None,
+            invoice_id=None,
+            amount_override=None,
+            invoice_timing="prepaid",
+        )
+
+    assert excinfo.value.status_code == 409
+    assert "payment.invoice_required" in str(excinfo.value.detail)
+
+
+async def test_postpaid_execution_records_a_catch_up_deadline(seeded_db_session):
+    """后票: money moves now, the invoice is owed within the grace period."""
+    db = seeded_db_session
+    contract = await _ensure_contract(db)
+    await _schedule_one_installment(db, contract)
+
+    item = await svc.execute_schedule_item(
+        db,
+        1,
+        contract_id=contract.id,
+        payment_method="bank_transfer",
+        transaction_ref=None,
+        invoice_id=None,
+        amount_override=None,
+        invoice_timing="postpaid",
+    )
+
+    payment = await db.get(PaymentRecord, item.payment_record_id)
+    assert payment is not None
+    assert payment.invoice_timing == "postpaid"
+    assert payment.invoice_id is None
+    assert payment.invoice_due_date == date.today() + timedelta(days=30)
+
+
+async def test_attaching_the_invoice_clears_the_deadline(seeded_db_session):
+    db = seeded_db_session
+    contract = await _ensure_contract(db)
+    await _schedule_one_installment(db, contract)
+    item = await svc.execute_schedule_item(
+        db,
+        1,
+        contract_id=contract.id,
+        payment_method="bank_transfer",
+        transaction_ref=None,
+        invoice_id=None,
+        amount_override=None,
+        invoice_timing="postpaid",
+    )
+    payment = await db.get(PaymentRecord, item.payment_record_id)
+    actor = (await db.execute(select(User).limit(1))).scalar_one()
+
+    invoice = Invoice(
+        id=new_uuid(),
+        internal_number="INV-TIMING-1",
+        invoice_number="F-TIMING-1",
+        supplier_id=contract.supplier_id,
+        invoice_date=date.today(),
+        subtotal=Decimal("5000"),
+        tax_amount=Decimal("0"),
+        total_amount=Decimal("5000"),
+        currency="CNY",
+        status=InvoiceStatus.PENDING_MATCH.value,
+    )
+    db.add(invoice)
+    await db.flush()
+
+    updated = await flow_svc.attach_payment_invoice(db, actor, payment.id, invoice.id)
+
+    assert updated.invoice_id == invoice.id
+    assert updated.invoice_due_date is None

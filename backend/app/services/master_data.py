@@ -203,6 +203,7 @@ async def create_supplier(db: AsyncSession, actor: User, payload: SupplierCreate
         payee_bank=payload.payee_bank,
         payee_bank_account=payload.payee_bank_account,
         notes=payload.notes,
+        default_invoice_timing=payload.default_invoice_timing or "postpaid",
     )
     db.add(supplier)
     await db.flush()

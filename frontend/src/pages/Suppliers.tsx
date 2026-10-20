@@ -615,6 +615,16 @@ export default function SuppliersPage() {
         }
       >
         <Form form={form} layout="vertical">
+          <Form.Item name="default_invoice_timing" label={t("pay.invoice_timing")}>
+            <Select
+              allowClear
+              placeholder={t("pay.timing_postpaid")}
+              options={[
+                { value: 'prepaid', label: t('pay.timing_prepaid') },
+                { value: 'postpaid', label: t('pay.timing_postpaid') },
+              ]}
+            />
+          </Form.Item>
           <Form.Item
             name="code"
             label={t("supplier.code")}
