@@ -261,3 +261,30 @@ async def test_receipts_reject_negative_quantity_payload(seeded_client):
         json={"items": [{"po_item_id": str(uuid4()), "qty": "-1"}]},
     )
     assert r.status_code == 422, r.text
+
+
+@pytest.mark.asyncio
+async def test_receipts_create_reaches_the_handler(seeded_client):
+    """A well-formed payload for an unknown order must be 404, not 500.
+
+    The receipt endpoints once called a helper that did not exist in the service
+    they imported, so every real request returned 500. Earlier tests all stopped
+    at request validation (401/422) and never executed the handler — this one
+    walks past validation on purpose.
+    """
+    auth = await _login_as(seeded_client, "admin")
+
+    r = await seeded_client.post(
+        f"/api/v1/purchase-orders/{uuid4()}/receipts",
+        headers=auth,
+        json={"items": [{"po_item_id": str(uuid4()), "qty": "1"}]},
+    )
+    assert r.status_code == 404, r.text
+
+
+@pytest.mark.asyncio
+async def test_receipts_list_reaches_the_handler(seeded_client):
+    auth = await _login_as(seeded_client, "admin")
+
+    r = await seeded_client.get(f"/api/v1/purchase-orders/{uuid4()}/receipts", headers=auth)
+    assert r.status_code == 404, r.text

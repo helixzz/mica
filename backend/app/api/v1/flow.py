@@ -33,7 +33,7 @@ from app.schemas import (
     ShipmentOut,
     ShipmentUpdate,
 )
-from app.services import export_excel, flow
+from app.services import export_excel, flow, purchase
 
 router = APIRouter()
 
@@ -402,7 +402,7 @@ async def create_receipts(
 ):
     # Visibility first: a requester may only receive against orders derived from
     # their own requisitions.
-    await flow.get_po(db, po_id, actor=user)
+    await purchase.get_po(db, po_id, actor=user)
     receipts = await flow.create_receipts(
         db,
         user,
@@ -420,7 +420,7 @@ async def list_receipts(
     user: CurrentUser,
     db: Annotated[AsyncSession, Depends(get_db)],
 ):
-    await flow.get_po(db, po_id, actor=user)
+    await purchase.get_po(db, po_id, actor=user)
     return [_receipt_to_out(receipt) for receipt in await flow.list_receipts(db, po_id)]
 
 
