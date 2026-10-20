@@ -5,6 +5,7 @@ import { useEffect, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 
 import { api, type Contract } from '@/api'
+import { getCurrencySymbol } from '@/utils/format'
 import { extractError } from '@/api/client'
 
 type Mode = 'create' | 'edit'
@@ -63,6 +64,30 @@ export function ContractFormModal({
   const { t } = useTranslation()
   const [form] = Form.useForm<ContractFormValues>()
   const [suggesting, setSuggesting] = useState(false)
+  // The amount field used to hardcode ¥, so a HKD contract was typed as if it were
+  // RMB and then displayed as HK$ once saved. Take the currency from the thing
+  // being created: the contract when editing, its order otherwise.
+  const [currency, setCurrency] = useState<string>(contract?.currency ?? 'CNY')
+
+  useEffect(() => {
+    if (contract?.currency) {
+      setCurrency(contract.currency)
+      return
+    }
+    if (!poId) return
+    let cancelled = false
+    api
+      .getPO(poId)
+      .then((po) => {
+        if (!cancelled) setCurrency(po.currency || 'CNY')
+      })
+      .catch(() => {
+        /* the symbol is only a hint; CNY is a harmless fallback */
+      })
+    return () => {
+      cancelled = true
+    }
+  }, [contract?.currency, poId])
 
   const fetchSuggestion = async () => {
     setSuggesting(true)
@@ -195,7 +220,12 @@ export function ContractFormModal({
           label={t('field.total_amount')}
           rules={[{ required: true, message: t('validation.required') }]}
         >
-          <InputNumber style={{ width: '100%' }} min={0} precision={2} prefix="¥" />
+          <InputNumber
+            style={{ width: '100%' }}
+            min={0}
+            precision={2}
+            prefix={getCurrencySymbol(currency)}
+          />
         </Form.Item>
         <Form.Item name="signed_date" label={t('field.signed_date')}>
           <DatePicker style={{ width: '100%' }} />
