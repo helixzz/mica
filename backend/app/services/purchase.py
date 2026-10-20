@@ -1862,7 +1862,12 @@ async def _load_po(db: AsyncSession, po_id: UUID) -> PurchaseOrder | None:
     result = await db.execute(
         select(PurchaseOrder)
         .where(PurchaseOrder.id == po_id)
-        .options(selectinload(PurchaseOrder.items).selectinload(POItem.fulfillment_links))
+        .options(
+            selectinload(PurchaseOrder.items).selectinload(POItem.fulfillment_links),
+            selectinload(PurchaseOrder.company),
+            selectinload(PurchaseOrder.supplier),
+            selectinload(PurchaseOrder.pr),
+        )
     )
     return result.scalar_one_or_none()
 
@@ -2016,6 +2021,7 @@ async def list_pos(db: AsyncSession, actor: User) -> list[PurchaseOrder]:
         .options(
             selectinload(PurchaseOrder.supplier),
             selectinload(PurchaseOrder.pr),
+            selectinload(PurchaseOrder.company),
         )
         .order_by(PurchaseOrder.created_at.desc())
     )

@@ -1463,6 +1463,7 @@
     "deleted": "发票已删除"
   },
   "po": {
+    "company_label": "我司采购主体：{{name}}",
     "ai_source": "AI 来源",
     "confidence": "置信度",
     "ai_failed": "AI 失败",

@@ -23,7 +23,7 @@ from app.models import (
     Supplier,
     User,
 )
-from app.schemas import PRCreateIn, PRItemIn, ShipmentItemQtyIn, ShipmentUpdate
+from app.schemas import POOut, PRCreateIn, PRItemIn, ShipmentItemQtyIn, ShipmentUpdate
 from app.services import flow as flow_svc
 from app.services import purchase as purchase_svc
 
@@ -1793,3 +1793,15 @@ async def test_terminal_states_survive_recompute(seeded_db_session):
 
     after = await purchase_svc.get_po(db, po.id)
     assert after.status == "cancelled"
+
+
+async def test_po_response_carries_the_purchasing_entity(seeded_db_session):
+    """The order page shows "our entity"; it lives on the joined company."""
+    db = seeded_db_session
+    _user, _supplier, _pr, po = await _create_confirmed_po(db)
+
+    loaded = await purchase_svc.get_po(db, po.id)
+    out = POOut.model_validate(loaded)
+
+    assert out.company_id == loaded.company_id
+    assert out.company_name
