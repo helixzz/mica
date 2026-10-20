@@ -13,6 +13,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.config import get_settings
 from app.models import Document, DocumentDownloadToken, User
+from app.services import pdf_compress
 from app.services.system_params import system_params
 
 settings = get_settings()
@@ -82,6 +83,14 @@ async def upload_document(
         raise HTTPException(415, f"file.unsupported_type:{content_type}")
 
     content_hash, file_size, content = await _stream_read_and_hash(db, file)
+
+    # Scans lose nothing at a lower resolution. Compress before hashing so the
+    # stored hash (and therefore dedupe) describes the bytes we actually keep.
+    compressed = await pdf_compress.compress_pdf_if_worthwhile(db, content, content_type)
+    if compressed is not content:
+        content = compressed
+        content_hash = hashlib.sha256(content).hexdigest()
+        file_size = len(content)
 
     existing = (
         await db.execute(

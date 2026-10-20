@@ -16,6 +16,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     pkg-config \
     curl \
     fonts-wqy-microhei \
+    ghostscript \
     && rm -rf /var/lib/apt/lists/*
 
 COPY pyproject.toml ./
