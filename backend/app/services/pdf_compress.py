@@ -43,15 +43,17 @@ _MIN_DPI = 96
 _MIN_QUALITY = 40
 
 
-def _refinement_ladder(dpi: int, quality: int) -> list[tuple[int, int, bool]]:
+def _refinement_ladder(dpi: int, quality: int) -> list[tuple[int, int]]:
     """Fallbacks used only when a target size was requested and missed.
 
     Resolution carries the win (200 -> 120 dpi measured 2.8x further on a 300 dpi
-    scan), so step that down first; grayscale then buys the last ~15%.
+    scan), so step that down and lower the quality. Grayscale is deliberately not
+    part of the ladder: contracts carry red seals, and losing them is a visible
+    change nobody asked for.
     """
     return [
-        (max(_MIN_DPI, int(dpi * 0.8)), max(_MIN_QUALITY, quality - 10), True),
-        (max(_MIN_DPI, int(dpi * 0.6)), max(_MIN_QUALITY, quality - 20), True),
+        (max(_MIN_DPI, int(dpi * 0.8)), max(_MIN_QUALITY, quality - 10)),
+        (max(_MIN_DPI, int(dpi * 0.6)), max(_MIN_QUALITY, quality - 20)),
     ]
 
 
@@ -71,7 +73,7 @@ async def compress_pdf_if_worthwhile(db: AsyncSession, content: bytes, content_t
         if shutil.which("gs") is None:
             logger.debug("ghostscript not installed; storing PDF as-is")
             return content
-        dpi = await system_params.get_int_or(db, "pdf_compress.image_dpi", 150)
+        dpi = await system_params.get_int_or(db, "pdf_compress.image_dpi", 200)
         quality = await system_params.get_int_or(db, "pdf_compress.jpeg_quality", 65)
         grayscale = await system_params.get_bool_or(db, "pdf_compress.grayscale", False)
         target_mb = await system_params.get_int_or(db, "pdf_compress.target_size_mb", 0)
@@ -87,10 +89,10 @@ async def compress_pdf_if_worthwhile(db: AsyncSession, content: bytes, content_t
 
     target_bytes = target_mb * 1024 * 1024 if target_mb > 0 else 0
     if target_bytes and best and len(best) > target_bytes:
-        for step_dpi, step_quality, step_gray in _refinement_ladder(dpi, quality):
+        for step_dpi, step_quality in _refinement_ladder(dpi, quality):
             try:
                 candidate = await _run_ghostscript(
-                    content, dpi=step_dpi, quality=step_quality, grayscale=step_gray
+                    content, dpi=step_dpi, quality=step_quality, grayscale=grayscale
                 )
             except Exception:
                 logger.warning("pdf refinement step failed", exc_info=True)
