@@ -426,6 +426,7 @@
     }
   },
   "insights": {
+    "currency": "Currency",
     "title": "Insights",
     "edit_mode": "Edit Panels",
     "save_layout": "Save Layout",

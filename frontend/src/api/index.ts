@@ -1049,6 +1049,9 @@ export interface CashFlowMonth {
 }
 
 export interface CashFlowData {
+  // Every figure is in `currency`; the list says what else exists.
+  currency?: string
+  available_currencies?: string[]
   months: CashFlowMonth[]
   total_planned: number
   total_confirmed: number
@@ -2521,8 +2524,10 @@ export const api = {
     const { data } = await client.get('/insights/anomaly-wall')
     return data
   },
-  async getInsightsCashFlow(months?: number): Promise<CashFlowData> {
-    const { data } = await client.get('/insights/cash-flow-forecast', { params: { months: months ?? 3 } })
+  async getInsightsCashFlow(months?: number, currency?: string): Promise<CashFlowData> {
+    const { data } = await client.get('/insights/cash-flow-forecast', {
+      params: { months: months ?? 3, currency: currency ?? 'CNY' },
+    })
     return data
   },
   async getInsightsDashboardConfig(): Promise<{ panels: PanelConfig[] }> {

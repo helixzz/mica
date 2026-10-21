@@ -426,6 +426,7 @@
     }
   },
   "insights": {
+    "currency": "币种",
     "title": "数据洞察",
     "edit_mode": "编辑面板",
     "save_layout": "保存布局",
