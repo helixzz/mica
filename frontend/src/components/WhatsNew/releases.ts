@@ -24,6 +24,17 @@ export interface Release {
 
 export const RELEASES: Release[] = [
   {
+    version: '1.66.0',
+    date: '2026-10-21',
+    items: [
+      {
+        kind: 'new',
+        zh: '仪表盘新增「待取回询价单」卡片：哪些已发出、还有几家没回、哪些已逾期',
+        en: 'New dashboard card for quotations awaiting collection — who has not replied, what is overdue',
+      },
+    ],
+  },
+  {
     version: '1.65.2',
     date: '2026-10-21',
     items: [
