@@ -3,6 +3,7 @@ import { Button, Popconfirm, Space, Table, Typography, Upload, message } from 'a
 import { useEffect, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 
+import { useAuth } from '@/auth/useAuth'
 import { api } from '@/api'
 
 interface Attachment {
@@ -19,6 +20,7 @@ interface Props {
 }
 
 export function POAttachmentsTab({ poId }: Props) {
+  const user = useAuth((state) => state.user)
   const { t } = useTranslation()
   const [attachments, setAttachments] = useState<Attachment[]>([])
   const [loading, setLoading] = useState(false)
@@ -48,8 +50,15 @@ export function POAttachmentsTab({ poId }: Props) {
     }
   }
 
+  // Uploading a document edits the order's dossier, which the API restricts to
+  // procurement roles — showing the button to everyone just earns a 403.
+  const canUpload = Boolean(
+    user && ['admin', 'procurement_mgr', 'it_buyer'].includes(user.role),
+  )
+
   return (
     <Space direction="vertical" style={{ width: '100%' }}>
+      {canUpload && (
       <Upload
         accept=".pdf,.jpg,.jpeg,.png,.xlsx,.xls,.docx,.doc,.csv,.txt,.zip"
         showUploadList={false}
@@ -79,6 +88,7 @@ export function POAttachmentsTab({ poId }: Props) {
           {t('button.upload')}
         </Button>
       </Upload>
+      )}
       <Typography.Text type="secondary">
         {t('po.attachments_hint')}
       </Typography.Text>
