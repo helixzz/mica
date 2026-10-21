@@ -24,6 +24,17 @@ export interface Release {
 
 export const RELEASES: Release[] = [
   {
+    version: '1.72.1',
+    date: '2026-10-22',
+    items: [
+      {
+        kind: 'fix',
+        zh: '修复部署重启会让当天的价格异常扫描与合同到期提醒静默跳过的问题',
+        en: 'Fixed a deploy restart silently skipping that day\'s price anomaly scan and contract expiry check',
+      },
+    ],
+  },
+  {
     version: '1.72.0',
     date: '2026-10-22',
     items: [
