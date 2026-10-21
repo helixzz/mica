@@ -341,7 +341,16 @@ cd deploy && docker compose build   # 所有镜像构建通过
 
 ### 6.2 本地一键验证
 
-没有独立的 `scripts/verify.sh`，但常用组合：
+**发版前跑这一条**：
+
+```bash
+./scripts/verify.sh          # lint + 后端测试 + 类型 + 前端单测 + 构建 + E2E
+./scripts/verify.sh --fast   # 跳过 E2E（无数据库时）
+```
+
+它存在的原因：曾用「后端测试 + type-check + build」当发版检查，**漏掉了 `npm test`**，于是连续六个版本没写更新日志——抓这个问题的守卫测试就在前端单测里。靠人记的清单不算检查。
+
+手动组合（需要单独跑某步时）：
 
 ```bash
 # Backend 完整检查
