@@ -37,6 +37,7 @@ async def record_price(
     source_ref: str | None = None,
     notes: str | None = None,
     anomaly_threshold_pct: Decimal | None = None,
+    currency: str = "CNY",
 ) -> tuple[SKUPriceRecord, SKUPriceAnomaly | None]:
     item = await db.get(Item, item_id)
     if item is None:
@@ -46,7 +47,7 @@ async def record_price(
         item_id=item_id,
         supplier_id=supplier_id,
         price=_as_decimal(price),
-        currency="CNY",
+        currency=currency,
         quotation_date=quotation_date,
         source_type=source_type,
         source_ref=source_ref,

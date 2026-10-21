@@ -7,6 +7,27 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [v1.68.1] — 2026-10-21
+
+### 修复（询价报价写入价格库时绕过了风控）
+
+录入供应商报价时，价格记录是**直接 `db.add(SKUPriceRecord)` 且整段包在 `try/except: pass` 里**：
+
+- 不刷新价格基准（`sku.benchmark_window_days` 那套）
+- 不做价格异常检测
+- 不写审计日志（`entered_by_id` 一直为空）
+- 失败时**无声**，报价存进去了但价格没记，事后无从发现
+
+改为统一走 `services/sku.record_price`（与手工录价、实际采购价同一个入口），`source_type` 规范为允许值 `quote` 而非此前那个不在白名单里的 `rfq_quote`。
+
+- `record_price` 新增 `currency` 参数（此前把币种写死 `CNY`）
+- 端点层把操作人传进来，价格记录因此有了归属
+- 失败仍不阻塞报价本身，但改为**记日志**而不是吞掉
+
+### 验证
+
+- 后端 **899 passed**（新增：报价确实走共享路径，断言 `source_type=quote`、`source_ref=RFQ:…`、`entered_by_id` 非空——旧的直接插入这三项都拿不到）
+
 ## [v1.68.0] — 2026-10-21
 
 ### 新增（询价单扫描报价的预览提取）

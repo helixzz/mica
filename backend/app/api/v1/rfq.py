@@ -14,6 +14,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.security import CurrentUser, require_roles
 from app.db import get_db
+from app.models import User
 from app.services import rfq as svc
 
 logger = logging.getLogger("mica.rfq")
@@ -268,10 +269,10 @@ async def update_rfq(
 async def add_quote(
     rfq_id: UUID,
     body: RFQQuoteIn,
-    _user: Annotated[None, Depends(require_roles("admin", "it_buyer", "procurement_mgr"))],
+    user: Annotated[User, Depends(require_roles("admin", "it_buyer", "procurement_mgr"))],
     db: Annotated[AsyncSession, Depends(get_db)],
 ):
-    q = await svc.add_quote(db, rfq_id, body.model_dump())
+    q = await svc.add_quote(db, rfq_id, body.model_dump(), actor=user)
     await db.commit()
     return RFQQuoteOut(
         id=q.id,
