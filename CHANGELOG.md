@@ -7,6 +7,23 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [v1.72.3] — 2026-10-22
+
+### 修复（合同币种不符时被静默忽略）
+
+`POST /contracts` 传 `currency: "HKD"`，接口回 **201** 且 `currency: "CNY"`——因为 `ContractCreateIn` **根本没有 currency 字段**，Pydantic 把值丢掉了，合同默默存了订单的币种。
+
+合同金额跟随订单币种是**正确设计**（前端也不让改），问题在于**调用方得不到任何提示**：集成方会以为设成功了。
+
+- `ContractCreateIn` 增加可选 `currency`
+- 传入值与订单不符 → **422 `contract.currency_follows_order`**，消息里带订单币种与请求币种
+- 一致或省略 → 行为不变
+
+### 验证
+
+- 后端 **918 passed**（新增 2 条：不符被拒、一致通过）
+- 多币种链路复查：合同币种 = 订单币种、付款计划沿用、前端符号取自合同或订单
+
 ## [v1.72.2] — 2026-10-22
 
 ### 新增（收货边界检查）

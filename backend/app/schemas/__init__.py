@@ -736,6 +736,10 @@ class ContractCreateIn(BaseModel):
     po_id: UUID
     title: str
     total_amount: Decimal
+    # A contract's money follows its order. Accept the field so a caller who passes a
+    # different currency gets told, instead of having it silently dropped by Pydantic
+    # (which is what happened: an API client set HKD and the contract stored CNY).
+    currency: str | None = Field(default=None, max_length=3)
     signed_date: date | None = None
     effective_date: date | None = None
     expiry_date: date | None = None
