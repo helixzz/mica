@@ -95,7 +95,7 @@ export function PaymentExecuteModal({
       okText={t('pay.execute_ok')}
       cancelText={t('button.cancel')}
       width={560}
-      destroyOnClose
+      destroyOnHidden
     >
       <Space direction="vertical" size="middle" style={{ width: '100%' }}>
         <Typography.Text type="secondary">

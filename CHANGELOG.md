@@ -7,6 +7,30 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [v1.71.1] — 2026-10-22
+
+### 修复（antd 弃用属性）
+
+三处对话框仍用 `destroyOnClose`，Ant Design 已弃用（推荐 `destroyOnHidden`）。目前只是控制台警告，但下一个大版本会失效。
+
+- `PaymentExecuteModal` / `RfqQuoteImportModal` / 付款页补充发票对话框
+
+### 验证（全页面 × 多角色的运行时检查）
+
+用 Playwright 逐个打开 14 个主要页面，监听未捕获异常与 console error：
+
+| 角色 | 页面数 | 问题数 |
+| :--- | :--- | :--- |
+| `it_buyer` | 13 | 0（仅上述警告） |
+| `dept_manager` | 14 | **0** |
+| `finance_auditor` | 14 | **0** |
+
+没有空白页、没有渲染异常。
+
+### 另外
+
+生产后端近 7 天：**0 个 5xx、0 条异常堆栈、1 次 4xx**（登录参数错误）。业务数据 6 类一致性检查中 5 类完全干净。
+
 ## [v1.71.0] — 2026-10-22
 
 ### 修复（订单页对合同期次编号的操作会落到错误的记录上）

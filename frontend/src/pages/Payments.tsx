@@ -153,7 +153,7 @@ export function PaymentsPage() {
         confirmLoading={attachingBusy}
         okText={t('pay.attach_invoice')}
         cancelText={t('button.cancel')}
-        destroyOnClose
+        destroyOnHidden
       >
         <Space direction="vertical" size="middle" style={{ width: '100%' }}>
           <Upload

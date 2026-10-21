@@ -24,6 +24,17 @@ export interface Release {
 
 export const RELEASES: Release[] = [
   {
+    version: '1.71.1',
+    date: '2026-10-22',
+    items: [
+      {
+        kind: 'improvement',
+        zh: '对话框改用新版组件属性（旧的写法已被 Ant Design 弃用，未来会失效）',
+        en: 'Dialogs use the current component prop (the old one is deprecated and will stop working)',
+      },
+    ],
+  },
+  {
     version: '1.71.0',
     date: '2026-10-22',
     items: [

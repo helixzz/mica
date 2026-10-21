@@ -50,7 +50,7 @@ export function RfqQuoteImportModal({ open, onClose }: Props) {
       onCancel={onClose}
       footer={<Button onClick={onClose}>{t('button.close')}</Button>}
       width={860}
-      destroyOnClose
+      destroyOnHidden
     >
       <Space direction="vertical" size="middle" style={{ width: '100%' }}>
         <Alert type="info" showIcon message={t('rfq.import_scan_hint')} />
