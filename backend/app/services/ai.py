@@ -32,8 +32,21 @@ PROMPT_TEMPLATES: dict[str, str] = {
 }
 
 
+DEFAULT_TIMEOUT_SECONDS = 60
+
+
+def _timeout_for(model: AIModel) -> float:
+    """Seconds to wait for a model before giving up."""
+    configured = getattr(model, "timeout_s", None)
+    try:
+        value = float(configured) if configured is not None else DEFAULT_TIMEOUT_SECONDS
+    except (TypeError, ValueError):
+        value = DEFAULT_TIMEOUT_SECONDS
+    return value if value > 0 else DEFAULT_TIMEOUT_SECONDS
+
+
 async def _get_routing(
-    db: AsyncSession, feature_code: str
+    db: AsyncSession, feature_code: str, *, required_modality: str | None = None
 ) -> tuple[AIFeatureRouting, AIModel | None]:
     routing = (
         await db.execute(
@@ -44,11 +57,16 @@ async def _get_routing(
         raise RuntimeError(f"ai.feature_not_configured:{feature_code}")
     if not routing.enabled:
         raise RuntimeError(f"ai.feature_disabled:{feature_code}")
-    model = await _pick_model(db, routing)
+    model = await _pick_model(db, routing, required_modality=required_modality)
     return routing, model
 
 
-async def _pick_model(db: AsyncSession, routing: AIFeatureRouting) -> AIModel | None:
+async def _pick_model(
+    db: AsyncSession,
+    routing: AIFeatureRouting,
+    *,
+    required_modality: str | None = None,
+) -> AIModel | None:
     """First usable model: the primary, then its configured fallbacks.
 
     Two things were wrong before. A route could point at a disabled model and fail at
@@ -69,8 +87,20 @@ async def _pick_model(db: AsyncSession, routing: AIFeatureRouting) -> AIModel | 
             logger.warning("ai: ignoring malformed model id in routing: %s", model_id)
             continue
         model = (await db.execute(select(AIModel).where(AIModel.id == parsed))).scalar_one_or_none()
-        if model is not None and model.is_active:
-            return model
+        if model is None or not model.is_active:
+            continue
+        # A vision feature routed at a text model fails at request time with a
+        # provider error that says nothing about the real cause. Skip it instead.
+        if required_modality and model.modality != required_modality:
+            logger.warning(
+                "ai: %s needs a %s model but %s is %s; trying the next candidate",
+                routing.feature_code,
+                required_modality,
+                model.name,
+                model.modality,
+            )
+            continue
+        return model
     return None
 
 
@@ -126,6 +156,9 @@ async def _call_litellm_stream(
         "stream": True,
         "temperature": temperature,
         "max_tokens": max_tokens,
+        # AIModel.timeout_s was only ever used by the admin "test connection"
+        # button; real calls had no deadline and a stalled model hung the request.
+        "timeout": _timeout_for(model),
     }
     if api_key:
         kwargs["api_key"] = api_key
@@ -162,6 +195,7 @@ async def _call_litellm_vision(
     api_key = decrypt(model.api_key_encrypted) if model.api_key_encrypted else None
     kwargs: dict[str, Any] = {
         "model": resolve_litellm_model(model.provider, model.model_string),
+        "timeout": _timeout_for(model),
         "messages": [
             {
                 "role": "user",
