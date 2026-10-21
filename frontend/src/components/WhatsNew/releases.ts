@@ -24,6 +24,17 @@ export interface Release {
 
 export const RELEASES: Release[] = [
   {
+    version: '1.69.2',
+    date: '2026-10-21',
+    items: [
+      {
+        kind: 'fix',
+        zh: '在后台修改 AI 提示词现在会真正生效（此前保存了但运行时仍用内置提示词）',
+        en: 'Prompt overrides saved in the admin console now take effect instead of being ignored',
+      },
+    ],
+  },
+  {
     version: '1.69.0',
     date: '2026-10-21',
     items: [

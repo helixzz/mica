@@ -45,6 +45,16 @@ def _timeout_for(model: AIModel) -> float:
     return value if value > 0 else DEFAULT_TIMEOUT_SECONDS
 
 
+def resolve_prompt(routing: AIFeatureRouting, default_prompt: str) -> str:
+    """The prompt to use: the admin's override when set, otherwise the built-in one.
+
+    AIFeatureRouting.prompt_template was stored and editable from the admin UI but
+    never read, so "tune the prompt" always meant a release.
+    """
+    override = (routing.prompt_template or "").strip()
+    return override or default_prompt
+
+
 async def _get_routing(
     db: AsyncSession, feature_code: str, *, required_modality: str | None = None
 ) -> tuple[AIFeatureRouting, AIModel | None]:
