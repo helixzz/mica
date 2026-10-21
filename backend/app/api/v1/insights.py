@@ -21,6 +21,7 @@ from app.models import (
     ApprovalInstance,
     ApprovalTask,
     Budget,
+    Contract,
     InsightCache,
     Item,
     PaymentRecord,
@@ -835,6 +836,7 @@ async def cash_flow_forecast(
     user: CurrentUser,
     db: Annotated[AsyncSession, Depends(get_db)],
     months: Annotated[int, Query(ge=1, le=12)] = 3,
+    currency: Annotated[str, Query(min_length=3, max_length=3)] = "CNY",
 ) -> dict:
     _ = user
     start = _month_start(datetime.now(UTC).date())
@@ -845,11 +847,16 @@ async def cash_flow_forecast(
     end = _add_months(start, months)
     planned_rows = (
         await db.execute(
-            select(PaymentSchedule.planned_date, PaymentSchedule.planned_amount).where(
+            select(PaymentSchedule.planned_date, PaymentSchedule.planned_amount)
+            .join(Contract, Contract.id == PaymentSchedule.contract_id, isouter=True)
+            .join(PurchaseOrder, PurchaseOrder.id == PaymentSchedule.po_id, isouter=True)
+            .where(
                 PaymentSchedule.planned_date.isnot(None),
                 PaymentSchedule.planned_date >= start,
                 PaymentSchedule.planned_date < end,
                 PaymentSchedule.status != "paid",
+                # Without this, a HKD schedule was added straight into the CNY total.
+                func.coalesce(Contract.currency, PurchaseOrder.currency, "CNY") == currency,
             )
         )
     ).all()
@@ -862,6 +869,7 @@ async def cash_flow_forecast(
                 PaymentRecord.payment_date >= start,
                 PaymentRecord.payment_date < end,
                 PaymentRecord.status == PaymentStatus.CONFIRMED.value,
+                PaymentRecord.currency == currency,
             )
         )
     ).all()
@@ -876,7 +884,10 @@ async def cash_flow_forecast(
         }
         for month, values in buckets.items()
     ]
+    available = (await db.execute(select(func.distinct(PaymentRecord.currency)))).scalars().all()
     return {
+        "currency": currency,
+        "available_currencies": sorted({str(c) for c in available if c} | {currency}),
         "months": month_items,
         "total_planned": round(sum(item["planned"] for item in month_items), 2),
         "total_confirmed": round(sum(item["confirmed"] for item in month_items), 2),

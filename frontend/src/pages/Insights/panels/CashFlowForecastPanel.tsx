@@ -1,9 +1,9 @@
 import React, { useEffect, useState, useMemo } from 'react';
-import { Card, Typography, Skeleton, Row, Col, Statistic, Table, Empty } from 'antd';
+import { Card, Typography, Skeleton, Row, Col, Statistic, Table, Empty, Select, Space } from 'antd';
 import { useTranslation } from 'react-i18next';
 import { api, CashFlowData, CashFlowMonth } from '@/api';
 import { PanelProps } from '../PanelRegistry';
-import { fmtAmount } from '@/utils/format';
+import { fmtAmount, getCurrencySymbol } from '@/utils/format';
 
 const { Text } = Typography;
 
@@ -14,12 +14,13 @@ export default function CashFlowForecastPanel({ width, height }: PanelProps) {
   const { t } = useTranslation();
   const [loading, setLoading] = useState(true);
   const [data, setData] = useState<CashFlowData | null>(null);
+  const [currency, setCurrency] = useState('CNY');
 
   useEffect(() => {
     const fetchData = async () => {
       try {
         setLoading(true);
-        const result = await api.getInsightsCashFlow(3);
+        const result = await api.getInsightsCashFlow(3, currency);
         setData(result);
       } catch (err) {
         console.error('Failed to fetch cash flow forecast:', err);
@@ -29,7 +30,7 @@ export default function CashFlowForecastPanel({ width, height }: PanelProps) {
     };
 
     fetchData();
-  }, []);
+  }, [currency]);
 
   const maxValue = useMemo(() => {
     if (!data || !data.months.length) return 0;
@@ -72,6 +73,20 @@ export default function CashFlowForecastPanel({ width, height }: PanelProps) {
       style={{ height: '100%', display: 'flex', flexDirection: 'column' }}
       styles={{ body: { flex: 1, overflow: 'auto', display: 'flex', flexDirection: 'column' } }}
     >
+      {(data?.available_currencies?.length ?? 0) > 1 && (
+        <Space style={{ marginBottom: 12 }}>
+          <Typography.Text type="secondary">{t('insights.currency', '币种')}</Typography.Text>
+          <Select
+            size="small"
+            value={currency}
+            onChange={setCurrency}
+            options={(data?.available_currencies ?? ['CNY']).map((item) => ({
+              value: item,
+              label: item,
+            }))}
+          />
+        </Space>
+      )}
       {loading ? (
         <Skeleton active paragraph={{ rows: 8 }} />
       ) : !data || data.months.length === 0 ? (
@@ -83,7 +98,7 @@ export default function CashFlowForecastPanel({ width, height }: PanelProps) {
               <Statistic 
                 title={t('insights.planned_amount', '计划付款')} 
                 value={data.total_planned} 
-                prefix="¥" 
+                prefix={getCurrencySymbol(data.currency ?? currency)} 
                 precision={2}
                 valueStyle={{ color: PLANNED_COLOR }}
               />
@@ -92,7 +107,7 @@ export default function CashFlowForecastPanel({ width, height }: PanelProps) {
               <Statistic 
                 title={t('insights.confirmed_amount', '已确认付款')} 
                 value={data.total_confirmed} 
-                prefix="¥" 
+                prefix={getCurrencySymbol(data.currency ?? currency)} 
                 precision={2}
                 valueStyle={{ color: CONFIRMED_COLOR }}
               />

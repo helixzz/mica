@@ -1449,6 +1449,9 @@ class PaymentForecastMonth(BaseModel):
 
 
 class PaymentForecastOut(BaseModel):
+    # Every figure in this payload is in `currency`; mixing them was the bug.
+    currency: str = "CNY"
+    available_currencies: list[str] = Field(default_factory=list)
     months: list[PaymentForecastMonth]
     grand_planned: Decimal
     grand_paid: Decimal

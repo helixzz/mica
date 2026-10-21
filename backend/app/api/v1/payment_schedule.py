@@ -239,6 +239,7 @@ async def get_payment_forecast(
     months: Annotated[int, Query(ge=1, le=24)] = 6,
     past_months: Annotated[int, Query(ge=0, le=24)] = 0,
     anchor: Annotated[str | None, Query(pattern=r"^\d{4}-\d{2}$")] = None,
+    currency: Annotated[str, Query(min_length=3, max_length=3)] = "CNY",
 ):
     from datetime import date as _date
 
@@ -246,9 +247,12 @@ async def get_payment_forecast(
     if anchor:
         y, m = anchor.split("-")
         anchor_date = _date(int(y), int(m), 1)
-    return await svc.payment_forecast(
-        db, months=months, anchor=anchor_date, past_months=past_months
+    payload = await svc.payment_forecast(
+        db, months=months, anchor=anchor_date, past_months=past_months, currency=currency
     )
+    payload["currency"] = currency
+    payload["available_currencies"] = await svc.forecast_currencies(db)
+    return payload
 
 
 @router.get("/dashboard/invoice-forecast", response_model=InvoiceForecastOut)

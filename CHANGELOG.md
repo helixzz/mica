@@ -7,6 +7,27 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [v1.64.0] — 2026-10-21
+
+### 修复（现金流预测与付款预测把不同币种直接相加）
+
+两个看板的金额在 SQL 里都是**跨币种求和**：`SUM(payment_schedules.planned_amount)` 与 `SUM(payment_records.amount)` 没有币种条件。生产上那份 HKD 合同（31,250）被当作人民币加进了 CNY 的现金流总额——**数字本身是错的**，不只是符号问题。
+
+- `GET /insights/cash-flow-forecast` 与 `GET /dashboard/payment-forecast` 新增 `currency` 参数（默认 `CNY`），所有求和按币种过滤
+- 期次表本身没有币种，改为按所属合同/订单的币种（`COALESCE(contract.currency, po.currency, 'CNY')`）
+- 响应带上 `currency` 与 `available_currencies`，前端据此提供币种切换
+- 现金流面板原本把金额前缀写死 `¥`，改为按实际币种渲染
+
+### 已知影响（口径变更）
+
+- **现金流/付款预测的合计数字会变小**：不再包含其他币种的金额。此前的总数是虚高的
+- 需要看别的币种时，在面板上切换（仅当存在多种币种才会出现选择器）
+
+### 验证
+
+- 后端 **882 passed**（新增：期次金额不会串到另一种币种的预测里）
+- 前端 `type-check` / `build` / Vitest **96 passed**，i18n 中英 parity 干净
+
 ## [v1.63.3] — 2026-10-20
 
 ### 修复（新建合同时金额前缀恒为 ¥，与合同实际币种不符）

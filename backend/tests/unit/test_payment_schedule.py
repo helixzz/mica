@@ -1127,3 +1127,34 @@ async def test_attaching_the_invoice_clears_the_deadline(seeded_db_session):
 
     assert updated.invoice_id == invoice.id
     assert updated.invoice_due_date is None
+
+
+async def test_forecast_never_mixes_currencies(seeded_db_session):
+    """Scheduled money in one currency must not show up in another's forecast.
+
+    Production had a HKD contract whose 31,250 was being added straight into the
+    CNY cash-flow figure.
+    """
+    db = seeded_db_session
+    contract = await _ensure_contract(db)
+    # The shared helper schedules in a fixed 2026-06 bucket, which sits outside the
+    # forward window, so put this one near today.
+    await svc.replace_schedule(
+        db,
+        [
+            {
+                "installment_no": 1,
+                "label": "forecast",
+                "planned_amount": Decimal("5000"),
+                "planned_date": (date.today() + timedelta(days=20)).isoformat(),
+            }
+        ],
+        contract_id=contract.id,
+    )
+
+    cny = await svc.payment_forecast(db, currency="CNY")
+    hkd = await svc.payment_forecast(db, currency="HKD")
+
+    assert cny["grand_planned"] > 0
+    assert hkd["grand_planned"] == 0
+    assert hkd["grand_paid"] == 0

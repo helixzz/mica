@@ -417,12 +417,41 @@ def build_summary(contract: Contract, items: list[PaymentSchedule]) -> dict:
     }
 
 
+# A schedule row has no currency of its own: it belongs to a contract or an order.
+_SCHEDULE_CURRENCY = func.coalesce(
+    select(Contract.currency).where(Contract.id == PaymentSchedule.contract_id).scalar_subquery(),
+    select(PurchaseOrder.currency)
+    .where(PurchaseOrder.id == PaymentSchedule.po_id)
+    .scalar_subquery(),
+    "CNY",
+)
+
+
+async def forecast_currencies(db: AsyncSession) -> list[str]:
+    """Currencies that actually carry scheduled or recorded money."""
+    from_schedules = select(_SCHEDULE_CURRENCY).where(
+        PaymentSchedule.status.in_((ScheduleItemStatus.PLANNED.value, ScheduleItemStatus.DUE.value))
+    )
+    from_records = select(PaymentRecord.currency).where(
+        PaymentRecord.status.in_((PaymentStatus.PENDING.value, PaymentStatus.CONFIRMED.value))
+    )
+    found = {
+        str(row) for row in (await db.execute(from_schedules)).scalars().all() if row is not None
+    }
+    found |= {
+        str(row) for row in (await db.execute(from_records)).scalars().all() if row is not None
+    }
+    # CNY first: it is the default and keeps the list stable for the common case.
+    return sorted(found, key=lambda item: (item != "CNY", item))
+
+
 async def payment_forecast(
     db: AsyncSession,
     months: int = 6,
     *,
     anchor: date | None = None,
     past_months: int = 0,
+    currency: str = "CNY",
 ) -> dict:
     today = date.today()
     anchor_month = (anchor or today).replace(day=1)
@@ -449,6 +478,7 @@ async def payment_forecast(
             PaymentSchedule.status.in_(
                 (ScheduleItemStatus.PLANNED.value, ScheduleItemStatus.DUE.value)
             ),
+            _SCHEDULE_CURRENCY == currency,
         )
         planned_from_pending_records = select(
             func.coalesce(func.sum(PaymentRecord.amount), 0)
@@ -456,6 +486,7 @@ async def payment_forecast(
             PaymentRecord.due_date >= month_start,
             PaymentRecord.due_date < month_end,
             PaymentRecord.status == PaymentStatus.PENDING.value,
+            PaymentRecord.currency == currency,
         )
         planned_sched = Decimal(str((await db.execute(planned_from_schedule)).scalar()))
         planned_pending = Decimal(str((await db.execute(planned_from_pending_records)).scalar()))
@@ -465,6 +496,7 @@ async def payment_forecast(
             PaymentRecord.payment_date >= month_start,
             PaymentRecord.payment_date < month_end,
             PaymentRecord.status == PaymentStatus.CONFIRMED.value,
+            PaymentRecord.currency == currency,
         )
         paid = Decimal(str((await db.execute(paid_q)).scalar()))
 
@@ -487,6 +519,7 @@ async def payment_forecast(
 
     paid_to_date_q = select(func.coalesce(func.sum(PaymentRecord.amount), 0)).where(
         PaymentRecord.status == PaymentStatus.CONFIRMED.value,
+        PaymentRecord.currency == currency,
     )
     paid_to_date = Decimal(str((await db.execute(paid_to_date_q)).scalar()))
 
@@ -495,6 +528,7 @@ async def payment_forecast(
         PaymentSchedule.status.in_(
             (ScheduleItemStatus.PLANNED.value, ScheduleItemStatus.DUE.value)
         ),
+        _SCHEDULE_CURRENCY == currency,
     )
     undated_planned = Decimal(str((await db.execute(undated_planned_q)).scalar()))
 
@@ -513,17 +547,19 @@ async def payment_forecast(
             PaymentSchedule.status.in_(
                 (ScheduleItemStatus.PLANNED.value, ScheduleItemStatus.DUE.value)
             ),
+            _SCHEDULE_CURRENCY == currency,
         )
         out_of_window_planned = Decimal(str((await db.execute(out_of_window_q)).scalar()))
     else:
         out_of_window_planned = Decimal("0")
 
     framework_total_q = select(func.coalesce(func.sum(Contract.total_amount), 0)).where(
-        Contract.status == ContractStatus.ACTIVE.value
+        Contract.currency == currency, Contract.status == ContractStatus.ACTIVE.value
     )
     framework_total = Decimal(str((await db.execute(framework_total_q)).scalar()))
 
     contract_paid_q = select(func.coalesce(func.sum(PaymentRecord.amount), 0)).where(
+        PaymentRecord.currency == currency,
         PaymentRecord.status == PaymentStatus.CONFIRMED.value,
         PaymentRecord.contract_id.isnot(None),
         PaymentRecord.contract_id.in_(
