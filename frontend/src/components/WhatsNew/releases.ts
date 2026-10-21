@@ -24,6 +24,17 @@ export interface Release {
 
 export const RELEASES: Release[] = [
   {
+    version: '1.69.0',
+    date: '2026-10-21',
+    items: [
+      {
+        kind: 'fix',
+        zh: '修复在采购订单页执行「合同名下的付款期次」时会失败：现在按该期次的归属执行',
+        en: 'Fixed executing a contract-owned instalment from the purchase order page — it now follows the instalment\'s owner',
+      },
+    ],
+  },
+  {
     version: '1.68.5',
     date: '2026-10-21',
     items: [

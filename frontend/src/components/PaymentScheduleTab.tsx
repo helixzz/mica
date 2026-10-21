@@ -248,14 +248,14 @@ export function PaymentScheduleTab({
 
     let invoiceId: string | undefined
     if (invoice_timing === 'prepaid' && file) {
-      // A schedule can hang off an order or off a contract, and only the contract
-      // carries its own supplier — resolving here covers both, which is exactly
-      // what a preloaded value got wrong.
+      // Ask the instalment who it belongs to, not the page. An order page lists its
+      // contracts' instalments too (see _list_schedules_for_summary), so the page is
+      // not a reliable hint about which parent to use.
       let supplierId: string | null | undefined
-      if (contractId) {
-        supplierId = (await api.getContract(contractId)).supplier_id
-      } else if (poId) {
-        supplierId = (await api.getPO(poId)).supplier_id
+      if (executing.contract_id) {
+        supplierId = (await api.getContract(executing.contract_id)).supplier_id
+      } else {
+        supplierId = (await api.getPO(executing.po_id ?? poId!)).supplier_id
       }
       if (!supplierId) {
         throw new Error(t('pay.supplier_missing'))
@@ -284,10 +284,16 @@ export function PaymentScheduleTab({
       invoice_timing,
       invoice_id: invoiceId,
     }
-    if (contractId) {
-      await api.executeScheduleItem(contractId, executing.installment_no, payload)
+    // Same rule for the execution call: posting a contract instalment to the order
+    // endpoint is exactly how "execute" used to fail from the order page.
+    if (executing.contract_id) {
+      await api.executeScheduleItem(executing.contract_id, executing.installment_no, payload)
     } else {
-      await api.executePOScheduleItem(poId!, executing.installment_no, payload)
+      await api.executePOScheduleItem(
+        executing.po_id ?? poId!,
+        executing.installment_no,
+        payload,
+      )
     }
     void message.success(t('contract.payment_executed'))
     setExecuting(null)
