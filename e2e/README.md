@@ -29,3 +29,9 @@ spec 都会 skip——于是"测试通过"不等于"功能可用"，最后仍靠
 - 登录统一走 `helpers/auth.ts`
 - 仪表盘有欢迎态：spec 里要 `localStorage.setItem('mica.welcome_dismissed', '1')`，
   否则所有卡片都被欢迎卡挡住
+
+## 为什么串行
+
+所有 spec 共用同几个测试账号，并行 worker 同时登录会触发限流，表现为
+`waitForURL` 超时之类的**假失败**——单独跑那个文件又通过了。`playwright.config.ts`
+里固定 `workers: 1`。全量 56 项约 2 分钟，比查假失败便宜。
