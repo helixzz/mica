@@ -1,6 +1,6 @@
 import { test, expect } from '@playwright/test';
 
-import { loginAs } from './helpers/auth';
+import { loginAs, loginViaApi } from './helpers/auth';
 import { readSeedManifest } from './helpers/seed';
 
 /**
@@ -19,14 +19,37 @@ async function seededPurchaseOrder() {
   return { id: manifest.po_id, po_number: manifest.po_number };
 }
 
+/**
+ * Put the instalment back to "planned".
+ *
+ * Executing it is the whole point of the spec, so the spec itself consumes the data
+ * it needs — the second run would otherwise find nothing left to execute. The first
+ * version of this test only worked once, which is not a test.
+ */
+async function resetInstalment(page: Parameters<typeof loginViaApi>[0], poId: string) {
+  const token = await loginViaApi(page, 'alice');
+  const headers = { Authorization: `Bearer ${token}` };
+  const due = new Date(Date.now() + 10 * 24 * 3600 * 1000).toISOString().slice(0, 10);
+  await page.request.put(`/api/v1/purchase-orders/${poId}/payment-schedule`, {
+    headers,
+    data: [
+      {
+        installment_no: 1,
+        label: '预付款',
+        planned_amount: '400',
+        planned_date: due,
+      },
+    ],
+  });
+}
+
 test.describe('Executing a payment', () => {
-  // fixme: passed against the earlier seed, fails against the current one — the
-  // confirm click leaves the dialog open. Needs a look at what the backend
-  // returns rather than more selector guessing.
-  test.fixme('invoice-first files the invoice and closes the dialog', async ({ page }) => {
-    await loginAs(page, 'alice');
+  test('invoice-first files the invoice and closes the dialog', async ({ page }) => {
     const order = await seededPurchaseOrder();
     test.skip(!order, 'seed data missing (run e2e/seed_data.py)');
+
+    await resetInstalment(page, order!.id);
+    await loginAs(page, 'alice');
 
     await page.goto(`/purchase-orders/${order!.id}`);
     await page.waitForSelector('[role="tab"]', { timeout: 30_000 });

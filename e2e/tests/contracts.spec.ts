@@ -27,9 +27,10 @@ test.describe('Contract detail', () => {
     await loginAs(page, 'alice');
   });
 
-  // fixme: the schedule tab does not render an .ant-table in this build, and I
-  // have not pinned down what it uses instead. Marked rather than left red: a
-  // failing suite trains everyone to ignore it.
+  // fixme: the seed's contract instalment and what the page renders are out of
+  // sync (leftover schedules keep an older label and a paid status), so the
+  // assertion looks for something that is not there. Needs the seed to reset
+  // schedules deterministically; parked rather than left red.
   test.fixme('shows the payment schedule with amounts in the contract currency', async ({ page }) => {
     const contract = seededContract();
     test.skip(!contract, 'no contract in this environment (run e2e/seed_data.py)');
@@ -45,11 +46,10 @@ test.describe('Contract detail', () => {
       { CNY: '¥', USD: '$', EUR: '€', GBP: '£', JPY: '¥', HKD: 'HK$', TWD: 'NT$' }[currency] ??
       currency;
 
-    // The schedule renders a table of instalments; assert it loaded rather than
-    // depending on a component class or a specific symbol in the markup.
-    const panel = page.locator('[role="tabpanel"]').filter({ hasText: /Payment|付款/ }).first();
-    await expect(panel).toBeVisible({ timeout: 15_000 });
-    await expect(panel.locator('.ant-table')).toBeVisible({ timeout: 15_000 });
+    // The seed puts one instalment on the contract; seeing its label means the tab
+    // really rendered the schedule. Matching the table wrapper depended on which
+    // tabpanel got selected and on the component used inside it.
+    await expect(page.getByText(/合同首款/).first()).toBeVisible({ timeout: 15_000 });
   });
 
   test('a contract can be opened from the list', async ({ page }) => {
