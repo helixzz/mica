@@ -139,6 +139,16 @@ async def extract_rfq_quote(
         "pages_total": 0,
     }
 
+    # Name the model in the log; "the scan failed" without saying which model read
+    # it is not a useful record.
+    model_name = provider = None
+    try:
+        _, routed = await _get_routing(db, FEATURE_CODE, required_modality="vision")
+        if routed is not None:
+            model_name, provider = routed.name, routed.provider
+    except Exception:
+        logger.debug("rfq quote extract: could not resolve the model for logging", exc_info=True)
+
     try:
         is_pdf = content_type == "application/pdf" or content[:4] == b"%PDF"
         dpi = await system_params.get_int_or(db, "ai.rfq_quote_dpi", DEFAULT_DPI)
@@ -210,8 +220,8 @@ async def extract_rfq_quote(
                 AICallLog(
                     feature_code=FEATURE_CODE,
                     user_id=actor.id,
-                    model_name=None,
-                    provider=None,
+                    model_name=model_name,
+                    provider=provider,
                     prompt_tokens=0,
                     completion_tokens=0,
                     latency_ms=int((time.monotonic() - started) * 1000),

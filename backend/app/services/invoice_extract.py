@@ -9,6 +9,7 @@ from __future__ import annotations
 
 import base64
 import io
+import logging
 import re
 import time
 import xml.etree.ElementTree as ET
@@ -21,6 +22,8 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.models import AICallLog, User
 from app.services.ai import _call_litellm_vision, _get_routing
+
+logger = logging.getLogger(__name__)
 
 
 class ExtractSource(StrEnum):
@@ -126,6 +129,15 @@ async def extract_invoice(
 ) -> InvoiceExtract:
     start = time.monotonic()
     feature = "invoice_extract"
+    # Resolve the model here so the call log can name it. The log used to record
+    # model_name=None, which made "the extraction failed" impossible to attribute.
+    model_name = provider = None
+    try:
+        _, routed = await _get_routing(db, feature, required_modality="vision")
+        if routed is not None:
+            model_name, provider = routed.name, routed.provider
+    except Exception:
+        logger.debug("invoice_extract: could not resolve the model for logging", exc_info=True)
     try:
         result = await _dispatch(db, actor, content, content_type, filename)
     except Exception as e:
@@ -137,8 +149,8 @@ async def extract_invoice(
                 AICallLog(
                     feature_code=feature,
                     user_id=actor.id,
-                    model_name=None,
-                    provider=None,
+                    model_name=model_name,
+                    provider=provider,
                     prompt_tokens=0,
                     completion_tokens=0,
                     latency_ms=elapsed,
