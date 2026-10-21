@@ -1,6 +1,6 @@
 import { test, expect } from '@playwright/test';
 
-import { loginAs, loginViaApi } from './helpers/auth';
+import { loginViaApi, loginViaToken } from './helpers/auth';
 import { readSeedManifest } from './helpers/seed';
 
 /**
@@ -47,17 +47,17 @@ async function resetInstalment(page: Parameters<typeof loginViaApi>[0], poId: st
 }
 
 test.describe('Executing a payment', () => {
-  // fixme: the feature itself is verified working (a diagnostic run showed
-  // upload 200, invoice 201, execute 200, paid_total updated and the dialog
-  // closing) but this spec cannot reproduce it — the reset it performs first
-  // likely leaves the page in a state the dialog does not expect. Parked
-  // rather than left red, and tracked as the last outstanding test debt.
+  // fixme, and worth a look: the failing run opened a dialog titled with the
+  // LABEL OF THE CONTRACT instalment (created by contracts.spec) while sitting on
+  // the purchase order page. That points at either a stale-state problem in the
+  // spec or a real association bug between orders and their contracts'
+  // schedules — I did not get to the bottom of it. Parked rather than left red.
   test.fixme('invoice-first files the invoice and closes the dialog', async ({ page }) => {
     const order = await seededPurchaseOrder();
     test.skip(!order, 'seed data missing (run e2e/seed_data.py)');
 
     await resetInstalment(page, order!.id);
-    await loginAs(page, 'alice');
+    await loginViaToken(page, 'alice');
 
     await page.goto(`/purchase-orders/${order!.id}`);
     await page.waitForSelector('[role="tab"]', { timeout: 30_000 });
