@@ -1,5 +1,5 @@
 import { LeftOutlined, RightOutlined, HomeOutlined } from '@ant-design/icons'
-import { Button, Card, Col, Empty, Row, Space, Table, Typography } from 'antd'
+import { Button, Card, Col, Empty, Row, Select, Space, Table, Typography } from 'antd'
 import type { ColumnsType } from 'antd/es/table'
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { useTranslation } from 'react-i18next'
@@ -31,6 +31,7 @@ export function PaymentTracker({ title }: PaymentTrackerProps) {
   const { t } = useTranslation()
   const today = currentMonthStr()
   const [anchor, setAnchor] = useState<string>(today)
+  const [currency, setCurrency] = useState('CNY')
   const [data, setData] = useState<PaymentForecast | null>(null)
   const [loading, setLoading] = useState(false)
 
@@ -41,6 +42,7 @@ export function PaymentTracker({ title }: PaymentTrackerProps) {
     setLoading(true)
     try {
       const result = await api.getPaymentForecast({
+        currency,
         months: futureMonths + 1,
         past_months: pastMonths,
         anchor,
@@ -95,7 +97,7 @@ export function PaymentTracker({ title }: PaymentTrackerProps) {
       align: 'right',
       render: (v: string) => (
         <Typography.Text style={{ color: PLANNED_COLOR }}>
-          {fmtAmount(v, 'CNY')}
+          {fmtAmount(v, currency)}
         </Typography.Text>
       ),
     },
@@ -104,14 +106,14 @@ export function PaymentTracker({ title }: PaymentTrackerProps) {
       dataIndex: 'paid',
       align: 'right',
       render: (v: string) => (
-        <Typography.Text style={{ color: PAID_COLOR }}>{fmtAmount(v, 'CNY')}</Typography.Text>
+        <Typography.Text style={{ color: PAID_COLOR }}>{fmtAmount(v, currency)}</Typography.Text>
       ),
     },
     {
       title: t('dashboard.forecast_remaining_col'),
       dataIndex: 'remaining',
       align: 'right',
-      render: (v: string) => fmtAmountNode(v, 'CNY'),
+      render: (v: string) => fmtAmountNode(v, currency),
     },
   ]
 
@@ -120,6 +122,17 @@ export function PaymentTracker({ title }: PaymentTrackerProps) {
       title={title ?? t('dashboard.payment_tracker')}
       extra={
         <Space>
+          {(data?.available_currencies?.length ?? 0) > 1 && (
+            <Select
+              size="small"
+              value={currency}
+              onChange={setCurrency}
+              options={(data?.available_currencies ?? ['CNY']).map((item) => ({
+                value: item,
+                label: item,
+              }))}
+            />
+          )}
           <Typography.Text type="secondary" style={{ fontSize: 12 }}>
             {windowLabel}
           </Typography.Text>
@@ -160,26 +173,26 @@ export function PaymentTracker({ title }: PaymentTrackerProps) {
           >
             <MiniStat
               label={t('dashboard.paid_to_date')}
-              value={fmtAmount(data.paid_to_date, 'CNY')}
+              value={fmtAmount(data.paid_to_date, currency)}
               valueColor={PAID_COLOR}
             />
             <MiniStat
               label={t('dashboard.tracker_window_planned')}
-              value={fmtAmount(data.grand_planned, 'CNY')}
+              value={fmtAmount(data.grand_planned, currency)}
             />
             <MiniStat
               label={t('dashboard.tracker_window_paid')}
-              value={fmtAmount(data.grand_paid, 'CNY')}
+              value={fmtAmount(data.grand_paid, currency)}
               valueColor={PAID_COLOR}
             />
             <MiniStat
               label={t('dashboard.tracker_window_remaining')}
-              value={fmtAmount(Math.max(0, Number(data.grand_planned) - Number(data.grand_paid)), 'CNY')}
+              value={fmtAmount(Math.max(0, Number(data.grand_planned) - Number(data.grand_paid)), currency)}
               valueColor={'var(--color-primary-500)'}
             />
             <MiniStat
               label={t('dashboard.tracker_contract_remaining')}
-              value={fmtAmount(data.grand_contract_remaining, 'CNY')}
+              value={fmtAmount(data.grand_contract_remaining, currency)}
               valueColor={PLANNED_COLOR}
             />
           </div>
@@ -196,14 +209,14 @@ export function PaymentTracker({ title }: PaymentTrackerProps) {
               {Number(data.undated_planned) > 0 && (
                 <MiniStat
                   label={t('dashboard.tracker_undated_planned')}
-                  value={fmtAmount(data.undated_planned, 'CNY')}
+                  value={fmtAmount(data.undated_planned, currency)}
                   valueColor={PLANNED_COLOR}
                 />
               )}
               {Number(data.out_of_window_planned) > 0 && (
                 <MiniStat
                   label={t('dashboard.tracker_out_of_window_planned')}
-                  value={fmtAmount(data.out_of_window_planned, 'CNY')}
+                  value={fmtAmount(data.out_of_window_planned, currency)}
                   valueColor={PLANNED_COLOR}
                 />
               )}
@@ -215,7 +228,12 @@ export function PaymentTracker({ title }: PaymentTrackerProps) {
             <Empty description={t('dashboard.tracker_window_empty')} style={{ margin: '32px 0' }} />
           ) : (
             <>
-              <BarChart months={data.months} maxValue={maxValue} todayMonth={today} />
+              <BarChart
+                months={data.months}
+                maxValue={maxValue}
+                todayMonth={today}
+                currency={currency}
+              />
               <Row style={{ marginTop: 12 }} gutter={16} align="middle">
                 <Col>
                   <LegendDot color={PLANNED_COLOR} label={t('dashboard.planned_amount')} />
@@ -253,16 +271,16 @@ export function PaymentTracker({ title }: PaymentTrackerProps) {
                   </Table.Summary.Cell>
                   <Table.Summary.Cell index={1} align="right">
                     <Typography.Text strong style={{ color: PLANNED_COLOR }}>
-                      {fmtAmount(totalPlanned, 'CNY')}
+                      {fmtAmount(totalPlanned, currency)}
                     </Typography.Text>
                   </Table.Summary.Cell>
                   <Table.Summary.Cell index={2} align="right">
                     <Typography.Text strong style={{ color: PAID_COLOR }}>
-                      {fmtAmount(totalPaid, 'CNY')}
+                      {fmtAmount(totalPaid, currency)}
                     </Typography.Text>
                   </Table.Summary.Cell>
                   <Table.Summary.Cell index={3} align="right">
-                    <Typography.Text strong>{fmtAmount(totalRemaining, 'CNY')}</Typography.Text>
+                    <Typography.Text strong>{fmtAmount(totalRemaining, currency)}</Typography.Text>
                   </Table.Summary.Cell>
                 </Table.Summary.Row>
               )
@@ -297,9 +315,10 @@ interface BarChartProps {
   months: { month: string; planned: string; paid: string; remaining: string }[]
   maxValue: number
   todayMonth: string
+  currency: string
 }
 
-function BarChart({ months, maxValue, todayMonth }: BarChartProps) {
+function BarChart({ months, maxValue, todayMonth, currency }: BarChartProps) {
   const { t } = useTranslation()
   const width = 800
   const height = 260
@@ -378,8 +397,8 @@ function BarChart({ months, maxValue, todayMonth }: BarChartProps) {
         return (
           <g key={m.month}>
             <title>
-              {m.month} · {t('dashboard.planned_amount')}: {fmtAmount(m.planned, 'CNY')} ·{' '}
-              {t('dashboard.paid_amount')}: {fmtAmount(m.paid, 'CNY')}
+              {m.month} · {t('dashboard.planned_amount')}: {fmtAmount(m.planned, currency)} ·{' '}
+              {t('dashboard.paid_amount')}: {fmtAmount(m.paid, currency)}
             </title>
             <rect
               x={cx - barW - 2}

@@ -7,6 +7,20 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [v1.64.1] — 2026-10-21
+
+### 补全（付款预测图也支持币种切换）
+
+上一版只改了 Insights 的现金流面板，`PaymentTracker`（付款预测图/表）仍固定按 CNY 统计——不会算错（后端已过滤），但看不到港币。
+
+- 图与表同一处金额格式化的 **5 个写死 `'CNY'`** 全部改为跟随所选币种
+- 存在多种币种时在卡片右上角出现切换器（与现金流面板一致）
+- `BarChart` 子组件补上 `currency` 入参（它原先没有这个作用域）
+
+### 验证
+
+- 前端 `type-check` / `build` / Vitest **96 passed**
+
 ## [v1.64.0] — 2026-10-21
 
 ### 修复（现金流预测与付款预测把不同币种直接相加）
