@@ -1158,3 +1158,63 @@ async def test_forecast_never_mixes_currencies(seeded_db_session):
     assert cny["grand_planned"] > 0
     assert hkd["grand_planned"] == 0
     assert hkd["grand_paid"] == 0
+
+
+async def test_executing_the_orders_own_instalment_does_not_hit_the_contracts(seeded_db_session):
+    """A PO and its contract number their instalments independently.
+
+    Both can have a #1. Looking up by number alone across the union returned whichever
+    came first, so executing the order's planned #1 could land on the contract's paid
+    #1 and answer "already paid".
+    """
+    db = seeded_db_session
+    contract = await _ensure_contract(db)
+    po = await db.get(PurchaseOrder, contract.po_id)
+
+    # The contract gets a paid #1; the order gets a planned #1.
+    await svc.replace_schedule(
+        db,
+        [
+            {
+                "installment_no": 1,
+                "label": "contract-1",
+                "planned_amount": Decimal("100"),
+                "planned_date": date.today() + timedelta(days=5),
+            }
+        ],
+        contract_id=contract.id,
+    )
+    await db.commit()
+    contract_item = (await svc.list_schedule(db, contract_id=contract.id))[0]
+    contract_item.status = ScheduleItemStatus.PAID.value
+    contract_item.actual_amount = Decimal("100")
+    await db.commit()
+
+    await svc.replace_schedule(
+        db,
+        [
+            {
+                "installment_no": 1,
+                "label": "po-1",
+                "planned_amount": Decimal("200"),
+                "planned_date": date.today() + timedelta(days=5),
+            }
+        ],
+        po_id=po.id,
+    )
+    await db.commit()
+
+    executed = await svc.execute_schedule_item(
+        db,
+        1,
+        payment_method="bank_transfer",
+        transaction_ref=None,
+        invoice_id=None,
+        amount_override=None,
+        po_id=po.id,
+        invoice_timing="postpaid",
+    )
+
+    # The order's own instalment was executed, not the contract's paid one.
+    assert executed.label == "po-1"
+    assert executed.po_id == po.id

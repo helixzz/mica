@@ -145,6 +145,19 @@ async def _find_schedule_item(
     write-side endpoints couldn't honor (404 schedule_item.not_found).
     """
     items = await _list_schedules_for_summary(db, parent)
+
+    # The union contains the parent's own instalments AND those of its contracts, and
+    # the two number themselves independently — a PO and its contract can both have a
+    # #3. Matching on number alone returned whichever came first, so acting on the PO's
+    # #3 could hit the contract's paid #3 instead ("already been paid" on a planned row).
+    own = [
+        item
+        for item in items
+        if (item.po_id == parent.id if parent.kind == "po" else item.contract_id == parent.id)
+    ]
+    for item in own:
+        if item.installment_no == installment_no:
+            return item
     for item in items:
         if item.installment_no == installment_no:
             return item

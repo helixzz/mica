@@ -31,7 +31,10 @@ cleanup() {
 trap cleanup EXIT
 
 echo "==> database: $PSQL_URL"
-psql "$PSQL_URL" -c "SELECT 1" >/dev/null
+# Probe with a socket: the psql client is not always installed, and a missing client
+# must not look like a missing database.
+"$PYTHON" -c "import socket,sys; socket.create_connection((sys.argv[1], int(sys.argv[2])), 2).close()" \
+  "${E2E_DB_HOST:-127.0.0.1}" "${E2E_DB_PORT:-5432}"
 
 echo "==> migrations"
 (cd "$REPO_ROOT/backend" && DATABASE_URL="$DB_URL" "$PYTHON" -m alembic upgrade head >/dev/null)

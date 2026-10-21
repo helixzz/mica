@@ -52,10 +52,14 @@ npm run build
 
 if [ "$FAST" -eq 0 ]; then
   step "e2e"
-  if command -v psql >/dev/null 2>&1 && psql "${E2E_PSQL_URL:-postgresql://mica:mica@localhost:5432/mica_e2e}" -c 'SELECT 1' >/dev/null 2>&1; then
+  # Probe with a socket, not psql: the client is often not installed, and a missing
+  # client used to look like a missing database — which skipped E2E silently.
+  E2E_HOST="${E2E_DB_HOST:-127.0.0.1}"
+  E2E_PORT_="${E2E_DB_PORT:-5432}"
+  if "$PYTHON" -c "import socket,sys; socket.create_connection((sys.argv[1], int(sys.argv[2])), 2).close()" "$E2E_HOST" "$E2E_PORT_" 2>/dev/null; then
     "$REPO_ROOT/e2e/run-local.sh"
   else
-    echo "skipped: no e2e database reachable (set E2E_PSQL_URL, or run e2e/run-local.sh)"
+    echo "skipped: nothing listening on $E2E_HOST:$E2E_PORT_ (set E2E_DB_HOST/E2E_DB_PORT, or run e2e/run-local.sh)"
   fi
 fi
 
