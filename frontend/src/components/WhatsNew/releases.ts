@@ -24,6 +24,17 @@ export interface Release {
 
 export const RELEASES: Release[] = [
   {
+    version: '1.72.0',
+    date: '2026-10-22',
+    items: [
+      {
+        kind: 'fix',
+        zh: '修复在审批中心批准后采购申请仍停留在「已提交」、无法转采购订单的问题',
+        en: 'Fixed requisitions staying "submitted" after approval from the approval centre, which blocked conversion to a purchase order',
+      },
+    ],
+  },
+  {
     version: '1.71.4',
     date: '2026-10-22',
     items: [

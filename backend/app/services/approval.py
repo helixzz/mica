@@ -21,6 +21,7 @@ from app.models import (
     ApproverDelegation,
     Department,
     NotificationCategory,
+    PRStatus,
     PurchaseRequisition,
     User,
     UserRole,
@@ -796,7 +797,51 @@ async def act_on_task(
                 )
         except Exception:
             logger.warning("failed to create approval decision notification", exc_info=True)
+
+    # Carry the decision into the business object. This used to live only in the PR
+    # decision endpoint, so approving from the approval centre flipped the instance to
+    # approved while the PR stayed "submitted" — and a submitted PR cannot be converted
+    # to a purchase order. Doing it here covers every entry point.
+    if instance.status in {"approved", "rejected", "returned"}:
+        await _sync_business_status(db, instance, user, comment=comment)
+
     return instance
+
+
+async def _sync_business_status(
+    db: AsyncSession,
+    instance: ApprovalInstance,
+    actor: User,
+    *,
+    comment: str | None,
+) -> None:
+    """Reflect an instance decision on the requisition it belongs to."""
+    if instance.biz_type != "purchase_requisition":
+        return
+
+    pr = (
+        await db.execute(
+            select(PurchaseRequisition).where(PurchaseRequisition.id == instance.biz_id)
+        )
+    ).scalar_one_or_none()
+    if pr is None:
+        return
+    # Only a submitted PR transitions; anything else was decided elsewhere already.
+    if pr.status != PRStatus.SUBMITTED.value:
+        return
+
+    target = {
+        "approved": PRStatus.APPROVED.value,
+        "rejected": PRStatus.REJECTED.value,
+        "returned": PRStatus.RETURNED.value,
+    }.get(instance.status)
+    if target is None:
+        return
+
+    pr.status = target
+    pr.decided_at = datetime.now(UTC)
+    pr.decided_by_id = actor.id
+    pr.decision_comment = comment
 
 
 async def get_instance_for_biz(
