@@ -24,6 +24,22 @@ export interface Release {
 
 export const RELEASES: Release[] = [
   {
+    version: '1.68.5',
+    date: '2026-10-21',
+    items: [
+      {
+        kind: 'fix',
+        zh: 'AI 识别增加超时上限（此前模型卡住会把请求一直挂着）',
+        en: 'AI calls now time out instead of hanging when a model stalls',
+      },
+      {
+        kind: 'improvement',
+        zh: '识别类功能只会调用支持图片的模型，配置错了会明确提示而不是给出看不懂的报错',
+        en: 'Vision features now only use models that accept images, and say so plainly when none is configured',
+      },
+    ],
+  },
+  {
     version: '1.68.4',
     date: '2026-10-21',
     items: [

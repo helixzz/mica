@@ -309,7 +309,7 @@ async def _extract_via_vision(
     db: AsyncSession, actor: User, img_bytes: bytes, content_type: str
 ) -> InvoiceExtract:
     try:
-        routing, model = await _get_routing(db, "invoice_extract")
+        routing, model = await _get_routing(db, "invoice_extract", required_modality="vision")
     except Exception as e:
         return InvoiceExtract(
             raw_extract_source=ExtractSource.LLM_VISION.value,

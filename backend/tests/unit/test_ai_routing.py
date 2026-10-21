@@ -86,3 +86,47 @@ async def test_routing_rejects_a_disabled_feature(seeded_db_session):
 
     with pytest.raises(RuntimeError, match=r"ai\.feature_disabled"):
         await _get_routing(db, "test_vision_route")
+
+
+async def test_routing_skips_a_model_of_the_wrong_kind(seeded_db_session):
+    """A vision feature routed at a text model fails at request time with an error
+    that names the provider, not the actual mistake."""
+    db = seeded_db_session
+    text_model = AIModel(
+        id=new_uuid(),
+        name="route-text-only",
+        provider="openai",
+        model_string="test/text-only",
+        modality="text",
+        is_active=True,
+    )
+    db.add(text_model)
+    await db.flush()
+    vision_model = await _model(db, "route-vision", active=True)
+    await _routing(db, primary=text_model.id, fallbacks=[str(vision_model.id)])
+    await db.commit()
+
+    _, model = await _get_routing(db, "test_vision_route", required_modality="vision")
+
+    assert model is not None
+    assert model.id == vision_model.id
+
+
+async def test_routing_returns_none_when_no_model_matches_the_modality(seeded_db_session):
+    db = seeded_db_session
+    text_model = AIModel(
+        id=new_uuid(),
+        name="route-text-only-2",
+        provider="openai",
+        model_string="test/text-only-2",
+        modality="text",
+        is_active=True,
+    )
+    db.add(text_model)
+    await db.flush()
+    await _routing(db, primary=text_model.id)
+    await db.commit()
+
+    _, model = await _get_routing(db, "test_vision_route", required_modality="vision")
+
+    assert model is None

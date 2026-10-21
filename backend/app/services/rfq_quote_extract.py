@@ -76,7 +76,7 @@ def _pages(pdf_bytes: bytes, dpi: int, max_pages: int) -> tuple[list[bytes], int
 
 
 async def _read_page(db: AsyncSession, actor: User, image: bytes, content_type: str) -> dict:
-    routing, model = await _get_routing(db, FEATURE_CODE)
+    routing, model = await _get_routing(db, FEATURE_CODE, required_modality="vision")
     if model is None:
         raise RuntimeError("no_vision_model_configured")
 
