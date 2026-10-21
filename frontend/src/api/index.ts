@@ -764,6 +764,9 @@ export interface PaymentForecastMonth {
 }
 
 export interface PaymentForecast {
+  // Figures are in `currency`; available_currencies lists what else exists.
+  currency?: string
+  available_currencies?: string[]
   months: PaymentForecastMonth[]
   grand_planned: string
   grand_paid: string
@@ -2338,12 +2341,13 @@ export const api = {
     return data
   },
   async getPaymentForecast(
-    opts: { months?: number; past_months?: number; anchor?: string } = {},
+    opts: { months?: number; past_months?: number; anchor?: string; currency?: string } = {},
   ): Promise<PaymentForecast> {
-    const { months = 6, past_months, anchor } = opts
+    const { months = 6, past_months, anchor, currency = 'CNY' } = opts
     const { data } = await client.get<PaymentForecast>('/dashboard/payment-forecast', {
       params: {
         months,
+        currency,
         ...(past_months !== undefined ? { past_months } : {}),
         ...(anchor ? { anchor } : {}),
       },
