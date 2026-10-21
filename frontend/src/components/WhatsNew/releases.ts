@@ -24,6 +24,17 @@ export interface Release {
 
 export const RELEASES: Release[] = [
   {
+    version: '1.66.1',
+    date: '2026-10-21',
+    items: [
+      {
+        kind: 'improvement',
+        zh: '回归测试更可靠：全量 56 项端到端用例串行执行，登录竞态不再造成假失败',
+        en: 'More reliable regression: all 56 end-to-end cases run serially, so login races no longer cause false failures',
+      },
+    ],
+  },
+  {
     version: '1.66.0',
     date: '2026-10-21',
     items: [

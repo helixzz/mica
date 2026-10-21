@@ -5,7 +5,10 @@ export default defineConfig({
   fullyParallel: true,
   forbidOnly: !!process.env.CI,
   retries: process.env.CI ? 2 : 0,
-  workers: process.env.CI ? 1 : undefined,
+  // Every spec signs in as the same few accounts and the login endpoint is rate
+  // limited, so parallel workers make unrelated specs fail on login timeouts.
+  // CI already ran serially; do the same locally so the result means something.
+  workers: 1,
   reporter: [
     ['html', { open: 'never' }],
     ['list'],
