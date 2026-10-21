@@ -24,6 +24,83 @@ export interface Release {
 
 export const RELEASES: Release[] = [
   {
+    version: '1.69.9',
+    date: '2026-10-21',
+    items: [
+      {
+        kind: 'fix',
+        zh: '补齐最近六个版本的更新记录（此前它们没进「最近更新」）',
+        en: 'Filled in the six missing release entries',
+      },
+    ],
+  },
+  {
+    version: '1.69.8',
+    date: '2026-10-21',
+    items: [
+      {
+        kind: 'improvement',
+        zh: '确认历史报价记录已经被计入价格基准，无需重算；价格页的来源显示也已改为中文',
+        en: 'Confirmed legacy price records were already part of the benchmark; the source column now reads in plain language',
+      },
+    ],
+  },
+  {
+    version: '1.69.7',
+    date: '2026-10-21',
+    items: [
+      {
+        kind: 'improvement',
+        zh: '上传按钮的权限显示现在有自动验证：不同角色登录后实际打开页面对照',
+        en: 'Upload button visibility is now verified automatically by signing in as different roles',
+      },
+    ],
+  },
+  {
+    version: '1.69.6',
+    date: '2026-10-21',
+    items: [
+      {
+        kind: 'fix',
+        zh: '无采购权限的角色不再看到上传附件的按钮（此前看得到但点击会被拒绝）',
+        en: 'Roles without procurement rights no longer see attachment upload buttons that would reject them',
+      },
+    ],
+  },
+  {
+    version: '1.69.5',
+    date: '2026-10-21',
+    items: [
+      {
+        kind: 'fix',
+        zh: '给合同/订单/发货挂附件需要采购权限，此前只要登录即可',
+        en: 'Attaching files to contracts, orders and shipments now requires a procurement role',
+      },
+    ],
+  },
+  {
+    version: '1.69.4',
+    date: '2026-10-21',
+    items: [
+      {
+        kind: 'improvement',
+        zh: '扫描报价识别已在生产真实模型上验证：5 行价格、税率、交期全部识别正确',
+        en: 'The scanned-quotation reader was verified against the real model: all five lines read correctly',
+      },
+    ],
+  },
+  {
+    version: '1.69.3',
+    date: '2026-10-21',
+    items: [
+      {
+        kind: 'improvement',
+        zh: '推出现场待决策清单文档，需要业务判断的事项集中一处',
+        en: 'An open-decisions document lists everything that needs a business call',
+      },
+    ],
+  },
+  {
     version: '1.69.2',
     date: '2026-10-21',
     items: [
