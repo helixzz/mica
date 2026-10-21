@@ -5,6 +5,7 @@ import io
 import pytest
 from sqlalchemy import select
 
+from app.db import new_uuid
 from app.models import AIFeatureRouting, User
 from app.services import rfq_quote_extract as svc
 
@@ -192,3 +193,58 @@ async def test_unsupported_content_type_is_reported(seeded_db_session, routed):
     result = await svc.extract_rfq_quote(db, actor, b"xlsx-bytes", "application/vnd.ms-excel")
 
     assert result["error"] and "unsupported_content_type" in result["error"]
+
+
+async def test_call_log_names_the_model_that_read_the_scan(seeded_db_session, monkeypatch):
+    """A log that says model_name=None cannot answer 'which model got this wrong'."""
+    db = seeded_db_session
+    actor = await _actor(db)
+
+    from app.models import AICallLog, AIModel
+
+    model_row = AIModel(
+        id=new_uuid(),
+        name="attribution-model",
+        provider="openai",
+        model_string="test/attribution",
+        modality="vision",
+        is_active=True,
+    )
+    db.add(model_row)
+    await db.flush()
+    # The route has to live in the same session the service reads it from; the
+    # `routed` fixture belongs to another session and its edit is invisible here.
+    db.add(
+        AIFeatureRouting(
+            feature_code=svc.FEATURE_CODE,
+            primary_model_id=model_row.id,
+            fallback_model_ids=[],
+            temperature=0.1,
+            max_tokens=2000,
+            enabled=True,
+        )
+    )
+    await db.commit()
+
+    async def fake_read(db_, actor_, image, content_type):
+        return _page_payload()
+
+    monkeypatch.setattr(svc, "_read_page", fake_read)
+
+    await svc.extract_rfq_quote(db, actor, b"\xff\xd8\xff", "image/jpeg", "scan.jpg")
+
+    log = (
+        (
+            await db.execute(
+                select(AICallLog)
+                .where(AICallLog.feature_code == svc.FEATURE_CODE)
+                .order_by(AICallLog.occurred_at.desc())
+            )
+        )
+        .scalars()
+        .first()
+    )
+
+    assert log is not None
+    assert log.model_name == "attribution-model"
+    assert log.provider == "openai"
