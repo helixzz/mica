@@ -47,12 +47,11 @@ async function resetInstalment(page: Parameters<typeof loginViaApi>[0], poId: st
 }
 
 test.describe('Executing a payment', () => {
-  // fixme, and worth a look: the failing run opened a dialog titled with the
-  // LABEL OF THE CONTRACT instalment (created by contracts.spec) while sitting on
-  // the purchase order page. That points at either a stale-state problem in the
-  // spec or a real association bug between orders and their contracts'
-  // schedules — I did not get to the bottom of it. Parked rather than left red.
-  test.fixme('invoice-first files the invoice and closes the dialog', async ({ page }) => {
+  // The order page deliberately lists its contracts' instalments as well
+  // (see _list_schedules_for_summary), so the dialog may target a contract-owned
+  // instalment. Execution has to follow the instalment's owner; this spec is what
+  // caught that it did not.
+  test('invoice-first files the invoice and closes the dialog', async ({ page }) => {
     const order = await seededPurchaseOrder();
     test.skip(!order, 'seed data missing (run e2e/seed_data.py)');
 
@@ -79,8 +78,11 @@ test.describe('Executing a payment', () => {
     await dialog.locator('input[type="file"]').setInputFiles('/tmp/e2e-invoice.png');
     await page.waitForTimeout(800);
 
+    // A fixed number makes the second run collide with the first (invoice numbers are
+    // unique; the endpoint answers 409), which is what kept this spec red.
+    const invoiceNumber = `E2E-${Date.now()}`;
     const textInputs = dialog.locator('input.ant-input:not([type="file"])');
-    if (await textInputs.count()) await textInputs.nth(0).fill('E2E-INV-0001');
+    if (await textInputs.count()) await textInputs.nth(0).fill(invoiceNumber);
     const numberInputs = dialog.locator('.ant-input-number-input');
     if (await numberInputs.count()) await numberInputs.nth(0).fill('400');
 
