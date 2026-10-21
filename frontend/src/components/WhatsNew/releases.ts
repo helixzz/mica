@@ -24,6 +24,17 @@ export interface Release {
 
 export const RELEASES: Release[] = [
   {
+    version: '1.71.4',
+    date: '2026-10-22',
+    items: [
+      {
+        kind: 'improvement',
+        zh: '搜索、导出与通知新增自动冒烟检查（这三个功能此前没有验证）',
+        en: 'Search, export and notifications now have automated smoke checks',
+      },
+    ],
+  },
+  {
     version: '1.71.3',
     date: '2026-10-22',
     items: [

@@ -7,6 +7,33 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [v1.71.4] — 2026-10-22
+
+### 新增（搜索 / 导出 / 通知的冒烟脚本）
+
+```bash
+python scripts/smoke-features.py     # 11 项检查，覆盖 E2E 没管到的三个面
+```
+
+这三个功能此前没有任何自动验证。逐项实测结果：**全部正常**——搜索 8/1 命中、10 个导出数据集、xlsx 与 csv 都能出、通知列表/未读数/标记已读/订阅均可用。
+
+### 但我自己的脚本先错了四次
+
+第一版脚本报出「搜索 0 命中」「导出空列表」「mark-read 422」，看起来像三个 bug。逐个核对真实响应后发现：
+
+| 我以为 | 实际 |
+| :--- | :--- |
+| 搜索返回 `groups` / `results` | `{total, by_type, top_hits}` |
+| 导出返回列表 | `{datasets: [...]}` |
+| 标记已读传 `{}` | 要 `{"ids": [...]}` 或 `{"all": true}` |
+| 通知的已读字段是 `is_read` | 是 `read_at` |
+
+**四个「bug」全是我的假设错。**所以这个脚本的断言是照着真实响应校准过的，不是凭猜。
+
+### 验证
+
+`scripts/smoke-features.py`：**11 项全部 ok，0 failure**。
+
 ## [v1.71.3] — 2026-10-22
 
 ### 修复（7 个洞察面板文案缺英文）
