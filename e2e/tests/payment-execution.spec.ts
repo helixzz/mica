@@ -63,12 +63,19 @@ test.describe('Executing a payment', () => {
     await page.getByRole('tab', { name: /Payment Schedule|付款计划/ }).click();
     await page.waitForTimeout(1200);
 
-    const execute = page.getByRole('button', { name: /Execute|执行/ }).first();
+    // Executed instalments stay in the table (paid rows cannot be deleted — the API
+    // refuses), and each reset adds the next number. So pick the row that is still
+    // planned instead of "the first execute button", which may belong to a paid one
+    // and answers 409.
+    const plannedRow = page
+      .locator('.ant-table-row')
+      .filter({ hasText: /Planned|已计划|计划/ })
+      .first();
     test.skip(
-      !(await execute.isVisible({ timeout: 8_000 }).catch(() => false)),
-      'no pending instalment to execute',
+      !(await plannedRow.isVisible({ timeout: 8_000 }).catch(() => false)),
+      'no planned instalment to execute',
     );
-    await execute.click();
+    await plannedRow.getByRole('button', { name: /Execute|执行/ }).click();
 
     const dialog = page.locator('.ant-modal');
     await expect(dialog).toBeVisible({ timeout: 15_000 });

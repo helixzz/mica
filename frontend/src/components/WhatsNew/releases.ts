@@ -24,6 +24,17 @@ export interface Release {
 
 export const RELEASES: Release[] = [
   {
+    version: '1.71.0',
+    date: '2026-10-22',
+    items: [
+      {
+        kind: 'fix',
+        zh: '修复在订单页操作合同期次编号时会落到错误记录上（例如执行「计划」中的期次却提示已支付）',
+        en: 'Fixed order-page actions on contract instalment numbers hitting the wrong record',
+      },
+    ],
+  },
+  {
     version: '1.70.1',
     date: '2026-10-21',
     items: [
