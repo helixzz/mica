@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 
 import { api, type Shipment } from '@/api'
+import { useAuth } from '@/auth/useAuth'
 
 interface Attachment {
   document_id: string
@@ -21,6 +22,13 @@ interface Props {
 }
 
 export function ShipmentAttachmentsDrawer({ shipment, open, onClose }: Props) {
+  const user = useAuth((state) => state.user)
+  // Attaching a file edits the shipment record, which the API restricts to
+  // procurement roles.
+  const canUpload = Boolean(
+    user && ['admin', 'procurement_mgr', 'it_buyer'].includes(user.role),
+  )
+
   const { t } = useTranslation()
   const [attachments, setAttachments] = useState<Attachment[]>([])
   const [loading, setLoading] = useState(false)
@@ -89,9 +97,11 @@ export function ShipmentAttachmentsDrawer({ shipment, open, onClose }: Props) {
       onClose={onClose}
     >
       <Space direction="vertical" size="middle" style={{ width: '100%' }}>
+        {canUpload && (
         <Upload beforeUpload={handleUpload} showUploadList={false} multiple>
           <Button icon={<UploadOutlined />}>{t('shipment.upload_attachment')}</Button>
         </Upload>
+        )}
         <Typography.Text type="secondary">{t('shipment.attachment_hint')}</Typography.Text>
         <Table<Attachment>
           dataSource={attachments}

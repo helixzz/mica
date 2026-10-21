@@ -367,15 +367,19 @@ export function ContractDetailPage() {
           <Card
             title={t('contract.scan_archive')}
             extra={
-              <Upload
-                accept=".pdf,.ofd,.xml,.jpg,.jpeg,.png,.tiff,.gif,.webp,.bmp,.xlsx,.xls,.docx,.doc,.csv,.txt,.zip"
-                beforeUpload={handleUpload}
-                showUploadList={false}
-                maxCount={1}
-              >
-                <Button type="primary" icon={<UploadOutlined />} loading={uploading}>{t('contract.upload_scan')}
-                </Button>
-              </Upload>
+              // Uploading edits the contract's dossier; the API restricts that to
+              // procurement roles, so do not offer it to everyone.
+              canWrite ? (
+                <Upload
+                  accept=".pdf,.ofd,.xml,.jpg,.jpeg,.png,.tiff,.gif,.webp,.bmp,.xlsx,.xls,.docx,.doc,.csv,.txt,.zip"
+                  beforeUpload={handleUpload}
+                  showUploadList={false}
+                  maxCount={1}
+                >
+                  <Button type="primary" icon={<UploadOutlined />} loading={uploading}>{t('contract.upload_scan')}
+                  </Button>
+                </Upload>
+              ) : null
             }
           >
             {attachments.length > 0 ? (
