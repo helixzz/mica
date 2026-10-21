@@ -24,6 +24,98 @@ export interface Release {
 
 export const RELEASES: Release[] = [
   {
+    version: '1.65.1',
+    date: '2026-10-21',
+    items: [
+      {
+        kind: 'fix',
+        zh: '补齐更新日志：此前只显示到 v1.63.0，后面六个版本的变更都漏了',
+        en: 'The release history now covers v1.63.1 through v1.65.0, which had been missing',
+      },
+    ],
+  },
+  {
+    version: '1.65.0',
+    date: '2026-10-21',
+    items: [
+      {
+        kind: 'new',
+        zh: '询价单改按采购的模板生成：表头与明细自动填好，单价/税率/交期/质保留空给供应商',
+        en: 'Quotation sheets now follow the procurement template — header and lines filled, prices left for the supplier',
+      },
+      {
+        kind: 'improvement',
+        zh: '明细行按实际物料数生成，合计公式自动覆盖所有行；物料少时保留空行供供应商多报',
+        en: 'Line rows match the actual item count, totals cover every row, and short RFQs keep blank rows to spare',
+      },
+    ],
+  },
+  {
+    version: '1.64.1',
+    date: '2026-10-21',
+    items: [
+      {
+        kind: 'improvement',
+        zh: '付款预测图也能切换币种，图表和金额符号一起变',
+        en: 'The payment forecast chart can switch currency too, chart and symbols together',
+      },
+    ],
+  },
+  {
+    version: '1.64.0',
+    date: '2026-10-21',
+    items: [
+      {
+        kind: 'fix',
+        zh: '现金流预测与付款预测不再把不同币种的钱加在一起（此前港币被当成人民币算）',
+        en: 'Cash-flow and payment forecasts no longer add different currencies together',
+      },
+      {
+        kind: 'new',
+        zh: '两个预测面板支持按币种查看',
+        en: 'Both forecast panels can be viewed per currency',
+      },
+      {
+        kind: 'improvement',
+        zh: '注意：预测合计会变小——它不再包含其他币种的金额，此前那个数字是虚高的',
+        en: 'Note: forecast totals get smaller — they no longer include other currencies',
+      },
+    ],
+  },
+  {
+    version: '1.63.3',
+    date: '2026-10-20',
+    items: [
+      {
+        kind: 'fix',
+        zh: '新建合同时金额前缀不再固定显示人民币，港币合同会正确显示 HK$',
+        en: 'The contract amount field no longer always shows ¥, so HKD contracts read correctly',
+      },
+    ],
+  },
+  {
+    version: '1.63.2',
+    date: '2026-10-20',
+    items: [
+      {
+        kind: 'fix',
+        zh: '修复在合同付款计划上执行"先票"时报「缺少供应商信息」、无法归档发票的问题',
+        en: 'Fixed invoice-first payments on contract schedules failing with a missing-supplier error',
+      },
+    ],
+  },
+  {
+    version: '1.63.1',
+    date: '2026-10-20',
+    items: [
+      {
+        kind: 'fix',
+        zh: '飞书回调改为强制校验签名（此前不携带签名头即可绕过）',
+        en: 'Feishu callbacks now always verify the signature',
+      },
+    ],
+  },
+  {
     version: '1.63.0',
     date: '2026-10-20',
     items: [
