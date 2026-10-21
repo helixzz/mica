@@ -7,6 +7,21 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [v1.71.3] — 2026-10-22
+
+### 修复（7 个洞察面板文案缺英文）
+
+`insights.*` 有 7 个键只有中文：`no_anomalies`、`summary_loading`、`summary_failed`、`planned_amount`、`confirmed_amount`、`net_outflow`、`view_details`。
+
+英文界面在这些位置会 fallback 成中文（或直接显示 key）。文档里一直标为「历史遗留可忽略」——但英文用户看到的确实是中文，所以不算可忽略。
+
+- 补齐 7 个英文键，按语义翻译（不是直译）
+- `AGENTS.md` §5.18 同步更新：两侧现为 **zh 1648 / en 1648，零差异**
+
+### 验证
+
+前端 Vitest **99 passed**；i18n parity 脚本输出 0 / 0。
+
 ## [v1.71.2] — 2026-10-22
 
 ### 新增（权限矩阵回归脚本）

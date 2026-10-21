@@ -24,6 +24,17 @@ export interface Release {
 
 export const RELEASES: Release[] = [
   {
+    version: '1.71.3',
+    date: '2026-10-22',
+    items: [
+      {
+        kind: 'fix',
+        zh: '补齐洞察面板缺失的英文文案（此前英文界面会显示中文）',
+        en: 'Filled in the English strings for the insights panels that were showing Chinese',
+      },
+    ],
+  },
+  {
     version: '1.71.2',
     date: '2026-10-22',
     items: [

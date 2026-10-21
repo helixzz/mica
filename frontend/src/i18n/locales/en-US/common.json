@@ -463,7 +463,14 @@
     "change_pct": "Change",
     "pending_approvals": "Pending",
     "approved_30d": "Approved (30d)",
-    "avg_hours": "Avg Hours"
+    "avg_hours": "Avg Hours",
+    "no_anomalies": "No anomalies right now",
+    "summary_loading": "Generating the quarterly summary…",
+    "summary_failed": "Could not generate the summary",
+    "planned_amount": "Planned",
+    "confirmed_amount": "Confirmed",
+    "net_outflow": "Net outflow",
+    "view_details": "View details"
   },
   "dashboard": {
     "greeting": "Hi, {{name}}",

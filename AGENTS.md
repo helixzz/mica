@@ -297,7 +297,7 @@ console.log('en-only:', walk(en).filter(k => !new Set(walk(zh)).has(k)));
 "
 ```
 
-前端有 7 个历史 `insights.*` 键 zh-only（pre-existing），可忽略。
+两侧目前完全对齐（zh/en 各 1648 键）。历史上曾有 7 个 `insights.*` 键 zh-only，v1.71.3 已补齐——英文用户在这些位置会看到中文或 key。
 
 ### 5.19 履约模型语义（PR ↔ PO 多对多）
 
