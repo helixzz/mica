@@ -24,6 +24,17 @@ export interface Release {
 
 export const RELEASES: Release[] = [
   {
+    version: '1.67.1',
+    date: '2026-10-21',
+    items: [
+      {
+        kind: 'fix',
+        zh: 'AI 功能（发票识别等）在首选模型停用时改为自动使用备用模型，此前会直接失败',
+        en: 'AI features (invoice extraction and others) now fall back to the backup model when the primary is disabled',
+      },
+    ],
+  },
+  {
     version: '1.67.0',
     date: '2026-10-21',
     items: [

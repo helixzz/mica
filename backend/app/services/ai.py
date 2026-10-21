@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import asyncio
+import logging
 import time
 from collections.abc import AsyncGenerator
 from typing import Any
@@ -11,6 +12,8 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.core.crypto import decrypt
 from app.core.litellm_helpers import resolve_litellm_model
 from app.models import AICallLog, AIFeatureRouting, AIModel, User
+
+logger = logging.getLogger(__name__)
 
 PROMPT_TEMPLATES: dict[str, str] = {
     "pr_description_polish": (
@@ -41,12 +44,34 @@ async def _get_routing(
         raise RuntimeError(f"ai.feature_not_configured:{feature_code}")
     if not routing.enabled:
         raise RuntimeError(f"ai.feature_disabled:{feature_code}")
-    model = None
-    if routing.primary_model_id:
-        model = (
-            await db.execute(select(AIModel).where(AIModel.id == routing.primary_model_id))
-        ).scalar_one_or_none()
+    model = await _pick_model(db, routing)
     return routing, model
+
+
+async def _pick_model(db: AsyncSession, routing: AIFeatureRouting) -> AIModel | None:
+    """First usable model: the primary, then its configured fallbacks.
+
+    Two things were wrong before. A route could point at a disabled model and fail at
+    request time instead of being caught here, and ``fallback_model_ids`` was written
+    by the admin UI but never read, so "failover" was a setting that did nothing.
+    """
+    from uuid import UUID
+
+    candidates = [routing.primary_model_id, *(routing.fallback_model_ids or [])]
+    for model_id in candidates:
+        if not model_id:
+            continue
+        try:
+            # Stored as text in the JSONB column; comparing it to a UUID column
+            # directly makes the driver reject the query.
+            parsed = UUID(str(model_id))
+        except ValueError:
+            logger.warning("ai: ignoring malformed model id in routing: %s", model_id)
+            continue
+        model = (await db.execute(select(AIModel).where(AIModel.id == parsed))).scalar_one_or_none()
+        if model is not None and model.is_active:
+            return model
+    return None
 
 
 async def _log_call(
