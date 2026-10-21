@@ -1202,6 +1202,28 @@ export interface ApiTokenCreate {
  * an ``Error`` whose message is the localised backend ``detail`` (empty string
  * when the backend sent none, so callers can fall back to ``export.failed``).
  */
+export async function downloadRfqQuotation(rfqId: string): Promise<string> {
+  const { data, headers } = await client.get(`/rfqs/${rfqId}/quotation`, {
+    responseType: 'blob',
+  })
+  const blob = new Blob([data as BlobPart], {
+    type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+  })
+  const filename = filenameFromDisposition(
+    (headers as Record<string, string>)['content-disposition'],
+    'rfq-quotation.xlsx',
+  )
+  const url = URL.createObjectURL(blob)
+  const a = document.createElement('a')
+  a.href = url
+  a.download = filename
+  document.body.appendChild(a)
+  a.click()
+  a.remove()
+  URL.revokeObjectURL(url)
+  return filename
+}
+
 export async function downloadExport(key: string, params: ExportParams = {}): Promise<string> {
   const resp = await fetch(buildExportUrl(key, params), {
     headers: {

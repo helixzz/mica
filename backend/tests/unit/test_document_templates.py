@@ -863,3 +863,80 @@ def test_two_jiaqi_payers_still_require_distinct_short_names_when_configured():
     context = _company_context(_company("上海佳期数据科技有限公司", short_name="上海佳期"))
 
     assert svc.resolve_placeholder_deterministic("采购公司名的四字简称", context) == "上海佳期"
+
+
+# ── RFQ quotation sheet ──────────────────────────────────────────────────────
+# The bundled template carries five line rows and totals written for them. An RFQ
+# with more lines has to grow, and the totals must follow.
+
+
+def _render_quotation(line_count: int):
+    import io
+    from datetime import date, datetime
+    from pathlib import Path
+    from types import SimpleNamespace
+
+    from openpyxl import load_workbook
+
+    from app.services.document_templates import (
+        build_rfq_context,
+        rfq_line_entries,
+        substitute_xlsx,
+    )
+
+    rfq = SimpleNamespace(
+        rfq_number="RFQ-TEST-1",
+        created_at=datetime(2026, 10, 21, 9, 0),
+        deadline=date(2026, 11, 5),
+        items=[
+            SimpleNamespace(item_name=f"物料{i}", specification=f"规格{i}", qty=i, uom="台")
+            for i in range(1, line_count + 1)
+        ],
+    )
+    pr = SimpleNamespace(pr_number="PR-TEST-1", currency="CNY", delivery_address="上海")
+    company = SimpleNamespace(name_zh="测试主体", name_en="")
+
+    lines = rfq_line_entries(rfq)
+    content = substitute_xlsx(
+        Path("app/templates/rfq_quotation.xlsx").read_bytes(),
+        build_rfq_context(rfq, company, pr),
+        repeat_provider=lambda anchor: lines if anchor == "line_no" else None,
+    )
+    return load_workbook(io.BytesIO(content))["RFQ询价单"]
+
+
+def test_quotation_grows_for_a_long_rfq():
+    sheet = _render_quotation(7)
+
+    assert sheet["B8"].value == "物料1"
+    assert sheet["B14"].value == "物料7"
+    totals = [
+        c.value
+        for row in sheet.iter_rows()
+        for c in row
+        if isinstance(c.value, str) and c.value.startswith("=SUM(")
+    ]
+    assert totals == ["=SUM(J8:J14)"]
+
+
+def test_quotation_keeps_blank_rows_and_totals_cover_them():
+    """A short RFQ still leaves the supplier room to quote extra items."""
+    sheet = _render_quotation(3)
+
+    assert sheet["B10"].value == "物料3"
+    assert sheet["B11"].value in (None, "")
+    totals = [
+        c.value
+        for row in sheet.iter_rows()
+        for c in row
+        if isinstance(c.value, str) and c.value.startswith("=SUM(")
+    ]
+    assert totals == ["=SUM(J8:J12)"]
+
+
+def test_quotation_fills_the_header():
+    sheet = _render_quotation(2)
+
+    assert sheet["B3"].value == "测试主体"
+    assert sheet["E3"].value == "RFQ-TEST-1"
+    assert sheet["B5"].value == "上海"

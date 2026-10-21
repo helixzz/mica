@@ -630,6 +630,9 @@
     "system_parameter.upserted": "System Parameter Updated"
   },
   "rfq": {
+    "download_quotation": "Generate quotation",
+    "quotation_ready": "Generated {{filename}}",
+    "quotation_failed": "Could not generate the quotation",
     "edit_title": "Edit RFQ",
     "items_title": "Items",
     "title": "RFQ",
