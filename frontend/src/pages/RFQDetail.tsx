@@ -1,9 +1,10 @@
 import { useTranslation } from 'react-i18next'
-import { DownloadOutlined, CheckCircleOutlined, DeleteOutlined, EditOutlined, PlusOutlined } from '@ant-design/icons'
+import { DownloadOutlined, ScanOutlined, CheckCircleOutlined, DeleteOutlined, EditOutlined, PlusOutlined } from '@ant-design/icons'
 import { Button, Card, Col, Descriptions, InputNumber, Modal, Row, Select, Space, Table, Tabs, Tag, Typography, message } from 'antd'
 import { useEffect, useState } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
 import { api, downloadRfqQuotation, type Supplier } from '@/api'
+import { RfqQuoteImportModal } from '@/components/RfqQuoteImportModal'
 import { client, extractError } from '@/api/client'
 import { useAuth } from '@/auth/useAuth'
 import { fmtAmount, fmtQty, getCurrencySymbol } from '@/utils/format'
@@ -31,6 +32,7 @@ export default function RFQDetailPage() {
   const [quotePrice, setQuotePrice] = useState<number>(0)
   const [quoteDays, setQuoteDays] = useState<number | null>(null)
   const [downloading, setDownloading] = useState(false)
+  const [importOpen, setImportOpen] = useState(false)
   const [sending, setSending] = useState(false)
   const [awarding, setAwarding] = useState(false)
   const [activeTab, setActiveTab] = useState('details')
@@ -209,6 +211,9 @@ export default function RFQDetailPage() {
           <Button icon={<DownloadOutlined />} loading={downloading} onClick={downloadQuotation}>
             {t('rfq.download_quotation')}
           </Button>
+          <Button icon={<ScanOutlined />} onClick={() => setImportOpen(true)}>
+            {t('rfq.import_scan')}
+          </Button>
           {canEdit && <Button icon={<EditOutlined />} onClick={() => navigate(`/rfqs/${id}/edit`)}>{t('button.edit')}</Button>}
           {canSend && <Button type="primary" loading={sending} onClick={doSend}>{t('rfq.send')}</Button>}
           {canSend && <Button danger icon={<DeleteOutlined />} onClick={doDelete}>{t('button.delete')}</Button>}
@@ -248,6 +253,7 @@ export default function RFQDetailPage() {
           <div><Typography.Text>{t('rfq.delivery_days')}</Typography.Text><InputNumber style={{ width: '100%' }} min={0} value={quoteDays ?? undefined} onChange={(v) => setQuoteDays(v ? Number(v) : null)} /></div>
         </Space>
       </Modal>
+      <RfqQuoteImportModal open={importOpen} onClose={() => setImportOpen(false)} />
     </Space>
   )
 }

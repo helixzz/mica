@@ -317,3 +317,16 @@ async def test_rfq_quotation_endpoint_reaches_the_handler(seeded_client):
     )
 
     assert response.status_code in (403, 404), response.text
+
+
+@pytest.mark.asyncio
+async def test_rfq_quote_extract_404_for_unknown_document(seeded_client):
+    """The preview endpoint must fail cleanly, not 500, when the document is gone."""
+    auth = await _login_as(seeded_client, "admin")
+
+    response = await seeded_client.post(
+        f"/api/v1/ai/rfq-quote-extract?document_id={uuid4()}",
+        headers=auth,
+    )
+
+    assert response.status_code == 404, response.text

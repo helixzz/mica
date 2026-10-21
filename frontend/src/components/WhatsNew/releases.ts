@@ -24,6 +24,22 @@ export interface Release {
 
 export const RELEASES: Release[] = [
   {
+    version: '1.68.0',
+    date: '2026-10-21',
+    items: [
+      {
+        kind: 'new',
+        zh: '询价单可以导入供应商回传的扫描报价：自动读出每行价格并显示识别把握度，供你核对',
+        en: 'Quotation pages can read a supplier\'s scanned quote: prices are pulled out with a confidence score for you to check',
+      },
+      {
+        kind: 'improvement',
+        zh: '这一版只做预览、不写入任何数据——价格库一旦被错价污染很难回溯，确认后再手动录入',
+        en: 'Preview only in this release — nothing is saved, so a misread price cannot reach price history',
+      },
+    ],
+  },
+  {
     version: '1.67.1',
     date: '2026-10-21',
     items: [

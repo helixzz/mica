@@ -7,7 +7,8 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.security import CurrentUser
 from app.db import get_db
-from app.schemas import AIFeaturePromptIn, InvoiceExtractOut
+from app.models import Document
+from app.schemas import AIFeaturePromptIn, InvoiceExtractOut, RfqQuoteExtractOut
 from app.services import ai as ai_svc
 from app.services import documents as doc_svc
 from app.services import invoice_extract as extract_svc
@@ -66,6 +67,29 @@ async def ai_stream(
             "Connection": "keep-alive",
         },
     )
+
+
+@router.post("/ai/rfq-quote-extract", response_model=RfqQuoteExtractOut)
+async def rfq_quote_extract(
+    document_id: UUID,
+    user: CurrentUser,
+    db: Annotated[AsyncSession, Depends(get_db)],
+):
+    """Preview the price table on a supplier's scanned quotation.
+
+    Writes nothing: the numbers are for a person to check before they would ever
+    reach price history.
+    """
+    from app.services import rfq_quote_extract as extract_svc
+
+    document = await db.get(Document, document_id)
+    if document is None:
+        raise HTTPException(404, "document.not_found")
+    content = await doc_svc.read_document_bytes(document)
+    payload = await extract_svc.extract_rfq_quote(
+        db, user, content, document.content_type or "", document.file_name or ""
+    )
+    return RfqQuoteExtractOut(**payload)
 
 
 @router.post("/ai/invoice-extract", response_model=InvoiceExtractOut, tags=["ai"])
