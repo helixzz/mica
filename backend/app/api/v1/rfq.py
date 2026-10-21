@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import io
 import logging
 from datetime import date, datetime
 from decimal import Decimal
@@ -7,6 +8,7 @@ from typing import Annotated
 from uuid import UUID
 
 from fastapi import APIRouter, Depends, HTTPException
+from fastapi.responses import StreamingResponse
 from pydantic import BaseModel, ConfigDict, Field
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -181,6 +183,32 @@ async def create_rfq(
         logger.warning("Failed to send rfq_created notification for rfq=%s", rfq.id, exc_info=True)
 
     return rfq
+
+
+@router.get("/rfqs/{rfq_id}/quotation")
+async def download_rfq_quotation(
+    rfq_id: UUID,
+    user: CurrentUser,
+    db: Annotated[AsyncSession, Depends(get_db)],
+):
+    """The quotation sheet sent to suppliers, rendered from the bundled template."""
+    from urllib.parse import quote
+
+    from app.core.scoping import is_rfq_hidden
+    from app.services import document_templates
+
+    # Same rule as viewing the RFQ: if you cannot see it, you cannot hand its
+    # requirements to a supplier.
+    if is_rfq_hidden(user):
+        raise HTTPException(status_code=403, detail="insufficient_role")
+
+    content, filename = await document_templates.generate_rfq_quotation(db, rfq_id)
+    encoded = quote(filename)
+    return StreamingResponse(
+        io.BytesIO(content),
+        media_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+        headers={"Content-Disposition": f"attachment; filename*=UTF-8''{encoded}"},
+    )
 
 
 @router.post("/rfqs/{rfq_id}/send", response_model=RFQOut)

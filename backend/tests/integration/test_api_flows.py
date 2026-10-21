@@ -304,3 +304,16 @@ async def test_feishu_webhook_refuses_when_no_secret_is_configured(seeded_client
 
     assert response.status_code == 503, response.text
     assert "feishu.webhook_not_configured" in response.text
+
+
+@pytest.mark.asyncio
+async def test_rfq_quotation_endpoint_reaches_the_handler(seeded_client):
+    """Unknown RFQ must be 404 — not a 500 from a broken template path."""
+    auth = await _login_as(seeded_client, "admin")
+
+    response = await seeded_client.get(
+        f"/api/v1/rfqs/{uuid4()}/quotation",
+        headers=auth,
+    )
+
+    assert response.status_code in (403, 404), response.text
