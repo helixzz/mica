@@ -24,6 +24,17 @@ export interface Release {
 
 export const RELEASES: Release[] = [
   {
+    version: '1.68.2',
+    date: '2026-10-21',
+    items: [
+      {
+        kind: 'improvement',
+        zh: '收货、付款执行、询价单生成、待取回都纳入自动化回归测试，每次发版真跑一遍（不再靠人点）',
+        en: 'Receipts, payment execution, quotation generation and awaiting quotes are now covered by automated regression',
+      },
+    ],
+  },
+  {
     version: '1.68.1',
     date: '2026-10-21',
     items: [
