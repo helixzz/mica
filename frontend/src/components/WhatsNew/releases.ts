@@ -24,6 +24,17 @@ export interface Release {
 
 export const RELEASES: Release[] = [
   {
+    version: '1.71.2',
+    date: '2026-10-22',
+    items: [
+      {
+        kind: 'improvement',
+        zh: '新增权限矩阵检查脚本：一次确认各角色对关键接口的访问权限是否符合预期',
+        en: 'Added a permission matrix script that verifies each role against the key endpoints in one run',
+      },
+    ],
+  },
+  {
     version: '1.71.1',
     date: '2026-10-22',
     items: [

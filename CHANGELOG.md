@@ -7,6 +7,25 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [v1.71.2] — 2026-10-22
+
+### 新增（权限矩阵回归脚本）
+
+```bash
+python scripts/perm-matrix.py      # 9 个端点 × 5 个角色，断言 403 / 放行
+```
+
+本次会话修了三个权限缺口（附件越权读取、挂附件仅需登录、按钮未跟随接口），全部靠人工读代码发现。这个脚本把「每个角色对每个关键端点应该得到什么」变成可执行的断言。
+
+**首轮结果：0 mismatch**——也就是说当前权限是对的，问题在于以前没有工具能确认这一点。
+
+写脚本时我自己先错了一轮：期望表里有 4 处写错（`DELETE /purchase-orders` 其实只允许 `admin`、提 PR 其实任何角色都行、两个路径不存在）。修正后清零。
+
+### 验证
+
+- `scripts/perm-matrix.py`：**9 × 5 = 45 项，0 mismatch**
+- 生产近 7 天：0 个 5xx
+
 ## [v1.71.1] — 2026-10-22
 
 ### 修复（antd 弃用属性）

@@ -217,6 +217,11 @@ cd deploy
   ```bash
   grep -rnE "\[.*'(admin|procurement_mgr|it_buyer|finance_auditor|dept_manager|requester)'.*\]\.includes\(.*role" src/
   ```
+- **权限矩阵回归**（跑在本地环境，需要后端与数据库）：
+  ```bash
+  python scripts/perm-matrix.py            # 9 个端点 × 5 个角色，断言 403 / 放行
+  ```
+  新增或收紧 `require_roles` 后跑一次。改权限只靠 grep 前端、读代码，漏过三次（v1.68.3 附件越权、v1.69.5 挂附件仅需登录、v1.69.6 按钮未跟随），所以这件事需要可执行的检查而不是清单。
 - **历史教训**：v1.33.3 / v1.33.4 一次性补齐了 6 处前端漏配 it_buyer 的按钮——它们都是后端早已允许、但前端 UI 一直不显示，用户报告"找不到按钮"才发现
 
 ### 5.16 Async ORM 序列化（避免 MissingGreenlet）
