@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import logging
 from datetime import UTC, date, datetime
 from decimal import Decimal
 from uuid import UUID
@@ -11,6 +12,9 @@ from sqlalchemy.orm import selectinload
 
 from app.db import new_uuid
 from app.models import RFQ, RFQItem, RFQQuote, RFQStatus, RFQSupplier, User
+from app.services import sku as sku_svc
+
+logger = logging.getLogger(__name__)
 
 
 async def list_rfqs(db: AsyncSession, user: User) -> list[RFQ]:
@@ -90,6 +94,7 @@ async def add_quote(
     db: AsyncSession,
     rfq_id: UUID,
     data: dict,
+    actor: User | None = None,
 ) -> RFQQuote:
     rfq = await get_rfq(db, rfq_id)
     if rfq.status not in (RFQStatus.SENT.value, RFQStatus.QUOTING.value):
@@ -116,30 +121,32 @@ async def add_quote(
         sup.responded_at = datetime.now(UTC)
         sup.status = "quoted"
 
-    # Record SKU price for tracking
+    # Record the price through the shared path, so benchmarks, anomaly detection and
+    # the audit trail all happen. This used to insert SKUPriceRecord directly inside a
+    # bare try/except: pass — a quoted price silently skipped every one of them, and a
+    # failure left no trace. A failed side effect must not lose the quote itself, so
+    # the error is logged rather than raised.
     try:
         rfq_item = await db.get(RFQItem, data["rfq_item_id"])
-        if rfq_item and rfq_item.item_id:
-            from app.models import SKUPriceRecord
-
+        if rfq_item is not None and rfq_item.item_id is not None and actor is not None:
             sid = (
                 data["supplier_id"]
                 if isinstance(data["supplier_id"], UUID)
                 else UUID(str(data["supplier_id"]))
             )
-            db.add(
-                SKUPriceRecord(
-                    item_id=rfq_item.item_id,
-                    supplier_id=sid,
-                    price=Decimal(str(data["unit_price"])),
-                    currency=data.get("currency", "CNY"),
-                    quotation_date=date.today(),
-                    source_type="rfq_quote",
-                    source_ref=f"RFQ:{rfq.rfq_number}",
-                )
+            await sku_svc.record_price(
+                db,
+                actor,
+                rfq_item.item_id,
+                Decimal(str(data["unit_price"])),
+                date.today(),
+                supplier_id=sid,
+                source_type="quote",
+                source_ref=f"RFQ:{rfq.rfq_number}",
+                currency=data.get("currency", "CNY"),
             )
     except Exception:
-        pass
+        logger.warning("rfq %s: could not record the quoted price", rfq_id, exc_info=True)
 
     await db.flush()
     return quote

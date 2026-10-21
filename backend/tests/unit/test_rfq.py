@@ -7,7 +7,8 @@ import pytest
 from fastapi import HTTPException
 from sqlalchemy import select
 
-from app.models import Item, RFQQuote, RFQStatus, Supplier, User
+from app.db import new_uuid
+from app.models import Item, RFQItem, RFQQuote, RFQStatus, SKUPriceRecord, Supplier, User
 from app.services import purchase as purchase_svc
 from app.services import rfq as rfq_svc
 
@@ -424,3 +425,64 @@ async def test_update_rfq_finalized_rejected(seeded_db_session, monkeypatch):
     with pytest.raises(HTTPException) as exc:
         await rfq_svc.update_rfq(seeded_db_session, rfq.id, {"title": "X"}, alice)
     assert exc.value.status_code == 409
+
+
+async def test_quote_price_goes_through_the_shared_price_path(seeded_db_session, monkeypatch):
+    """A quoted price must reach price history the same way a manual one does.
+
+    It used to be inserted directly inside `try/except: pass`, so benchmarks were
+    never refreshed, anomalies were never detected and nothing was audited.
+    """
+    db = seeded_db_session
+    alice = await _get_alice(db)
+    supplier = (await db.execute(select(Supplier))).scalars().first()
+
+    # An RFQ line tied to a real item, which is what price history needs.
+    item = await db.execute(select(Item).where(Item.is_deleted.is_(False)))
+    item = item.scalars().first()
+    if item is None:
+        pytest.skip("no active item in the seed data")
+
+    rfq = await _create_sent_rfq(db, monkeypatch, alice, [str(supplier.id)])
+    row = RFQItem(
+        id=new_uuid(),
+        rfq_id=rfq.id,
+        item_id=item.id,
+        item_name=item.name,
+        qty=Decimal("2"),
+        uom="EA",
+    )
+    db.add(row)
+    await db.commit()
+
+    await rfq_svc.add_quote(
+        db,
+        rfq.id,
+        {
+            "rfq_item_id": str(row.id),
+            "supplier_id": str(supplier.id),
+            "unit_price": "500",
+            "currency": "CNY",
+        },
+        actor=alice,
+    )
+    await db.commit()
+
+    record = (
+        (
+            await db.execute(
+                select(SKUPriceRecord).where(
+                    SKUPriceRecord.item_id == item.id,
+                    SKUPriceRecord.price == Decimal("500"),
+                )
+            )
+        )
+        .scalars()
+        .first()
+    )
+
+    assert record is not None
+    assert record.source_type == "quote"
+    assert record.source_ref and record.source_ref.startswith("RFQ:")
+    # record_price stamps the owner; the old direct insert left this empty.
+    assert record.entered_by_id == alice.id

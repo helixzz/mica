@@ -24,6 +24,17 @@ export interface Release {
 
 export const RELEASES: Release[] = [
   {
+    version: '1.68.1',
+    date: '2026-10-21',
+    items: [
+      {
+        kind: 'fix',
+        zh: '录入询价报价时会正常更新价格基准与异常检测，并留下审计记录（此前这一步被静默跳过）',
+        en: 'Recording a quoted price now updates the benchmark, runs anomaly checks and leaves an audit trail',
+      },
+    ],
+  },
+  {
     version: '1.68.0',
     date: '2026-10-21',
     items: [
