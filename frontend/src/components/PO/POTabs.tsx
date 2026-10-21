@@ -151,7 +151,9 @@ children: (
               poId={po.id}
               currency={po.currency}
               canWrite={canWriteSchedule}
-              onExecutePayment={onExecuteSchedulePayment}
+              // Deliberately no onExecutePayment: that callback sent the execute
+              // action to the legacy Record Payment dialog, which has no invoice
+              // timing, so invoice-first only ever worked on contract schedules.
             />
           ),
         },

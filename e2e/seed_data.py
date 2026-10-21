@@ -22,8 +22,9 @@ from decimal import Decimal
 from sqlalchemy import select
 
 from app.db import AsyncSessionLocal, new_uuid
-from app.models import RFQ, RFQSupplier, Supplier, User
+from app.models import RFQ, PaymentSchedule, RFQSupplier, Supplier, User
 from app.schemas import PRCreateIn, PRItemIn
+from app.services import payment_schedule as payment_schedule_svc
 from app.services import purchase as purchase_svc
 from app.services import rfq as rfq_svc
 
@@ -70,6 +71,28 @@ async def _confirmed_po(db, buyer, supplier):
     pr.status = "approved"
     await db.commit()
     po = (await purchase_svc.convert_pr_to_po(db, buyer, pr.id))[0]
+
+    # A payment schedule gives the execute-payment spec something real to act on.
+    existing_items = (
+        (await db.execute(select(PaymentSchedule.id).where(PaymentSchedule.po_id == po.id)))
+        .scalars()
+        .first()
+    )
+    if existing_items is None:
+        await payment_schedule_svc.replace_schedule(
+            db,
+            [
+                {
+                    "installment_no": 1,
+                    "label": "预付款",
+                    "planned_amount": Decimal("400"),
+                    "planned_date": date.today() + timedelta(days=10),
+                }
+            ],
+            po_id=po.id,
+        )
+        await db.commit()
+
     print(f"PO={po.po_number} ({po.id})")
     return po
 
