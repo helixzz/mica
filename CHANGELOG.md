@@ -7,6 +7,32 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [v1.66.0] — 2026-10-21
+
+### 新增（待取回询价单上仪表盘）
+
+采购每天第一眼看仪表盘，待办放在那里比藏在询价单列表里有用。
+
+- 仪表盘新增卡片，与 RFQ 列表共用同一份数据；逾期用警示色标出
+- 可像其他卡片一样隐藏/排序
+
+### 新增（E2E 不再依赖人工点）
+
+此前凡是需要业务对象的 spec 都 skip（smoke 库只有账号和供应商），所以"测试通过"不等于"功能可用"，最终仍靠人验收。
+
+- `e2e/seed_data.py`：造一张已确认采购订单 + 一张已发出且**已逾期**的询价单
+- `e2e/run-local.sh`：迁移 → 灌种子 → 起前后端 → 跑 Playwright → 收尾，一条命令
+- 新增 `rfq-collection.spec.ts`：RFQ 列表提醒条、仪表盘卡片、询价单生成按钮
+
+### 顺带查清的一件事
+
+仪表盘对新用户显示欢迎卡，**所有业务卡片都被它挡住**——这正是首次跑 dashboard spec 失败的原因，不是功能坏了。spec 里预设 `mica.welcome_dismissed` 即可。
+
+### 验证
+
+- Playwright **3 passed**（rfq-collection，真数据实跑）
+- 后端 **886 passed**；前端 `type-check` / `build` / Vitest **99 passed**
+
 ## [v1.65.2] — 2026-10-21
 
 ### 新增（询价单「待取回」待办清单）
