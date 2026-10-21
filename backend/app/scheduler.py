@@ -276,6 +276,28 @@ def build_scheduler(session_factory: async_sessionmaker[AsyncSession]) -> AsyncI
             except Exception:
                 logger.exception("weekly_insights_digest failed")
 
+    # APScheduler keeps jobs in memory and the scheduler container is recreated on
+    # every deploy, so a cron slot that fell inside a restart never ran — silently, with
+    # no error and no notification. Both jobs below are idempotent (the anomaly scan
+    # skips price records it already flagged; the expiry check only notifies for
+    # contracts still expiring), so running them once after startup closes that gap.
+    from datetime import UTC, datetime, timedelta
+
+    from apscheduler.triggers.date import DateTrigger
+
+    catch_up_at = datetime.now(UTC) + timedelta(seconds=90)
+    for job_fn, catchup_id in (
+        (_run_price_anomaly_scan, "price_anomaly_scan_catchup"),
+        (_run_contract_expiry_check, "contract_expiry_catchup"),
+    ):
+        scheduler.add_job(
+            job_fn,
+            DateTrigger(run_date=catch_up_at),
+            id=catchup_id,
+            name=f"{catchup_id} (once after startup)",
+            misfire_grace_time=600,
+        )
+
     scheduler.add_job(
         _run_weekly_insights_digest,
         CronTrigger(day_of_week="mon", hour=9, minute=0),
