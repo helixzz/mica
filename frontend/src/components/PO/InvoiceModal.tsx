@@ -160,6 +160,13 @@ export function InvoiceModal({ open, po, onClose, onDone, busy, setBusy }: Invoi
         setOcrResult(ex)
         if (ex.error) {
           setExtractMsg(`AI: ${ex.error}`)
+        } else if (ex.pages_total && ex.pages_total > (ex.pages_read || 1)) {
+          // Say it out loud: a partially read invoice otherwise just looks like it
+          // has fewer lines than it does.
+          void message.warning(
+            t('message.invoice_pages_partial', { total: ex.pages_total }),
+            6,
+          )
         } else {
           if (ex.invoice_number) setInvoiceNumber(ex.invoice_number)
           if (ex.invoice_date && /^\d{4}-\d{1,2}-\d{1,2}$/.test(ex.invoice_date)) {

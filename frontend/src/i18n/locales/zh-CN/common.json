@@ -319,6 +319,7 @@
     "back_to_sso": "← 返回 SSO 登录"
   },
   "message": {
+    "invoice_pages_partial": "该 PDF 共 {{total}} 页，只读取了第 1 页；若明细不全请检查后续页",
     "welcome": "欢迎，{{name}}",
     "no_data": "暂无数据",
     "loading": "加载中...",

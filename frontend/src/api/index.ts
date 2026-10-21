@@ -851,6 +851,8 @@ export interface InvoiceExtractResult {
   raw_extract_source: string
   confidence: number
   error: string | null
+  pages_read?: number
+  pages_total?: number
 }
 
 export interface DeliveryPlan {

@@ -1284,6 +1284,10 @@ class InvoiceExtractOut(BaseModel):
     raw_extract_source: str
     confidence: float
     error: str | None = None
+    # Set when the PDF had more pages than were read, so "the numbers look short"
+    # can be explained instead of puzzled over.
+    pages_read: int = 0
+    pages_total: int = 0
 
 
 class NotificationOut(BaseModel):
