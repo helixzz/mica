@@ -157,7 +157,7 @@ async def test_shared_entry_is_readable_but_not_editable_by_a_plain_user(seeded_
 async def test_list_orders_by_usage_then_recency(seeded_db_session):
     db = seeded_db_session
     alice = await _user(db, "alice")
-    a = await svc.create_address(db, alice, _address(label="A"))
+    await svc.create_address(db, alice, _address(label="A"))
     b = await svc.create_address(db, alice, _address(label="B"))
     c = await svc.create_address(db, alice, _address(label="C"))
 
@@ -217,7 +217,9 @@ async def test_deleting_an_entry_leaves_the_requisition_snapshot_intact(seeded_d
     await svc.delete_address(db, alice, entry.id)
 
     # ON DELETE SET NULL drops the provenance link...
-    assert (await db.execute(select(DeliveryAddress).where(DeliveryAddress.id == entry.id))).first() is None
+    assert (
+        await db.execute(select(DeliveryAddress).where(DeliveryAddress.id == entry.id))
+    ).first() is None
     # ...but the copied text, which is what the order is actually shipped to,
     # is untouched.
     assert pr.delivery_address == "上海市浦东新区张江高科技园区 88 号 5 层机房"
