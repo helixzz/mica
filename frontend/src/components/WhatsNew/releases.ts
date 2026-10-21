@@ -24,6 +24,17 @@ export interface Release {
 
 export const RELEASES: Release[] = [
   {
+    version: '1.68.3',
+    date: '2026-10-21',
+    items: [
+      {
+        kind: 'fix',
+        zh: '附件与发票识别改为校验访问权限：此前任何登录用户只要知道文件编号就能读取或下载',
+        en: 'Attachments and invoice extraction now check access: previously any signed-in user who knew a file id could read or download it',
+      },
+    ],
+  },
+  {
     version: '1.68.2',
     date: '2026-10-21',
     items: [
