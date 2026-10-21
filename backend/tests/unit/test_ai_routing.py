@@ -130,3 +130,21 @@ async def test_routing_returns_none_when_no_model_matches_the_modality(seeded_db
     _, model = await _get_routing(db, "test_vision_route", required_modality="vision")
 
     assert model is None
+
+
+def test_prompt_override_is_used_when_set():
+    from app.services.ai import resolve_prompt
+
+    routing = AIFeatureRouting(
+        feature_code="x", primary_model_id=None, prompt_template="自定义提示词"
+    )
+
+    assert resolve_prompt(routing, "内置提示词") == "自定义提示词"
+
+
+def test_blank_prompt_override_falls_back_to_the_builtin():
+    from app.services.ai import resolve_prompt
+
+    for blank in (None, "", "   \n  "):
+        routing = AIFeatureRouting(feature_code="x", primary_model_id=None, prompt_template=blank)
+        assert resolve_prompt(routing, "内置提示词") == "内置提示词"

@@ -23,7 +23,7 @@ from typing import Any
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.models import AICallLog, User
-from app.services.ai import _call_litellm_vision, _get_routing
+from app.services.ai import _call_litellm_vision, _get_routing, resolve_prompt
 from app.services.system_params import system_params
 
 logger = logging.getLogger(__name__)
@@ -83,7 +83,11 @@ async def _read_page(db: AsyncSession, actor: User, image: bytes, content_type: 
     data_url = f"data:{content_type};base64,{base64.b64encode(image).decode()}"
     raw = ""
     async for chunk in _call_litellm_vision(
-        model, _QUOTE_PROMPT, data_url, float(routing.temperature), int(routing.max_tokens)
+        model,
+        resolve_prompt(routing, _QUOTE_PROMPT),
+        data_url,
+        float(routing.temperature),
+        int(routing.max_tokens),
     ):
         raw += chunk
     return _parse_json(raw)
