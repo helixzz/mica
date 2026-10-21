@@ -24,6 +24,22 @@ export interface Release {
 
 export const RELEASES: Release[] = [
   {
+    version: '1.67.0',
+    date: '2026-10-21',
+    items: [
+      {
+        kind: 'fix',
+        zh: '采购订单的付款计划现在也能选先票/后票（此前只有合同的付款计划有这个选项）',
+        en: 'Payment schedules on purchase orders now offer invoice-first / invoice-later too, not just contracts',
+      },
+      {
+        kind: 'improvement',
+        zh: '新增付款执行回归测试，先票上传发票并归档的流程每次发版都会自动跑一遍',
+        en: 'A regression test now covers invoice-first payment execution on every release',
+      },
+    ],
+  },
+  {
     version: '1.66.1',
     date: '2026-10-21',
     items: [
