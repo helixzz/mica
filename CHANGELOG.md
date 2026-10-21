@@ -7,6 +7,25 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [v1.70.0] — 2026-10-21
+
+### 新增（一条命令跑完所有检查）
+
+```bash
+./scripts/verify.sh          # lint + 后端测试 + 类型 + 前端单测 + 构建 + E2E
+./scripts/verify.sh --fast   # 跳过 E2E
+```
+
+上一版暴露的问题不是"忘了写更新日志"，而是**发版检查漏了 `npm test`**——守卫测试存在，但不在必跑路径上。靠人记的清单不算检查。
+
+- 脚本自动定位后端虚拟环境（worktree 与主仓库都试）
+- 无数据库时 E2E 自动跳过并提示，不会假失败
+- `AGENTS.md` §6.2 同步更新（它此前写着"没有独立的 verify.sh"）
+
+### 验证
+
+`./scripts/verify.sh --fast` 全部通过：后端 **912 passed**、前端 **99 passed**、构建成功。
+
 ## [v1.69.9] — 2026-10-21
 
 ### 修复（六个版本的更新日志没写）

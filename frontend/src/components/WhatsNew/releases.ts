@@ -24,6 +24,17 @@ export interface Release {
 
 export const RELEASES: Release[] = [
   {
+    version: '1.70.0',
+    date: '2026-10-21',
+    items: [
+      {
+        kind: 'improvement',
+        zh: '发布前的一键验证脚本：一条命令跑完 lint、测试、类型检查与构建',
+        en: 'One command checks everything before a release: lint, tests, types and build',
+      },
+    ],
+  },
+  {
     version: '1.69.9',
     date: '2026-10-21',
     items: [
