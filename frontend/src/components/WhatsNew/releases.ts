@@ -24,6 +24,17 @@ export interface Release {
 
 export const RELEASES: Release[] = [
   {
+    version: '1.72.4',
+    date: '2026-10-22',
+    items: [
+      {
+        kind: 'improvement',
+        zh: '新增端到端验证记录文档，记下这一夜发现的缺陷与根因',
+        en: 'Added a verification log recording the defects found this session and why they happened',
+      },
+    ],
+  },
+  {
     version: '1.72.3',
     date: '2026-10-22',
     items: [
