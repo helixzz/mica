@@ -15,9 +15,11 @@ pile up duplicates.
 from __future__ import annotations
 
 import asyncio
+import json
 import os
 from datetime import date, timedelta
 from decimal import Decimal
+from pathlib import Path
 
 from sqlalchemy import select
 
@@ -40,6 +42,28 @@ async def _users_and_suppliers(db):
 
 
 async def _confirmed_po(db, buyer, supplier):
+    # Re-running must not pile up orders; reuse the one this seed created before.
+    from app.models import PurchaseOrder, PurchaseRequisition
+
+    existing_pr = (
+        (
+            await db.execute(
+                select(PurchaseRequisition).where(PurchaseRequisition.title == "E2E 采购申请")
+            )
+        )
+        .scalars()
+        .first()
+    )
+    if existing_pr is not None:
+        existing_po = (
+            (await db.execute(select(PurchaseOrder).where(PurchaseOrder.pr_id == existing_pr.id)))
+            .scalars()
+            .first()
+        )
+        if existing_po is not None:
+            print(f"PO={existing_po.po_number} ({existing_po.id}) reused")
+            return existing_po
+
     pr = await purchase_svc.create_pr(
         db,
         buyer,
@@ -97,6 +121,27 @@ async def _confirmed_po(db, buyer, supplier):
     return po
 
 
+async def _contract(db, buyer, po):
+    from app.models import Contract
+    from app.services import flow as flow_svc
+
+    existing = (await db.execute(select(Contract).where(Contract.po_id == po.id))).scalars().first()
+    if existing is not None:
+        print(f"Contract={existing.contract_number} ({existing.id}) reused")
+        return existing
+
+    contract = await flow_svc.create_contract(
+        db,
+        buyer,
+        po.id,
+        title="E2E 合同",
+        total_amount=po.total_amount,
+    )
+    await db.commit()
+    print(f"Contract={contract.contract_number} ({contract.id})")
+    return contract
+
+
 async def _sent_rfq(db, buyer, suppliers):
     existing = (
         await db.execute(select(RFQ).where(RFQ.title == "E2E 待回传询价"))
@@ -143,8 +188,25 @@ async def main() -> None:
         raise SystemExit("DATABASE_URL must point at the database under test")
     async with AsyncSessionLocal() as db:
         buyer, suppliers = await _users_and_suppliers(db)
-        await _confirmed_po(db, buyer, suppliers[0])
-        await _sent_rfq(db, buyer, suppliers)
+        po = await _confirmed_po(db, buyer, suppliers[0])
+        contract = await _contract(db, buyer, po)
+        rfq = await _sent_rfq(db, buyer, suppliers)
+
+    # Hand the identifiers to the specs instead of making them guess or pin numbers
+    # that change every time the seed runs against a fresh database.
+    manifest = {
+        "po_id": str(po.id),
+        "po_number": po.po_number,
+        "contract_id": str(contract.id) if contract else None,
+        "contract_number": contract.contract_number if contract else None,
+        "contract_currency": contract.currency if contract else None,
+        "rfq_id": str(rfq.id) if rfq else None,
+        "rfq_number": rfq.rfq_number if rfq else None,
+    }
+    Path(__file__).with_name(".seed.json").write_text(
+        json.dumps(manifest, ensure_ascii=False, indent=2), encoding="utf-8"
+    )
+    print("wrote e2e/.seed.json")
 
 
 if __name__ == "__main__":
