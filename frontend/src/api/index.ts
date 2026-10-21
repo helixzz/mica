@@ -1215,6 +1215,29 @@ export interface PendingCollectionItem {
   item_count: number
 }
 
+export interface RfqQuoteLinePreview {
+  line_no: number | null
+  item_name: string | null
+  specification: string | null
+  qty: string | null
+  unit_price: string | null
+  tax_rate: string | null
+  delivery_days: number | null
+  confidence: number
+}
+
+export interface RfqQuoteExtract {
+  supplier_name: string | null
+  currency: string | null
+  valid_until: string | null
+  lines: RfqQuoteLinePreview[]
+  confidence: number
+  warnings: string[]
+  pages_read: number
+  pages_total: number
+  error: string | null
+}
+
 export async function downloadRfqQuotation(rfqId: string): Promise<string> {
   const { data, headers } = await client.get(`/rfqs/${rfqId}/quotation`, {
     responseType: 'blob',
@@ -1862,6 +1885,12 @@ export const api = {
   },
   async deletePODocument(poId: string, documentId: string): Promise<void> {
     await client.delete(`/purchase-orders/${poId}/attachments/${documentId}`)
+  },
+  async extractRfqQuote(documentId: string): Promise<RfqQuoteExtract> {
+    const { data } = await client.post<RfqQuoteExtract>(
+      `/ai/rfq-quote-extract?document_id=${documentId}`,
+    )
+    return data
   },
   async listPendingCollection(): Promise<PendingCollectionItem[]> {
     const { data } = await client.get<PendingCollectionItem[]>('/rfqs/pending-collection')

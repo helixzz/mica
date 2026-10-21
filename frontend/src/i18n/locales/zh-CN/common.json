@@ -266,6 +266,7 @@
     "reset": "恢复默认"
   },
   "status": {
+    "processing": "处理中…",
     "draft": "草稿",
     "submitted": "待审批",
     "approved": "已批准",
@@ -642,6 +643,19 @@
     "system_parameter.upserted": "系统参数更新"
   },
   "rfq": {
+    "line_no": "行号",
+    "item_name": "物料",
+    "specification": "规格",
+    "qty": "数量",
+    "tax_rate": "税率",
+    "import_scan": "导入扫描报价",
+    "import_scan_hint": "上传供应商回传的报价单扫描件，先看看识别结果。本版只做预览，不会写入任何数据。",
+    "import_scan_confidence": "识别置信度",
+    "import_scan_pages": "已读取 {{read}} / {{total}} 页",
+    "import_scan_warnings": "需要留意",
+    "import_scan_empty": "没有识别出价格行",
+    "import_scan_failed": "识别失败：{{error}}",
+    "import_scan_tip": "确认无误后，请手动把这几个价格录入下方报价表。",
     "pending_collection": "待取回询价单",
     "pending_collection_hint": "{{count}} 个询价单已发出、仍有供应商未回传（{{overdue}} 个已过截止日）",
     "pending_collection_all_clear": "没有待取回的询价单",

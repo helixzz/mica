@@ -266,6 +266,7 @@
     "reset": "Reset to default"
   },
   "status": {
+    "processing": "Working…",
     "draft": "Draft",
     "submitted": "Pending Approval",
     "approved": "Approved",
@@ -630,6 +631,19 @@
     "system_parameter.upserted": "System Parameter Updated"
   },
   "rfq": {
+    "line_no": "Line",
+    "item_name": "Item",
+    "specification": "Specification",
+    "qty": "Qty",
+    "tax_rate": "Tax rate",
+    "import_scan": "Import scanned quote",
+    "import_scan_hint": "Upload the supplier's scanned quotation to see what was read. Preview only — nothing is saved.",
+    "import_scan_confidence": "Confidence",
+    "import_scan_pages": "Read {{read}} of {{total}} pages",
+    "import_scan_warnings": "Worth checking",
+    "import_scan_empty": "No price lines were recognised",
+    "import_scan_failed": "Could not read the scan: {{error}}",
+    "import_scan_tip": "Once it looks right, enter these prices in the quote table below.",
     "pending_collection": "Awaiting quotations",
     "pending_collection_hint": "{{count}} RFQ(s) sent with suppliers yet to respond ({{overdue}} past deadline)",
     "pending_collection_all_clear": "Nothing awaiting collection",

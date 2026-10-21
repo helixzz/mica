@@ -1461,6 +1461,31 @@ class PaymentForecastOut(BaseModel):
     grand_contract_remaining: Decimal = Decimal(0)
 
 
+class RfqQuoteLineOut(BaseModel):
+    line_no: int | None = None
+    item_name: str | None = None
+    specification: str | None = None
+    qty: Decimal | None = None
+    unit_price: Decimal | None = None
+    tax_rate: Decimal | None = None
+    delivery_days: int | None = None
+    confidence: float = 0.0
+
+
+class RfqQuoteExtractOut(BaseModel):
+    """A preview only: nothing here is persisted until a person confirms it."""
+
+    supplier_name: str | None = None
+    currency: str | None = None
+    valid_until: str | None = None
+    lines: list[RfqQuoteLineOut] = Field(default_factory=list)
+    confidence: float = 0.0
+    warnings: list[str] = Field(default_factory=list)
+    pages_read: int = 0
+    pages_total: int = 0
+    error: str | None = None
+
+
 class InvoiceForecastMonth(BaseModel):
     month: str
     invoiceable: Decimal
