@@ -1,14 +1,14 @@
-import { test, expect } from '@playwright/test';
+import { test, expect, Page } from '@playwright/test';
 
-import { loginAs } from './helpers/auth';
+import { loginAs, loginViaApi } from './helpers/auth';
 import { readSeedManifest } from './helpers/seed';
 
 /**
- * Contract detail: the payment schedule tab and the currency it shows.
+ * Contract detail: opening it from the list, and the payment schedule it shows.
  *
- * The currency matters because a contract form used to print ¥ for the amount
- * regardless of the contract's own currency, so an HKD contract was filled in as if
- * it were RMB. This checks that what the schedule shows follows the contract.
+ * The schedule spec resets its own data first. An earlier version trusted whatever
+ * the seed had left behind — an older instalment label, or one already paid — and
+ * then asserted on something that was no longer there.
  */
 
 function seededContract() {
@@ -17,45 +17,54 @@ function seededContract() {
   return {
     id: manifest.contract_id,
     contract_number: manifest.contract_number ?? '',
-    currency: manifest.contract_currency ?? 'CNY',
   };
 }
 
-test.describe('Contract detail', () => {
-  test.beforeEach(async ({ page }) => {
-    await page.setViewportSize({ width: 1440, height: 1000 });
-    await loginAs(page, 'alice');
-  });
+async function resetContractSchedule(
+  page: Page,
+  contractId: string,
+  label: string,
+): Promise<void> {
+  const token = await loginViaApi(page, 'alice');
+  const due = new Date(Date.now() + 10 * 24 * 3600 * 1000).toISOString().slice(0, 10);
+  // Replacing the whole schedule is a POST whose body wraps the items; there is no
+  // bulk PUT (PUT updates one instalment by number).
+  const response = await page.request.post(
+    `/api/v1/contracts/${contractId}/payment-schedule`,
+    {
+      headers: { Authorization: `Bearer ${token}` },
+      data: {
+        items: [{ installment_no: 1, label, planned_amount: '400', planned_date: due }],
+      },
+    },
+  );
+  expect(response.ok(), `schedule reset failed: ${response.status()}`).toBeTruthy();
+}
 
-  // fixme: the seed's contract instalment and what the page renders are out of
-  // sync (leftover schedules keep an older label and a paid status), so the
-  // assertion looks for something that is not there. Needs the seed to reset
-  // schedules deterministically; parked rather than left red.
-  test.fixme('shows the payment schedule with amounts in the contract currency', async ({ page }) => {
+test.describe('Contract detail', () => {
+  test('shows the payment schedule it was given', async ({ page }) => {
     const contract = seededContract();
     test.skip(!contract, 'no contract in this environment (run e2e/seed_data.py)');
 
+    const label = '首款-用例';
+    await resetContractSchedule(page, contract!.id, label);
+    await loginAs(page, 'alice');
+    await page.setViewportSize({ width: 1440, height: 1000 });
+
     await page.goto(`/contracts/${contract!.id}`);
     await page.waitForSelector('[role="tab"]', { timeout: 30_000 });
-
     await page.getByRole('tab', { name: /Payment Schedule|付款计划/ }).click();
-    await page.waitForTimeout(1200);
 
-    const currency = contract!.currency ?? 'CNY';
-    const symbol =
-      { CNY: '¥', USD: '$', EUR: '€', GBP: '£', JPY: '¥', HKD: 'HK$', TWD: 'NT$' }[currency] ??
-      currency;
-
-    // The seed puts one instalment on the contract; seeing its label means the tab
-    // really rendered the schedule. Matching the table wrapper depended on which
-    // tabpanel got selected and on the component used inside it.
-    await expect(page.getByText(/合同首款/).first()).toBeVisible({ timeout: 15_000 });
+    // The instalment we just wrote has to appear; that proves the tab loaded the
+    // contract's own schedule rather than an empty state.
+    await expect(page.getByText(label).first()).toBeVisible({ timeout: 20_000 });
   });
 
   test('a contract can be opened from the list', async ({ page }) => {
-    const contract = await seededContract(page);
+    const contract = seededContract();
     test.skip(!contract, 'no contract in this environment');
 
+    await loginAs(page, 'alice');
     await page.goto('/contracts');
     await page.waitForSelector('.ant-table', { timeout: 30_000 });
 
