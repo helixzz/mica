@@ -114,6 +114,17 @@ async def list_rfqs(
     return await svc.list_rfqs(db, user)
 
 
+@router.get("/rfqs/pending-collection")
+async def list_pending_collection(
+    user: CurrentUser,
+    db: Annotated[AsyncSession, Depends(get_db)],
+):
+    """Outstanding quotations: sent, but some invited supplier has not responded."""
+    from app.services import rfq as svc
+
+    return await svc.list_pending_collection(db, user)
+
+
 @router.get("/rfqs/{rfq_id}", response_model=RFQDetailOut)
 async def get_rfq(
     rfq_id: UUID,

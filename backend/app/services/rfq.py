@@ -247,3 +247,62 @@ async def update_rfq(
     await db.commit()
 
     return await get_rfq(db, rfq.id)
+
+
+async def list_pending_collection(db: AsyncSession, user: User) -> list[dict]:
+    """RFQs that went out and still owe us quotes.
+
+    This is a to-do list, not a notification: procurement chases suppliers by hand,
+    so what they need is one place that says "these are outstanding, and these are
+    already late".
+    """
+    from app.core.scoping import is_rfq_hidden
+
+    today = date.today()
+    statement = (
+        select(RFQ)
+        .where(RFQ.status.in_((RFQStatus.SENT.value, RFQStatus.QUOTING.value)))
+        .options(
+            selectinload(RFQ.suppliers).selectinload(RFQSupplier.supplier),
+            selectinload(RFQ.items),
+        )
+        .order_by(RFQ.deadline.is_(None), RFQ.deadline)
+    )
+    if is_rfq_hidden(user):
+        return []
+
+    rfqs = (await db.execute(statement)).scalars().all()
+    quoted_suppliers = set(
+        (await db.execute(select(RFQQuote.rfq_id, RFQQuote.supplier_id).distinct())).all()
+    )
+
+    pending: list[dict] = []
+    for rfq in rfqs:
+        outstanding = [
+            invited
+            for invited in rfq.suppliers
+            if invited.responded_at is None
+            and (rfq.id, invited.supplier_id) not in quoted_suppliers
+        ]
+        if not outstanding:
+            continue
+        overdue_days = 0
+        if rfq.deadline is not None and rfq.deadline < today:
+            overdue_days = (today - rfq.deadline).days
+        pending.append(
+            {
+                "id": str(rfq.id),
+                "rfq_number": rfq.rfq_number,
+                "title": rfq.title,
+                "status": rfq.status,
+                "deadline": rfq.deadline.isoformat() if rfq.deadline else None,
+                "overdue_days": overdue_days,
+                "invited_count": len(rfq.suppliers),
+                "outstanding_count": len(outstanding),
+                "outstanding_suppliers": [
+                    invited.supplier.name if invited.supplier else "" for invited in outstanding
+                ],
+                "item_count": len(rfq.items),
+            }
+        )
+    return pending

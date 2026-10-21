@@ -642,6 +642,13 @@
     "system_parameter.upserted": "系统参数更新"
   },
   "rfq": {
+    "pending_collection": "待取回询价单",
+    "pending_collection_hint": "{{count}} 个询价单已发出、仍有供应商未回传（{{overdue}} 个已过截止日）",
+    "pending_collection_all_clear": "没有待取回的询价单",
+    "pending_collection_deadline": "截止日",
+    "pending_collection_outstanding": "未回传",
+    "overdue_days": "超期 {{days}} 天",
+    "due_today": "今天截止",
     "download_quotation": "生成询价单",
     "quotation_ready": "已生成 {{filename}}",
     "quotation_failed": "生成询价单失败",

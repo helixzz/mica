@@ -1202,6 +1202,19 @@ export interface ApiTokenCreate {
  * an ``Error`` whose message is the localised backend ``detail`` (empty string
  * when the backend sent none, so callers can fall back to ``export.failed``).
  */
+export interface PendingCollectionItem {
+  id: string
+  rfq_number: string
+  title: string
+  status: string
+  deadline: string | null
+  overdue_days: number
+  invited_count: number
+  outstanding_count: number
+  outstanding_suppliers: string[]
+  item_count: number
+}
+
 export async function downloadRfqQuotation(rfqId: string): Promise<string> {
   const { data, headers } = await client.get(`/rfqs/${rfqId}/quotation`, {
     responseType: 'blob',
@@ -1849,6 +1862,10 @@ export const api = {
   },
   async deletePODocument(poId: string, documentId: string): Promise<void> {
     await client.delete(`/purchase-orders/${poId}/attachments/${documentId}`)
+  },
+  async listPendingCollection(): Promise<PendingCollectionItem[]> {
+    const { data } = await client.get<PendingCollectionItem[]>('/rfqs/pending-collection')
+    return data
   },
   async listPayments(po_id?: string): Promise<PaymentRecord[]> {
     const { data } = await client.get<PaymentRecord[]>('/payments', { params: { po_id } })

@@ -630,6 +630,13 @@
     "system_parameter.upserted": "System Parameter Updated"
   },
   "rfq": {
+    "pending_collection": "Awaiting quotations",
+    "pending_collection_hint": "{{count}} RFQ(s) sent with suppliers yet to respond ({{overdue}} past deadline)",
+    "pending_collection_all_clear": "Nothing awaiting collection",
+    "pending_collection_deadline": "Deadline",
+    "pending_collection_outstanding": "Outstanding",
+    "overdue_days": "{{days}} days overdue",
+    "due_today": "Due today",
     "download_quotation": "Generate quotation",
     "quotation_ready": "Generated {{filename}}",
     "quotation_failed": "Could not generate the quotation",
