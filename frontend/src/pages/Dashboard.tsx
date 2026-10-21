@@ -56,6 +56,7 @@ import { useAuth } from '@/auth/useAuth'
 import { StatCard, Section, EmptyState } from '@/components/ui'
 import { PaymentTracker } from '@/components/PaymentForecastChart'
 import { InvoiceTracker } from '@/components/InvoiceTrackerChart'
+import { PendingCollectionCard } from '@/components/PendingCollectionCard'
 import { fmtAmount, fmtAmountNode } from '@/utils/format'
 import { MonoId } from '@/components/ui/Mono'
 
@@ -126,6 +127,7 @@ export function DashboardPage() {
   const defaultLayout = [
     { id: 'stats', visible: true },
     { id: 'alerts', visible: true },
+    { id: 'pending_collection', visible: true },
     { id: 'payment_tracker', visible: true },
     { id: 'invoice_tracker', visible: true },
     { id: 'analytics', visible: true },
@@ -245,6 +247,7 @@ export function DashboardPage() {
   const sectionTitles: Record<string, string> = {
     stats: t('dashboard.stats_cards', 'Stats Cards'),
     alerts: t('dashboard.alerts'),
+    pending_collection: t('rfq.pending_collection'),
     payment_tracker: t('dashboard.payment_tracker', 'Payment Tracker'),
     invoice_tracker: t('dashboard.invoice_tracker', 'Invoice Tracker'),
     analytics: t('dashboard.analytics'),
@@ -510,6 +513,10 @@ export function DashboardPage() {
             </Row>
           </Space>
         )
+      case 'pending_collection':
+        return isProcurementMgr || isItBuyer || role === 'admin' ? (
+          <PendingCollectionCard key="pending_collection" />
+        ) : null
       case 'payment_tracker':
         return (isProcurementMgr || isFinanceAuditor || isItBuyer || role === 'admin') ? <PaymentTracker key="payment_tracker" /> : null
       case 'invoice_tracker':
