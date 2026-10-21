@@ -1814,5 +1814,14 @@
     "invoice_due_in": "还剩 {{days}} 天",
     "invoice_overdue": "已超期 {{days}} 天",
     "attach_invoice": "补传发票"
+  },
+  "price_source": {
+    "manual": "手工录入",
+    "quote": "询价报价",
+    "actual_po": "实际采购价",
+    "market_research": "市场调研",
+    "supplier_quote": "供应商报价（PR）",
+    "excel_import": "Excel 导入",
+    "rfq_quote": "询价报价（历史）"
   }
 }

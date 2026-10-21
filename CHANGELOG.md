@@ -7,6 +7,20 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [v1.68.4] — 2026-10-21
+
+### 修复（来源类型定义的根因与显示）
+
+`SKUPriceRecord.source_type` 的白名单只写在 API 的 `Literal` 里，而**五个 service 函数各自直接插库**，用的字符串从未经过它——`supplier_quote`（PR 报价弹窗，仍在活跃写入）、`excel_import`（Excel 导入）都不在白名单内，`rfq_quote` 则是旧实现留下的死字面量。白名单描述了一条没人遵守的规则。
+
+- 新增 `services/price_sources.py`：所有可能写入该列的值集中一处，API 契约与每个写入点共用
+- 价格记录页的「来源」列接上 i18n：此前 `supplier_quote` 等直接显示英文标识符
+- **本次不合并任何取值**。`supplier_quote`（PR 明细报价）与 `quote`（询价报价）是否语义等价属于业务判断，合并会改变展示口径且牵连 PR 报价的幂等键，需先确认
+
+### 验证
+
+- 后端 **903 passed**；前端 `type-check` / `build` / Vitest **99 passed**，i18n 中英 parity 干净（1693 / 1681 keys，差异仅为历史遗留的 `insights.*`）
+
 ## [v1.68.3] — 2026-10-21
 
 ### 修复（附件可被任意登录用户读取）

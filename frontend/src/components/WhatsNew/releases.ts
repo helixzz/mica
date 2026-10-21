@@ -24,6 +24,17 @@ export interface Release {
 
 export const RELEASES: Release[] = [
   {
+    version: '1.68.4',
+    date: '2026-10-21',
+    items: [
+      {
+        kind: 'fix',
+        zh: '价格记录页的「来源」列改为中文显示（此前供应商报价等会直接显示英文标识符）',
+        en: 'The source column on the price page now shows readable labels instead of raw identifiers',
+      },
+    ],
+  },
+  {
     version: '1.68.3',
     date: '2026-10-21',
     items: [
