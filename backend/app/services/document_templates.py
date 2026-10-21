@@ -5,8 +5,10 @@ import json
 import logging
 import re
 import zipfile
+from collections.abc import Callable
 from datetime import UTC, datetime
 from decimal import Decimal
+from pathlib import Path
 from typing import Any
 from uuid import UUID
 
@@ -576,11 +578,145 @@ def substitute_docx(content_bytes: bytes, mapping: dict[str, str]) -> bytes:
     return buf.getvalue()
 
 
-def substitute_xlsx(content_bytes: bytes, mapping: dict[str, str]) -> bytes:
+# A row that carries this placeholder is treated as the repeating template row for
+# a line-item table; everything in it is copied once per entry.
+_XLSX_REPEAT_ANCHOR = "line_no"
+
+
+def _offset_formula(formula: str, from_row: int, to_row: int) -> str:
+    """Shift the row numbers inside a formula, keeping columns as they are."""
+    if from_row == to_row:
+        return formula
+    return re.sub(
+        rf"([A-Z]{{1,3}})\$?{from_row}(?![0-9])",
+        lambda m: m.group(0).replace(str(from_row), str(to_row)),
+        formula,
+    )
+
+
+def _resize_block_keeping_merges(sheet, at_row: int, delta: int) -> None:
+    """Insert or delete rows without losing the merged ranges below them.
+
+    openpyxl moves cell values on insert/delete but leaves merged ranges where they
+    were, which silently corrupted the totals row of the quotation sheet.
+    """
+    from openpyxl.worksheet.cell_range import CellRange
+
+    ranges = [CellRange(str(item)) for item in sheet.merged_cells.ranges]
+    for item in ranges:
+        sheet.unmerge_cells(str(item))
+
+    if delta > 0:
+        sheet.insert_rows(at_row, amount=delta)
+    elif delta < 0:
+        sheet.delete_rows(at_row, amount=-delta)
+
+    for item in ranges:
+        if item.min_row >= at_row:
+            item.shift(row_shift=delta)
+        sheet.merge_cells(str(item))
+
+
+def _detail_rows(sheet, template_row: int) -> list[int]:
+    """Rows of the line-item block: the template row plus consecutive numbered rows."""
+    rows = [template_row]
+    row = template_row + 1
+    while row <= sheet.max_row:
+        value = sheet.cell(row=row, column=1).value
+        numbered = isinstance(value, (int, float)) or (
+            isinstance(value, str) and value.strip().isdigit()
+        )
+        if not numbered:
+            break
+        rows.append(row)
+        row += 1
+    return rows
+
+
+def _repeat_rows_by_anchor(sheet, provider: Callable[[str], list[dict[str, Any]] | None]) -> None:
+    """Expand the line-item block to one row per data entry.
+
+    The row containing ``[line_no]`` is the template. The block is sized to the
+    entry count (inserting or removing rows, keeping merged ranges intact), then
+    each row is filled from its own entry; columns the supplier must write (price,
+    tax rate, lead time) are left blank.
+    """
+    from copy import copy
+
+    template_row: int | None = None
+    for row in sheet.iter_rows():
+        for cell in row:
+            if isinstance(cell.value, str) and PLACEHOLDER_RE.search(cell.value):
+                if _XLSX_REPEAT_ANCHOR in cell.value:
+                    template_row = cell.row
+                    break
+        if template_row:
+            break
+    if template_row is None:
+        return
+
+    entries = provider(_XLSX_REPEAT_ANCHOR)
+    if not entries:
+        return
+
+    block = _detail_rows(sheet, template_row)
+    original_last = block[-1]
+    # Only grow. A supplier may quote extra items, so leftover blank rows are better
+    # than a table that leaves them no room; shrinking also fought the merged totals
+    # row for no real benefit.
+    if len(entries) > len(block):
+        _resize_block_keeping_merges(sheet, original_last + 1, len(entries) - len(block))
+    # Totals cover the rows we used and any blank rows left for the supplier.
+    new_last = max(template_row + len(entries) - 1, original_last)
+
+    template_values: dict[int, Any] = {}
+    styles: dict[int, Any] = {}
+    for col in range(1, sheet.max_column + 1):
+        source = sheet.cell(row=template_row, column=col)
+        template_values[col] = source.value
+        styles[col] = copy(source._style)
+
+    for index, entry in enumerate(entries):
+        target_row = template_row + index
+        sheet.row_dimensions[target_row].height = sheet.row_dimensions[template_row].height
+        for col, style in styles.items():
+            cell = sheet.cell(row=target_row, column=col)
+            cell._style = copy(style)
+            value = template_values[col]
+            if isinstance(value, str):
+                if value.startswith("="):
+                    cell.value = _offset_formula(value, template_row, target_row)
+                else:
+                    cell.value = PLACEHOLDER_RE.sub(
+                        lambda match, row=entry: str(row.get(match.group(1).strip(), "")),
+                        value,
+                    )
+            else:
+                cell.value = value
+
+    # Totals formulas were written for the template's five rows; stretch them over
+    # the rows that actually exist now.
+    if new_last != original_last:
+        for row in sheet.iter_rows():
+            for cell in row:
+                if not (isinstance(cell.value, str) and cell.value.startswith("=SUM(")):
+                    continue
+                cell.value = cell.value.replace(f"{original_last})", f"{new_last})")
+
+
+def substitute_xlsx(
+    content_bytes: bytes,
+    mapping: dict[str, str],
+    *,
+    repeat_provider: Callable[[str], list[dict[str, Any]] | None] | None = None,
+) -> bytes:
     from openpyxl import load_workbook
     from openpyxl.cell.cell import MergedCell
 
     workbook = load_workbook(io.BytesIO(content_bytes))
+    if repeat_provider is not None:
+        for sheet in workbook.worksheets:
+            _repeat_rows_by_anchor(sheet, repeat_provider)
     for sheet in workbook.worksheets:
         for row in sheet.iter_rows():
             for cell in row:
@@ -710,7 +846,6 @@ async def generate_payment_document(
 
 
 def _read_document_bytes(document: Document) -> bytes:
-    from pathlib import Path
 
     from app.config import get_settings
 
@@ -720,3 +855,77 @@ def _read_document_bytes(document: Document) -> bytes:
     if not path.exists():
         raise HTTPException(500, "template.file_missing_on_disk")
     return path.read_bytes()
+
+
+# ── RFQ quotation ────────────────────────────────────────────────────────────
+
+
+def build_rfq_context(rfq: Any, company: Any, pr: Any) -> dict[str, Any]:
+    """Header values for the quotation sheet handed to suppliers.
+
+    Only what we know: the supplier fills prices, tax rate, lead time and
+    warranty themselves, so those columns stay blank in the template.
+    """
+    created = getattr(rfq, "created_at", None)
+    return {
+        "rfq.number": rfq.rfq_number,
+        "rfq.date": created.date().isoformat() if created else "",
+        "rfq.deadline": _as_date_str(rfq.deadline),
+        "rfq.currency": getattr(pr, "currency", None) or "CNY",
+        "rfq.pr_number": getattr(pr, "pr_number", None) or "",
+        "rfq.delivery_location": getattr(pr, "delivery_address", None) or "",
+        "rfq.payment_terms": "",
+        "buyer.name": getattr(company, "name_zh", None) or getattr(company, "name_en", None) or "",
+    }
+
+
+def rfq_line_entries(rfq: Any) -> list[dict[str, Any]]:
+    entries: list[dict[str, Any]] = []
+    for index, item in enumerate(getattr(rfq, "items", []) or [], start=1):
+        entries.append(
+            {
+                "line_no": str(index),
+                "item_name": item.item_name or "",
+                "brand_model": "",
+                "specification": (item.specification or "").strip(),
+                "qty": _as_date_str(item.qty),
+                "uom": item.uom or "",
+            }
+        )
+    return entries
+
+
+async def generate_rfq_quotation(db: AsyncSession, rfq_id: UUID) -> tuple[bytes, str]:
+    """Render the quotation sheet for one RFQ from the bundled template."""
+    from app.models import RFQ, Company, PurchaseRequisition
+
+    rfq = (
+        await db.execute(select(RFQ).where(RFQ.id == rfq_id).options(selectinload(RFQ.items)))
+    ).scalar_one_or_none()
+    if rfq is None:
+        raise HTTPException(404, "rfq.not_found")
+
+    pr = (
+        (
+            await db.execute(select(PurchaseRequisition).where(PurchaseRequisition.id == rfq.pr_id))
+        ).scalar_one_or_none()
+        if rfq.pr_id
+        else None
+    )
+    company = (
+        (await db.execute(select(Company).where(Company.id == rfq.company_id))).scalar_one_or_none()
+        if rfq.company_id
+        else None
+    )
+
+    template_path = Path(__file__).resolve().parent.parent / "templates" / "rfq_quotation.xlsx"
+    context = build_rfq_context(rfq, company, pr)
+    lines = rfq_line_entries(rfq)
+
+    content = substitute_xlsx(
+        template_path.read_bytes(),
+        context,
+        repeat_provider=lambda anchor: lines if anchor == "line_no" else None,
+    )
+    filename = render_filename("{{number}}-询价单.xlsx", {"number": rfq.rfq_number})
+    return content, filename
