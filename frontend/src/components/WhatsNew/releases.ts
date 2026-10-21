@@ -24,6 +24,17 @@ export interface Release {
 
 export const RELEASES: Release[] = [
   {
+    version: '1.72.2',
+    date: '2026-10-22',
+    items: [
+      {
+        kind: 'improvement',
+        zh: '收货边界（部分收货、全部收货、超收拒绝）新增自动检查',
+        en: 'Receipt edges now have automated checks: partial, complete and over-receipt',
+      },
+    ],
+  },
+  {
     version: '1.72.1',
     date: '2026-10-22',
     items: [
