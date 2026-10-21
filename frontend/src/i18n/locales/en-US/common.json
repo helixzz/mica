@@ -319,6 +319,7 @@
     "back_to_sso": "← Back to SSO login"
   },
   "message": {
+    "invoice_pages_partial": "This PDF has {{total}} pages; only page 1 was read — check the rest if lines are missing",
     "welcome": "Welcome, {{name}}",
     "no_data": "No data",
     "loading": "Loading...",

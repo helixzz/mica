@@ -306,10 +306,17 @@ async def _extract_via_vision_from_pdf(
         import fitz
 
         doc = fitz.open(stream=pdf_bytes, filetype="pdf")
+        # Only the first page is read: an invoice's price table is on page one, and
+        # feeding attachment pages to the model invites invented lines. What was
+        # missing is telling anyone that the rest was skipped.
+        total_pages = doc.page_count
         page = doc.load_page(0)
         pix = page.get_pixmap(dpi=150)
         img_bytes = pix.tobytes("jpeg")
-        return await _extract_via_vision(db, actor, img_bytes, "image/jpeg")
+        result = await _extract_via_vision(db, actor, img_bytes, "image/jpeg")
+        result.pages_read = 1 if total_pages else 0
+        result.pages_total = total_pages
+        return result
     except Exception as e:
         return InvoiceExtract(
             raw_extract_source=ExtractSource.LLM_VISION.value,

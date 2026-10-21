@@ -248,3 +248,45 @@ async def test_call_log_names_the_model_that_read_the_scan(seeded_db_session, mo
     assert log is not None
     assert log.model_name == "attribution-model"
     assert log.provider == "openai"
+
+
+async def test_invoice_pdf_reports_how_many_pages_were_skipped(seeded_db_session, monkeypatch):
+    """A three-page invoice PDF reads page one; the result has to say so.
+
+    Silence here looks like "the invoice only had a few lines".
+    """
+    from app.services import invoice_extract as inv
+
+    db = seeded_db_session
+    actor = await _actor(db)
+
+    async def fake_vision(db_, actor_, img_bytes, content_type):
+        result = inv.InvoiceExtract(raw_extract_source=inv.ExtractSource.LLM_VISION.value)
+        result.confidence = 0.8
+        return result
+
+    monkeypatch.setattr(inv, "_extract_via_vision", fake_vision)
+
+    result = await inv._extract_via_vision_from_pdf(db, actor, _pdf(3))
+
+    assert result.pages_read == 1
+    assert result.pages_total == 3
+
+
+async def test_invoice_single_page_reports_no_shortfall(seeded_db_session, monkeypatch):
+    from app.services import invoice_extract as inv
+
+    db = seeded_db_session
+    actor = await _actor(db)
+
+    async def fake_vision(db_, actor_, img_bytes, content_type):
+        result = inv.InvoiceExtract(raw_extract_source=inv.ExtractSource.LLM_VISION.value)
+        result.confidence = 0.8
+        return result
+
+    monkeypatch.setattr(inv, "_extract_via_vision", fake_vision)
+
+    result = await inv._extract_via_vision_from_pdf(db, actor, _pdf(1))
+
+    assert result.pages_total == 1
+    assert result.pages_read == 1
