@@ -24,6 +24,17 @@ export interface Release {
 
 export const RELEASES: Release[] = [
   {
+    version: '1.70.1',
+    date: '2026-10-21',
+    items: [
+      {
+        kind: 'fix',
+        zh: '修复下载的询价单文件名显示成变量名（如 {{number}}-询价单.xlsx）',
+        en: 'Fixed downloaded quotation filenames showing the raw placeholder instead of the RFQ number',
+      },
+    ],
+  },
+  {
     version: '1.70.0',
     date: '2026-10-21',
     items: [
