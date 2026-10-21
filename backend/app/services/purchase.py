@@ -34,6 +34,7 @@ from app.models import (
 )
 from app.schemas import PRCreateIn, PRDecisionIn, PRUpdateIn
 from app.services import approval as approval_svc
+from app.services import price_sources
 from app.services.delivery_addresses import touch_usage
 
 logger = logging.getLogger("mica.purchase")
@@ -2052,7 +2053,7 @@ async def get_po(db: AsyncSession, po_id: UUID, actor: User | None = None) -> Pu
     return po
 
 
-_SUPPLIER_QUOTE_SOURCE_TYPE = "supplier_quote"
+_SUPPLIER_QUOTE_SOURCE_TYPE = price_sources.SUPPLIER_QUOTE
 
 
 async def delete_pr(db: AsyncSession, actor: User, pr_id: UUID) -> None:

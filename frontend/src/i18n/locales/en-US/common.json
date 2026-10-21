@@ -1802,5 +1802,14 @@
     "invoice_due_in": "{{days}} days left",
     "invoice_overdue": "{{days}} days overdue",
     "attach_invoice": "Attach invoice"
+  },
+  "price_source": {
+    "manual": "Manual",
+    "quote": "Quoted",
+    "actual_po": "Actual PO price",
+    "market_research": "Market research",
+    "supplier_quote": "Supplier quote (PR)",
+    "excel_import": "Excel import",
+    "rfq_quote": "Quoted (legacy)"
   }
 }

@@ -15,6 +15,7 @@ from app.core.security import CurrentUser, require_roles
 from app.db import get_db, new_uuid
 from app.models import Item, SKUPriceRecord, Supplier
 from app.services import master_data as master_data_svc
+from app.services import price_sources
 
 router = APIRouter(tags=["import"])
 
@@ -175,7 +176,7 @@ async def import_prices(
             price=price,
             currency=row.get("currency") or row.get("币种", "CNY") or "CNY",
             quotation_date=quotation_date,
-            source_type="excel_import",
+            source_type=price_sources.EXCEL_IMPORT,
         )
         db.add(record)
         created += 1

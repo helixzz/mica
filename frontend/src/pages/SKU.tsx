@@ -187,7 +187,9 @@ export function SKUPage() {
     {
       title: t('sku.source_col'),
       dataIndex: 'source_type',
-      render: (v: string) => <Tag>{v}</Tag>,
+      render: (v: string) => (
+        <Tag>{t(`price_source.${v}` as never, { defaultValue: v })}</Tag>
+      ),
     },
   ]
 

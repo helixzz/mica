@@ -11,6 +11,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.core.security import CurrentUser, require_roles
 from app.db import get_db
 from app.i18n import t
+from app.services import price_sources
 from app.services import sku as sku_svc
 
 router = APIRouter()
@@ -21,7 +22,7 @@ class PriceRecordIn(BaseModel):
     price: Decimal = Field(..., gt=0)
     quotation_date: date
     supplier_id: UUID | None = None
-    source_type: Literal["manual", "quote", "actual_po", "market_research"] = "manual"
+    source_type: Literal["manual", "quote", "actual_po", "market_research"] = price_sources.MANUAL
     source_ref: str | None = None
     notes: str | None = None
 
