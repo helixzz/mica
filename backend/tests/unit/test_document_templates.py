@@ -940,3 +940,75 @@ def test_quotation_fills_the_header():
     assert sheet["B3"].value == "测试主体"
     assert sheet["E3"].value == "RFQ-TEST-1"
     assert sheet["B5"].value == "上海"
+
+
+# ── document access ──────────────────────────────────────────────────────────
+# Document.is_private was written on upload and never read, so any signed-in user
+# could read any file whose id they knew.
+
+
+def _document(*, uploaded_by, private: bool = True):
+    from app.db import new_uuid
+    from app.models import Document
+
+    return Document(
+        id=new_uuid(),
+        storage_key=f"documents/{new_uuid()}",
+        original_filename="scan.pdf",
+        content_type="application/pdf",
+        file_size=10,
+        content_hash="0" * 64,
+        doc_category="invoice",
+        is_private=private,
+        uploaded_by_id=uploaded_by,
+    )
+
+
+def test_uploader_can_read_their_own_private_document():
+    from types import SimpleNamespace
+
+    from app.services.documents import ensure_document_access
+
+    user_id = __import__("app.db", fromlist=["new_uuid"]).new_uuid()
+    doc = _document(uploaded_by=user_id)
+
+    ensure_document_access(doc, SimpleNamespace(id=user_id, role="requester"))
+
+
+def test_another_requester_cannot_read_a_private_document():
+    from types import SimpleNamespace
+
+    import pytest
+    from fastapi import HTTPException
+
+    from app.db import new_uuid
+    from app.services.documents import ensure_document_access
+
+    doc = _document(uploaded_by=new_uuid())
+
+    with pytest.raises(HTTPException) as exc:
+        ensure_document_access(doc, SimpleNamespace(id=new_uuid(), role="requester"))
+    assert exc.value.status_code == 403
+
+
+def test_procurement_roles_can_read_other_peoples_documents():
+    from types import SimpleNamespace
+
+    from app.db import new_uuid
+    from app.services.documents import ensure_document_access
+
+    doc = _document(uploaded_by=new_uuid())
+
+    for role in ("admin", "it_buyer", "procurement_mgr", "finance_auditor"):
+        ensure_document_access(doc, SimpleNamespace(id=new_uuid(), role=role))
+
+
+def test_shared_documents_are_open_to_everyone():
+    from types import SimpleNamespace
+
+    from app.db import new_uuid
+    from app.services.documents import ensure_document_access
+
+    doc = _document(uploaded_by=new_uuid(), private=False)
+
+    ensure_document_access(doc, SimpleNamespace(id=new_uuid(), role="requester"))

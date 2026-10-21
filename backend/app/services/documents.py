@@ -144,6 +144,27 @@ async def get_document(db: AsyncSession, document_id: UUID) -> Document | None:
     ).scalar_one_or_none()
 
 
+# Roles that routinely handle other people's documents (invoices, contracts,
+# quotations). Everyone else may only touch what they uploaded.
+_DOCUMENT_READER_ROLES = ("admin", "it_buyer", "procurement_mgr", "finance_auditor")
+
+
+def ensure_document_access(doc: Document, user: User) -> None:
+    """Who may read this file.
+
+    Document.is_private was written as True on upload and then never read, so any
+    signed-in user who knew a document id could extract or download the file. The
+    check lives here rather than in each endpoint so a new one cannot forget it.
+    """
+    if not doc.is_private:
+        return
+    if doc.uploaded_by_id == user.id:
+        return
+    if user.role in _DOCUMENT_READER_ROLES:
+        return
+    raise HTTPException(403, "document.forbidden")
+
+
 async def create_download_token(
     db: AsyncSession,
     document_id: UUID,
@@ -153,6 +174,7 @@ async def create_download_token(
     doc = await db.get(Document, document_id)
     if doc is None or doc.deleted_at is not None:
         raise HTTPException(404, "document.not_found")
+    ensure_document_access(doc, created_by)
     resolved_ttl_seconds = ttl_seconds or settings.download_token_ttl_seconds
     tok = DocumentDownloadToken(
         token=secrets.token_urlsafe(32),

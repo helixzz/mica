@@ -7,6 +7,21 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [v1.68.3] — 2026-10-21
+
+### 修复（附件可被任意登录用户读取）
+
+`Document.is_private` 在上传时写入 `true`，然后**从来没有任何代码读过它**。后果：
+
+- 任何登录用户只要知道一个文件编号，就能调 `/ai/invoice-extract`、`/ai/rfq-quote-extract`、合同提取接口读走文件内容
+- 更直接的一条：`/documents/{id}/token` 也不校验权限，可以为**任意**文档生成下载令牌
+
+新增统一的 `ensure_document_access`（`services/documents.py`），规则：上传者本人、或采购/财务/管理员角色（`admin`/`it_buyer`/`procurement_mgr`/`finance_auditor`）、或该文档标记为非私有。四个入口（三个提取端点 + 下载令牌）全部接入，检查放在服务层而不是各端点里，避免以后新增端点又忘掉。
+
+### 验证
+
+- 后端 **903 passed**（新增 4 条：本人可读、他人 requester 403、采购角色可读、共享文档开放）
+
 ## [v1.68.2] — 2026-10-21
 
 ### 文档（权限设计梳理入库）

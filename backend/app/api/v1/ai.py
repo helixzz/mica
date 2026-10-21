@@ -85,6 +85,7 @@ async def rfq_quote_extract(
     document = await db.get(Document, document_id)
     if document is None:
         raise HTTPException(404, "document.not_found")
+    doc_svc.ensure_document_access(document, user)
     content = await doc_svc.read_document_bytes(document)
     payload = await extract_svc.extract_rfq_quote(
         db, user, content, document.content_type or "", document.file_name or ""
@@ -103,6 +104,7 @@ async def ai_invoice_extract(
     doc = await db.get(Document, document_id)
     if doc is None or doc.deleted_at is not None:
         raise HTTPException(404, "document.not_found")
+    doc_svc.ensure_document_access(doc, user)
     content = await doc_svc.read_document_bytes(doc)
     result = await extract_svc.extract_invoice(
         db, user, content, doc.content_type, doc.original_filename
@@ -123,6 +125,7 @@ async def ai_contract_extract(
     if not doc:
         raise HTTPException(404, "document.not_found")
 
+    doc_svc.ensure_document_access(doc, user)
     content = await doc_svc.read_document_bytes(doc)
     result = await contract_extract_svc.extract_contract(
         db, user, document_id, content, doc.content_type, doc.original_filename
