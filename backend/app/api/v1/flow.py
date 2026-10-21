@@ -102,6 +102,7 @@ async def create_contract(
         payload.expiry_date,
         payload.notes,
         contract_number=payload.contract_number,
+        currency=payload.currency,
     )
     c = await flow.get_contract(db, c.id)
     return _contract_to_out(c)

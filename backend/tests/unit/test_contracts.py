@@ -620,3 +620,80 @@ async def test_search_contracts_respects_row_visibility(seeded_db_session):
     # Without an actor there is no scoping (kept for internal callers).
     unscoped = await svc.search_contracts(db, "Scoped search target")
     assert contract.id in {UUID(row["id"]) for row in unscoped}
+
+
+async def _po_for_currency_test(db, actor, supplier, currency: str = "CNY") -> PurchaseOrder:
+    from uuid import uuid4
+
+    pr = PurchaseRequisition(
+        pr_number=f"PR-CUR-{uuid4().hex[:6]}",
+        title="币种测试",
+        requester_id=actor.id,
+        company_id=actor.company_id,
+        status="approved",
+        currency=currency,
+        total_amount=Decimal("1000.00"),
+    )
+    db.add(pr)
+    await db.flush()
+    po = PurchaseOrder(
+        po_number=f"PO-CUR-{uuid4().hex[:6]}",
+        pr_id=pr.id,
+        supplier_id=supplier.id,
+        company_id=actor.company_id,
+        status=POStatus.CONFIRMED.value,
+        currency=currency,
+        total_amount=Decimal("1000.00"),
+        amount_paid=Decimal("0"),
+        created_by_id=actor.id,
+    )
+    db.add(po)
+    await db.flush()
+    return po
+
+
+async def test_a_mismatched_contract_currency_is_refused(seeded_db_session):
+    """A contract's money follows its order — but the caller must be told.
+
+    ContractCreateIn had no currency field, so Pydantic dropped the value and the
+    contract quietly stored the order's. An API client setting HKD got CNY with a 201.
+    """
+    from app.services import flow as flow_svc
+
+    db = seeded_db_session
+    actor = await _user(db)
+    supplier = await _supplier(db)
+    po = await _po_for_currency_test(db, actor, supplier)
+
+    with pytest.raises(HTTPException) as exc:
+        await flow_svc.create_contract(
+            db,
+            actor,
+            po.id,
+            "币种不符的合同",
+            Decimal("1000"),
+            currency="HKD" if po.currency != "HKD" else "USD",
+        )
+
+    assert exc.value.status_code == 422
+    assert "currency_follows_order" in str(exc.value.detail)
+
+
+async def test_a_matching_contract_currency_is_accepted(seeded_db_session):
+    from app.services import flow as flow_svc
+
+    db = seeded_db_session
+    actor = await _user(db)
+    supplier = await _supplier(db)
+    po = await _po_for_currency_test(db, actor, supplier)
+
+    contract = await flow_svc.create_contract(
+        db,
+        actor,
+        po.id,
+        "币种一致的合同",
+        Decimal("1000"),
+        currency=po.currency,
+    )
+
+    assert contract.currency == po.currency

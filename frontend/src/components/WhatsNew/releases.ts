@@ -24,6 +24,17 @@ export interface Release {
 
 export const RELEASES: Release[] = [
   {
+    version: '1.72.3',
+    date: '2026-10-22',
+    items: [
+      {
+        kind: 'fix',
+        zh: '创建合同时传入与订单不同的币种，现在会明确报错，而不是悄悄用订单的币种',
+        en: 'Creating a contract with a currency different from its order now says so instead of silently using the order\'s',
+      },
+    ],
+  },
+  {
     version: '1.72.2',
     date: '2026-10-22',
     items: [

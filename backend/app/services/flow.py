@@ -108,6 +108,20 @@ async def suggest_contract_number(db: AsyncSession) -> str:
     return f"{full_prefix}{next_seq:03d}"
 
 
+def _contract_currency(requested: str | None, po: PurchaseOrder) -> str:
+    """A contract is paid in its order's currency; say so if the caller disagrees.
+
+    ContractCreateIn used to have no currency field at all, so Pydantic dropped the
+    value without complaint and the contract silently stored the order's currency.
+    """
+    if requested and requested.strip().upper() != (po.currency or "CNY").upper():
+        raise HTTPException(
+            422,
+            f"contract.currency_follows_order: order={po.currency} requested={requested}",
+        )
+    return po.currency or "CNY"
+
+
 async def create_contract(
     db: AsyncSession,
     actor: User,
@@ -119,6 +133,7 @@ async def create_contract(
     expiry_date=None,
     notes: str | None = None,
     contract_number: str | None = None,
+    currency: str | None = None,
 ) -> Contract:
     po = await _load_po(db, po_id)
     if po is None:
@@ -144,7 +159,7 @@ async def create_contract(
         supplier_id=po.supplier_id,
         company_id=po.company_id,
         title=title,
-        currency=po.currency,
+        currency=_contract_currency(currency, po),
         total_amount=_as_decimal(total_amount),
         signed_date=signed_date,
         effective_date=effective_date,
