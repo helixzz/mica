@@ -316,6 +316,7 @@ async def attach_shipment_document(
     payload: ShipmentAttachIn,
     user: CurrentUser,
     db: Annotated[AsyncSession, Depends(get_db)],
+    _role: Annotated[None, Depends(require_roles("admin", "procurement_mgr", "it_buyer"))],
 ):
     link = await flow.attach_document_to_shipment(
         db, user, shipment_id, payload.document_id, payload.role
@@ -357,6 +358,7 @@ async def attach_po_document(
     payload: POAttachIn,
     user: CurrentUser,
     db: Annotated[AsyncSession, Depends(get_db)],
+    _role: Annotated[None, Depends(require_roles("admin", "procurement_mgr", "it_buyer"))],
 ):
     link = await flow.attach_po_document(db, user, po_id, payload.document_id, payload.role)
     return {

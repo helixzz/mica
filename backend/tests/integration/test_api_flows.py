@@ -330,3 +330,36 @@ async def test_rfq_quote_extract_404_for_unknown_document(seeded_client):
     )
 
     assert response.status_code == 404, response.text
+
+
+@pytest.mark.asyncio
+async def test_a_requester_cannot_attach_a_file_to_a_contract(seeded_client):
+    """Attaching a file edits the contract's dossier; it used to need only a login.
+
+    The endpoint had no role guard while editing the contract required procurement
+    roles, so any requester who knew a contract id could add documents to it.
+    """
+    auth = await _login_as(seeded_client, "bob")  # dept_manager, not procurement
+
+    response = await seeded_client.post(
+        f"/api/v1/contracts/{uuid4()}/attachments",
+        json={"document_id": str(uuid4()), "role": "other"},
+        headers=auth,
+    )
+
+    assert response.status_code == 403, response.text
+
+
+@pytest.mark.asyncio
+async def test_procurement_roles_reach_the_attachment_handler(seeded_client):
+    """The guard must not shut out the roles that legitimately add documents."""
+    auth = await _login_as(seeded_client, "alice")  # it_buyer
+
+    response = await seeded_client.post(
+        f"/api/v1/contracts/{uuid4()}/attachments",
+        json={"document_id": str(uuid4()), "role": "other"},
+        headers=auth,
+    )
+
+    # Past the role guard: the contract does not exist, which is a 404, not a 403.
+    assert response.status_code in (404, 422), response.text
