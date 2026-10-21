@@ -138,6 +138,32 @@ async def _contract(db, buyer, po):
         total_amount=po.total_amount,
     )
     await db.commit()
+
+    # A contract with no schedule shows an empty tab, which is not what the contract
+    # spec is meant to look at.
+    has_items = (
+        (
+            await db.execute(
+                select(PaymentSchedule.id).where(PaymentSchedule.contract_id == contract.id)
+            )
+        )
+        .scalars()
+        .first()
+    )
+    if has_items is None:
+        await payment_schedule_svc.replace_schedule(
+            db,
+            [
+                {
+                    "installment_no": 1,
+                    "label": "合同首款",
+                    "planned_amount": Decimal("400"),
+                    "planned_date": date.today() + timedelta(days=10),
+                }
+            ],
+            contract_id=contract.id,
+        )
+        await db.commit()
     print(f"Contract={contract.contract_number} ({contract.id})")
     return contract
 
