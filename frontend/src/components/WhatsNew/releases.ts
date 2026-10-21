@@ -24,6 +24,17 @@ export interface Release {
 
 export const RELEASES: Release[] = [
   {
+    version: '1.65.2',
+    date: '2026-10-21',
+    items: [
+      {
+        kind: 'new',
+        zh: '询价单列表顶部显示「待取回」提醒：哪些已发出、还有几家没回、哪些已过截止日',
+        en: 'The RFQ list flags quotations awaiting collection — who has not replied, and what is past deadline',
+      },
+    ],
+  },
+  {
     version: '1.65.1',
     date: '2026-10-21',
     items: [
