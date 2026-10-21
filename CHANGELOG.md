@@ -7,6 +7,27 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [v1.69.5] — 2026-10-21
+
+### 修复（挂附件不需要任何采购角色）
+
+系统排查时发现三处权限不一致：
+
+| 端点 | 修前 | 对照 |
+| :--- | :--- | :--- |
+| `POST /contracts/{id}/attachments` | 仅需登录 | `PATCH /contracts/{id}` 要求采购角色 |
+| `POST /purchase-orders/{id}/attachments` | 仅需登录 | 改订单要求采购角色 |
+| `POST /shipments/{id}/attachments` | 仅需登录 | 收货操作要求采购角色 |
+
+挂附件是在往合同/订单的档案里加文件，与编辑它们是同类动作，却只要登录即可——任何申请人（requester）只要知道编号，就能给别人的合同挂文件。
+
+- 三处统一收紧为 `admin` / `procurement_mgr` / `it_buyer`
+- 权限检查放在端点签名里（`Depends(require_roles(...))`），与同文件其他写操作一致
+
+### 验证
+
+- 后端 **912 passed**（新增 2 条：非采购角色 403、采购角色可通过守卫到达处理逻辑）
+
 ## [v1.69.4] — 2026-10-21
 
 ### 验证（扫描报价识别在生产真实模型上跑通）

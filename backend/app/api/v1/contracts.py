@@ -6,7 +6,7 @@ from pydantic import BaseModel
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.core.security import CurrentUser
+from app.core.security import CurrentUser, require_roles
 from app.db import get_db
 from app.models import ContractDocument
 from app.schemas import ContractVersionOut
@@ -27,6 +27,9 @@ async def attach_doc(
     payload: AttachDocumentIn,
     user: CurrentUser,
     db: Annotated[AsyncSession, Depends(get_db)],
+    # Attaching a file changes the contract's dossier, so it needs the same roles as
+    # editing the contract. It only required a login before.
+    _role: Annotated[None, Depends(require_roles("admin", "procurement_mgr", "it_buyer"))],
 ):
     # Auto-OCR disabled: OCR during upload causes InFailedSQLTransactionError.
     # The litellm HTTP call inside extract_contract corrupts the async session.
