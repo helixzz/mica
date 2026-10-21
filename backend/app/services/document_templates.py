@@ -927,5 +927,5 @@ async def generate_rfq_quotation(db: AsyncSession, rfq_id: UUID) -> tuple[bytes,
         context,
         repeat_provider=lambda anchor: lines if anchor == "line_no" else None,
     )
-    filename = render_filename("{{number}}-询价单.xlsx", {"number": rfq.rfq_number})
+    filename = render_filename("[number]-询价单.xlsx", {"number": rfq.rfq_number})
     return content, filename

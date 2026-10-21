@@ -1012,3 +1012,33 @@ def test_shared_documents_are_open_to_everyone():
     doc = _document(uploaded_by=new_uuid(), private=False)
 
     ensure_document_access(doc, SimpleNamespace(id=new_uuid(), role="requester"))
+
+
+# ── placeholder syntax ───────────────────────────────────────────────────────
+# The template language is square brackets ([number]). A hardcoded "{{number}}" was
+# shipped once and produced a file literally named "{{number}}-询价单.xlsx".
+
+
+def test_render_filename_substitutes_square_bracket_placeholders():
+    from app.services.document_templates import render_filename
+
+    assert render_filename("[number]-询价单.xlsx", {"number": "RFQ-2026-0003"}) == (
+        "RFQ-2026-0003-询价单.xlsx"
+    )
+
+
+def test_render_filename_leaves_braces_untouched():
+    """Guard against reintroducing the wrong syntax: braces are not placeholders."""
+    from app.services.document_templates import render_filename
+
+    assert render_filename("{{number}}-x.xlsx", {"number": "RFQ-1"}) == "{{number}}-x.xlsx"
+
+
+def test_the_quotation_filename_has_no_placeholders_left():
+    """The generated name must not contain the raw marker."""
+    import inspect
+
+    from app.services import document_templates
+
+    source = inspect.getsource(document_templates.generate_rfq_quotation)
+    assert "{{" not in source, "generate_rfq_quotation still uses double-brace syntax"
