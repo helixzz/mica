@@ -6,8 +6,10 @@ from app.services.feishu.messages import (
     build_approval_decided_card,
     build_contract_expiring_card,
     build_event_card,
+    build_invoice_card,
     build_payment_pending_card,
     build_po_created_card,
+    build_po_receipt_card,
     build_pr_submitted_card,
 )
 
@@ -211,3 +213,83 @@ def test_event_card_renders_changes_with_arrows():
     text = _texts(card)
     assert "¥100.00 → ¥200.00" in text
     assert _actions(card)[0]["url"].endswith("/contracts/1")
+
+
+def test_invoice_card_leads_with_total_and_drops_redundant_fields():
+    card = build_invoice_card(
+        invoice_number="JQIV20261023002",
+        vendor_number="26952000004325772046",
+        supplier="深圳冠量科技有限公司",
+        total_amount="¥742,500.00",
+        invoice_date="2026年10月13日",
+        tax_note="",
+        matched=True,
+        po_hint="PO-2026-0069",
+        created_by="Elvis Li",
+        invoice_url="https://mica.example/invoices",
+        locale="zh-CN",
+    )
+    text = _texts(card)
+    assert card["header"]["template"] == "green"
+    assert "¥742,500.00" in text
+    # subtotal/tax repeated the total and are gone
+    assert "小计" not in text
+    assert "税额" not in text
+    assert "三单匹配通过" in text
+    assert _actions(card)[0]["url"].endswith("/invoices")
+
+
+def test_invoice_card_flags_an_unmatched_invoice():
+    card = build_invoice_card(
+        invoice_number="JQIV-2",
+        vendor_number="",
+        supplier="ACME",
+        total_amount="¥1,000.00",
+        invoice_date="2026年10月13日",
+        tax_note="",
+        matched=False,
+        po_hint="",
+        created_by="Elvis Li",
+        invoice_url="",
+        locale="zh-CN",
+    )
+    assert card["header"]["template"] == "red"
+    assert "需人工核对" in _texts(card)
+
+
+def test_po_receipt_card_leads_with_progress():
+    card = build_po_receipt_card(
+        po_number="PO-2026-0076",
+        pr_title="Production Trading Server FTX-2 补货",
+        received="0",
+        ordered="5",
+        percent="0%",
+        shipment_number="PO-2026-0076-S01 (Batch 1)",
+        carrier="跨越物流",
+        tracking="KYE640056607434",
+        fully_received=False,
+        po_url="https://mica.example/purchase-orders/1",
+        locale="zh-CN",
+    )
+    text = _texts(card)
+    assert card["header"]["template"] == "orange"
+    assert "0 / 5" in text
+    assert "部分到货" in text
+    assert "PO PO-" not in text
+
+
+def test_po_receipt_card_marks_a_complete_batch_green():
+    card = build_po_receipt_card(
+        po_number="PO-1",
+        pr_title="",
+        received="5",
+        ordered="5",
+        percent="100%",
+        shipment_number="",
+        carrier="",
+        tracking="",
+        fully_received=True,
+        po_url="",
+        locale="zh-CN",
+    )
+    assert card["header"]["template"] == "green"

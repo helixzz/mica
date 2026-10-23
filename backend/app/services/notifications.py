@@ -360,6 +360,23 @@ async def _maybe_send_feishu_card(
         if subscription is not None and not subscription.feishu_enabled:
             return
 
+        # Two Mica accounts can share one Feishu identity (the same person holding
+        # an admin and a second role). Without this check the same event reaches
+        # one chat twice, which is exactly what "the cards arrive in pairs" was.
+        if (
+            notification.dedupe_key
+            and user.feishu_union_id
+            and await _delivered_to_shared_account(
+                session, union_id=user.feishu_union_id, dedupe_key=notification.dedupe_key
+            )
+        ):
+            logger.info(
+                "feishu: skipped duplicate for shared account user=%s key=%s",
+                user.email,
+                notification.dedupe_key,
+            )
+            return
+
         base_url = await _app_base_url(session)
         card = _build_feishu_card(notification, user, base_url=base_url)
         if card is None:
@@ -381,6 +398,31 @@ async def _app_base_url(session: AsyncSession) -> str:
 
         value = get_settings().app_base_url
     return str(value).rstrip("/")
+
+
+async def _delivered_to_shared_account(
+    session: AsyncSession,
+    *,
+    union_id: str,
+    dedupe_key: str,
+) -> bool:
+    """True when this Feishu identity already received the same event."""
+    window_hours = await system_params.get_int_or(session, "notifications.event_dedupe_hours", 24)
+    since = datetime.now(UTC) - timedelta(hours=window_hours)
+    stmt = (
+        select(NotificationDelivery.id)
+        .join(Notification, Notification.id == NotificationDelivery.notification_id)
+        .join(User, User.id == Notification.user_id)
+        .where(
+            User.feishu_union_id == union_id,
+            Notification.dedupe_key == dedupe_key,
+            NotificationDelivery.channel == NotificationChannel.FEISHU.value,
+            NotificationDelivery.status == NotificationDeliveryStatus.SENT.value,
+            NotificationDelivery.created_at >= since,
+        )
+        .limit(1)
+    )
+    return (await session.execute(stmt)).scalar_one_or_none() is not None
 
 
 async def _send_feishu_card(session: AsyncSession, user: User, card: dict) -> dict:
@@ -739,6 +781,41 @@ def _build_feishu_card(
                 pr_url=link,
                 locale=locale,
             )
+
+    if meta.get("kind") == "invoice":
+        return feishu_messages.build_invoice_card(
+            invoice_number=str(meta.get("invoice_number") or ""),
+            vendor_number=str(meta.get("vendor_number") or ""),
+            supplier=str(meta.get("supplier") or ""),
+            total_amount=_amount_text(
+                {
+                    "amount": meta.get("total_amount"),
+                    "currency": meta.get("currency"),
+                }
+            ),
+            invoice_date=fmt_date(meta.get("invoice_date"), locale),
+            tax_note=str(meta.get("tax_note") or ""),
+            matched=bool(meta.get("matched")),
+            po_hint=str(meta.get("po_hint") or ""),
+            created_by=str(meta.get("created_by") or ""),
+            invoice_url=_absolute_url(notification.link_url, base_url),
+            locale=locale,
+        )
+
+    if meta.get("kind") == "po_receipt":
+        return feishu_messages.build_po_receipt_card(
+            po_number=str(meta.get("po_number") or ""),
+            pr_title=str(meta.get("pr_title") or ""),
+            received=str(meta.get("received") or "0"),
+            ordered=str(meta.get("ordered") or "0"),
+            percent=str(meta.get("percent") or "0%"),
+            shipment_number=str(meta.get("shipment_number") or ""),
+            carrier=str(meta.get("carrier") or ""),
+            tracking=str(meta.get("tracking") or ""),
+            fully_received=bool(meta.get("fully_received")),
+            po_url=_absolute_url(notification.link_url, base_url),
+            locale=locale,
+        )
 
     if notification.category == NotificationCategory.CONTRACT_EXPIRING:
         if meta.get("contract_number") and meta.get("days_remaining") is not None:

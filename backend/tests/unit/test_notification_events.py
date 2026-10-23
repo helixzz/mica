@@ -158,3 +158,37 @@ async def test_failed_delivery_is_recorded_for_retry(seeded_db_session, monkeypa
     assert delivery.status == NotificationDeliveryStatus.FAILED.value
     assert delivery.next_retry_at is not None
     assert "feishu down" in (delivery.last_error or "")
+
+
+async def test_two_accounts_sharing_one_feishu_identity_get_one_card(seeded_db_session, monkeypatch):
+    """zijing-guo and admin shared a union_id in production; the event arrived twice."""
+    alice = (await seeded_db_session.execute(select(User).where(User.username == "alice"))).scalar_one()
+    bob = (await seeded_db_session.execute(select(User).where(User.username == "bob"))).scalar_one()
+    alice.feishu_union_id = "on_shared"
+    bob.feishu_union_id = "on_shared"
+    await seeded_db_session.flush()
+
+    monkeypatch.setattr(
+        svc.system_params, "get", _feishu_params("auth.feishu.notify_on_system", True)
+    )
+    send = AsyncMock(return_value={"code": 0, "data": {"message_id": "om_one"}})
+    monkeypatch.setattr(svc, "_send_feishu_card", send)
+
+    first = await svc.create_notification(
+        seeded_db_session,
+        user_id=alice.id,
+        category=NotificationCategory.SYSTEM,
+        title="同一事件",
+        dedupe_key="shared:event:1",
+    )
+    second = await svc.create_notification(
+        seeded_db_session,
+        user_id=bob.id,
+        category=NotificationCategory.SYSTEM,
+        title="同一事件",
+        dedupe_key="shared:event:1",
+    )
+    await seeded_db_session.flush()
+
+    assert first is not None and second is not None
+    assert send.await_count == 1

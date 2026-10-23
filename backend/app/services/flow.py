@@ -1045,54 +1045,66 @@ async def create_shipment(
 
     try:
         from app.db import AsyncSessionLocal
-        from app.models import NotificationCategory, UserRole
-        from app.services.notifications import create_notification
+        from app.services.notifications import emit_event_notification, user_locale
         from app.services.system_params import notification_enabled
 
         async with AsyncSessionLocal() as notif_db:
             if await notification_enabled(notif_db, "shipment_received"):
-                status_label = (
-                    "fully received"
-                    if po.status == POStatus.FULLY_RECEIVED.value
-                    else "partially received"
-                )
+                fully_received = po.status == POStatus.FULLY_RECEIVED.value
                 ordered_qty = sum((_as_decimal(i.qty or 0) for i in po.items), start=Decimal("0"))
-                recipients = {actor.id, po.created_by_id}
+                received_qty = _as_decimal(po.qty_received or 0)
+                percent = (
+                    f"{(float(received_qty) / float(ordered_qty) * 100):.0f}%"
+                    if ordered_qty
+                    else "0%"
+                )
+
+                recipients: set[UUID] = {actor.id}
+                if po.created_by_id:
+                    recipients.add(po.created_by_id)
                 pr = await notif_db.get(PurchaseRequisition, po.pr_id)
                 if pr and pr.requester_id:
                     recipients.add(pr.requester_id)
-                admin_rows = (
-                    (
-                        await notif_db.execute(
-                            select(User.id).where(
-                                User.role.in_(
-                                    [UserRole.ADMIN.value, UserRole.PROCUREMENT_MGR.value]
-                                ),
-                                User.is_active.is_(True),
-                            )
-                        )
-                    )
-                    .scalars()
-                    .all()
-                )
-                recipients.update(admin_rows)
+
                 for uid in recipients:
-                    await create_notification(
+                    user = await notif_db.get(User, uid)
+                    if user is None:
+                        continue
+                    locale = user_locale(user)
+                    await emit_event_notification(
                         notif_db,
-                        user_id=uid,
-                        category=NotificationCategory.PO_CREATED,
-                        title=f"PO {po.po_number} {status_label}",
-                        body=(
-                            f"**PO**: {po.po_number}\n"
-                            f"**PR**: {po.pr_title or '—'}\n"
-                            f"**Shipment**: {shipment.shipment_number} (Batch {shipment.batch_no})\n"
-                            f"**Status**: {status_label} ({po.qty_received}/{ordered_qty} received)\n"
-                            f"**Carrier**: {shipment.carrier or '—'} | **Tracking**: {shipment.tracking_number or '—'}\n"
-                            f"**Created by**: {actor.display_name}"
+                        user_id=user.id,
+                        event="po_receipt",
+                        title=t(
+                            "notification.event.po_receipt",
+                            locale,
+                            po_number=po.po_number,
+                            state=t(
+                                "feishu.card.receipt.state"
+                                if fully_received
+                                else "feishu.card.receipt.state_partial",
+                                locale,
+                            ),
                         ),
                         link_url=f"/purchase-orders/{po.id}",
                         biz_type="po",
                         biz_id=po.id,
+                        status="success" if fully_received else "action",
+                        fingerprint_parts=("receipt", received_qty, fully_received),
+                        meta={
+                            "kind": "po_receipt",
+                            "po_number": po.po_number,
+                            "pr_title": po.pr_title or "",
+                            "received": str(received_qty),
+                            "ordered": str(ordered_qty),
+                            "percent": percent,
+                            "shipment_number": (
+                                f"{shipment.shipment_number} (Batch {shipment.batch_no})"
+                            ),
+                            "carrier": shipment.carrier or "",
+                            "tracking": shipment.tracking_number or "",
+                            "fully_received": fully_received,
+                        },
                     )
                 await notif_db.commit()
     except Exception:
@@ -2435,7 +2447,7 @@ async def create_invoice(
 
     try:
         from app.models import User, UserRole
-        from app.services.notifications import emit_event_notification, status_label, user_locale
+        from app.services.notifications import emit_event_notification, user_locale
         from app.services.system_params import notification_enabled
 
         if await notification_enabled(db, "invoice_created"):
@@ -2476,53 +2488,61 @@ async def create_invoice(
                 .all()
             )
             recipients.update(admin_rows)
+            po_hint = ""
+            if touched_po_ids:
+                po_hint = (
+                    await db.execute(
+                        select(PurchaseOrder.po_number)
+                        .where(PurchaseOrder.id.in_(touched_po_ids))
+                        .limit(1)
+                    )
+                ).scalar_one_or_none() or ""
+
             for uid in recipients:
                 user = await db.get(User, uid)
                 if user is None:
                     continue
                 locale = user_locale(user)
+                tax_note = (
+                    t(
+                        "feishu.card.invoice.tax",
+                        locale,
+                        amount=fmt_amount(invoice.tax_amount, invoice.currency),
+                    )
+                    if invoice.tax_amount
+                    else ""
+                )
                 await emit_event_notification(
                     db,
                     user_id=user.id,
                     event="invoice_created",
                     title=t(
-                        "notification.event.invoice_created",
+                        "feishu.card.headline.invoice_created"
+                        if is_matched
+                        else "feishu.card.headline.invoice_needs_review",
                         locale,
-                        invoice_number=invoice.internal_number,
+                        number=invoice.internal_number,
                     ),
                     link_url="/invoices",
                     biz_type="invoice",
                     biz_id=invoice.id,
-                    fields=[
-                        (t("notification.label.invoice", locale), invoice.internal_number),
-                        (
-                            t("notification.label.vendor_number", locale),
-                            invoice.invoice_number or "—",
-                        ),
-                        (t("notification.label.supplier", locale), supplier.name),
-                        (
-                            t("notification.label.total", locale),
-                            fmt_amount(invoice.total_amount, invoice.currency),
-                        ),
-                        (
-                            t("notification.label.subtotal", locale),
-                            fmt_amount(invoice.subtotal, invoice.currency),
-                        ),
-                        (
-                            t("notification.label.tax", locale),
-                            fmt_amount(invoice.tax_amount, invoice.currency),
-                        ),
-                        (
-                            t("notification.label.status", locale),
-                            status_label(invoice.status, locale),
-                        ),
-                        (
-                            t("notification.label.date", locale),
-                            fmt_date(invoice.invoice_date, locale),
-                        ),
-                        (t("notification.label.created_by", locale), actor.display_name),
-                    ],
-                    fingerprint_parts=("created", invoice.internal_number),
+                    status="success" if is_matched else "warning",
+                    fingerprint_parts=("created", invoice.internal_number, is_matched),
+                    meta={
+                        "kind": "invoice",
+                        "invoice_number": invoice.internal_number,
+                        "vendor_number": invoice.invoice_number or "",
+                        "supplier": supplier.name,
+                        "total_amount": str(invoice.total_amount),
+                        "currency": invoice.currency,
+                        "invoice_date": invoice.invoice_date.isoformat()
+                        if invoice.invoice_date
+                        else None,
+                        "tax_note": tax_note,
+                        "matched": is_matched,
+                        "po_hint": po_hint,
+                        "created_by": actor.display_name,
+                    },
                 )
             await db.commit()
     except Exception:
@@ -2530,65 +2550,8 @@ async def create_invoice(
             "Failed to send invoice_created notification for invoice=%s", invoice.id, exc_info=True
         )
 
-    try:
-        from app.models import User, UserRole
-        from app.services.notifications import emit_event_notification, user_locale
-        from app.services.system_params import notification_enabled
-
-        if await notification_enabled(db, "invoice_matched"):
-            match_label = "matched" if is_matched else "mismatched"
-            admin_rows = (
-                (
-                    await db.execute(
-                        select(User.id).where(
-                            User.role.in_([UserRole.ADMIN.value, UserRole.FINANCE_AUDITOR.value]),
-                            User.is_active.is_(True),
-                        )
-                    )
-                )
-                .scalars()
-                .all()
-            )
-            for uid in admin_rows:
-                user = await db.get(User, uid)
-                if user is None:
-                    continue
-                locale = user_locale(user)
-                title_key = (
-                    "notification.event.invoice_matched"
-                    if is_matched
-                    else "notification.event.invoice_mismatched"
-                )
-                await emit_event_notification(
-                    db,
-                    user_id=user.id,
-                    event="invoice_matched" if is_matched else "invoice_mismatched",
-                    title=t(
-                        title_key,
-                        locale,
-                        invoice_number=invoice.internal_number,
-                    ),
-                    link_url="/invoices",
-                    biz_type="invoice_match",
-                    biz_id=invoice.id,
-                    fields=[
-                        (t("notification.label.invoice", locale), invoice.internal_number),
-                        (t("notification.label.three_way_match", locale), match_label),
-                        (t("notification.label.status", locale), str(initial_status)),
-                        (
-                            t("notification.label.total", locale),
-                            fmt_amount(invoice.total_amount, invoice.currency),
-                        ),
-                        (t("notification.label.created_by", locale), actor.display_name),
-                    ],
-                    status="info" if is_matched else "warning",
-                    fingerprint_parts=("match", is_matched),
-                )
-            await db.commit()
-    except Exception:
-        logger.warning(
-            "Failed to send invoice_matched notification for invoice=%s", invoice.id, exc_info=True
-        )
+    # Creation already carries the 3-way match result, so there is no separate
+    # "invoice matched" card: two cards for one invoice was the noise.
 
     loaded = (
         await db.execute(

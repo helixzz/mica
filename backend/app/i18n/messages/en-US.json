@@ -217,7 +217,8 @@
       "changed": "Changed: {fields}",
       "contract_status_changed": "Contract {contract_number} {status}",
       "invoice_matched": "Invoice {invoice_number} matched",
-      "invoice_mismatched": "Invoice {invoice_number} does not match"
+      "invoice_mismatched": "Invoice {invoice_number} does not match",
+      "po_receipt": "PO {po_number} {state}"
     },
     "status": {
       "draft": "Draft",
@@ -266,7 +267,10 @@
         "returned": "Your request was returned",
         "po_created": "A purchase order was created",
         "payment_pending": "A payment is waiting for you",
-        "contract_expiring": "A contract is about to expire"
+        "contract_expiring": "A contract is about to expire",
+        "invoice_created": "Invoice {number}",
+        "invoice_needs_review": "Invoice {number} · needs review",
+        "po_receipt": "{number} · {state}"
       },
       "result": {
         "approved": "Approved",
@@ -294,7 +298,8 @@
         "observed": "Observed",
         "baseline": "Baseline",
         "deviation": "Deviation",
-        "severity": "Severity"
+        "severity": "Severity",
+        "vendor_number": "Vendor invoice #"
       },
       "action": {
         "review": "Review",
@@ -302,7 +307,20 @@
         "view_pr": "View request",
         "view_po": "View order",
         "view_payment": "View payment",
-        "view_contract": "View contract"
+        "view_contract": "View contract",
+        "view_invoice": "View invoice"
+      },
+      "invoice": {
+        "matched": "3-way match passed ({po})",
+        "unmatched": "3-way match failed — manual check needed",
+        "tax": "incl. tax {amount}"
+      },
+      "received_caption": "received ({percent})",
+      "receipt": {
+        "complete": "Fully received, nothing to do",
+        "partial": "Partially received, the rest is still outstanding",
+        "state": "fully received",
+        "state_partial": "partially received"
       }
     }
   },

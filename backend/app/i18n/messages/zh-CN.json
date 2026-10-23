@@ -217,7 +217,8 @@
       "changed": "变更：{fields}",
       "contract_status_changed": "合同 {contract_number} {status}",
       "invoice_matched": "发票 {invoice_number} 三单匹配",
-      "invoice_mismatched": "发票 {invoice_number} 三单不符"
+      "invoice_mismatched": "发票 {invoice_number} 三单不符",
+      "po_receipt": "PO {po_number} {state}"
     },
     "status": {
       "draft": "草稿",
@@ -266,7 +267,10 @@
         "returned": "审批已退回",
         "po_created": "采购订单已创建",
         "payment_pending": "有一笔付款待你处理",
-        "contract_expiring": "合同即将到期"
+        "contract_expiring": "合同即将到期",
+        "invoice_created": "发票 {number}",
+        "invoice_needs_review": "发票 {number} · 待核对",
+        "po_receipt": "{number} · {state}"
       },
       "result": {
         "approved": "已通过",
@@ -294,7 +298,8 @@
         "observed": "观察价",
         "baseline": "基准价",
         "deviation": "偏离",
-        "severity": "严重度"
+        "severity": "严重度",
+        "vendor_number": "供应商发票号"
       },
       "action": {
         "review": "去审批",
@@ -302,7 +307,20 @@
         "view_pr": "查看申请",
         "view_po": "查看订单",
         "view_payment": "查看付款",
-        "view_contract": "查看合同"
+        "view_contract": "查看合同",
+        "view_invoice": "查看发票"
+      },
+      "invoice": {
+        "matched": "三单匹配通过（{po}）",
+        "unmatched": "三单不符，需人工核对",
+        "tax": "含税 {amount}"
+      },
+      "received_caption": "已收货（{percent}）",
+      "receipt": {
+        "complete": "已全部到货，无需操作",
+        "partial": "部分到货，剩余待收",
+        "state": "已全部到货",
+        "state_partial": "部分到货"
       }
     }
   },

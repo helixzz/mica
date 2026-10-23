@@ -247,3 +247,105 @@ def build_event_card(
         actions=[action] if action else None,
         footer=_footer(locale),
     )
+
+
+def build_invoice_card(
+    *,
+    invoice_number: str,
+    vendor_number: str,
+    supplier: str,
+    total_amount: str,
+    invoice_date: str,
+    tax_note: str,
+    matched: bool,
+    po_hint: str,
+    created_by: str,
+    invoice_url: str,
+    locale: str,
+) -> dict[str, Any]:
+    """One card for "an invoice arrived" — creation and 3-way match in one.
+
+    Sending a creation card and a match card separately said the same thing
+    twice, and listed subtotal/tax even when they only repeated the total.
+    """
+    meta = " · ".join(
+        part
+        for part in (
+            invoice_date,
+            tax_note,
+            f"{_label(locale, 'vendor_number')} {vendor_number}" if vendor_number else "",
+            created_by,
+        )
+        if part
+    )
+    match_text = (
+        t("feishu.card.invoice.matched", locale, po=po_hint or "—")
+        if matched
+        else t("feishu.card.invoice.unmatched", locale)
+    )
+    action = _button(locale, "view_invoice", invoice_url)
+
+    return cards.card(
+        title=(
+            t("feishu.card.headline.invoice_created", locale, number=invoice_number)
+            if matched
+            else t("feishu.card.headline.invoice_needs_review", locale, number=invoice_number)
+        ),
+        subtitle=supplier,
+        status="success" if matched else "warning",
+        elements=[
+            cards.hero(total_amount, supplier),
+            cards.meta_line([meta]) if meta else cards.markdown(" "),
+            cards.divider(),
+            cards.status_line(matched, match_text),
+        ],
+        actions=[action] if action else None,
+        footer=_footer(locale),
+    )
+
+
+def build_po_receipt_card(
+    *,
+    po_number: str,
+    pr_title: str,
+    received: str,
+    ordered: str,
+    percent: str,
+    shipment_number: str,
+    carrier: str,
+    tracking: str,
+    fully_received: bool,
+    po_url: str,
+    locale: str,
+) -> dict[str, Any]:
+    """Receipt cards lead with the quantity progress, not with the PO number."""
+    action = _button(locale, "view_po", po_url)
+    progress = f"{received} / {ordered}"
+    meta = " · ".join(part for part in (pr_title, carrier, tracking, shipment_number) if part)
+
+    elements: list[dict[str, Any]] = [
+        cards.hero(progress, t("feishu.card.received_caption", locale, percent=percent)),
+        cards.meta_line([meta]) if meta else cards.markdown(" "),
+        cards.divider(),
+        cards.status_line(
+            fully_received,
+            t("feishu.card.receipt.complete", locale)
+            if fully_received
+            else t("feishu.card.receipt.partial", locale),
+        ),
+    ]
+
+    return cards.card(
+        title=t(
+            "feishu.card.headline.po_receipt",
+            locale,
+            number=po_number,
+            state=t("feishu.card.receipt.state", locale)
+            if fully_received
+            else t("feishu.card.receipt.state_partial", locale),
+        ),
+        status="success" if fully_received else "action",
+        elements=elements,
+        actions=[action] if action else None,
+        footer=_footer(locale),
+    )

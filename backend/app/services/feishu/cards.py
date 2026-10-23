@@ -77,6 +77,28 @@ def note(content: str) -> dict[str, Any]:
     return {"tag": "note", "elements": [_text(content)]}
 
 
+def hero(value: str, caption: str = "") -> dict[str, Any]:
+    """The one number that matters, with a quiet caption beside it.
+
+    A card with nine equally-weighted fields has no headline; this puts the
+    amount (or the received/ordered count) where the eye lands first.
+    """
+    content = f"**{value}**"
+    if caption:
+        content += f"　<font color='grey'>{caption}</font>"
+    return markdown(content)
+
+
+def meta_line(parts: list[str]) -> dict[str, Any]:
+    """One dim, dot-separated line for facts that support the headline."""
+    kept = [part for part in parts if part]
+    return markdown(f"<font color='grey'>{' · '.join(kept)}</font>")
+
+
+def status_line(ok: bool, text: str) -> dict[str, Any]:
+    return markdown(f"{'✅' if ok else '⚠️'} {text}")
+
+
 def label_value(label: str, value: str) -> dict[str, Any]:
     """One two-line cell: dim label above a bold value."""
     return markdown(f"<font color='grey'>{label}</font>\n**{value}**")
