@@ -2,6 +2,9 @@ import { CheckCircleTwoTone, DownloadOutlined, WarningTwoTone } from '@ant-desig
 import {
   Button,
   Card,
+  DatePicker,
+  Form,
+  Input,
   Col,
   Descriptions,
   Row,
@@ -9,10 +12,12 @@ import {
   Space,
   Table,
   Tag,
+  Modal,
   Typography,
   message,
 } from 'antd'
 import { useEffect, useState } from 'react'
+import dayjs, { type Dayjs } from 'dayjs'
 import { useTranslation } from 'react-i18next'
 import { useNavigate, useParams } from 'react-router-dom'
 
@@ -27,6 +32,41 @@ export function InvoiceDetailPage() {
   const navigate = useNavigate()
   const [inv, setInv] = useState<Invoice | null>(null)
   const [poItems, setPoItems] = useState<{ id: string; item_name: string; qty: string; po_number: string; unit_price: string }[]>([])
+
+  const [editing, setEditing] = useState(false)
+  const [saving, setSaving] = useState(false)
+  const [draftDate, setDraftDate] = useState<Dayjs | null>(null)
+  const [draftNumber, setDraftNumber] = useState('')
+
+  const openEdit = () => {
+    if (!inv) return
+    setDraftDate(inv.invoice_date ? dayjs(inv.invoice_date) : null)
+    setDraftNumber(inv.invoice_number)
+    setEditing(true)
+  }
+
+  const saveEdit = async () => {
+    if (!id) return
+    setSaving(true)
+    try {
+      await api.updateInvoice(id, {
+        // Only send what actually changed: an untouched field should not overwrite.
+        ...(draftDate && draftDate.format('YYYY-MM-DD') !== inv?.invoice_date
+          ? { invoice_date: draftDate.format('YYYY-MM-DD') }
+          : {}),
+        ...(draftNumber && draftNumber !== inv?.invoice_number
+          ? { invoice_number: draftNumber.trim() }
+          : {}),
+      })
+      void message.success(t('common.saved'))
+      setEditing(false)
+      await load()
+    } catch (e) {
+      void message.error(extractError(e).detail)
+    } finally {
+      setSaving(false)
+    }
+  }
 
   const load = async () => {
     if (!id) return
@@ -104,7 +144,10 @@ export function InvoiceDetailPage() {
             <WarningTwoTone twoToneColor="#C97B3F" style={{ fontSize: 20 }} />
           )}
         </Space>
-        <Button onClick={() => navigate('/invoices')}>{t('button.back')}</Button>
+        <Space>
+          <Button onClick={openEdit}>{t('button.edit')}</Button>
+          <Button onClick={() => navigate('/invoices')}>{t('button.back')}</Button>
+        </Space>
       </div>
 
       <Card>
@@ -130,6 +173,31 @@ export function InvoiceDetailPage() {
           )}
         </Descriptions>
       </Card>
+
+      <Modal
+        open={editing}
+        title={t('invoice.edit_invoice')}
+        onCancel={() => setEditing(false)}
+        onOk={saveEdit}
+        confirmLoading={saving}
+        destroyOnHidden
+      >
+        <Form layout="vertical">
+          <Form.Item label={t('field.invoice_date')}>
+            <DatePicker
+              style={{ width: '100%' }}
+              value={draftDate}
+              onChange={(d) => setDraftDate(d)}
+            />
+          </Form.Item>
+          <Form.Item label={t('field.invoice_number')}>
+            <Input value={draftNumber} onChange={(e) => setDraftNumber(e.target.value)} />
+          </Form.Item>
+          <Typography.Text type="secondary" style={{ fontSize: 12 }}>
+            {t('invoice.invoice_fixed_hint')}
+          </Typography.Text>
+        </Form>
+      </Modal>
 
       <Card title={t('invoice.attachments')}>
         {inv.attachments && inv.attachments.length > 0 ? (

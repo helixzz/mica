@@ -348,7 +348,9 @@
     "awarded": "Awarded",
     "saved": "Saved",
     "created": "Created",
-    "deleted": "Deleted"
+    "deleted": "Deleted",
+    "invoice_date_not_recognised": "The AI could not read an invoice date — today's date is filled in; please check it before saving",
+    "invoice_date_from_ai": "Invoice date came from the AI result"
   },
   "placeholder": {
     "enter_username": "Username",
@@ -1484,7 +1486,9 @@
     "remaining": "Remaining",
     "confirm_delete_title": "Delete Invoice",
     "confirm_delete_body": "Delete invoice {{number}} (amount {{amount}})? This cannot be undone.",
-    "deleted": "Invoice deleted"
+    "deleted": "Invoice deleted",
+    "edit_invoice": "Edit invoice details",
+    "invoice_fixed_hint": "Amounts and lines are locked — they are matched against purchase orders"
   },
   "po": {
     "company_label": "Purchasing entity: {{name}}",

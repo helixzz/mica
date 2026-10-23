@@ -994,6 +994,25 @@ class InvoiceCreateIn(BaseModel):
     attachment_document_ids: list[UUID] = Field(..., min_length=1)
 
 
+class InvoiceUpdateIn(BaseModel):
+    """Fields a person may correct after the invoice is recorded.
+
+    Deliberately excludes amounts and lines: those drive the matching against purchase
+    order items, and changing them here would quietly break the reconciliation a payment
+    already relied on. Dates and identifying fields are the ones people get wrong.
+    """
+
+    # Forbid unknown keys: Pydantic would otherwise drop "total_amount" silently and the
+    # request would look like it succeeded while changing nothing.
+    model_config = ConfigDict(extra="forbid")
+
+    invoice_date: date | None = None
+    invoice_number: str | None = Field(default=None, min_length=1, max_length=64)
+    tax_number: str | None = Field(default=None, max_length=32)
+    due_date: date | None = None
+    notes: str | None = None
+
+
 class InvoiceLineOut(BaseModel):
     model_config = ConfigDict(from_attributes=True)
     id: UUID

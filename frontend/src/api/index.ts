@@ -1941,6 +1941,20 @@ export const api = {
     const { data } = await client.get<InvoiceListRow[]>('/invoices', { params: { po_id } })
     return data
   },
+  async updateInvoice(
+    id: string,
+    body: {
+      invoice_date?: string
+      invoice_number?: string
+      tax_number?: string | null
+      due_date?: string | null
+      notes?: string | null
+    },
+  ) {
+    const r = await client.patch(`/invoices/${id}`, body)
+    return r.data as { id: string; invoice_date: string }
+  },
+
   async getInvoice(id: string): Promise<Invoice> {
     const { data } = await client.get<Invoice>(`/invoices/${id}`)
     return data

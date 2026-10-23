@@ -2625,6 +2625,65 @@ async def list_invoices(
     return list((await db.execute(stmt)).scalars().all())
 
 
+async def update_invoice(
+    db: AsyncSession,
+    actor: User,
+    invoice_id: UUID,
+    updates: dict,
+) -> Invoice:
+    """Correct the identifying fields of a recorded invoice.
+
+    Amounts and lines are not in scope: they drive the PO matching a payment already
+    relied on. What people actually get wrong is the date — the form used to default to
+    today and nothing could change it afterwards.
+    """
+    invoice = await db.get(Invoice, invoice_id)
+    if invoice is None:
+        raise HTTPException(404, "invoice.not_found")
+
+    allowed = {"invoice_date", "invoice_number", "tax_number", "due_date", "notes"}
+    unknown = set(updates) - allowed
+    if unknown:
+        raise HTTPException(422, f"invoice.field_not_editable: {sorted(unknown)}")
+
+    new_number = updates.get("invoice_number")
+    if new_number and new_number != invoice.invoice_number:
+        taken = (
+            await db.execute(
+                select(func.count(Invoice.id)).where(
+                    Invoice.supplier_id == invoice.supplier_id,
+                    Invoice.invoice_number == new_number,
+                    Invoice.id != invoice.id,
+                )
+            )
+        ).scalar_one() or 0
+        if taken:
+            raise HTTPException(409, "invoice.number_duplicate")
+
+    changed: dict[str, object] = {}
+    for field, value in updates.items():
+        if value is None:
+            continue
+        if getattr(invoice, field) != value:
+            changed[field] = str(getattr(invoice, field))
+            setattr(invoice, field, value)
+
+    if not changed:
+        return invoice
+
+    await _audit_write(
+        db,
+        actor,
+        "invoice.updated",
+        "invoice",
+        str(invoice.id),
+        meta={"before": changed, "after": {k: str(updates[k]) for k in changed}},
+    )
+    await db.commit()
+    await db.refresh(invoice)
+    return invoice
+
+
 async def list_invoices_for_po(db: AsyncSession, po_id: UUID) -> list[Invoice]:
     po = await _load_po(db, po_id)
     if po is None:

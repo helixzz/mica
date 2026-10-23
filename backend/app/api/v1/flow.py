@@ -18,6 +18,7 @@ from app.schemas import (
     InvoiceCreateIn,
     InvoiceListOut,
     InvoiceOut,
+    InvoiceUpdateIn,
     PaymentConfirmIn,
     PaymentCreateIn,
     PaymentInvoiceIn,
@@ -643,6 +644,23 @@ async def list_invoices(
     else:
         rows = await flow.list_invoices(db, actor=user)
     return [InvoiceListOut.model_validate(i) for i in rows]
+
+
+@router.patch("/invoices/{invoice_id}", tags=["flow"])
+async def update_invoice(
+    invoice_id: UUID,
+    payload: InvoiceUpdateIn,
+    user: CurrentUser,
+    db: Annotated[AsyncSession, Depends(get_db)],
+    _role: Annotated[
+        None, Depends(require_roles("admin", "procurement_mgr", "it_buyer", "finance_auditor"))
+    ],
+):
+    """Fix an identifying field — usually the invoice date — after recording."""
+    inv = await flow.update_invoice(
+        db, user, invoice_id, payload.model_dump(exclude_unset=True, exclude_none=True)
+    )
+    return {"id": str(inv.id), "invoice_date": inv.invoice_date.isoformat()}
 
 
 @router.get("/invoices/{invoice_id}", tags=["flow"])
