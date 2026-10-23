@@ -115,8 +115,8 @@ export const NotificationCenter: React.FC = () => {
     }
   };
 
-  const handleToggleSubscription = async (category: string, field: 'in_app_enabled' | 'email_enabled', checked: boolean) => {
-    const sub = subscriptions.find(s => s.category === category) || { category, in_app_enabled: true, email_enabled: false };
+  const handleToggleSubscription = async (category: string, field: 'in_app_enabled' | 'email_enabled' | 'feishu_enabled', checked: boolean) => {
+    const sub = subscriptions.find(s => s.category === category) || { category, in_app_enabled: true, email_enabled: false, feishu_enabled: true };
     const payload = { ...sub, [field]: checked };
     
     try {
@@ -170,6 +170,17 @@ export const NotificationCenter: React.FC = () => {
           onChange={(checked) => handleToggleSubscription(record.category, 'email_enabled', checked)} 
         />
       )
+    },
+    {
+      title: t('notification.feishu'),
+      dataIndex: 'feishu_enabled',
+      key: 'feishu_enabled',
+      render: (enabled: boolean, record: any) => (
+        <Switch
+          checked={enabled !== false}
+          onChange={(checked) => handleToggleSubscription(record.category, 'feishu_enabled', checked)}
+        />
+      )
     }
   ];
 
@@ -179,7 +190,8 @@ export const NotificationCenter: React.FC = () => {
       key: cat,
       category: cat,
       in_app_enabled: sub ? sub.in_app_enabled : true,
-      email_enabled: sub ? sub.email_enabled : false
+      email_enabled: sub ? sub.email_enabled : false,
+      feishu_enabled: sub ? sub.feishu_enabled !== false : true
     };
   });
 

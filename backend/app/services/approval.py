@@ -264,17 +264,43 @@ def _legacy_stage_name(role: str) -> str:
     return ROLE_STAGE_NAMES.get(role, "管理员审批 / Administrator")
 
 
-def _notification_meta(instance: ApprovalInstance, task: ApprovalTask) -> dict[str, object]:
+def _user_locale(user: User | None) -> str:
+    return user.preferred_locale if user and user.preferred_locale else "zh-CN"
+
+
+def _notification_meta(
+    instance: ApprovalInstance,
+    task: ApprovalTask,
+    *,
+    pr: PurchaseRequisition | None = None,
+    department: Department | None = None,
+    waiting_hours: float | None = None,
+    sla_hours: int | None = None,
+) -> dict[str, object]:
+    submitter = getattr(instance, "submitter", None)
+    items = list(pr.items) if pr is not None and pr.items else []
     meta: dict[str, object] = {
-        "pr_no": instance.biz_number,
+        "kind": "task",
+        "task_id": str(task.id),
+        "pr_no": str(instance.biz_number or ""),
+        "pr_title": str(instance.title or ""),
+        "biz_id": str(instance.biz_id),
         "amount": str(instance.amount) if instance.amount is not None else None,
+        "currency": getattr(pr, "currency", None) or "CNY",
+        "applicant": getattr(submitter, "display_name", "") or "",
+        "department": department.name_zh if department is not None else "",
+        "department_en": (department.name_en if department is not None else "") or "",
+        "line_count": len(items),
+        "item_count": int(sum(float(item.qty or 0) for item in items)) if items else 0,
+        "waiting_hours": round(waiting_hours, 1) if waiting_hours is not None else None,
+        "sla_hours": sla_hours,
         "approval_instance_id": str(instance.id),
         "stage_name": task.stage_name,
         "stage_order": task.stage_order,
     }
     delegation = task.meta.get("delegation")
     if delegation:
-        meta["delegation"] = task.meta["delegation"]
+        meta["delegation"] = delegation
     return meta
 
 
@@ -286,32 +312,63 @@ async def _send_assignment_notification(
     try:
         if not await notification_enabled(db, "approval"):
             return
+
+        pr: PurchaseRequisition | None = None
+        if instance.biz_type == "pr" and instance.biz_id is not None:
+            pr = (
+                (
+                    await db.execute(
+                        select(PurchaseRequisition)
+                        .where(PurchaseRequisition.id == instance.biz_id)
+                        .options(selectinload(PurchaseRequisition.items))
+                    )
+                )
+                .scalars()
+                .first()
+            )
+
+        department: Department | None = None
+        if pr is not None and pr.department_id is not None:
+            department = await db.get(Department, pr.department_id)
+
+        waiting_hours: float | None = None
+        created_at = getattr(task, "created_at", None)
+        if created_at is not None:
+            waiting_hours = max(0.0, (datetime.now(UTC) - created_at).total_seconds() / 3600)
+        sla_hours = await system_params.get_int_or(db, "approval.sla_hours", 24)
+
+        currency = getattr(pr, "currency", None) or "CNY"
+        amount_text = fmt_amount(instance.amount, currency)
+
         _ = await create_notification(
             db,
             user_id=task.assignee_id,
             category=NotificationCategory.APPROVAL,
             title=lambda current_user: t(
                 "notification.approval.new_task",
-                current_user.preferred_locale
-                if current_user and current_user.preferred_locale
-                else "zh-CN",
+                _user_locale(current_user),
                 title=instance.title,
             ),
             body=lambda current_user: t(
                 "notification.approval.new_task_body",
-                current_user.preferred_locale
-                if current_user and current_user.preferred_locale
-                else "zh-CN",
+                _user_locale(current_user),
                 pr_number=str(instance.biz_number or ""),
                 title=instance.title or "",
-                amount=str(instance.amount) if instance.amount else "—",
+                amount=amount_text,
                 stage=task.stage_name or "",
                 submitter=getattr(getattr(instance, "submitter", None), "display_name", "") or "",
             ),
-            link_url="/approvals",
+            link_url=f"/approvals?task={task.id}",
             biz_type="approval_task",
             biz_id=task.id,
-            meta=_notification_meta(instance, task),
+            meta=_notification_meta(
+                instance,
+                task,
+                pr=pr,
+                department=department,
+                waiting_hours=waiting_hours,
+                sla_hours=sla_hours,
+            ),
         )
     except Exception:
         logger.warning("failed to create approval assignment notification", exc_info=True)
@@ -680,12 +737,15 @@ def _build_pr_notification_body(
         lines.append(comment)
         lines.append("")
     if pr is not None:
-        lines.append(f"**PR**: {pr.pr_number}")
-        lines.append(f"**Title**: {pr.title}")
+        lines.append(f"**{t('notification.label.pr', locale)}**: {pr.pr_number}")
+        lines.append(f"**{t('notification.label.title', locale)}**: {pr.title}")
         items_count = len(pr.items) if pr.items else 0
-        lines.append(f"**Items**: {items_count} line(s)")
-        lines.append(f"**Amount**: {fmt_amount(pr.total_amount, getattr(pr, 'currency', 'CNY'))}")
-    lines.append(f"**Result**: {t(decision_label_key, locale)}")
+        lines.append(f"**{t('notification.label.items', locale)}**: {items_count}")
+        lines.append(
+            f"**{t('notification.label.amount', locale)}**: "
+            f"{fmt_amount(pr.total_amount, getattr(pr, 'currency', 'CNY'))}"
+        )
+    lines.append(f"**{t('notification.label.status', locale)}**: {t(decision_label_key, locale)}")
     return "\n".join(lines)
 
 
@@ -769,28 +829,29 @@ async def act_on_task(
                         else "notification.approval.rejected"
                         if instance.status == "rejected"
                         else "notification.approval.returned",
-                        submitter.preferred_locale
-                        if submitter and submitter.preferred_locale
-                        else "zh-CN",
+                        _user_locale(submitter),
                         title=instance.title,
                     ),
                     body=lambda submitter: _build_pr_notification_body(
                         pr=pr,
                         comment=comment,
                         decision_label_key=f"notification.approval.result_{instance.status}",
-                        locale=submitter.preferred_locale
-                        if submitter and submitter.preferred_locale
-                        else "zh-CN",
+                        locale=_user_locale(submitter),
                     ),
                     link_url=f"/purchase-requisitions/{instance.biz_id}",
                     biz_type=instance.biz_type,
                     biz_id=instance.biz_id,
                     meta={
+                        "kind": "decision",
                         "approval_instance_id": str(instance.id),
                         "action": action,
                         "result": instance.status,
-                        "biz_number": instance.biz_number,
+                        "pr_no": str(instance.biz_number or ""),
+                        "pr_title": str(instance.title or ""),
+                        "decider": getattr(user, "display_name", "") or "",
+                        "comment": comment or "",
                         "amount": str(instance.amount) if instance.amount is not None else None,
+                        "currency": getattr(pr, "currency", None) or "CNY",
                         "current_stage": instance.current_stage,
                         "total_stages": instance.total_stages,
                     },

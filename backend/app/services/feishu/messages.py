@@ -1,138 +1,193 @@
+"""Feishu card templates for Mica's business events.
+
+Each builder receives already-formatted values (money via :func:`fmt_amount`,
+dates via :func:`fmt_date`) and a locale, and returns a card 2.0 payload. No
+builder decides what happened — that is the notification's job — so a template
+can be reused by the in-app notification copy without drifting.
+"""
+
 from __future__ import annotations
 
 from typing import Any
 
-
-def _card_header(title: str, color: str = "blue") -> dict[str, Any]:
-    return {
-        "title": {"tag": "plain_text", "content": title},
-        "template": color,
-    }
+from app.i18n import t
+from app.services.feishu import cards
 
 
-def _markdown_element(content: str) -> dict[str, Any]:
-    return {"tag": "markdown", "content": content}
+def _label(locale: str, key: str) -> str:
+    return t(f"feishu.card.label.{key}", locale)
 
 
-def _action_element(actions: list[dict[str, Any]]) -> dict[str, Any]:
-    return {"tag": "action", "actions": actions}
+def _footer(locale: str) -> str:
+    return t("feishu.card.footer", locale)
 
 
-def _button(text: str, url: str, button_type: str = "primary") -> dict[str, Any]:
-    full_url = url
-    if url and url.startswith("/"):
-        from app.config import get_settings
-
-        full_url = get_settings().app_base_url.rstrip("/") + url
-    return {
-        "tag": "button",
-        "text": {"tag": "plain_text", "content": text},
-        "type": button_type,
-        "url": full_url,
-    }
+def _headline(locale: str, key: str, **kwargs: object) -> str:
+    return t(f"feishu.card.headline.{key}", locale, **kwargs)
 
 
-def _hr_element() -> dict[str, Any]:
-    return {"tag": "hr"}
-
-
-def _note_element(content: str) -> dict[str, Any]:
-    return {"tag": "note", "elements": [{"tag": "plain_text", "content": content}]}
+def _button(locale: str, key: str, url: str, *, primary: bool = False) -> dict[str, Any] | None:
+    if not url:
+        return None
+    return cards.button(t(f"feishu.card.action.{key}", locale), url, primary=primary)
 
 
 def build_pr_submitted_card(
-    pr_title: str,
+    *,
+    pr_number: str,
+    title: str,
     applicant: str,
     department: str,
     amount: str,
     line_count: int,
+    item_count: int,
+    waiting_hours: float | None,
+    sla_hours: int | None,
+    task_url: str,
     pr_url: str,
+    locale: str,
 ) -> dict[str, Any]:
-    return {
-        "config": {"wide_screen_mode": True},
-        "header": _card_header("📋 新采购申请已提交"),
-        "elements": [
-            _markdown_element(f"**标题：**{pr_title}"),
-            _markdown_element(f"**申请人：**{applicant}"),
-            _markdown_element(f"**部门：**{department}"),
-            _markdown_element(f"**金额：**{amount}"),
-            _markdown_element(f"**物料行数：**{line_count}"),
-            _hr_element(),
-            _action_element([_button("查看详情", pr_url)]),
-            _note_element("Mica 采购管理系统"),
-        ],
-    }
+    subtitle_parts: list[str] = []
+    if waiting_hours is not None:
+        subtitle_parts.append(t("feishu.card.waiting", locale, hours=f"{waiting_hours:.1f}"))
+    if sla_hours is not None:
+        subtitle_parts.append(t("feishu.card.sla", locale, hours=sla_hours))
+
+    fields = [
+        (_label(locale, "amount"), amount),
+        (
+            _label(locale, "lines"),
+            t("feishu.card.lines_value", locale, lines=line_count, items=item_count),
+        ),
+        (_label(locale, "applicant"), applicant),
+        (_label(locale, "department"), department or "—"),
+    ]
+
+    elements: list[dict[str, Any]] = [
+        cards.markdown(f"**{pr_number}**　{title}"),
+        *cards.field_rows(fields),
+    ]
+
+    actions = [
+        button
+        for button in (
+            _button(locale, "review", task_url, primary=True),
+            _button(locale, "view_pr", pr_url),
+        )
+        if button is not None
+    ]
+
+    return cards.card(
+        title=_headline(locale, "pr_submitted", applicant=applicant),
+        subtitle=" · ".join(subtitle_parts) or None,
+        status="action",
+        elements=elements,
+        actions=actions,
+        footer=_footer(locale),
+    )
 
 
 def build_approval_decided_card(
-    pr_title: str,
+    *,
+    pr_number: str,
+    title: str,
     decider: str,
     result: str,
     comment: str,
+    amount: str,
     pr_url: str,
+    locale: str,
 ) -> dict[str, Any]:
-    result_label = (
-        "已通过" if result == "approved" else "已拒绝" if result == "rejected" else "已退回"
+    status = "success" if result == "approved" else "warning"
+    headline_key = {
+        "approved": "approved",
+        "rejected": "rejected",
+        "returned": "returned",
+    }.get(result, "approved")
+
+    fields = [
+        (_label(locale, "amount"), amount),
+        (_label(locale, "result"), t(f"feishu.card.result.{result}", locale)),
+        (_label(locale, "decider"), decider or "—"),
+    ]
+
+    elements: list[dict[str, Any]] = [
+        cards.markdown(f"**{pr_number}**　{title}"),
+        *cards.field_rows(fields),
+    ]
+    if comment:
+        elements.append(cards.divider())
+        elements.append(cards.markdown(f"**{_label(locale, 'comment')}**\n{comment}"))
+
+    action = _button(locale, "view_pr", pr_url, primary=(result != "approved"))
+
+    return cards.card(
+        title=_headline(locale, headline_key),
+        status=status,
+        elements=elements,
+        actions=[action] if action else None,
+        footer=_footer(locale),
     )
-    return {
-        "config": {"wide_screen_mode": True},
-        "header": _card_header(f"🔔 审批{result_label}"),
-        "elements": [
-            _markdown_element(f"**标题：**{pr_title}"),
-            _markdown_element(f"**审批人：**{decider}"),
-            comment and _markdown_element(f"**意见：**{comment}"),
-            _hr_element(),
-            _action_element([_button("查看详情", pr_url)]),
-            _note_element("Mica 采购管理系统"),
-        ],
-    }
 
 
 def build_po_created_card(
+    *,
     po_number: str,
     supplier: str,
     amount: str,
     pr_title: str,
     po_url: str,
+    locale: str,
 ) -> dict[str, Any]:
-    return {
-        "config": {"wide_screen_mode": True},
-        "header": _card_header("📦 采购订单已创建"),
-        "elements": [
-            _markdown_element(f"**订单号：**{po_number}"),
-            _markdown_element(f"**供应商：**{supplier}"),
-            _markdown_element(f"**金额：**{amount}"),
-            _markdown_element(f"**关联需求：**{pr_title}"),
-            _hr_element(),
-            _action_element([_button("查看订单", po_url)]),
-            _note_element("Mica 采购管理系统"),
-        ],
-    }
+    fields = [
+        (_label(locale, "amount"), amount),
+        (_label(locale, "supplier"), supplier or "—"),
+        (_label(locale, "po"), po_number),
+    ]
+    if pr_title:
+        fields.append((_label(locale, "pr_title"), pr_title))
+
+    action = _button(locale, "view_po", po_url)
+
+    return cards.card(
+        title=_headline(locale, "po_created", supplier=supplier or po_number),
+        status="info",
+        elements=[cards.markdown(f"**{po_number}**"), *cards.field_rows(fields)],
+        actions=[action] if action else None,
+        footer=_footer(locale),
+    )
 
 
 def build_payment_pending_card(
-    payment_id: str,
+    *,
+    payment_number: str,
     po_number: str,
     supplier: str,
     amount: str,
+    due_date: str,
     payment_url: str,
+    locale: str,
 ) -> dict[str, Any]:
-    return {
-        "config": {"wide_screen_mode": True},
-        "header": _card_header("💰 待处理付款"),
-        "elements": [
-            _markdown_element(f"**付款编号：**{payment_id}"),
-            _markdown_element(f"**订单号：**{po_number}"),
-            _markdown_element(f"**供应商：**{supplier}"),
-            _markdown_element(f"**金额：**{amount}"),
-            _hr_element(),
-            _action_element([_button("查看付款", payment_url)]),
-            _note_element("Mica 采购管理系统"),
-        ],
-    }
+    fields = [
+        (_label(locale, "amount"), amount),
+        (_label(locale, "supplier"), supplier or "—"),
+        (_label(locale, "po"), po_number or "—"),
+        (_label(locale, "due"), due_date or "—"),
+    ]
+    action = _button(locale, "view_payment", payment_url)
+
+    return cards.card(
+        title=_headline(locale, "payment_pending"),
+        subtitle=payment_number,
+        status="action",
+        elements=cards.field_rows(fields),
+        actions=[action] if action else None,
+        footer=_footer(locale),
+    )
 
 
 def build_contract_expiring_card(
+    *,
     contract_number: str,
     supplier: str,
     expiry_date: str,
@@ -140,39 +195,55 @@ def build_contract_expiring_card(
     total_amount: str,
     used_amount: str,
     contract_url: str,
+    locale: str,
 ) -> dict[str, Any]:
-    urgency_color = "red" if days_remaining <= 7 else "orange"
-    return {
-        "config": {"wide_screen_mode": True},
-        "header": _card_header("⚠️ 合同即将到期", urgency_color),
-        "elements": [
-            _markdown_element(f"**合同编号：**{contract_number}"),
-            _markdown_element(f"**供应商：**{supplier}"),
-            _markdown_element(f"**到期日期：**{expiry_date}"),
-            _markdown_element(f"**剩余天数：**{days_remaining} 天"),
-            _markdown_element(f"**合同总额：**{total_amount}"),
-            _markdown_element(f"**已使用金额：**{used_amount}"),
-            _hr_element(),
-            _action_element([_button("查看合同", contract_url)]),
-            _note_element("Mica 采购管理系统"),
-        ],
-    }
+    status = "warning" if days_remaining <= 7 else "action"
+    fields = [
+        (_label(locale, "supplier"), supplier or "—"),
+        (_label(locale, "expiry"), expiry_date),
+        (_label(locale, "days_left"), t("feishu.card.days", locale, days=days_remaining)),
+        (_label(locale, "amount"), total_amount),
+        (_label(locale, "used"), used_amount),
+    ]
+    action = _button(locale, "view_contract", contract_url)
+
+    return cards.card(
+        title=_headline(locale, "contract_expiring", number=contract_number),
+        subtitle=t("feishu.card.days", locale, days=days_remaining),
+        status=status,
+        elements=cards.field_rows(fields),
+        actions=[action] if action else None,
+        footer=_footer(locale),
+    )
 
 
-def _make_generic_card(title: str, body: str, link_url: str = "") -> dict[str, Any]:
+def build_event_card(
+    *,
+    title: str,
+    summary: str = "",
+    fields: list[tuple[str, str]] | None = None,
+    changes: list[tuple[str, str]] | None = None,
+    url: str = "",
+    status: str = "info",
+    locale: str,
+) -> dict[str, Any]:
+    """Generic announcement card: PR/contract/shipment updates and the like."""
     elements: list[dict[str, Any]] = []
-    if body:
-        elements.append(_markdown_element(body))
+    if summary:
+        elements.append(cards.markdown(summary))
+    if fields:
+        elements.extend(cards.field_rows(fields))
+    if changes:
+        elements.append(cards.divider())
+        rows = "\n".join(f"• **{label}**: {value}" for label, value in changes)
+        elements.append(cards.markdown(rows))
 
-    if link_url:
-        elements.append(_hr_element())
-        elements.append(_action_element([_button("查看详情", link_url)]))
+    action = _button(locale, "view", url)
 
-    elements.append(_hr_element())
-    elements.append(_note_element("Mica 采购管理系统 · 自动通知"))
-
-    return {
-        "config": {"wide_screen_mode": True},
-        "header": _card_header(title),
-        "elements": elements,
-    }
+    return cards.card(
+        title=title,
+        status=status,
+        elements=elements,
+        actions=[action] if action else None,
+        footer=_footer(locale),
+    )

@@ -251,7 +251,18 @@ async def test_send_feishu_digest_disabled(db_session):
     monkeypatch = pytest.MonkeyPatch()
     monkeypatch.setattr(daily_digest_mod.system_params, "get", disabled_get)
     try:
-        await _send_feishu_digest(db_session, user, 3, 1, 2, 5, 15000.0, 2, 8000.0, 4)
+        await _send_feishu_digest(
+            db_session,
+            user,
+            pending_approvals=3,
+            expiring_contracts=[],
+            anomaly_rows=[],
+            today_po_count=5,
+            today_po_amount=15000.0,
+            upcoming_pay_count=2,
+            upcoming_pay_amount=8000.0,
+            overdue_count=4,
+        )
     finally:
         monkeypatch.undo()
 
@@ -274,7 +285,18 @@ async def test_send_feishu_digest_no_feishu_id(db_session):
     monkeypatch = pytest.MonkeyPatch()
     monkeypatch.setattr(daily_digest_mod.system_params, "get", enabled_get)
     try:
-        await _send_feishu_digest(db_session, user, 0, 0, 0, 0, 0.0, 0, 0.0, 0)
+        await _send_feishu_digest(
+            db_session,
+            user,
+            pending_approvals=0,
+            expiring_contracts=[],
+            anomaly_rows=[],
+            today_po_count=0,
+            today_po_amount=0.0,
+            upcoming_pay_count=0,
+            upcoming_pay_amount=0.0,
+            overdue_count=0,
+        )
     finally:
         monkeypatch.undo()
 

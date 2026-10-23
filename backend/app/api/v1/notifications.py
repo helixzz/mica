@@ -104,5 +104,6 @@ async def update_subscription(
         category=category,
         in_app_enabled=payload.in_app_enabled,
         email_enabled=payload.email_enabled,
+        feishu_enabled=payload.feishu_enabled,
     )
     return SubscriptionOut.model_validate(subscription)

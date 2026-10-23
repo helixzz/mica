@@ -1329,11 +1329,13 @@ class SubscriptionOut(BaseModel):
     category: str
     in_app_enabled: bool
     email_enabled: bool
+    feishu_enabled: bool = True
 
 
 class SubscriptionUpdate(BaseModel):
     in_app_enabled: bool
     email_enabled: bool
+    feishu_enabled: bool = True
 
 
 class SystemParameterOut(BaseModel):

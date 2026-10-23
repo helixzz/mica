@@ -1980,6 +1980,15 @@ export const api = {
     const { data } = await client.get<ApprovalTask[]>('/approval/pending')
     return data
   },
+  async actOnApprovalTask(
+    taskId: string,
+    payload: { action: 'approve' | 'reject' | 'return'; comment?: string | null },
+  ): Promise<void> {
+    await client.post(`/approval/tasks/${taskId}/action`, {
+      action: payload.action,
+      comment: payload.comment ?? null,
+    })
+  },
   async previewApproval(payload: {
     biz_type?: string
     amount: number | string

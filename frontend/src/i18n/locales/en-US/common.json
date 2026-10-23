@@ -605,7 +605,8 @@
       "system": "System"
     },
     "mark_all_read": "Mark All Read",
-    "settings": "Notification Settings"
+    "settings": "Notification Settings",
+    "feishu": "Feishu"
   },
   "event_type": {
     "pr.created": "PR Created",
@@ -1819,5 +1820,16 @@
     "supplier_quote": "Supplier quote (PR)",
     "excel_import": "Excel import",
     "rfq_quote": "Quoted (legacy)"
+  },
+  "approvals": {
+    "review": "Review",
+    "reject": "Reject",
+    "task_detail": "Approval task",
+    "waiting_hours": "Waiting {hours}h",
+    "comment_placeholder": "Comment (optional)",
+    "open_in_mica": "Open the full request in Mica",
+    "deep_link_missing": "This task was already decided, or this account cannot act on it",
+    "action_done": "Decision submitted",
+    "action_failed": "Something went wrong, please retry"
   }
 }
