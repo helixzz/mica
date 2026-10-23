@@ -17,9 +17,10 @@ def _find(card: dict, tag: str) -> list[dict]:
 
 
 def _actions(card: dict) -> list[dict]:
-    rows = _find(card, "action")
-    assert rows, "card has no action row"
-    return rows[0]["actions"]
+    # Card 2.0 has no "action" wrapper: buttons live directly in body.elements.
+    rows = _find(card, "button")
+    assert rows, "card has no buttons"
+    return rows
 
 
 def _texts(card: dict) -> str:
@@ -31,7 +32,9 @@ def test_card_is_schema_2_with_semantic_template():
     assert payload["schema"] == "2.0"
     assert payload["config"]["wide_screen_mode"] is True
     assert payload["header"]["template"] == "orange"
-    assert payload["body"]["elements"][-1]["tag"] == "note"
+    footer = payload["body"]["elements"][-1]
+    assert footer["tag"] == "markdown"
+    assert "foot" in footer["content"]
     assert _texts(payload).count("foot") == 1
 
 
@@ -107,7 +110,7 @@ def test_pr_submitted_en_uses_english_labels():
     )
     assert "waiting 1.0h" in card["header"]["subtitle"]["content"]
     assert "Amount" in _texts(card)
-    assert not _find(card, "action")
+    assert not _find(card, "button")
 
 
 def test_approval_decided_is_green_when_approved():

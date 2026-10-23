@@ -40,9 +40,14 @@ def card(
     """Assemble a complete card 2.0 payload."""
     body: list[dict[str, Any]] = list(elements or [])
     if actions:
-        body.append(action_row(actions))
+        # Card JSON 2.0 dropped the 1.0 "action" wrapper: Feishu rejects it at
+        # render time (code 200861, "unsupported tag action"), so buttons are
+        # top-level elements here.
+        body.extend(actions)
     if footer:
-        body.append(note(footer))
+        # Card 2.0 has no "note" component either (same 200861 error), so the
+        # footer is dimmed markdown instead.
+        body.append(markdown(f"<font color='grey'>{footer}</font>"))
 
     header: dict[str, Any] = {
         "title": _text(title),
@@ -68,6 +73,7 @@ def divider() -> dict[str, Any]:
 
 
 def note(content: str) -> dict[str, Any]:
+    """1.0-style footnote. Kept for older payloads; card 2.0 rejects this tag."""
     return {"tag": "note", "elements": [_text(content)]}
 
 
@@ -141,6 +147,7 @@ def button(text: str, url: str, *, primary: bool = False) -> dict[str, Any]:
 
 
 def action_row(actions: list[dict[str, Any]]) -> dict[str, Any]:
+    """1.0-style action container. Kept for older payloads; card 2.0 rejects it."""
     return {"tag": "action", "actions": actions}
 
 

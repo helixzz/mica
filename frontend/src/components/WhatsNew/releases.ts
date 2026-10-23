@@ -24,6 +24,17 @@ export interface Release {
 
 export const RELEASES: Release[] = [
   {
+    version: '1.73.1',
+    date: '2026-10-23',
+    items: [
+      {
+        kind: 'fix',
+        zh: '修复飞书卡片发不出去：2.0 版不再支持旧的 action 容器与 note 组件，按钮和脚注改成了新写法',
+        en: 'Fixed Feishu cards failing to send: card 2.0 no longer accepts the old action wrapper or note component, so buttons and footnotes use the new shape',
+      },
+    ],
+  },
+  {
     version: '1.73.0',
     date: '2026-10-23',
     items: [

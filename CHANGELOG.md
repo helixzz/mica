@@ -7,6 +7,24 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [v1.73.1] — 2026-10-23
+
+### 修复（卡片 2.0 的两个组件被飞书拒绝，导致通知发不出去）
+
+v1.73.0 把卡片升级到 JSON 2.0，但保留了两个 1.0 的包装组件，飞书在渲染时直接拒绝（`230099` / `ErrCode 200861`）：
+
+- **`action` 容器**：2.0 里按钮必须是顶层元素，不能再包一层
+- **`note` 组件**：2.0 已移除，脚注改用灰色 markdown
+
+现象是**所有飞书卡片都发不出去**：`send_card` 抛 `FeishuError`，被通知层吞成 `notification.feishu_failed` 审计记录——于是「没收到通知」看起来像「没有事件」。v1.73.0 的投递账本正好把原因记了下来，这次是它自己先暴露的。
+
+修复后逐一验证了 2.0 的可用组件集：`markdown`、`column_set`、`hr`、`button`（`behaviors.open_url`）、灰色脚注 markdown 均被接受，真实发卡返回 `message_id`。
+
+### 验证
+
+- 生产实发探针卡成功（`om_x100b...`）
+- 后端 **841 unit + 34 integration passed**；卡片结构测试同步改为断言「按钮在顶层、脚注是 markdown」
+
 ## [v1.73.0] — 2026-10-23
 
 ### 通知（飞书卡片从「能发」改成「该发」）
