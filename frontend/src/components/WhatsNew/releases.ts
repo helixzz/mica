@@ -24,6 +24,22 @@ export interface Release {
 
 export const RELEASES: Release[] = [
   {
+    version: '1.73.3',
+    date: '2026-10-23',
+    items: [
+      {
+        kind: 'improvement',
+        zh: '发票和到货通知改成「一个主数字 + 一行摘要」：先看金额或收货进度，细节压成一行，不再把九项字段平铺成一屏',
+        en: 'Invoice and receipt notifications now lead with one number — the amount or the received/ordered progress — and keep the rest in a single summary line instead of a nine-field grid',
+      },
+      {
+        kind: 'fix',
+        zh: '同一张发票不再发两张卡（创建 + 三单匹配合并）；同一飞书账号也不会重复收到同一个事件',
+        en: 'One invoice no longer sends two cards (creation and 3-way match are merged), and one Feishu account no longer receives the same event twice',
+      },
+    ],
+  },
+  {
     version: '1.73.2',
     date: '2026-10-23',
     items: [
