@@ -24,6 +24,22 @@ export interface Release {
 
 export const RELEASES: Release[] = [
   {
+    version: '1.73.2',
+    date: '2026-10-23',
+    items: [
+      {
+        kind: 'fix',
+        zh: '发票日期等字段填错后可以修改了（金额与明细仍锁定，避免破坏订单匹配）',
+        en: 'Invoice dates and identifying fields can be corrected after saving; amounts and lines stay locked',
+      },
+      {
+        kind: 'improvement',
+        zh: 'AI 未识别出发票日期时会明确提示，不再让默认的今天看起来像识别结果',
+        en: 'A clear warning when the AI could not read the invoice date, instead of today\'s date looking like a result',
+      },
+    ],
+  },
+  {
     version: '1.73.1',
     date: '2026-10-23',
     items: [

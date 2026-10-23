@@ -348,7 +348,9 @@
     "awarded": "已定标",
     "saved": "已保存",
     "created": "已创建",
-    "deleted": "已删除"
+    "deleted": "已删除",
+    "invoice_date_not_recognised": "AI 未识别出发票日期，当前填写的是今天，请核对后再提交",
+    "invoice_date_from_ai": "发票日期取自 AI 识别结果"
   },
   "placeholder": {
     "enter_username": "请输入用户名",
@@ -1489,7 +1491,9 @@
     "remaining": "待开票",
     "confirm_delete_title": "确认删除发票",
     "confirm_delete_body": "确认删除发票 {{number}}（金额 {{amount}}）？此操作不可撤销。",
-    "deleted": "发票已删除"
+    "deleted": "发票已删除",
+    "edit_invoice": "编辑发票信息",
+    "invoice_fixed_hint": "金额与明细不可修改（已参与采购订单匹配）"
   },
   "po": {
     "company_label": "我司采购主体：{{name}}",

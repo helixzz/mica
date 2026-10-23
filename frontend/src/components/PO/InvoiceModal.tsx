@@ -169,8 +169,15 @@ export function InvoiceModal({ open, po, onClose, onDone, busy, setBusy }: Invoi
           )
         } else {
           if (ex.invoice_number) setInvoiceNumber(ex.invoice_number)
-          if (ex.invoice_date && /^\d{4}-\d{1,2}-\d{1,2}$/.test(ex.invoice_date)) {
+          const dateRead =
+            !!ex.invoice_date && /^\d{4}-\d{1,2}-\d{1,2}$/.test(ex.invoice_date)
+          if (dateRead) {
             setInvoiceDate(dayjs(ex.invoice_date))
+            void message.success(t('message.invoice_date_from_ai'), 4)
+          } else {
+            // The form defaults to today, so silence here reads as "the AI filled it in".
+            // Purchasers have filed invoices with today's date because of exactly that.
+            void message.warning(t('message.invoice_date_not_recognised'), 8)
           }
           if (ex.seller_tax_id) setTaxNumber(ex.seller_tax_id)
           autoMatchLines(ex)
