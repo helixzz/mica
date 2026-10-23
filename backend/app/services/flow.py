@@ -10,7 +10,9 @@ from sqlalchemy import func, or_, select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
+from app.core.dates import fmt_date
 from app.core.money import fmt_amount
+from app.i18n import t
 from app.models import (
     AuditLog,
     Contract,
@@ -188,49 +190,79 @@ async def create_contract(
 
     try:
         from app.db import AsyncSessionLocal
-        from app.models import NotificationCategory, UserRole
-        from app.services.notifications import create_notification
-        from app.services.system_params import notification_enabled
+        from app.models import User, UserRole
+        from app.services.notifications import emit_event_notification, status_label, user_locale
+        from app.services.system_params import notification_enabled, system_params
 
         async with AsyncSessionLocal() as notif_db:
             if await notification_enabled(notif_db, "contract_created"):
-                recipients = {actor.id}
+                recipients: set[UUID] = {actor.id}
                 pr = await notif_db.get(PurchaseRequisition, po.pr_id)
                 if pr and pr.requester_id:
                     recipients.add(pr.requester_id)
-                admin_rows = (
-                    (
-                        await notif_db.execute(
-                            select(User.id).where(
-                                User.role.in_(
-                                    [UserRole.ADMIN.value, UserRole.PROCUREMENT_MGR.value]
-                                ),
-                                User.is_active.is_(True),
+
+                if await system_params.get_bool_or(
+                    notif_db, "notifications.broadcast_admin_events", False
+                ):
+                    admin_rows = (
+                        (
+                            await notif_db.execute(
+                                select(User.id).where(
+                                    User.role.in_(
+                                        [UserRole.ADMIN.value, UserRole.PROCUREMENT_MGR.value]
+                                    ),
+                                    User.is_active.is_(True),
+                                )
                             )
                         )
+                        .scalars()
+                        .all()
                     )
-                    .scalars()
-                    .all()
-                )
-                recipients.update(admin_rows)
+                    recipients.update(admin_rows)
+
                 for uid in recipients:
-                    await create_notification(
+                    user = await notif_db.get(User, uid)
+                    if user is None:
+                        continue
+                    locale = user_locale(user)
+                    await emit_event_notification(
                         notif_db,
-                        user_id=uid,
-                        category=NotificationCategory.SYSTEM,
-                        title=f"Contract {contract.contract_number} created",
-                        body=(
-                            f"**Contract**: {contract.contract_number}\n"
-                            f"**Title**: {contract.title}\n"
-                            f"**PO**: {po.po_number}\n"
-                            f"**PR**: {po.pr_title or '—'}\n"
-                            f"**Amount**: {fmt_amount(contract.total_amount, contract.currency)}\n"
-                            f"**Effective**: {contract.effective_date} | **Expires**: {contract.expiry_date}\n"
-                            f"**Created by**: {actor.display_name}"
+                        user_id=user.id,
+                        event="contract_created",
+                        title=t(
+                            "notification.event.contract_created",
+                            locale,
+                            contract_number=contract.contract_number,
                         ),
                         link_url=f"/contracts/{contract.id}",
                         biz_type="contract",
                         biz_id=contract.id,
+                        fields=[
+                            (
+                                t("notification.label.contract", locale),
+                                contract.contract_number,
+                            ),
+                            (t("notification.label.po", locale), po.po_number),
+                            (t("notification.label.pr", locale), po.pr_title or "—"),
+                            (
+                                t("notification.label.amount", locale),
+                                fmt_amount(contract.total_amount, contract.currency),
+                            ),
+                            (
+                                t("notification.label.effective", locale),
+                                fmt_date(contract.effective_date, locale),
+                            ),
+                            (
+                                t("notification.label.expires", locale),
+                                fmt_date(contract.expiry_date, locale),
+                            ),
+                            (
+                                t("notification.label.status", locale),
+                                status_label(contract.status or "active", locale),
+                            ),
+                            (t("notification.label.created_by", locale), actor.display_name),
+                        ],
+                        fingerprint_parts=("created", contract.contract_number),
                     )
                 await notif_db.commit()
     except Exception:
@@ -455,6 +487,33 @@ _ALLOWED_CONTRACT_EDIT_FIELDS: frozenset[str] = frozenset(
     {"title", "total_amount", "signed_date", "effective_date", "expiry_date", "notes"}
 )
 
+#: Contract field → notification label key. Unknown fields fall back to the raw
+#: column name, which is ugly but honest; adding a mapping is one line.
+_CONTRACT_FIELD_LABELS: dict[str, str] = {
+    "title": "title",
+    "total_amount": "amount",
+    "signed_date": "date",
+    "effective_date": "effective",
+    "expiry_date": "expires",
+    "notes": "reason",
+}
+
+
+def _contract_field_label(field: str, locale: str) -> str:
+    key = _CONTRACT_FIELD_LABELS.get(field)
+    return t(f"notification.label.{key}", locale) if key else field
+
+
+def _contract_field_text(field: str, value: object, contract: Contract, locale: str) -> str:
+    if value is None or value == "":
+        return "—"
+    if field == "total_amount":
+        return fmt_amount(value, getattr(contract, "currency", "CNY"))  # type: ignore[arg-type]
+    if field in ("signed_date", "effective_date", "expiry_date"):
+        return fmt_date(value, locale)  # type: ignore[arg-type]
+    return str(value)
+
+
 # Terminal statuses block further edits/transitions — once a contract is
 # superseded/terminated/expired, its terms are frozen for the audit trail.
 _CONTRACT_TERMINAL_STATUSES: frozenset[str] = frozenset({"superseded", "terminated", "expired"})
@@ -483,16 +542,17 @@ async def update_contract(
     if contract.status in _CONTRACT_TERMINAL_STATUSES:
         raise HTTPException(409, "contract.not_editable_in_status")
 
-    changed: dict[str, object] = {}
+    changed: dict[str, tuple[object, object]] = {}
     for field in _ALLOWED_CONTRACT_EDIT_FIELDS:
         if field not in updates:
             continue
         value = updates[field]
         if field == "total_amount" and value is not None:
             value = _as_decimal(value)
-        if getattr(contract, field) != value:
+        previous = getattr(contract, field)
+        if previous != value:
             setattr(contract, field, value)
-            changed[field] = value
+            changed[field] = (previous, value)
 
     if not changed:
         return contract
@@ -520,54 +580,89 @@ async def update_contract(
 
     try:
         from app.db import AsyncSessionLocal
-        from app.models import NotificationCategory, PurchaseOrder, User, UserRole
-        from app.services.notifications import create_notification
-        from app.services.system_params import notification_enabled
+        from app.models import PurchaseOrder, User, UserRole
+        from app.services.notifications import emit_event_notification, status_label, user_locale
+        from app.services.system_params import notification_enabled, system_params
 
         async with AsyncSessionLocal() as notif_db:
             if await notification_enabled(notif_db, "contract_updated"):
-                recipients: set[str] = set()
+                recipients: set[UUID] = set()
                 po = await notif_db.get(PurchaseOrder, contract.po_id)
                 if po and po.created_by_id:
-                    recipients.add(str(po.created_by_id))
+                    recipients.add(po.created_by_id)
                 if po and po.pr_id:
                     pr = await notif_db.get(PurchaseRequisition, po.pr_id)
                     if pr and pr.requester_id:
-                        recipients.add(str(pr.requester_id))
-                admin_rows = (
-                    (
-                        await notif_db.execute(
-                            select(User.id).where(
-                                User.role.in_(
-                                    [UserRole.ADMIN.value, UserRole.PROCUREMENT_MGR.value]
-                                ),
-                                User.is_active.is_(True),
+                        recipients.add(pr.requester_id)
+
+                if await system_params.get_bool_or(
+                    notif_db, "notifications.broadcast_admin_events", False
+                ):
+                    admin_rows = (
+                        (
+                            await notif_db.execute(
+                                select(User.id).where(
+                                    User.role.in_(
+                                        [UserRole.ADMIN.value, UserRole.PROCUREMENT_MGR.value]
+                                    ),
+                                    User.is_active.is_(True),
+                                )
                             )
                         )
+                        .scalars()
+                        .all()
                     )
-                    .scalars()
-                    .all()
-                )
-                recipients.update(str(uid) for uid in admin_rows)
-                changed_fields = ", ".join(changed.keys())
-                from uuid import UUID as _UUID
+                    recipients.update(admin_rows)
 
-                for uid_str in recipients:
-                    await create_notification(
+                for uid in recipients:
+                    user = await notif_db.get(User, uid)
+                    if user is None:
+                        continue
+                    locale = user_locale(user)
+                    changes = [
+                        (
+                            _contract_field_label(field, locale),
+                            f"{_contract_field_text(field, old, contract, locale)}"
+                            f" → {_contract_field_text(field, new, contract, locale)}",
+                        )
+                        for field, (old, new) in changed.items()
+                    ]
+                    await emit_event_notification(
                         notif_db,
-                        user_id=_UUID(uid_str),
-                        category=NotificationCategory.SYSTEM,
-                        title=f"Contract {contract.contract_number} updated",
-                        body=(
-                            f"**Contract**: {contract.contract_number}\n"
-                            f"**Title**: {contract.title}\n"
-                            f"**Amount**: {fmt_amount(contract.total_amount, contract.currency)}\n"
-                            f"**Changed fields**: {changed_fields}\n"
-                            f"**Updated by**: {actor.display_name}"
+                        user_id=user.id,
+                        event="contract_updated",
+                        title=t(
+                            "notification.event.contract_updated",
+                            locale,
+                            contract_number=contract.contract_number,
                         ),
                         link_url=f"/contracts/{contract.id}",
                         biz_type="contract",
                         biz_id=contract.id,
+                        fields=[
+                            (
+                                t("notification.label.contract", locale),
+                                contract.contract_number,
+                            ),
+                            (t("notification.label.title", locale), contract.title),
+                            (
+                                t("notification.label.amount", locale),
+                                fmt_amount(contract.total_amount, contract.currency),
+                            ),
+                            (
+                                t("notification.label.status", locale),
+                                status_label(contract.status or "active", locale),
+                            ),
+                            (
+                                t("notification.label.updated_by", locale),
+                                actor.display_name,
+                            ),
+                        ],
+                        changes=changes,
+                        fingerprint_parts=(
+                            "updated",
+                            *[f"{key}={value[1]}" for key, value in sorted(changed.items())],
+                        ),
                     )
                 await notif_db.commit()
     except Exception:
@@ -616,20 +711,24 @@ async def transition_contract_status(
     if new_status in ("terminated", "superseded"):
         try:
             from app.db import AsyncSessionLocal
-            from app.models import NotificationCategory, PurchaseOrder, User, UserRole
-            from app.services.notifications import create_notification
+            from app.models import PurchaseOrder, User, UserRole
+            from app.services.notifications import (
+                emit_event_notification,
+                status_label,
+                user_locale,
+            )
             from app.services.system_params import notification_enabled
 
             async with AsyncSessionLocal() as notif_db:
                 if await notification_enabled(notif_db, "contract_status_changed"):
-                    recipients: set[str] = set()
+                    recipients: set[UUID] = set()
                     po = await notif_db.get(PurchaseOrder, contract.po_id)
                     if po and po.created_by_id:
-                        recipients.add(str(po.created_by_id))
+                        recipients.add(po.created_by_id)
                     if po and po.pr_id:
                         pr = await notif_db.get(PurchaseRequisition, po.pr_id)
                         if pr and pr.requester_id:
-                            recipients.add(str(pr.requester_id))
+                            recipients.add(pr.requester_id)
                     admin_rows = (
                         (
                             await notif_db.execute(
@@ -644,25 +743,51 @@ async def transition_contract_status(
                         .scalars()
                         .all()
                     )
-                    recipients.update(str(uid) for uid in admin_rows)
-                    from uuid import UUID as _UUID
+                    recipients.update(admin_rows)
 
-                    for uid_str in recipients:
-                        await create_notification(
+                    for uid in recipients:
+                        user = await notif_db.get(User, uid)
+                        if user is None:
+                            continue
+                        locale = user_locale(user)
+                        await emit_event_notification(
                             notif_db,
-                            user_id=_UUID(uid_str),
-                            category=NotificationCategory.SYSTEM,
-                            title=f"Contract {contract.contract_number} {new_status}",
-                            body=(
-                                f"**Contract**: {contract.contract_number}\n"
-                                f"**Title**: {contract.title}\n"
-                                f"**Status**: {current} → {new_status}\n"
-                                f"**Reason**: {reason or '—'}\n"
-                                f"**Updated by**: {actor.display_name}"
+                            user_id=user.id,
+                            event="contract_status_changed",
+                            title=t(
+                                "notification.event.contract_status_changed",
+                                locale,
+                                contract_number=contract.contract_number,
+                                status=status_label(new_status, locale),
                             ),
                             link_url=f"/contracts/{contract.id}",
                             biz_type="contract",
                             biz_id=contract.id,
+                            fields=[
+                                (
+                                    t("notification.label.contract", locale),
+                                    contract.contract_number,
+                                ),
+                                (t("notification.label.title", locale), contract.title),
+                                (
+                                    t("notification.label.status", locale),
+                                    status_label(new_status, locale),
+                                ),
+                            ],
+                            changes=[
+                                (
+                                    t("notification.label.status", locale),
+                                    f"{status_label(current, locale)}"
+                                    f" → {status_label(new_status, locale)}",
+                                ),
+                                (t("notification.label.reason", locale), reason or "—"),
+                                (
+                                    t("notification.label.updated_by", locale),
+                                    actor.display_name,
+                                ),
+                            ],
+                            status="warning",
+                            fingerprint_parts=("status", new_status),
                         )
                     await notif_db.commit()
         except Exception:
@@ -1340,8 +1465,8 @@ async def update_shipment(
 
         try:
             from app.db import AsyncSessionLocal
-            from app.models import NotificationCategory, PurchaseOrder, User, UserRole
-            from app.services.notifications import create_notification
+            from app.models import PurchaseOrder, User, UserRole
+            from app.services.notifications import emit_event_notification, user_locale
             from app.services.system_params import notification_enabled
 
             async with AsyncSessionLocal() as notif_db:
@@ -1368,25 +1493,50 @@ async def update_shipment(
                             .all()
                         )
                         recipients.update(admin_rows)
-                        changes_str = "\n".join(
-                            f"- **{k}**: {v['old']} → {v['new']}" for k, v in changes.items()
-                        )
                         for uid in recipients:
-                            await create_notification(
+                            user = await notif_db.get(User, uid)
+                            if user is None:
+                                continue
+                            locale = user_locale(user)
+                            await emit_event_notification(
                                 notif_db,
-                                user_id=uid,
-                                category=NotificationCategory.SYSTEM,
-                                title=f"Shipment {shipment.shipment_number} updated",
-                                body=(
-                                    f"**Shipment**: {shipment.shipment_number} | **PO**: {po.po_number}\n"
-                                    f"**PR**: {po.pr_title or '—'}\n"
-                                    f"**Carrier**: {shipment.carrier or '—'} | **Tracking**: {shipment.tracking_number or '—'}\n"
-                                    f"**Changes**:\n{changes_str}\n"
-                                    f"**Updated by**: {actor.display_name}"
+                                user_id=user.id,
+                                event="shipment_updated",
+                                title=t(
+                                    "notification.event.shipment_updated",
+                                    locale,
+                                    shipment_number=shipment.shipment_number,
                                 ),
                                 link_url=f"/purchase-orders/{shipment.po_id}",
                                 biz_type="shipment",
                                 biz_id=shipment.id,
+                                fields=[
+                                    (
+                                        t("notification.label.shipment", locale),
+                                        shipment.shipment_number,
+                                    ),
+                                    (t("notification.label.po", locale), po.po_number),
+                                    (t("notification.label.pr", locale), po.pr_title or "—"),
+                                    (
+                                        t("notification.label.carrier", locale),
+                                        shipment.carrier or "—",
+                                    ),
+                                    (
+                                        t("notification.label.tracking", locale),
+                                        shipment.tracking_number or "—",
+                                    ),
+                                ],
+                                changes=[
+                                    (str(key), f"{value['old']} → {value['new']}")
+                                    for key, value in changes.items()
+                                ],
+                                fingerprint_parts=(
+                                    "updated",
+                                    *[
+                                        f"{key}={value['new']}"
+                                        for key, value in sorted(changes.items())
+                                    ],
+                                ),
                             )
                         await notif_db.commit()
         except Exception:
@@ -1666,13 +1816,13 @@ async def create_payment(
 
     try:
         from app.db import AsyncSessionLocal
-        from app.models import NotificationCategory, UserRole
-        from app.services.notifications import create_notification
+        from app.models import User, UserRole
+        from app.services.notifications import emit_event_notification, status_label, user_locale
         from app.services.system_params import notification_enabled
 
         async with AsyncSessionLocal() as notif_db:
             if await notification_enabled(notif_db, "payment_created"):
-                recipients = {actor.id}
+                recipients: set[UUID] = {actor.id}
                 pr = await notif_db.get(PurchaseRequisition, po.pr_id)
                 if pr and pr.requester_id:
                     recipients.add(pr.requester_id)
@@ -1692,24 +1842,55 @@ async def create_payment(
                 )
                 recipients.update(admin_rows)
                 for uid in recipients:
-                    await create_notification(
+                    user = await notif_db.get(User, uid)
+                    if user is None:
+                        continue
+                    locale = user_locale(user)
+                    await emit_event_notification(
                         notif_db,
-                        user_id=uid,
-                        category=NotificationCategory.PAYMENT_PENDING,
-                        title=f"Payment {record.payment_number} created",
-                        body=(
-                            f"**Payment**: {record.payment_number} (Installment #{record.installment_no})\n"
-                            f"**PO**: {po.po_number}\n"
-                            f"**PR**: {po.pr_title or '—'}\n"
-                            f"**Amount**: {fmt_amount(record.amount, record.currency)}\n"
-                            f"**Due date**: {record.due_date}\n"
-                            f"**Status**: {record.status}\n"
-                            f"**Method**: {record.payment_method}\n"
-                            f"**Created by**: {actor.display_name}"
+                        user_id=user.id,
+                        event="payment_created",
+                        title=t(
+                            "notification.event.payment_created",
+                            locale,
+                            payment_number=record.payment_number,
                         ),
                         link_url=f"/purchase-orders/{record.po_id}",
                         biz_type="payment",
                         biz_id=record.id,
+                        fields=[
+                            (
+                                t("notification.label.payment", locale),
+                                record.payment_number,
+                            ),
+                            (
+                                t("notification.label.installment", locale),
+                                f"#{record.installment_no}",
+                            ),
+                            (t("notification.label.po", locale), po.po_number),
+                            (t("notification.label.pr", locale), po.pr_title or "—"),
+                            (
+                                t("notification.label.amount", locale),
+                                fmt_amount(record.amount, record.currency),
+                            ),
+                            (
+                                t("notification.label.due_date", locale),
+                                fmt_date(record.due_date, locale),
+                            ),
+                            (
+                                t("notification.label.status", locale),
+                                status_label(record.status, locale),
+                            ),
+                            (
+                                t("notification.label.method", locale),
+                                str(record.payment_method or "—"),
+                            ),
+                            (
+                                t("notification.label.created_by", locale),
+                                actor.display_name,
+                            ),
+                        ],
+                        fingerprint_parts=("created", record.payment_number),
                     )
                 await notif_db.commit()
     except Exception:
@@ -1868,8 +2049,8 @@ async def update_payment(
 
     try:
         from app.db import AsyncSessionLocal
-        from app.models import NotificationCategory, PurchaseOrder, User, UserRole
-        from app.services.notifications import create_notification
+        from app.models import PurchaseOrder, User, UserRole
+        from app.services.notifications import emit_event_notification, user_locale
         from app.services.system_params import notification_enabled
 
         async with AsyncSessionLocal() as notif_db:
@@ -1896,25 +2077,43 @@ async def update_payment(
                         .all()
                     )
                     recipients.update(admin_rows)
-                    changes_str = "\n".join(
-                        f"- **{k}**: {v['from']} → {v['to']}" for k, v in changes.items()
-                    )
                     for uid in recipients:
-                        await create_notification(
+                        user = await notif_db.get(User, uid)
+                        if user is None:
+                            continue
+                        locale = user_locale(user)
+                        await emit_event_notification(
                             notif_db,
-                            user_id=uid,
-                            category=NotificationCategory.SYSTEM,
-                            title=f"Payment {record.payment_number} updated",
-                            body=(
-                                f"**Payment**: {record.payment_number} | **PO**: {po.po_number}\n"
-                                f"**PR**: {po.pr_title or '—'}\n"
-                                f"**Amount**: {fmt_amount(record.amount, record.currency)}\n"
-                                f"**Changes**:\n{changes_str}\n"
-                                f"**Updated by**: {actor.display_name}"
+                            user_id=user.id,
+                            event="payment_updated",
+                            title=t(
+                                "notification.event.payment_updated",
+                                locale,
+                                payment_number=record.payment_number,
                             ),
                             link_url=f"/purchase-orders/{record.po_id}",
                             biz_type="payment",
                             biz_id=record.id,
+                            fields=[
+                                (
+                                    t("notification.label.payment", locale),
+                                    record.payment_number,
+                                ),
+                                (t("notification.label.po", locale), po.po_number),
+                                (t("notification.label.pr", locale), po.pr_title or "—"),
+                                (
+                                    t("notification.label.amount", locale),
+                                    fmt_amount(record.amount, record.currency),
+                                ),
+                            ],
+                            changes=[
+                                (str(key), f"{value['from']} → {value['to']}")
+                                for key, value in changes.items()
+                            ],
+                            fingerprint_parts=(
+                                "updated",
+                                *[f"{key}={value['to']}" for key, value in sorted(changes.items())],
+                            ),
                         )
                     await notif_db.commit()
     except Exception:
@@ -2235,8 +2434,8 @@ async def create_invoice(
     await db.commit()
 
     try:
-        from app.models import NotificationCategory, UserRole
-        from app.services.notifications import create_notification
+        from app.models import User, UserRole
+        from app.services.notifications import emit_event_notification, status_label, user_locale
         from app.services.system_params import notification_enabled
 
         if await notification_enabled(db, "invoice_created"):
@@ -2278,24 +2477,52 @@ async def create_invoice(
             )
             recipients.update(admin_rows)
             for uid in recipients:
-                await create_notification(
+                user = await db.get(User, uid)
+                if user is None:
+                    continue
+                locale = user_locale(user)
+                await emit_event_notification(
                     db,
-                    user_id=uid,
-                    category=NotificationCategory.SYSTEM,
-                    title=f"Invoice {invoice.internal_number} created",
-                    body=(
-                        f"**Invoice**: {invoice.internal_number}\n"
-                        f"**Vendor #**: {invoice.invoice_number}\n"
-                        f"**Supplier**: {supplier.name}\n"
-                        f"**Total**: {fmt_amount(invoice.total_amount, invoice.currency)}\n"
-                        f"**Subtotal**: {fmt_amount(invoice.subtotal, invoice.currency)} | **Tax**: {fmt_amount(invoice.tax_amount, invoice.currency)}\n"
-                        f"**Status**: {invoice.status}\n"
-                        f"**Date**: {invoice.invoice_date}\n"
-                        f"**Created by**: {actor.display_name}"
+                    user_id=user.id,
+                    event="invoice_created",
+                    title=t(
+                        "notification.event.invoice_created",
+                        locale,
+                        invoice_number=invoice.internal_number,
                     ),
                     link_url="/invoices",
                     biz_type="invoice",
                     biz_id=invoice.id,
+                    fields=[
+                        (t("notification.label.invoice", locale), invoice.internal_number),
+                        (
+                            t("notification.label.vendor_number", locale),
+                            invoice.invoice_number or "—",
+                        ),
+                        (t("notification.label.supplier", locale), supplier.name),
+                        (
+                            t("notification.label.total", locale),
+                            fmt_amount(invoice.total_amount, invoice.currency),
+                        ),
+                        (
+                            t("notification.label.subtotal", locale),
+                            fmt_amount(invoice.subtotal, invoice.currency),
+                        ),
+                        (
+                            t("notification.label.tax", locale),
+                            fmt_amount(invoice.tax_amount, invoice.currency),
+                        ),
+                        (
+                            t("notification.label.status", locale),
+                            status_label(invoice.status, locale),
+                        ),
+                        (
+                            t("notification.label.date", locale),
+                            fmt_date(invoice.invoice_date, locale),
+                        ),
+                        (t("notification.label.created_by", locale), actor.display_name),
+                    ],
+                    fingerprint_parts=("created", invoice.internal_number),
                 )
             await db.commit()
     except Exception:
@@ -2304,8 +2531,8 @@ async def create_invoice(
         )
 
     try:
-        from app.models import NotificationCategory, UserRole
-        from app.services.notifications import create_notification
+        from app.models import User, UserRole
+        from app.services.notifications import emit_event_notification, user_locale
         from app.services.system_params import notification_enabled
 
         if await notification_enabled(db, "invoice_matched"):
@@ -2323,21 +2550,39 @@ async def create_invoice(
                 .all()
             )
             for uid in admin_rows:
-                await create_notification(
+                user = await db.get(User, uid)
+                if user is None:
+                    continue
+                locale = user_locale(user)
+                title_key = (
+                    "notification.event.invoice_matched"
+                    if is_matched
+                    else "notification.event.invoice_mismatched"
+                )
+                await emit_event_notification(
                     db,
-                    user_id=uid,
-                    category=NotificationCategory.SYSTEM,
-                    title=f"Invoice {invoice.internal_number} {match_label}",
-                    body=(
-                        f"**Invoice**: {invoice.internal_number}\n"
-                        f"**3-Way Match**: {match_label}\n"
-                        f"**Status**: {initial_status}\n"
-                        f"**Total**: {fmt_amount(invoice.total_amount, invoice.currency)}\n"
-                        f"**Created by**: {actor.display_name}"
+                    user_id=user.id,
+                    event="invoice_matched" if is_matched else "invoice_mismatched",
+                    title=t(
+                        title_key,
+                        locale,
+                        invoice_number=invoice.internal_number,
                     ),
                     link_url="/invoices",
                     biz_type="invoice_match",
                     biz_id=invoice.id,
+                    fields=[
+                        (t("notification.label.invoice", locale), invoice.internal_number),
+                        (t("notification.label.three_way_match", locale), match_label),
+                        (t("notification.label.status", locale), str(initial_status)),
+                        (
+                            t("notification.label.total", locale),
+                            fmt_amount(invoice.total_amount, invoice.currency),
+                        ),
+                        (t("notification.label.created_by", locale), actor.display_name),
+                    ],
+                    status="info" if is_matched else "warning",
+                    fingerprint_parts=("match", is_matched),
                 )
             await db.commit()
     except Exception:

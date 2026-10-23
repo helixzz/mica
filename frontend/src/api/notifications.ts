@@ -18,6 +18,7 @@ export interface NotificationSubscription {
   category: string;
   in_app_enabled: boolean;
   email_enabled: boolean;
+  feishu_enabled: boolean;
 }
 
 export interface ListNotificationsParams {
@@ -55,7 +56,7 @@ export async function getSubscriptions(): Promise<NotificationSubscription[]> {
   return res.data;
 }
 
-export async function updateSubscription(category: string, payload: { in_app_enabled: boolean; email_enabled: boolean }): Promise<NotificationSubscription> {
+export async function updateSubscription(category: string, payload: { in_app_enabled: boolean; email_enabled: boolean; feishu_enabled?: boolean }): Promise<NotificationSubscription> {
   const res = await client.put(`/notifications/subscriptions/${category}`, payload);
   return res.data;
 }

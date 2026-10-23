@@ -213,8 +213,7 @@ async def create_pr(db: AsyncSession, actor: User, payload: PRCreateIn) -> Purch
 
     try:
         from app.db import AsyncSessionLocal
-        from app.models import NotificationCategory
-        from app.services.notifications import create_notification
+        from app.services.notifications import emit_event_notification
         from app.services.system_params import notification_enabled
 
         async with AsyncSessionLocal() as notif_db:
@@ -243,23 +242,40 @@ async def create_pr(db: AsyncSession, actor: User, payload: PRCreateIn) -> Purch
 
                 from uuid import UUID as _UUID
 
+                from app.i18n import t
+                from app.services.notifications import status_label, user_locale
+
                 for uid_str in recipients:
-                    await create_notification(
+                    user = await notif_db.get(User, _UUID(uid_str))
+                    if user is None:
+                        continue
+                    locale = user_locale(user)
+                    await emit_event_notification(
                         notif_db,
-                        user_id=_UUID(uid_str),
-                        category=NotificationCategory.SYSTEM,
-                        title=f"PR {notif_pr.pr_number} created",
-                        body=(
-                            f"**PR**: {notif_pr.pr_number}\n"
-                            f"**Title**: {notif_pr.title}\n"
-                            f"**Amount**: {fmt_amount(notif_pr.total_amount, notif_pr.currency)}\n"
-                            f"**Required by**: {notif_pr.required_date}\n"
-                            f"**Items**: {len(notif_pr.items)} line(s)\n"
-                            f"**Created by**: {actor.display_name}"
+                        user_id=user.id,
+                        event="pr_created",
+                        title=t(
+                            "notification.event.pr_created",
+                            locale,
+                            pr_number=notif_pr.pr_number,
                         ),
                         link_url=f"/purchase-requisitions/{notif_pr.id}",
                         biz_type="pr",
                         biz_id=notif_pr.id,
+                        fields=[
+                            (t("notification.label.pr", locale), notif_pr.pr_number),
+                            (t("notification.label.title", locale), notif_pr.title),
+                            (
+                                t("notification.label.amount", locale),
+                                fmt_amount(notif_pr.total_amount, notif_pr.currency),
+                            ),
+                            (
+                                t("notification.label.status", locale),
+                                status_label(notif_pr.status, locale),
+                            ),
+                            (t("notification.label.lines", locale), str(len(notif_pr.items))),
+                        ],
+                        fingerprint_parts=("created", notif_pr.pr_number),
                     )
                 await notif_db.commit()
     except Exception:
@@ -293,6 +309,13 @@ async def update_pr(
         pass
     else:
         raise HTTPException(409, "pr.cannot_edit_submitted")
+
+    # Snapshot the fields the change card reports as a from→to difference.
+    _before: dict[str, object] = {
+        "title": pr.title,
+        "total_amount": pr.total_amount,
+        "required_date": pr.required_date,
+    }
 
     if payload.title is not None:
         pr.title = payload.title
@@ -360,10 +383,11 @@ async def update_pr(
     await db.commit()
 
     try:
+        from app.core.dates import fmt_date
         from app.db import AsyncSessionLocal
-        from app.models import NotificationCategory
-        from app.services.notifications import create_notification
-        from app.services.system_params import notification_enabled
+        from app.i18n import t
+        from app.services.notifications import emit_event_notification, status_label, user_locale
+        from app.services.system_params import notification_enabled, system_params
 
         async with AsyncSessionLocal() as notif_db:
             if await notification_enabled(notif_db, "pr_updated"):
@@ -386,37 +410,94 @@ async def update_pr(
                         .all()
                     )
                     recipients.update(dept_managers)
-                admin_rows = (
-                    (
-                        await notif_db.execute(
-                            select(User.id).where(
-                                User.role.in_(
-                                    [UserRole.ADMIN.value, UserRole.PROCUREMENT_MGR.value]
-                                ),
-                                User.is_active.is_(True),
+                recipients.discard(None)
+
+                # Admin-wide broadcasting is opt-in: a PR edit should reach the
+                # people who own it, not every administrator in the company.
+                if await system_params.get_bool_or(
+                    notif_db, "notifications.broadcast_admin_events", False
+                ):
+                    admin_rows = (
+                        (
+                            await notif_db.execute(
+                                select(User.id).where(
+                                    User.role.in_(
+                                        [UserRole.ADMIN.value, UserRole.PROCUREMENT_MGR.value]
+                                    ),
+                                    User.is_active.is_(True),
+                                )
                             )
                         )
+                        .scalars()
+                        .all()
                     )
-                    .scalars()
-                    .all()
-                )
-                recipients.update(admin_rows)
+                    recipients.update(admin_rows)
+
                 for uid in recipients:
-                    await create_notification(
+                    user = await notif_db.get(User, uid)
+                    if user is None:
+                        continue
+                    locale = user_locale(user)
+                    changes: list[tuple[str, str]] = []
+                    if _before.get("title") != notif_pr.title:
+                        changes.append(
+                            (
+                                t("notification.label.title", locale),
+                                f"{_before.get('title')} → {notif_pr.title}",
+                            )
+                        )
+                    if _before.get("total_amount") != notif_pr.total_amount:
+                        changes.append(
+                            (
+                                t("notification.label.amount", locale),
+                                f"{fmt_amount(_before.get('total_amount'), notif_pr.currency)}"
+                                f" → {fmt_amount(notif_pr.total_amount, notif_pr.currency)}",
+                            )
+                        )
+                    if _before.get("required_date") != notif_pr.required_date:
+                        changes.append(
+                            (
+                                t("notification.label.date", locale),
+                                f"{fmt_date(_before.get('required_date'), locale)}"
+                                f" → {fmt_date(notif_pr.required_date, locale)}",
+                            )
+                        )
+
+                    await emit_event_notification(
                         notif_db,
-                        user_id=uid,
-                        category=NotificationCategory.SYSTEM,
-                        title=f"PR {notif_pr.pr_number} updated",
-                        body=(
-                            f"**PR**: {notif_pr.pr_number}\n"
-                            f"**Title**: {notif_pr.title}\n"
-                            f"**Amount**: {fmt_amount(notif_pr.total_amount, notif_pr.currency)}\n"
-                            f"**Status**: {notif_pr.status}\n"
-                            f"**Updated by**: {actor.display_name}"
+                        user_id=user.id,
+                        event="pr_updated",
+                        title=t(
+                            "notification.event.pr_updated",
+                            locale,
+                            pr_number=notif_pr.pr_number,
                         ),
                         link_url=f"/purchase-requisitions/{notif_pr.id}",
                         biz_type="pr",
                         biz_id=notif_pr.id,
+                        fields=[
+                            (t("notification.label.pr", locale), notif_pr.pr_number),
+                            (t("notification.label.title", locale), notif_pr.title),
+                            (
+                                t("notification.label.amount", locale),
+                                fmt_amount(notif_pr.total_amount, notif_pr.currency),
+                            ),
+                            (
+                                t("notification.label.status", locale),
+                                status_label(notif_pr.status, locale),
+                            ),
+                            (t("notification.label.updated_by", locale), actor.display_name),
+                        ],
+                        changes=changes or None,
+                        summary=str(getattr(notif_pr, "business_reason", "") or ""),
+                        fingerprint_parts=(
+                            "updated",
+                            notif_pr.title,
+                            notif_pr.total_amount,
+                            notif_pr.required_date,
+                            notif_pr.status,
+                        ),
+                        meta={"actor": actor.display_name},
                     )
                 await notif_db.commit()
     except Exception:

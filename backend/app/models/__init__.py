@@ -8,6 +8,7 @@ from typing import Any
 from uuid import UUID
 
 from sqlalchemy import (
+    Boolean,
     CheckConstraint,
     Column,
     Date,
@@ -1486,6 +1487,14 @@ class NotificationChannel(StrEnum):
     IN_APP = "in_app"
     EMAIL = "email"
     WEBHOOK = "webhook"
+    FEISHU = "feishu"
+
+
+class NotificationDeliveryStatus(StrEnum):
+    PENDING = "pending"
+    SENT = "sent"
+    FAILED = "failed"
+    SKIPPED = "skipped"
 
 
 class Notification(Base, TimestampMixin):
@@ -1512,12 +1521,16 @@ class Notification(Base, TimestampMixin):
     meta: Mapped[dict[str, JSONValue]] = mapped_column(JSONB, default=dict, nullable=False)
     read_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
     sent_via: Mapped[list[str]] = mapped_column(JSONB, default=list, nullable=False)
+    # Identifies an event announcement so the same object+change is not announced
+    # twice inside the dedupe window. NULL for notifications that are not events.
+    dedupe_key: Mapped[str | None] = mapped_column(String(160))
 
     user: Mapped[User] = relationship()
 
     __table_args__ = (
         Index("ix_notifications_user_read", "user_id", "read_at"),
         Index("ix_notifications_user_created", "user_id", desc("created_at")),
+        Index("ix_notifications_user_dedupe", "user_id", "dedupe_key"),
     )
 
 
@@ -1539,10 +1552,48 @@ class NotificationSubscription(Base, TimestampMixin):
     )
     in_app_enabled: Mapped[bool] = mapped_column(default=True, nullable=False)
     email_enabled: Mapped[bool] = mapped_column(default=False, nullable=False)
+    feishu_enabled: Mapped[bool] = mapped_column(
+        Boolean, default=True, server_default=text("true"), nullable=False
+    )
 
     user: Mapped[User] = relationship()
 
     __table_args__ = (UniqueConstraint("user_id", "category"),)
+
+
+class NotificationDelivery(Base, TimestampMixin):
+    """One outbound attempt per (notification, channel).
+
+    The row is created before the provider call and updated afterwards, so a
+    failed or duplicated send is inspectable instead of only living in logs. The
+    Feishu ``message_id`` is kept so a later release can update a card in place
+    rather than pushing a new one.
+    """
+
+    __tablename__ = "notification_deliveries"
+
+    id: Mapped[UUID] = mapped_column(PGUUID(as_uuid=True), primary_key=True, default=new_uuid)
+    notification_id: Mapped[UUID] = mapped_column(
+        PGUUID(as_uuid=True),
+        ForeignKey("notifications.id", ondelete="CASCADE"),
+        nullable=False,
+    )
+    channel: Mapped[str] = mapped_column(String(16), nullable=False)
+    status: Mapped[str] = mapped_column(
+        String(16), nullable=False, default=NotificationDeliveryStatus.PENDING.value
+    )
+    attempts: Mapped[int] = mapped_column(Integer, default=0, nullable=False)
+    last_error: Mapped[str | None] = mapped_column(Text)
+    message_id: Mapped[str | None] = mapped_column(String(128))
+    next_retry_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    sent_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+
+    notification: Mapped[Notification] = relationship()
+
+    __table_args__ = (
+        Index("ix_notification_deliveries_notification", "notification_id"),
+        Index("ix_notification_deliveries_retry", "status", "next_retry_at"),
+    )
 
 
 # === Approval DSL (rules + delegations) ===

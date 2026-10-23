@@ -24,6 +24,37 @@ export interface Release {
 
 export const RELEASES: Release[] = [
   {
+    version: '1.73.0',
+    date: '2026-10-23',
+    items: [
+      {
+        kind: 'improvement',
+        zh: '飞书通知重做：结论在前、金额和日期按本地格式显示，变更会写明「从什么改成什么」',
+        en: 'Feishu notifications rebuilt: the headline comes first, money and dates are localised, and changes show the before and after',
+      },
+      {
+        kind: 'new',
+        zh: '审批卡片可以直接点进具体任务，在弹窗里批准、驳回或退回并留下意见',
+        en: 'Approval cards now open the exact task, with approve / reject / return and a comment box in one dialog',
+      },
+      {
+        kind: 'improvement',
+        zh: '每日摘要改成「今天有几件事需要你」，只列与你相关的待办；没有待办时只发一行「一切正常」',
+        en: 'The daily digest now lists what needs you specifically, and sends a single all-clear line on quiet days',
+      },
+      {
+        kind: 'fix',
+        zh: '管理员里的飞书事件开关以前不起作用，现在真的会控制推送',
+        en: 'The Feishu event switches in admin were stored but never read; they now actually control delivery',
+      },
+      {
+        kind: 'fix',
+        zh: '同一对象重复保存不再重复推送同一张卡片；推送失败可以查记录并自动重试',
+        en: 'Saving the same object twice no longer sends the same card twice, and failed deliveries are recorded and retried',
+      },
+    ],
+  },
+  {
     version: '1.72.4',
     date: '2026-10-22',
     items: [

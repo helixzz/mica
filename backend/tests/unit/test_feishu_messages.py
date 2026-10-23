@@ -1,197 +1,210 @@
 # pyright: reportUnknownMemberType=false, reportUnknownVariableType=false
-from unittest.mock import patch
+"""Card 2.0 builders: layout, semantics and locale."""
 
+from app.services.feishu import cards
 from app.services.feishu.messages import (
-    _button,
-    _card_header,
-    _hr_element,
-    _make_generic_card,
-    _markdown_element,
-    _note_element,
     build_approval_decided_card,
     build_contract_expiring_card,
+    build_event_card,
     build_payment_pending_card,
     build_po_created_card,
     build_pr_submitted_card,
 )
 
 
-def test_card_header_default_color():
-    h = _card_header("Test")
-    assert h["title"]["content"] == "Test"
-    assert h["template"] == "blue"
+def _find(card: dict, tag: str) -> list[dict]:
+    return [element for element in card["body"]["elements"] if element["tag"] == tag]
 
 
-def test_card_header_custom_color():
-    h = _card_header("Warn", "red")
-    assert h["template"] == "red"
+def _actions(card: dict) -> list[dict]:
+    rows = _find(card, "action")
+    assert rows, "card has no action row"
+    return rows[0]["actions"]
 
 
-def test_markdown_element():
-    e = _markdown_element("**bold**")
-    assert e == {"tag": "markdown", "content": "**bold**"}
+def _texts(card: dict) -> str:
+    return str(card)
 
 
-def test_hr_element():
-    assert _hr_element() == {"tag": "hr"}
+def test_card_is_schema_2_with_semantic_template():
+    payload = cards.card(title="Test", status="action", footer="foot")
+    assert payload["schema"] == "2.0"
+    assert payload["config"]["wide_screen_mode"] is True
+    assert payload["header"]["template"] == "orange"
+    assert payload["body"]["elements"][-1]["tag"] == "note"
+    assert _texts(payload).count("foot") == 1
 
 
-def test_note_element():
-    n = _note_element("footer")
-    assert n["tag"] == "note"
-    assert n["elements"][0]["content"] == "footer"
+def test_unknown_status_falls_back_to_blue():
+    payload = cards.card(title="Test", status="nope")
+    assert payload["header"]["template"] == "blue"
 
 
-def test_button_absolute_url_unchanged():
-    b = _button("Click", "https://example.com/path")
-    assert b["url"] == "https://example.com/path"
-    assert b["text"]["content"] == "Click"
-    assert b["type"] == "primary"
+def test_field_rows_use_two_columns():
+    rows = cards.field_rows([("金额", "¥1.00"), ("部门", "IT"), ("申请人", "Alice")])
+    assert len(rows) == 2
+    assert rows[0]["tag"] == "column_set"
+    assert len(rows[0]["columns"]) == 2
+    # the trailing cell is padded so the grid keeps its shape
+    assert len(rows[1]["columns"]) == 2
 
 
-@patch("app.config.get_settings")
-def test_button_relative_url_prepends_base(mock_settings):
-    mock_settings.return_value.app_base_url = "https://mica.example.com"
-    b = _button("View", "/purchase-requisitions/123")
-    assert b["url"] == "https://mica.example.com/purchase-requisitions/123"
+def test_button_carries_both_navigation_forms():
+    button = cards.button("查看", "https://mica.example/approvals?task=1", primary=True)
+    assert button["type"] == "primary"
+    assert button["behaviors"][0]["type"] == "open_url"
+    assert button["behaviors"][0]["default_url"].endswith("task=1")
+    assert button["url"].endswith("task=1")
 
 
-@patch("app.config.get_settings")
-def test_button_relative_url_strips_trailing_slash(mock_settings):
-    mock_settings.return_value.app_base_url = "https://mica.example.com/"
-    b = _button("View", "/orders/1")
-    assert b["url"] == "https://mica.example.com/orders/1"
+def test_table_columns_and_rows():
+    table = cards.table(
+        [("pr", "PR"), ("amount", "金额")],
+        [{"pr": "PR-1", "amount": "¥1.00"}],
+    )
+    assert table["tag"] == "table"
+    assert [column["name"] for column in table["columns"]] == ["pr", "amount"]
+    assert table["rows"][0]["pr"] == "PR-1"
 
 
-def test_button_empty_url():
-    b = _button("Noop", "")
-    assert b["url"] == ""
-
-
-def test_build_pr_submitted_card_structure():
+def test_pr_submitted_zh_leads_with_action():
     card = build_pr_submitted_card(
-        pr_title="Buy Servers",
+        pr_number="PR-2026-0095",
+        title="prod耗材补货",
+        applicant="Chris Wang",
+        department="研发部",
+        amount="¥29,750.00",
+        line_count=3,
+        item_count=4,
+        waiting_hours=3.2,
+        sla_hours=24,
+        task_url="https://mica.example/approvals?task=t1",
+        pr_url="https://mica.example/purchase-requisitions/1",
+        locale="zh-CN",
+    )
+    assert card["header"]["template"] == "orange"
+    assert "Chris Wang" in card["header"]["title"]["content"]
+    assert "已等待 3.2 小时" in card["header"]["subtitle"]["content"]
+    actions = _actions(card)
+    assert actions[0]["behaviors"][0]["default_url"].endswith("task=t1")
+    assert "¥29,750.00" in _texts(card)
+
+
+def test_pr_submitted_en_uses_english_labels():
+    card = build_pr_submitted_card(
+        pr_number="PR-1",
+        title="Servers",
         applicant="Alice",
         department="IT",
-        amount="¥100,000",
-        line_count=3,
-        pr_url="https://mica.example.com/pr/1",
+        amount="$1,000.00",
+        line_count=1,
+        item_count=1,
+        waiting_hours=1.0,
+        sla_hours=24,
+        task_url="",
+        pr_url="",
+        locale="en-US",
     )
-    assert card["config"]["wide_screen_mode"] is True
-    assert "采购申请" in card["header"]["title"]["content"]
-    md_texts = [e["content"] for e in card["elements"] if e.get("tag") == "markdown"]
-    assert any("Buy Servers" in t for t in md_texts)
-    assert any("Alice" in t for t in md_texts)
-    assert any("IT" in t for t in md_texts)
-    assert any("¥100,000" in t for t in md_texts)
-    assert any("3" in t for t in md_texts)
+    assert "waiting 1.0h" in card["header"]["subtitle"]["content"]
+    assert "Amount" in _texts(card)
+    assert not _find(card, "action")
 
 
-def test_build_approval_decided_card_approved():
+def test_approval_decided_is_green_when_approved():
     card = build_approval_decided_card(
-        pr_title="PR-001",
+        pr_number="PR-1",
+        title="Servers",
         decider="Bob",
         result="approved",
-        comment="LGTM",
-        pr_url="https://mica.example.com/pr/1",
+        comment="ok",
+        amount="¥1.00",
+        pr_url="https://mica.example/pr/1",
+        locale="zh-CN",
     )
-    assert "通过" in card["header"]["title"]["content"]
+    assert card["header"]["template"] == "green"
+    assert "ok" in _texts(card)
 
 
-def test_build_approval_decided_card_rejected():
+def test_approval_rejected_is_red():
     card = build_approval_decided_card(
-        pr_title="PR-002",
+        pr_number="PR-1",
+        title="Servers",
         decider="Bob",
         result="rejected",
-        comment="Too expensive",
-        pr_url="https://mica.example.com/pr/2",
-    )
-    assert "拒绝" in card["header"]["title"]["content"]
-
-
-def test_build_approval_decided_card_returned():
-    card = build_approval_decided_card(
-        pr_title="PR-003",
-        decider="Bob",
-        result="returned",
         comment="",
+        amount="¥1.00",
         pr_url="",
-    )
-    assert "退回" in card["header"]["title"]["content"]
-
-
-def test_build_po_created_card():
-    card = build_po_created_card(
-        po_number="PO-2026-001",
-        supplier="Acme Corp",
-        amount="¥50,000",
-        pr_title="Buy Cables",
-        po_url="https://mica.example.com/po/1",
-    )
-    md_texts = [e["content"] for e in card["elements"] if e.get("tag") == "markdown"]
-    assert any("PO-2026-001" in t for t in md_texts)
-    assert any("Acme Corp" in t for t in md_texts)
-
-
-def test_build_payment_pending_card():
-    card = build_payment_pending_card(
-        payment_id="PAY-001",
-        po_number="PO-001",
-        supplier="Vendor",
-        amount="¥10,000",
-        payment_url="https://mica.example.com/pay/1",
-    )
-    assert "付款" in card["header"]["title"]["content"]
-    md_texts = [e["content"] for e in card["elements"] if e.get("tag") == "markdown"]
-    assert any("PAY-001" in t for t in md_texts)
-
-
-def test_build_contract_expiring_card_urgent():
-    card = build_contract_expiring_card(
-        contract_number="C-001",
-        supplier="Vendor",
-        expiry_date="2026-06-01",
-        days_remaining=5,
-        total_amount="¥1,000,000",
-        used_amount="¥800,000",
-        contract_url="https://mica.example.com/c/1",
+        locale="zh-CN",
     )
     assert card["header"]["template"] == "red"
 
 
-def test_build_contract_expiring_card_not_urgent():
+def test_po_created_card_lists_supplier_and_amount():
+    card = build_po_created_card(
+        po_number="PO-1",
+        supplier="ACME",
+        amount="¥9,000.00",
+        pr_title="Servers",
+        po_url="https://mica.example/po/1",
+        locale="zh-CN",
+    )
+    text = _texts(card)
+    assert "PO-1" in text and "ACME" in text and "¥9,000.00" in text
+    assert card["header"]["template"] == "blue"
+
+
+def test_payment_pending_is_action():
+    card = build_payment_pending_card(
+        payment_number="PAY-1",
+        po_number="PO-1",
+        supplier="ACME",
+        amount="¥1.00",
+        due_date="2026年10月30日",
+        payment_url="https://mica.example/pay/1",
+        locale="zh-CN",
+    )
+    assert card["header"]["template"] == "orange"
+    assert "2026年10月30日" in _texts(card)
+
+
+def test_contract_expiring_escalates_within_a_week():
     card = build_contract_expiring_card(
-        contract_number="C-002",
-        supplier="Vendor",
-        expiry_date="2026-07-01",
-        days_remaining=30,
-        total_amount="¥500,000",
-        used_amount="¥100,000",
+        contract_number="C-1",
+        supplier="ACME",
+        expiry_date="2026年10月30日",
+        days_remaining=5,
+        total_amount="¥1,000.00",
+        used_amount="¥400.00",
         contract_url="",
+        locale="zh-CN",
+    )
+    assert card["header"]["template"] == "red"
+
+
+def test_contract_expiring_outside_a_week_is_action():
+    card = build_contract_expiring_card(
+        contract_number="C-1",
+        supplier="ACME",
+        expiry_date="2026年11月30日",
+        days_remaining=20,
+        total_amount="¥1,000.00",
+        used_amount="—",
+        contract_url="",
+        locale="zh-CN",
     )
     assert card["header"]["template"] == "orange"
 
 
-def test_make_generic_card_with_body_and_link():
-    card = _make_generic_card(
-        title="Notification",
-        body="Something happened",
-        link_url="https://mica.example.com/details",
+def test_event_card_renders_changes_with_arrows():
+    card = build_event_card(
+        title="合同 C-1 已更新",
+        summary="",
+        fields=[("合同", "C-1")],
+        changes=[("金额", "¥100.00 → ¥200.00")],
+        url="https://mica.example/contracts/1",
+        status="info",
+        locale="zh-CN",
     )
-    assert card["header"]["title"]["content"] == "Notification"
-    has_md = any(e.get("content") == "Something happened" for e in card["elements"])
-    assert has_md
-    has_button = any(e.get("tag") == "action" for e in card["elements"])
-    assert has_button
-
-
-def test_make_generic_card_no_link():
-    card = _make_generic_card(title="Info", body="Just FYI", link_url="")
-    action_elements = [e for e in card["elements"] if e.get("tag") == "action"]
-    assert len(action_elements) == 0
-
-
-def test_make_generic_card_no_body():
-    card = _make_generic_card(title="Empty", body="", link_url="")
-    md_elements = [e for e in card["elements"] if e.get("tag") == "markdown"]
-    assert len(md_elements) == 0
+    text = _texts(card)
+    assert "¥100.00 → ¥200.00" in text
+    assert _actions(card)[0]["url"].endswith("/contracts/1")

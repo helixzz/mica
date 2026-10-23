@@ -610,7 +610,8 @@
       "system": "系统"
     },
     "mark_all_read": "全部标为已读",
-    "settings": "通知设置"
+    "settings": "通知设置",
+    "feishu": "飞书"
   },
   "event_type": {
     "pr.created": "创建采购申请",
@@ -1824,5 +1825,16 @@
     "supplier_quote": "供应商报价（PR）",
     "excel_import": "Excel 导入",
     "rfq_quote": "询价报价（历史）"
+  },
+  "approvals": {
+    "review": "审批",
+    "reject": "驳回",
+    "task_detail": "审批详情",
+    "waiting_hours": "已等待 {hours} 小时",
+    "comment_placeholder": "审批意见（可选）",
+    "open_in_mica": "在 Mica 中查看完整申请",
+    "deep_link_missing": "该审批任务已处理，或当前账号无权处理",
+    "action_done": "审批已提交",
+    "action_failed": "操作失败，请重试"
   }
 }

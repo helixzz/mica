@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 import logging
-from collections.abc import Callable, Mapping
+from collections.abc import Callable, Mapping, Sequence
 from datetime import UTC, datetime, timedelta
 from uuid import UUID
 
@@ -18,6 +18,8 @@ from app.models import (
     Notification,
     NotificationCategory,
     NotificationChannel,
+    NotificationDelivery,
+    NotificationDeliveryStatus,
     NotificationSubscription,
     POContractLink,
     PurchaseOrder,
@@ -26,6 +28,7 @@ from app.models import (
     UserRole,
 )
 from app.services import contracts as contract_svc
+from app.services.system_params import system_params
 
 logger = logging.getLogger(__name__)
 
@@ -102,6 +105,7 @@ async def _create_notification_if_fresh(
     biz_type: str | None = None,
     biz_id: UUID | None = None,
     meta: Mapping[str, JSONValue] | None = None,
+    dedupe_key: str | None = None,
 ) -> Notification | None:
     if await _recent_notification_exists(
         session,
@@ -121,7 +125,47 @@ async def _create_notification_if_fresh(
         biz_type=biz_type,
         biz_id=biz_id,
         meta=meta,
+        dedupe_key=dedupe_key,
     )
+
+
+async def _dedupe_announced(
+    session: AsyncSession,
+    *,
+    user_id: UUID,
+    dedupe_key: str,
+) -> bool:
+    window_hours = await system_params.get_int_or(session, "notifications.event_dedupe_hours", 24)
+    since = datetime.now(UTC) - timedelta(hours=window_hours)
+    return (
+        await session.execute(
+            select(Notification.id)
+            .where(
+                Notification.user_id == user_id,
+                Notification.dedupe_key == dedupe_key,
+                Notification.created_at >= since,
+            )
+            .limit(1)
+        )
+    ).scalar_one_or_none() is not None
+
+
+def announcement_key(event: str, biz_type: str, biz_id: object, fingerprint: str) -> str:
+    """Stable identity for one announcement: same object, same change, same event."""
+    return f"{event}:{biz_type}:{biz_id}:{fingerprint}"
+
+
+def fingerprint_of(*parts: object) -> str:
+    """Short hash of the values that make a change distinct.
+
+    Two saves with no real difference collapse into one announcement; a changed
+    amount or status is a new one. Values are joined in caller order, so callers
+    should keep the order stable.
+    """
+    import hashlib
+
+    raw = "|".join(str(part) for part in parts)
+    return hashlib.sha1(raw.encode("utf-8")).hexdigest()[:12]
 
 
 async def create_notification(
@@ -135,10 +179,22 @@ async def create_notification(
     biz_type: str | None = None,
     biz_id: UUID | None = None,
     meta: Mapping[str, JSONValue] | None = None,
+    dedupe_key: str | None = None,
 ) -> Notification | None:
-    """Respects user's subscription. Returns created notification or None if muted."""
+    """Respects user's subscription. Returns created notification or None if muted.
+
+    When ``dedupe_key`` is supplied the same announcement for the same user is
+    never created twice inside the configured window — the fix for a PR that was
+    saved twice announcing itself twice, and for two processes sharing one Feishu
+    app pushing the same card.
+    """
     subscription = await _get_subscription(session, user_id=user_id, category=category)
     if subscription is not None and not subscription.in_app_enabled:
+        return None
+
+    if dedupe_key is not None and await _dedupe_announced(
+        session, user_id=user_id, dedupe_key=dedupe_key
+    ):
         return None
 
     user: User | None = None
@@ -155,6 +211,7 @@ async def create_notification(
         biz_id=biz_id,
         meta=dict(meta or {}),
         sent_via=[NotificationChannel.IN_APP.value],
+        dedupe_key=dedupe_key,
     )
     session.add(notification)
     await session.flush()
@@ -201,110 +258,320 @@ async def create_notification(
     return notification
 
 
+def status_label(status: str, locale: str) -> str:
+    """Human status text; unknown values fall back to the raw enum rather than a key."""
+    key = f"notification.status.{status}"
+    text = t(key, locale)
+    return status if text == key else text
+
+
+def user_locale(user: User | None) -> str:
+    return user.preferred_locale if user and user.preferred_locale else "zh-CN"
+
+
+async def emit_event_notification(
+    session: AsyncSession,
+    *,
+    user_id: UUID,
+    event: str,
+    title: NotificationText,
+    link_url: str,
+    biz_type: str,
+    biz_id: UUID,
+    fields: Sequence[tuple[str, str]] | None = None,
+    changes: Sequence[tuple[str, str]] | None = None,
+    summary: str = "",
+    fingerprint_parts: Sequence[object] = (),
+    status: str = "info",
+    category: NotificationCategory = NotificationCategory.SYSTEM,
+    meta: Mapping[str, JSONValue] | None = None,
+) -> Notification | None:
+    """Create one event announcement with a structured card payload.
+
+    ``fields`` and ``changes`` are already-translated label/value pairs; the card
+    renderer only lays them out. ``fingerprint_parts`` identify the change itself,
+    so re-saving an object with the same values does not announce it twice.
+    """
+    payload_meta: dict[str, JSONValue] = dict(meta or {})
+    if fields:
+        payload_meta["fields"] = [[label, value] for label, value in fields]
+    if changes:
+        payload_meta["changes"] = [[label, value] for label, value in changes]
+    if summary:
+        payload_meta["summary"] = summary
+    payload_meta["status"] = status
+    payload_meta["event"] = event
+
+    dedupe_key = announcement_key(event, biz_type, biz_id, fingerprint_of(*fingerprint_parts))
+    return await create_notification(
+        session,
+        user_id=user_id,
+        category=category,
+        title=title,
+        body=summary or None,
+        link_url=link_url,
+        biz_type=biz_type,
+        biz_id=biz_id,
+        meta=payload_meta,
+        dedupe_key=dedupe_key,
+    )
+
+
+#: Admin switch governing each category on the Feishu side. A category that is
+#: missing here is never pushed to Feishu, which is what keeps "notify me" honest.
+_FEISHU_SWITCH_BY_CATEGORY: dict[NotificationCategory, str] = {
+    NotificationCategory.FEISHU_PR_SUBMITTED: "auth.feishu.notify_on_pr",
+    NotificationCategory.APPROVAL: "auth.feishu.notify_on_approval",
+    NotificationCategory.FEISHU_APPROVAL_DECIDED: "auth.feishu.notify_on_approval",
+    NotificationCategory.FEISHU_PO_CREATED: "auth.feishu.notify_on_po",
+    NotificationCategory.PO_CREATED: "auth.feishu.notify_on_po",
+    NotificationCategory.FEISHU_PAYMENT_PENDING: "auth.feishu.notify_on_payment",
+    NotificationCategory.PAYMENT_PENDING: "auth.feishu.notify_on_payment",
+    NotificationCategory.FEISHU_CONTRACT_EXPIRING: "auth.feishu.notify_on_contract_expiry",
+    NotificationCategory.CONTRACT_EXPIRING: "auth.feishu.notify_on_contract_expiry",
+    NotificationCategory.SYSTEM: "auth.feishu.notify_on_system",
+    NotificationCategory.PRICE_ANOMALY: "auth.feishu.notify_on_system",
+    NotificationCategory.RECEIPT_RECORDED: "auth.feishu.notify_on_system",
+}
+
+
 async def _maybe_send_feishu_card(
     session: AsyncSession,
     notification: Notification,
 ) -> None:
-    """Send a Feishu card notification if feishu is enabled and category matches."""
-    feishu_categories = {
-        NotificationCategory.FEISHU_PR_SUBMITTED,
-        NotificationCategory.FEISHU_APPROVAL_DECIDED,
-        NotificationCategory.FEISHU_PO_CREATED,
-        NotificationCategory.FEISHU_PAYMENT_PENDING,
-        NotificationCategory.FEISHU_CONTRACT_EXPIRING,
-        NotificationCategory.SYSTEM,
-        NotificationCategory.APPROVAL,
-        NotificationCategory.CONTRACT_EXPIRING,
-        NotificationCategory.PRICE_ANOMALY,
-    }
-    if notification.category not in feishu_categories:
+    """Push one card, honouring the admin switch, the user's own preference and the ledger."""
+    switch = _FEISHU_SWITCH_BY_CATEGORY.get(notification.category)
+    if switch is None:
         return
 
     try:
-        from app.services.feishu.client import FeishuClient
-        from app.services.system_params import system_params
-
-        enabled = await system_params.get(session, "auth.feishu.enabled", False)
-        if not enabled:
+        if not await system_params.get(session, "auth.feishu.enabled", False):
+            return
+        if not await system_params.get(session, switch, True):
             return
 
         user = await session.get(User, notification.user_id)
         if not user or not user.email:
             return
 
-        client = FeishuClient(session)
-        try:
-            from app.services.system_params import system_params
+        subscription = await _get_subscription(
+            session, user_id=user.id, category=notification.category
+        )
+        if subscription is not None and not subscription.feishu_enabled:
+            return
 
-            base_url = await system_params.get(session, "app.base_url", "")
-            if not base_url:
-                from app.config import get_settings
+        base_url = await _app_base_url(session)
+        card = _build_feishu_card(notification, user, base_url=base_url)
+        if card is None:
+            return
 
-                base_url = get_settings().app_base_url
-            base_url = str(base_url).rstrip("/")
-
-            card = _build_feishu_card(notification, user, base_url=base_url)
-            if card is None:
-                return
-
-            # Prefer feishu IDs: union_id (tenant-wide) > open_id > email
-            if user.feishu_union_id:
-                await client.send_card("union_id", user.feishu_union_id, card)
-            elif user.feishu_open_id:
-                await client.send_card("open_id", user.feishu_open_id, card)
-            else:
-                await client.send_card("email", user.email, card)
-            logger.info(
-                "feishu: card sent to user=%s category=%s via=%s",
-                user.email,
-                notification.category.value,
-                "open_id" if user.feishu_open_id else "email",
-            )
-            try:
-                session.add(
-                    AuditLog(
-                        actor_id=None,
-                        actor_name=None,
-                        event_type="notification.feishu_sent",
-                        resource_type="notification",
-                        resource_id=str(notification.id),
-                        metadata_json={
-                            "category": notification.category.value,
-                            "user_id": str(notification.user_id),
-                            "via": "union_id"
-                            if user.feishu_union_id
-                            else ("open_id" if user.feishu_open_id else "email"),
-                        },
-                        comment="notification.feishu_sent",
-                    )
-                )
-            except Exception:
-                pass
-        finally:
-            await client.close()
+        await _deliver_feishu(session, notification, user, card, base_url=base_url)
     except Exception:
         logger.warning(
             "feishu: card send failed for notification %s",
             notification.id,
             exc_info=True,
         )
-        try:
-            session.add(
-                AuditLog(
-                    actor_id=None,
-                    actor_name=None,
-                    event_type="notification.feishu_failed",
-                    resource_type="notification",
-                    resource_id=str(notification.id),
-                    metadata_json={
-                        "category": notification.category.value,
-                        "user_id": str(notification.user_id),
-                    },
-                    comment="notification.feishu_failed",
-                )
+
+
+async def _app_base_url(session: AsyncSession) -> str:
+    value = await system_params.get(session, "app.base_url", "")
+    if not value:
+        from app.config import get_settings
+
+        value = get_settings().app_base_url
+    return str(value).rstrip("/")
+
+
+async def _send_feishu_card(session: AsyncSession, user: User, card: dict) -> dict:
+    from app.services.feishu.client import FeishuClient
+
+    client = FeishuClient(session)
+    try:
+        # Prefer feishu IDs: union_id (tenant-wide) > open_id > email
+        if user.feishu_union_id:
+            return await client.send_card("union_id", user.feishu_union_id, card)
+        if user.feishu_open_id:
+            return await client.send_card("open_id", user.feishu_open_id, card)
+        return await client.send_card("email", user.email, card)
+    finally:
+        await client.close()
+
+
+async def _deliver_feishu(
+    session: AsyncSession,
+    notification: Notification,
+    user: User,
+    card: dict,
+    *,
+    base_url: str = "",
+) -> None:
+    delivery = NotificationDelivery(
+        notification_id=notification.id,
+        channel=NotificationChannel.FEISHU.value,
+        status=NotificationDeliveryStatus.PENDING.value,
+        attempts=0,
+    )
+    session.add(delivery)
+    await session.flush()
+
+    try:
+        response = await _send_feishu_card(session, user, card)
+        delivery.status = NotificationDeliveryStatus.SENT.value
+        delivery.attempts = 1
+        delivery.message_id = _message_id_of(response)
+        delivery.sent_at = datetime.now(UTC)
+        if NotificationChannel.FEISHU.value not in (notification.sent_via or []):
+            notification.sent_via = [
+                *(notification.sent_via or []),
+                NotificationChannel.FEISHU.value,
+            ]
+        logger.info(
+            "feishu: card sent user=%s category=%s message_id=%s",
+            user.email,
+            notification.category.value,
+            delivery.message_id or "-",
+        )
+        _audit(
+            session,
+            "notification.feishu_sent",
+            notification,
+            {"message_id": delivery.message_id, "via": _receive_id_kind(user)},
+        )
+    except Exception as exc:
+        delivery.status = NotificationDeliveryStatus.FAILED.value
+        delivery.attempts = 1
+        delivery.last_error = str(exc)[:500]
+        delivery.next_retry_at = datetime.now(UTC) + timedelta(minutes=10)
+        logger.warning(
+            "feishu: delivery failed notification=%s user=%s error=%s",
+            notification.id,
+            user.email,
+            exc,
+        )
+        _audit(session, "notification.feishu_failed", notification, {"error": str(exc)[:200]})
+
+
+def _receive_id_kind(user: User) -> str:
+    if user.feishu_union_id:
+        return "union_id"
+    if user.feishu_open_id:
+        return "open_id"
+    return "email"
+
+
+def _message_id_of(response: dict | None) -> str | None:
+    data = (response or {}).get("data")
+    if isinstance(data, dict):
+        message_id = data.get("message_id")
+        if isinstance(message_id, str) and message_id:
+            return message_id
+    return None
+
+
+def _audit(
+    session: AsyncSession,
+    event_type: str,
+    notification: Notification,
+    extra: dict | None = None,
+) -> None:
+    try:
+        session.add(
+            AuditLog(
+                actor_id=None,
+                actor_name=None,
+                event_type=event_type,
+                resource_type="notification",
+                resource_id=str(notification.id),
+                metadata_json={
+                    "category": notification.category.value,
+                    "user_id": str(notification.user_id),
+                    **(extra or {}),
+                },
+                comment=event_type,
             )
-        except Exception:
-            pass
+        )
+    except Exception:
+        pass
+
+
+async def retry_failed_feishu_deliveries(session: AsyncSession) -> dict[str, int]:
+    """Re-send cards whose first attempt failed, up to the configured ceiling.
+
+    The ledger is the only place that knows a card failed, so this job is what
+    turns "we probably sent it" into a bounded, inspectable retry.
+    """
+    from sqlalchemy import or_
+
+    max_attempts = await system_params.get_int_or(session, "notifications.delivery_max_attempts", 3)
+    now = datetime.now(UTC)
+    deliveries = list(
+        (
+            await session.execute(
+                select(NotificationDelivery)
+                .where(
+                    NotificationDelivery.channel == NotificationChannel.FEISHU.value,
+                    NotificationDelivery.status == NotificationDeliveryStatus.FAILED.value,
+                    NotificationDelivery.attempts < max_attempts,
+                    or_(
+                        NotificationDelivery.next_retry_at.is_(None),
+                        NotificationDelivery.next_retry_at <= now,
+                    ),
+                )
+                .order_by(NotificationDelivery.created_at)
+                .limit(50)
+            )
+        )
+        .scalars()
+        .all()
+    )
+
+    retried = 0
+    sent = 0
+    for delivery in deliveries:
+        notification = await session.get(Notification, delivery.notification_id)
+        if notification is None:
+            delivery.status = NotificationDeliveryStatus.SKIPPED.value
+            delivery.last_error = "notification missing"
+            continue
+        user = await session.get(User, notification.user_id)
+        if user is None or not user.email:
+            delivery.status = NotificationDeliveryStatus.SKIPPED.value
+            delivery.last_error = "user missing"
+            continue
+
+        base_url = await _app_base_url(session)
+        card = _build_feishu_card(notification, user, base_url=base_url)
+        if card is None:
+            delivery.status = NotificationDeliveryStatus.SKIPPED.value
+            delivery.last_error = "no card template for category"
+            continue
+
+        retried += 1
+        delivery.attempts += 1
+        try:
+            response = await _send_feishu_card(session, user, card)
+            delivery.status = NotificationDeliveryStatus.SENT.value
+            delivery.message_id = _message_id_of(response)
+            delivery.sent_at = datetime.now(UTC)
+            delivery.last_error = None
+            sent += 1
+            _audit(
+                session,
+                "notification.feishu_retried",
+                notification,
+                {"attempts": delivery.attempts},
+            )
+        except Exception as exc:
+            delivery.last_error = str(exc)[:500]
+            if delivery.attempts >= max_attempts:
+                delivery.status = NotificationDeliveryStatus.FAILED.value
+                delivery.next_retry_at = None
+            else:
+                delivery.next_retry_at = now + timedelta(minutes=10 * delivery.attempts)
+
+    await session.commit()
+    return {"scanned": len(deliveries), "retried": retried, "sent": sent}
 
 
 async def _maybe_send_email(
@@ -376,83 +643,164 @@ async def _maybe_send_email(
             pass
 
 
+def _absolute_url(path: str | None, base_url: str) -> str:
+    if not path:
+        return ""
+    if path.startswith("http://") or path.startswith("https://"):
+        return path
+    if path.startswith("/") and base_url:
+        return base_url + path
+    return path
+
+
+def _amount_text(meta: Mapping[str, JSONValue]) -> str:
+    from app.core.money import fmt_amount
+
+    raw = meta.get("amount")
+    if raw is None or raw == "":
+        return "—"
+    return fmt_amount(raw, str(meta.get("currency") or "CNY"))
+
+
+def _float_or_none(value: JSONValue | None) -> float | None:
+    if value is None or value == "":
+        return None
+    try:
+        return float(value)  # type: ignore[arg-type]
+    except (TypeError, ValueError):
+        return None
+
+
+def _int_or_none(value: JSONValue | None) -> int | None:
+    if value is None or value == "":
+        return None
+    try:
+        return int(value)  # type: ignore[arg-type]
+    except (TypeError, ValueError):
+        return None
+
+
+def _meta_pairs(value: JSONValue | None) -> list[tuple[str, str]]:
+    """Accept ``[[label, value], ...]`` from notification meta, ignoring noise."""
+    if not isinstance(value, list):
+        return []
+    pairs: list[tuple[str, str]] = []
+    for entry in value:
+        if isinstance(entry, (list, tuple)) and len(entry) == 2:
+            pairs.append((str(entry[0]), str(entry[1])))
+    return pairs
+
+
 def _build_feishu_card(
     notification: Notification,
     user: User,
     base_url: str = "",
 ) -> dict | None:
-    """Build a Feishu card dict from notification data."""
+    """Render the notification as a card 2.0 payload for this user's locale."""
+    from app.core.dates import fmt_date
     from app.services.feishu import messages as feishu_messages
 
+    locale = user.preferred_locale or "zh-CN"
     meta = notification.meta or {}
+    link = _absolute_url(notification.link_url, base_url)
 
-    if notification.category == NotificationCategory.FEISHU_PR_SUBMITTED:
-        return feishu_messages.build_pr_submitted_card(
-            pr_title=notification.title,
-            applicant=user.display_name,
-            department=meta.get("department", ""),
-            amount=meta.get("amount", "—"),
-            line_count=int(meta.get("line_count", 0)),
-            pr_url=meta.get("pr_url", ""),
-        )
+    if notification.category == NotificationCategory.APPROVAL:
+        kind = str(meta.get("kind") or "task")
+        if kind == "task":
+            task_id = str(meta.get("task_id") or "")
+            if meta.get("pr_no") and task_id:
+                department = str(
+                    (meta.get("department_en") if locale.startswith("en") else None)
+                    or meta.get("department")
+                    or ""
+                )
+                return feishu_messages.build_pr_submitted_card(
+                    pr_number=str(meta.get("pr_no")),
+                    title=str(meta.get("pr_title") or notification.title),
+                    applicant=str(meta.get("applicant") or ""),
+                    department=department,
+                    amount=_amount_text(meta),
+                    line_count=_int_or_none(meta.get("line_count")) or 0,
+                    item_count=_int_or_none(meta.get("item_count")) or 0,
+                    waiting_hours=_float_or_none(meta.get("waiting_hours")),
+                    sla_hours=_int_or_none(meta.get("sla_hours")),
+                    task_url=_absolute_url(f"/approvals?task={task_id}", base_url),
+                    pr_url=_absolute_url(f"/purchase-requisitions/{meta.get('biz_id')}", base_url),
+                    locale=locale,
+                )
+        elif kind == "decision":
+            return feishu_messages.build_approval_decided_card(
+                pr_number=str(meta.get("pr_no") or ""),
+                title=str(meta.get("pr_title") or notification.title),
+                decider=str(meta.get("decider") or ""),
+                result=str(meta.get("result") or "approved"),
+                comment=str(meta.get("comment") or ""),
+                amount=_amount_text(meta),
+                pr_url=link,
+                locale=locale,
+            )
 
-    if notification.category == NotificationCategory.FEISHU_APPROVAL_DECIDED:
-        return feishu_messages.build_approval_decided_card(
-            pr_title=notification.title,
-            decider=meta.get("decider", ""),
-            result=meta.get("result", "approved"),
-            comment=meta.get("comment", ""),
-            pr_url=meta.get("pr_url", ""),
-        )
+    if notification.category == NotificationCategory.CONTRACT_EXPIRING:
+        if meta.get("contract_number") and meta.get("days_remaining") is not None:
+            from app.core.money import fmt_amount
 
-    if notification.category == NotificationCategory.FEISHU_PO_CREATED:
-        return feishu_messages.build_po_created_card(
-            po_number=meta.get("po_number", ""),
-            supplier=meta.get("supplier", ""),
-            amount=meta.get("amount", "—"),
-            pr_title=meta.get("pr_title", ""),
-            po_url=meta.get("po_url", ""),
-        )
+            used_amount = meta.get("used_amount")
+            if not used_amount and meta.get("used_amount_value") is not None:
+                used_amount = fmt_amount(
+                    meta.get("used_amount_value"), str(meta.get("currency") or "CNY")
+                )
+            return feishu_messages.build_contract_expiring_card(
+                contract_number=str(meta.get("contract_number")),
+                supplier=str(meta.get("supplier") or ""),
+                expiry_date=fmt_date(meta.get("expiry_date"), locale),
+                days_remaining=_int_or_none(meta.get("days_remaining")) or 0,
+                total_amount=_amount_text(meta),
+                used_amount=str(used_amount or "—"),
+                contract_url=link,
+                locale=locale,
+            )
 
-    if notification.category == NotificationCategory.FEISHU_PAYMENT_PENDING:
-        return feishu_messages.build_payment_pending_card(
-            payment_id=meta.get("payment_id", ""),
-            po_number=meta.get("po_number", ""),
-            supplier=meta.get("supplier", ""),
-            amount=meta.get("amount", "—"),
-            payment_url=meta.get("payment_url", ""),
-        )
-
-    if notification.category == NotificationCategory.FEISHU_CONTRACT_EXPIRING:
-        return feishu_messages.build_contract_expiring_card(
-            contract_number=meta.get("contract_number", ""),
-            supplier=meta.get("supplier", ""),
-            expiry_date=meta.get("expiry_date", ""),
-            days_remaining=int(meta.get("days_remaining", 0)),
-            total_amount=meta.get("total_amount", "—"),
-            used_amount=meta.get("used_amount", "—"),
-            contract_url=meta.get("contract_url", ""),
-        )
-
-    link = notification.link_url or ""
-    if link.startswith("/") and base_url:
-        link = base_url + link
-
-    if notification.category == NotificationCategory.SYSTEM:
-        from app.services.feishu.messages import _make_generic_card
-
-        return _make_generic_card(
+    if notification.category == NotificationCategory.PRICE_ANOMALY:
+        fields = [
+            (
+                t("feishu.card.label.observed", locale),
+                _amount_text({"amount": meta.get("observed_price")}),
+            ),
+            (
+                t("feishu.card.label.baseline", locale),
+                _amount_text({"amount": meta.get("baseline_avg_price")}),
+            ),
+            (t("feishu.card.label.deviation", locale), f"{meta.get('deviation_pct', '—')}%"),
+            (t("feishu.card.label.severity", locale), str(meta.get("severity") or "—")),
+        ]
+        return feishu_messages.build_event_card(
             title=notification.title,
-            body=notification.body or "",
-            link_url=link,
+            summary=notification.body or "",
+            fields=fields,
+            url=link,
+            status="warning",
+            locale=locale,
         )
 
-    from app.services.feishu.messages import _make_generic_card
+    fields = _meta_pairs(meta.get("fields"))
+    changes = _meta_pairs(meta.get("changes"))
+    if fields or changes:
+        return feishu_messages.build_event_card(
+            title=notification.title,
+            summary=str(meta.get("summary") or ""),
+            fields=fields,
+            changes=changes,
+            url=link,
+            status=str(meta.get("status") or "info"),
+            locale=locale,
+        )
 
-    return _make_generic_card(
+    return feishu_messages.build_event_card(
         title=notification.title,
-        body=notification.body or "",
-        link_url=link,
+        summary=notification.body or "",
+        url=link,
+        status=str(meta.get("status") or "info"),
+        locale=locale,
     )
 
 
@@ -598,6 +946,7 @@ async def get_subscriptions(
                 category=category,
                 in_app_enabled=True,
                 email_enabled=False,
+                feishu_enabled=True,
             )
         )
     return results
@@ -610,6 +959,7 @@ async def upsert_subscription(
     category: NotificationCategory,
     in_app_enabled: bool,
     email_enabled: bool,
+    feishu_enabled: bool = True,
 ) -> NotificationSubscription:
     """Upsert per (user_id, category)."""
     row = await _get_subscription(session, user_id=user_id, category=category)
@@ -619,11 +969,13 @@ async def upsert_subscription(
             category=category,
             in_app_enabled=in_app_enabled,
             email_enabled=email_enabled,
+            feishu_enabled=feishu_enabled,
         )
         session.add(row)
     else:
         row.in_app_enabled = in_app_enabled
         row.email_enabled = email_enabled
+        row.feishu_enabled = feishu_enabled
     await session.commit()
     await session.refresh(row)
     return row

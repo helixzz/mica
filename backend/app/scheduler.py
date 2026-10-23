@@ -58,9 +58,14 @@ def build_scheduler(session_factory: async_sessionmaker[AsyncSession]) -> AsyncI
                 logger.exception("sla_escalation failed")
 
     async def _run_contract_expiry_check():
-        from app.models import NotificationCategory, User, UserRole
+        from datetime import UTC, datetime
+
+        from app.core.dates import fmt_date
+        from app.core.money import fmt_amount
+        from app.i18n import t
+        from app.models import User, UserRole
         from app.services import contracts as contract_svc
-        from app.services.notifications import create_notification
+        from app.services.notifications import emit_event_notification, user_locale
         from app.services.system_params import notification_enabled
 
         async with session_factory() as db:
@@ -96,24 +101,59 @@ def build_scheduler(session_factory: async_sessionmaker[AsyncSession]) -> AsyncI
 
                 notified = 0
                 for c in expiring:
+                    days_remaining = (
+                        (c.expiry_date - datetime.now(UTC).date()).days if c.expiry_date else 0
+                    )
                     for admin in admins:
                         try:
-                            await create_notification(
+                            locale = user_locale(admin)
+                            await emit_event_notification(
                                 db,
                                 user_id=admin.id,
-                                category=NotificationCategory.SYSTEM,
-                                title=f"Contract {c.contract_number} expires on {c.expiry_date}",
-                                body=(
-                                    f"**Contract**: {c.contract_number}\n"
-                                    f"**Title**: {c.title}\n"
-                                    f"**Supplier**: {c.supplier.name if c.supplier else '—'}\n"
-                                    f"**Expiry**: {c.expiry_date}\n"
-                                    f"**Status**: {c.status}\n"
-                                    f"Please review and renew if needed."
+                                event="contract_expiring",
+                                title=t(
+                                    "notification.contract.expiring",
+                                    locale,
+                                    name=c.contract_number,
                                 ),
                                 link_url=f"/contracts/{c.id}",
-                                biz_type="contract_expiry",
+                                biz_type="contract",
                                 biz_id=c.id,
+                                fields=[
+                                    (
+                                        t("notification.label.contract", locale),
+                                        c.contract_number,
+                                    ),
+                                    (
+                                        t("notification.label.supplier", locale),
+                                        c.supplier.name if c.supplier else "—",
+                                    ),
+                                    (
+                                        t("notification.label.expires", locale),
+                                        fmt_date(c.expiry_date, locale),
+                                    ),
+                                    (
+                                        t("notification.label.days_remaining", locale),
+                                        str(days_remaining),
+                                    ),
+                                    (
+                                        t("notification.label.amount", locale),
+                                        fmt_amount(c.total_amount, c.currency),
+                                    ),
+                                ],
+                                summary=str(c.notes or ""),
+                                fingerprint_parts=("expiring", c.expiry_date),
+                                status="warning" if days_remaining <= 7 else "action",
+                                meta={
+                                    "contract_number": c.contract_number,
+                                    "expiry_date": c.expiry_date.isoformat()
+                                    if c.expiry_date
+                                    else None,
+                                    "days_remaining": days_remaining,
+                                    "supplier": c.supplier.name if c.supplier else "",
+                                    "amount": str(c.total_amount),
+                                    "currency": c.currency,
+                                },
                             )
                             notified += 1
                         except Exception:
@@ -130,8 +170,10 @@ def build_scheduler(session_factory: async_sessionmaker[AsyncSession]) -> AsyncI
                 logger.exception("contract_expiry_check failed")
 
     async def _run_price_anomaly_scan():
+        from app.core.money import fmt_amount
+        from app.i18n import t
         from app.models import Item, NotificationCategory, SKUPriceAnomaly, User, UserRole
-        from app.services.notifications import create_notification
+        from app.services.notifications import emit_event_notification, user_locale
         from app.services.sku import scan_all_anomalies
         from app.services.system_params import notification_enabled
 
@@ -190,22 +232,44 @@ def build_scheduler(session_factory: async_sessionmaker[AsyncSession]) -> AsyncI
 
                     for admin in admins:
                         try:
-                            await create_notification(
+                            locale = user_locale(admin)
+                            await emit_event_notification(
                                 db,
                                 user_id=admin.id,
-                                category=NotificationCategory.PRICE_ANOMALY,
-                                title=f"Price anomaly detected for {item_name}",
-                                body=(
-                                    f"**Item**: {item_name}\n"
-                                    f"**Observed Price**: {anomaly.observed_price}\n"
-                                    f"**Baseline Avg**: {anomaly.baseline_avg_price}\n"
-                                    f"**Deviation**: {anomaly.deviation_pct}%\n"
-                                    f"**Severity**: {anomaly.severity}\n"
-                                    f"Please review in SKU price monitoring."
-                                ),
+                                event="price_anomaly",
+                                title=t("notification.price.anomaly", locale, item=item_name),
                                 link_url=f"/sku/items/{anomaly.item_id}",
                                 biz_type="sku_price_anomaly",
                                 biz_id=anomaly.id,
+                                fields=[
+                                    (t("notification.label.item", locale), item_name),
+                                    (
+                                        t("notification.label.observed_price", locale),
+                                        fmt_amount(anomaly.observed_price),
+                                    ),
+                                    (
+                                        t("notification.label.baseline_price", locale),
+                                        fmt_amount(anomaly.baseline_avg_price),
+                                    ),
+                                    (
+                                        t("notification.label.deviation", locale),
+                                        f"{anomaly.deviation_pct}%",
+                                    ),
+                                    (
+                                        t("notification.label.severity", locale),
+                                        str(anomaly.severity),
+                                    ),
+                                ],
+                                fingerprint_parts=("new", anomaly.observed_price),
+                                status="warning",
+                                category=NotificationCategory.PRICE_ANOMALY,
+                                meta={
+                                    "observed_price": str(anomaly.observed_price),
+                                    "baseline_avg_price": str(anomaly.baseline_avg_price),
+                                    "deviation_pct": str(anomaly.deviation_pct),
+                                    "severity": anomaly.severity,
+                                    "item_id": str(anomaly.item_id),
+                                },
                             )
                             notified += 1
                         except Exception:
@@ -222,6 +286,17 @@ def build_scheduler(session_factory: async_sessionmaker[AsyncSession]) -> AsyncI
             except Exception:
                 logger.exception("price_anomaly_scan failed")
 
+    async def _run_delivery_retry():
+        from app.services.notifications import retry_failed_feishu_deliveries
+
+        async with session_factory() as db:
+            try:
+                result = await retry_failed_feishu_deliveries(db)
+                if result.get("retried"):
+                    logger.info("delivery_retry: %s", result)
+            except Exception:
+                logger.exception("delivery_retry failed")
+
     scheduler.add_job(
         _run_daily_digest,
         CronTrigger(hour=9, minute=0),
@@ -235,6 +310,14 @@ def build_scheduler(session_factory: async_sessionmaker[AsyncSession]) -> AsyncI
         IntervalTrigger(hours=1),
         id="approval_reminders",
         name="Approval reminders",
+        misfire_grace_time=300,
+    )
+
+    scheduler.add_job(
+        _run_delivery_retry,
+        IntervalTrigger(minutes=15),
+        id="notification_delivery_retry",
+        name="Retry failed notification deliveries",
         misfire_grace_time=300,
     )
 

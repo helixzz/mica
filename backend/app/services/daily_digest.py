@@ -13,6 +13,7 @@ from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.config import get_settings
+from app.core.dates import fmt_date
 from app.core.money import fmt_amount
 from app.i18n import t
 from app.models import (
@@ -98,14 +99,14 @@ async def send_daily_digest(db: AsyncSession) -> dict:
             await _send_feishu_digest(
                 db,
                 user,
-                pending_approvals,
-                expiring_count,
-                sku_anomalies,
-                today_po_count,
-                today_po_amount,
-                upcoming_pay_count,
-                upcoming_pay_amount,
-                overdue_count,
+                pending_approvals=pending_approvals,
+                expiring_contracts=expiring_contracts,
+                anomaly_rows=anomaly_rows,
+                today_po_count=today_po_count,
+                today_po_amount=today_po_amount,
+                upcoming_pay_count=upcoming_pay_count,
+                upcoming_pay_amount=upcoming_pay_amount,
+                overdue_count=overdue_count,
             )
         except Exception:
             logger.warning("Feishu digest skipped for user %s", user.email, exc_info=True)
@@ -385,70 +386,171 @@ def _build_email_body(
 async def _send_feishu_digest(
     db: AsyncSession,
     user: User,
+    *,
     pending_approvals: int,
-    expiring_count: int,
-    sku_anomalies: int,
+    expiring_contracts: list[Contract],
+    anomaly_rows: list,
     today_po_count: int,
     today_po_amount: float,
     upcoming_pay_count: int,
     upcoming_pay_amount: float,
     overdue_count: int,
 ) -> None:
-    from app.services.feishu.client import FeishuClient
+    """One card per person, showing *their* work first and totals second.
+
+    The previous digest listed four company-wide counters, so anyone who was not
+    an approver opened it every day to read "0 / 0 / 0". This version leads with
+    the rows that need that person and only falls back to a single all-clear line
+    when there is genuinely nothing to do.
+    """
+    from app.services import approval as approval_svc
+    from app.services.feishu import cards
     from app.services.system_params import system_params
 
-    enabled = await system_params.get(db, "auth.feishu.enabled", False)
-    if not enabled:
+    if not await system_params.get(db, "auth.feishu.enabled", False):
         return
     if not user.feishu_union_id and not user.feishu_open_id:
         return
 
     locale = user.preferred_locale or "zh-CN"
     base_url = get_settings().app_base_url.rstrip("/")
+    top_n = await system_params.get_int_or(db, "notifications.digest_top_n", 3)
 
-    po_amount_fmt = fmt_amount(today_po_amount)
-    pay_amount_fmt = fmt_amount(upcoming_pay_amount)
+    tasks = await approval_svc.list_pending_tasks_for_user(db, user)
+    now = datetime.now(UTC)
 
-    today_po_line = t("digest.feishu.today_pos", locale, count=today_po_count, amount=po_amount_fmt)
-    pay_line = t(
-        "digest.feishu.upcoming_payments", locale, count=upcoming_pay_count, amount=pay_amount_fmt
+    approval_items: list[str] = []
+    for task in tasks[:top_n]:
+        instance = task.instance
+        if instance is None:
+            continue
+        assigned = getattr(task, "assigned_at", None) or getattr(task, "created_at", None)
+        waiting = (now - assigned).total_seconds() / 3600 if assigned else 0.0
+        approval_items.append(
+            t(
+                "digest.feishu.approval_item",
+                locale,
+                pr_number=str(instance.biz_number or ""),
+                title=str(instance.title or ""),
+                amount=fmt_amount(instance.amount),
+                hours=f"{waiting:.1f}",
+            )
+        )
+
+    contract_items: list[str] = []
+    for contract in expiring_contracts[:top_n]:
+        days = (contract.expiry_date - now.date()).days if contract.expiry_date is not None else 0
+        contract_items.append(
+            t(
+                "digest.feishu.contract_item",
+                locale,
+                number=contract.contract_number,
+                amount=fmt_amount(contract.total_amount, contract.currency),
+                days=days,
+            )
+        )
+
+    anomaly_items: list[str] = []
+    for anomaly, item in anomaly_rows[:top_n]:
+        anomaly_items.append(
+            t(
+                "digest.feishu.anomaly_item",
+                locale,
+                item=item.name,
+                deviation=f"{float(anomaly.deviation_pct or 0):+.1f}%",
+                observed=fmt_amount(anomaly.observed_price),
+                baseline=fmt_amount(anomaly.baseline_avg_price),
+            )
+        )
+
+    total_things = len(tasks) + len(expiring_contracts) + len(anomaly_rows) + upcoming_pay_count
+
+    elements: list[dict] = []
+    if total_things == 0:
+        elements.append(cards.markdown(f"✅ {t('digest.feishu.all_clear', locale)}"))
+
+    sections: list[tuple[str, str, int, list[str]]] = [
+        ("📋", t("digest.feishu.section_approvals", locale), len(tasks), approval_items),
+        (
+            "📄",
+            t("digest.feishu.section_contracts", locale),
+            len(expiring_contracts),
+            contract_items,
+        ),
+        ("⚠️", t("digest.feishu.section_anomalies", locale), len(anomaly_rows), anomaly_items),
+    ]
+    for icon, heading, count, items in sections:
+        if count == 0:
+            continue
+        elements.append(cards.markdown(f"**{icon} {heading}（{count}）**"))
+        elements.append(cards.bullet_list(items, empty="—"))
+        if count > len(items):
+            elements.append(
+                cards.markdown(
+                    f"<font color='grey'>"
+                    f"{t('digest.feishu.more', locale, count=count - len(items))}"
+                    f"</font>"
+                )
+            )
+
+    overview: list[str] = []
+    if today_po_count:
+        overview.append(
+            t(
+                "digest.feishu.today_pos",
+                locale,
+                count=today_po_count,
+                amount=fmt_amount(today_po_amount),
+            )
+        )
+    if upcoming_pay_count:
+        overview.append(
+            t(
+                "digest.feishu.upcoming_payments",
+                locale,
+                count=upcoming_pay_count,
+                amount=fmt_amount(upcoming_pay_amount),
+            )
+        )
+    if overdue_count:
+        overview.append(t("digest.feishu.overdue", locale, count=overdue_count))
+    if overview:
+        elements.append(cards.divider())
+        elements.append(
+            cards.markdown(
+                f"**{t('digest.feishu.section_today', locale)}**\n"
+                + "\n".join(f"• {line}" for line in overview)
+            )
+        )
+
+    actions = []
+    if tasks:
+        actions.append(
+            cards.button(
+                t("digest.feishu.view_approvals", locale),
+                f"{base_url}/approvals",
+                primary=True,
+            )
+        )
+    actions.append(cards.button(t("digest.feishu.view_dashboard", locale), f"{base_url}/dashboard"))
+
+    card = cards.card(
+        title=t("digest.feishu.title", locale),
+        subtitle=t(
+            "digest.feishu.subtitle",
+            locale,
+            date=fmt_date(now.date(), locale),
+            count=total_things,
+        ),
+        status="action" if total_things else "neutral",
+        elements=elements,
+        actions=actions,
+        footer=t("digest.feishu.footer", locale),
     )
 
-    lines = []
-    if today_po_count > 0 or upcoming_pay_count > 0:
-        lines.append(t("digest.feishu.today_overview", locale))
-        if today_po_count > 0:
-            lines.append(f"• {today_po_line}")
-        if upcoming_pay_count > 0:
-            lines.append(f"• {pay_line}")
-        lines.append("")
+    from app.services.notifications import _send_feishu_card
 
-    lines.append(t("digest.feishu.pending_approvals", locale, count=pending_approvals))
-    if overdue_count > 0:
-        lines.append(t("digest.feishu.overdue_approvals", locale, count=overdue_count))
-    lines.append(t("digest.feishu.expiring_contracts", locale, count=expiring_count))
-    lines.append(t("digest.feishu.price_anomalies", locale, count=sku_anomalies))
-    lines.append("")
-    lines.append(
-        f"[{t('digest.feishu.view_dashboard', locale)}]({base_url}/dashboard) ｜ "
-        f"[{t('digest.feishu.view_approvals', locale)}]({base_url}/approvals)"
-    )
-
-    body = "\n".join(lines)
-
-    card = {
-        "header": {
-            "title": {"tag": "plain_text", "content": t("digest.feishu.title", locale)},
-            "template": "blue",
-        },
-        "elements": [{"tag": "markdown", "content": body}],
-    }
-
-    client = FeishuClient(db)
     try:
-        if user.feishu_union_id:
-            await client.send_card("union_id", user.feishu_union_id, card)
-        elif user.feishu_open_id:
-            await client.send_card("open_id", user.feishu_open_id, card)
+        await _send_feishu_card(db, user, card)
     except Exception:
         logger.warning("Failed to send Feishu digest to user %s", user.id, exc_info=True)
