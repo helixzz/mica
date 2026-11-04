@@ -7,6 +7,33 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [v1.73.4] — 2026-11-04
+
+### 采购申请（PR 协作者选择器）
+
+用户反馈「给 PR 添加协作者时搜不到人」。排查后不是权限配错了，是**候选名单取错了端点**，而且错误被静默吞掉。
+
+- 协作者下拉的候选人来源是 `GET /purchase-requisitions/proxy-candidates`，那是「代他人提交 PR」的审批代理人候选端点，只对 `admin` / `procurement_mgr` / `it_buyer` 开放。
+- 而 `add_collaborator` 允许 PR 申请人本人与 `admin` / `procurement_mgr` / `it_buyer` / `dept_manager`。于是**申请人和部门负责人都能看到「添加协作者」输入框，却拿到 403 空列表**，前端 `.catch(() => {})` 又不提示，用户只能看到「未找到该用户」。
+- 生产证据：PR-2026-0100（申请人 `chris_wang`，role=`requester`）详情页连续 4 次 `GET /proxy-candidates` 返回 403，同期另一账号同一 URL 返回 200。
+
+修复：
+
+- 新增 `GET /purchase-requisitions/{pr_id}/collaborator-candidates`，授权与 `add_collaborator` 共用同一个判定函数 `can_manage_collaborators()`（抽出常量，避免候选项与写权限再次漂移）；只返回同公司、在职、未成为协作者、且非申请人本人的用户。
+- 前端协作者下拉改用新端点；拉取失败会提示而不是静默变空列表。
+- 前端的「谁能看到添加入口」与后端授权对齐：补齐 `procurement_mgr` / `it_buyer`（后端一直允许，UI 一直不显示），移除对 `dept_manager` 的过宽判断（改为统一走同一个 `canManageCollaborators`）。
+
+### 验证
+
+- 后端 **930 passed / 12 skipped / 1 xfailed / 1 xpassed**（新增 4 个协作者候选用例）
+- 前端 **21 files / 103 tests passed**，`type-check` 与 `build` 通过
+- 生产：以真实 requester 身份请求新端点返回 200 且名单含 `jean_wu`；旧 `proxy-candidates` 对同一身份仍为 403（未放宽语义）
+
+### 顺带
+
+- `frontend/src/components/WhatsNew/releases.ts` 补 1.73.4 条目（守卫测试要求首条与 `package.json` 一致）
+- 修正 `backend/tests/unit/test_notification_events.py` 的 ruff format 遗留（v1.73.3 带入，导致 `verify.sh` 的 format 检查红）
+
 ## [v1.73.3] — 2026-10-23
 
 ### 通知（信息层级与重复发送）
