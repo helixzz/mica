@@ -889,7 +889,8 @@
     "confirm_cancel_body": "Cancelling ends this procurement need. This is allowed only before any purchase order is created; the cancelled PR can still be deleted. Continue?",
     "collaborators": "Collaborators",
     "collaborator_search_placeholder": "Search name or email to add",
-    "collaborator_not_found": "User not found",
+    "collaborator_not_found": "No matching user",
+    "collaborator_candidates_failed": "Could not load the list of users you can add. Please try again later.",
     "collaborator_added": "Collaborator added",
     "no_collaborators": "No collaborators yet"
   },

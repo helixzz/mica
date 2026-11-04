@@ -455,6 +455,28 @@ async def export_pr_rfq_sheet(
     )
 
 
+class CollaboratorCandidateOut(BaseModel):
+    id: UUID
+    display_name: str
+    email: str
+    role: str
+    department_id: UUID | None
+
+
+@router.get(
+    "/purchase-requisitions/{pr_id}/collaborator-candidates",
+    response_model=list[CollaboratorCandidateOut],
+    tags=["purchase"],
+)
+async def list_collaborator_candidates(
+    pr_id: UUID,
+    user: CurrentUser,
+    db: Annotated[AsyncSession, Depends(get_db)],
+) -> list[CollaboratorCandidateOut]:
+    rows = await svc.list_collaborator_candidates(db, user, pr_id)
+    return [CollaboratorCandidateOut(**row) for row in rows]
+
+
 @router.get("/purchase-requisitions/{pr_id}/collaborators", tags=["purchase"])
 async def list_collaborators(
     pr_id: UUID,

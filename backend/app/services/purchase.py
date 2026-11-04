@@ -2373,6 +2373,67 @@ async def save_pr_supplier_quotes(
     return written
 
 
+# Roles that may edit a PR's collaborator list on top of the PR's own requester.
+# Kept in one place on purpose: the candidate endpoint and the write endpoints
+# must agree. When they drifted, requesters and dept managers could open the
+# picker while the candidate list came from the proxy-submission endpoint and
+# answered 403, so the UI showed an empty "user not found" dropdown.
+_COLLABORATOR_MANAGER_ROLES: Final[frozenset[str]] = frozenset(
+    {
+        UserRole.ADMIN.value,
+        UserRole.PROCUREMENT_MGR.value,
+        UserRole.IT_BUYER.value,
+        UserRole.DEPT_MANAGER.value,
+    }
+)
+
+
+def can_manage_collaborators(pr: PurchaseRequisition, actor: User) -> bool:
+    return pr.requester_id == actor.id or actor.role in _COLLABORATOR_MANAGER_ROLES
+
+
+async def list_collaborator_candidates(db: AsyncSession, actor: User, pr_id: UUID) -> list[dict]:
+    """Colleagues ``actor`` may add as collaborators on ``pr_id``.
+
+    Authorized exactly like ``add_collaborator`` so the picker can never show an
+    add button to somebody whose candidate list is empty, and never hide it from
+    somebody who is allowed to write.
+    """
+    from app.models import pr_collaborators
+
+    pr = await get_pr(db, actor, pr_id)
+    if not can_manage_collaborators(pr, actor):
+        raise HTTPException(403, "pr.only_requester_can_add_collaborator")
+
+    already_linked = select(pr_collaborators.c.user_id).where(pr_collaborators.c.pr_id == pr_id)
+    rows = (
+        (
+            await db.execute(
+                select(User)
+                .where(
+                    User.is_active.is_(True),
+                    User.company_id == pr.company_id,
+                    User.id != pr.requester_id,
+                    User.id.not_in(already_linked),
+                )
+                .order_by(User.display_name)
+            )
+        )
+        .scalars()
+        .all()
+    )
+    return [
+        {
+            "id": str(u.id),
+            "display_name": u.display_name,
+            "email": u.email,
+            "role": u.role,
+            "department_id": str(u.department_id) if u.department_id else None,
+        }
+        for u in rows
+    ]
+
+
 async def list_collaborators(db: AsyncSession, pr_id: UUID) -> list[dict]:
     from app.models import pr_collaborators
 
@@ -2389,12 +2450,7 @@ async def add_collaborator(db: AsyncSession, actor: User, pr_id: UUID, user_id: 
     from app.models import pr_collaborators
 
     pr = await get_pr(db, actor, pr_id)
-    if pr.requester_id != actor.id and actor.role not in {
-        UserRole.ADMIN.value,
-        UserRole.PROCUREMENT_MGR.value,
-        UserRole.IT_BUYER.value,
-        UserRole.DEPT_MANAGER.value,
-    }:
+    if not can_manage_collaborators(pr, actor):
         raise HTTPException(403, "pr.only_requester_can_add_collaborator")
 
     target = await db.get(User, user_id)
@@ -2442,12 +2498,7 @@ async def remove_collaborator(db: AsyncSession, actor: User, pr_id: UUID, user_i
     from app.models import pr_collaborators
 
     pr = await get_pr(db, actor, pr_id)
-    if pr.requester_id != actor.id and actor.role not in {
-        UserRole.ADMIN.value,
-        UserRole.PROCUREMENT_MGR.value,
-        UserRole.IT_BUYER.value,
-        UserRole.DEPT_MANAGER.value,
-    }:
+    if not can_manage_collaborators(pr, actor):
         raise HTTPException(403, "pr.only_requester_can_remove_collaborator")
 
     await db.execute(

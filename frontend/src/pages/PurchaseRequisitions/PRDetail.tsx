@@ -97,7 +97,9 @@ export function PRDetailPage() {
     }[]
   }>({ purchase_orders: [], contracts: [] })
   const [downstreamLoaded, setDownstreamLoaded] = useState(false)
-  const [allUsers, setAllUsers] = useState<{ id: string; display_name: string; email: string }[]>([])
+  const [collaboratorCandidates, setCollaboratorCandidates] = useState<
+    { id: string; display_name: string; email: string; role: string; department_id: string | null }[]
+  >([])
   const [convertOpen, setConvertOpen] = useState(false)
   const [suppOpen, setSuppOpen] = useState(false)
   const [suppItem, setSuppItem] = useState<{ id: string; line_no: number; item_name: string; qty: string | number; uom: string } | null>(null)
@@ -126,10 +128,35 @@ export function PRDetailPage() {
   useEffect(() => {
     load()
     void api.suppliers().then(setSuppliers)
-    void api.listProxyCandidates().then(candidates =>
-      setAllUsers(candidates.map(c => ({ id: c.id, display_name: c.display_name, email: c.email })))
-    ).catch(() => {})
   }, [id])
+
+  // Who may edit this PR's collaborators. Mirrors can_manage_collaborators() in
+  // backend/app/services/purchase.py: when the two disagreed, a visible "add
+  // collaborator" box opened onto an empty list and the user read that as
+  // "this person cannot be found" (v1.73.3 report).
+  const canManageCollaborators =
+    !!pr &&
+    !!user &&
+    (pr.requester_id === user.id ||
+      ['admin', 'procurement_mgr', 'it_buyer', 'dept_manager'].includes(user.role))
+
+  useEffect(() => {
+    if (!id || !canManageCollaborators) {
+      setCollaboratorCandidates([])
+      return
+    }
+    // Never swallow this failure: an empty candidate list with no message is
+    // indistinguishable from "no such user", which is exactly the confusion
+    // this endpoint exists to remove.
+    void api
+      .listCollaboratorCandidates(id)
+      .then(setCollaboratorCandidates)
+      .catch((err) => {
+        setCollaboratorCandidates([])
+        void message.warning(t('pr.collaborator_candidates_failed', '无法加载用户列表，请稍后重试'))
+        console.warn('listCollaboratorCandidates failed', err)
+      })
+  }, [id, canManageCollaborators, t])
 
   const supplierMap = useMemo(
     () => Object.fromEntries(suppliers.map((s) => [s.id, s.name])),
@@ -371,7 +398,7 @@ export function PRDetailPage() {
             size="small"
             title={t('pr.collaborators', '协作者')}
             extra={
-              (pr.requester_id === user?.id || user?.role === 'admin' || user?.role === 'dept_manager') && (
+              canManageCollaborators && (
                 <Select
                   size="small"
                   showSearch
@@ -380,9 +407,10 @@ export function PRDetailPage() {
                   style={{ width: 200 }}
                   optionFilterProp="label"
                   value={undefined}
-                  options={allUsers
-                    .filter((u) => u.id !== pr.requester_id && !pr.collaborators.some((c) => c.id === u.id))
-                    .map((u) => ({ value: u.id, label: `${u.display_name} (${u.email})` }))}
+                  options={collaboratorCandidates.map((u) => ({
+                    value: u.id,
+                    label: `${u.display_name} (${u.email})`,
+                  }))}
                   onSelect={async (userId) => {
                     if (!userId) return
                     try {
@@ -405,7 +433,7 @@ export function PRDetailPage() {
                 {pr.collaborators.map((c) => (
                   <Tag
                     key={c.id}
-                    closable={pr.requester_id === user?.id || user?.role === 'admin' || user?.role === 'dept_manager'}
+                    closable={canManageCollaborators}
                     onClose={async (e) => {
                       e.preventDefault()
                       try {

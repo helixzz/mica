@@ -1496,6 +1496,12 @@ export const api = {
     const { data } = await client.get(`/purchase-requisitions/${prId}/collaborators`)
     return data as { id: string; display_name: string; email: string }[]
   },
+  async listCollaboratorCandidates(
+    prId: string,
+  ): Promise<{ id: string; display_name: string; email: string; role: string; department_id: string | null }[]> {
+    const { data } = await client.get(`/purchase-requisitions/${prId}/collaborator-candidates`)
+    return data as { id: string; display_name: string; email: string; role: string; department_id: string | null }[]
+  },
   async createPR(payload: {
     title: string
     business_reason?: string

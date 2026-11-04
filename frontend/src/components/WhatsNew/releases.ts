@@ -24,6 +24,27 @@ export interface Release {
 
 export const RELEASES: Release[] = [
   {
+    version: '1.73.4',
+    date: '2026-11-04',
+    items: [
+      {
+        kind: 'fix',
+        zh: '采购申请的「添加协作者」又能选人了：以前普通申请人打开这个框，下拉列表是空的，看上去像「找不到这个人」',
+        en: 'Adding a collaborator to a purchase request lists people again — requesters used to get an empty dropdown that looked like "user not found"',
+      },
+      {
+        kind: 'fix',
+        zh: '采购经理和 IT 采购员现在也能看到「添加协作者」入口（系统本来就允许他们添加，只是一直没显示按钮）',
+        en: 'Procurement managers and IT buyers can now see the "add collaborator" control too — the system already allowed them to add people, but the button never appeared',
+      },
+      {
+        kind: 'improvement',
+        zh: '可添加的名单只显示同公司、在职、且还不是协作者的同事，并去掉了申请人自己',
+        en: 'The candidate list now shows only active colleagues in the same company who are not collaborators yet, and never the requester themselves',
+      },
+    ],
+  },
+  {
     version: '1.73.3',
     date: '2026-10-23',
     items: [
