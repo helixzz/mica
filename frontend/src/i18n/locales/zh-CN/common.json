@@ -894,7 +894,8 @@
     "confirm_cancel_body": "作废后将终止该采购需求。尚未生成采购订单时可执行此操作；作废后仍可删除。确认继续？",
     "collaborators": "协作者",
     "collaborator_search_placeholder": "搜索姓名或邮箱添加",
-    "collaborator_not_found": "未找到该用户",
+    "collaborator_not_found": "未找到匹配的用户",
+    "collaborator_candidates_failed": "无法加载可添加的用户列表，请稍后重试",
     "collaborator_added": "已添加协作者",
     "no_collaborators": "暂无协作者"
   },

@@ -1264,6 +1264,71 @@ async def test_add_collaborator_is_idempotent(seeded_db_session):
     assert len(collabs) == 1
 
 
+async def test_collaborator_candidates_offered_to_pr_requester(seeded_db_session):
+    """The candidate list must authorize exactly like add_collaborator.
+
+    Regression (v1.73.3): the picker sourced candidates from
+    /purchase-requisitions/proxy-candidates, which only serves admin,
+    procurement_mgr and it_buyer. A requester editing their own PR therefore got
+    403, the response was swallowed, and the dropdown read "user not found".
+    """
+    db = seeded_db_session
+    supplier = await _get_supplier(db)
+    requester = await _make_requester(db)
+    pr = await _create_pr(db, requester, supplier.id, title="Candidates PR")
+
+    candidates = await purchase_svc.list_collaborator_candidates(db, requester, pr.id)
+    ids = {c["id"] for c in candidates}
+
+    assert str(requester.id) not in ids, "the requester must not be offered as a collaborator"
+    alice = await _get_user(db, "alice")
+    assert str(alice.id) in ids, "active colleagues in the same company must be offered"
+
+
+async def test_collaborator_candidates_hide_existing_collaborators(seeded_db_session):
+    db = seeded_db_session
+    supplier = await _get_supplier(db)
+    requester = await _make_requester(db)
+    pr = await _create_pr(db, requester, supplier.id, title="Candidates Dedupe PR")
+    alice = await _get_user(db, "alice")
+
+    await purchase_svc.add_collaborator(db, requester, pr.id, alice.id)
+
+    candidates = await purchase_svc.list_collaborator_candidates(db, requester, pr.id)
+    assert str(alice.id) not in {c["id"] for c in candidates}
+
+
+async def test_collaborator_candidates_offered_to_dept_manager(seeded_db_session):
+    """dept_manager may add collaborators but used to get an empty list.
+
+    A dept manager only reaches PRs of their own department (see get_pr), so the
+    fixture PR has to live there.
+    """
+    db = seeded_db_session
+    supplier = await _get_supplier(db)
+    requester = await _make_requester(db)
+    bob = await _get_user(db, "bob")
+    pr = await _create_pr(
+        db, requester, supplier.id, title="Candidates DM PR", department_id=bob.department_id
+    )
+
+    candidates = await purchase_svc.list_collaborator_candidates(db, bob, pr.id)
+    assert candidates, "dept_manager is allowed to add collaborators, so the list cannot be empty"
+
+
+async def test_collaborator_candidates_rejected_for_auditor(seeded_db_session):
+    """An auditor can read the PR but must not manage its collaborators."""
+    db = seeded_db_session
+    supplier = await _get_supplier(db)
+    requester = await _make_requester(db)
+    pr = await _create_pr(db, requester, supplier.id, title="Candidates Auditor PR")
+    carol = await _get_user(db, "carol")
+
+    with pytest.raises(HTTPException) as exc:
+        await purchase_svc.list_collaborator_candidates(db, carol, pr.id)
+    assert exc.value.status_code == 403
+
+
 async def test_delete_pr_allows_draft(seeded_db_session):
     db = seeded_db_session
     actor = await _get_user(db, "alice")
