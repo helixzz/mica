@@ -160,9 +160,13 @@ async def test_failed_delivery_is_recorded_for_retry(seeded_db_session, monkeypa
     assert "feishu down" in (delivery.last_error or "")
 
 
-async def test_two_accounts_sharing_one_feishu_identity_get_one_card(seeded_db_session, monkeypatch):
+async def test_two_accounts_sharing_one_feishu_identity_get_one_card(
+    seeded_db_session, monkeypatch
+):
     """zijing-guo and admin shared a union_id in production; the event arrived twice."""
-    alice = (await seeded_db_session.execute(select(User).where(User.username == "alice"))).scalar_one()
+    alice = (
+        await seeded_db_session.execute(select(User).where(User.username == "alice"))
+    ).scalar_one()
     bob = (await seeded_db_session.execute(select(User).where(User.username == "bob"))).scalar_one()
     alice.feishu_union_id = "on_shared"
     bob.feishu_union_id = "on_shared"
