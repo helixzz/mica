@@ -24,6 +24,22 @@ export interface Release {
 
 export const RELEASES: Release[] = [
   {
+    version: '1.73.5',
+    date: '2026-11-11',
+    items: [
+      {
+        kind: 'fix',
+        zh: '审批详情会显示真实的等待小时数，不再露出 {hours} 模板占位符',
+        en: 'Approval details now show the actual waiting hours instead of the raw {hours} placeholder',
+      },
+      {
+        kind: 'fix',
+        zh: '物料列表重新显示条目总数；同时清理了会被同名键遮蔽的重复翻译',
+        en: 'The item list shows its total count again, and duplicate translations shadowed by identical paths have been removed',
+      },
+    ],
+  },
+  {
     version: '1.73.4',
     date: '2026-11-04',
     items: [
