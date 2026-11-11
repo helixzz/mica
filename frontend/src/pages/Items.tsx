@@ -147,7 +147,7 @@ export default function ItemsPage() {
               style={{ maxWidth: 400 }}
             />
             <Typography.Text type="secondary">
-              {t('item.count', { total })}
+              {t('item.total_count', { total })}
             </Typography.Text>
             <Table
               dataSource={data}
