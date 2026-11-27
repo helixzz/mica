@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [v1.73.7] — 2026-11-27
+
+### 修复（飞书长连接消费器独立事件循环）
+
+- 修复 `lark-oapi` 在主协程内导入时缓存运行中 event loop 导致子线程 `ws_client.start()` 报错 `This event loop is already running` 的问题，改为为长连接线程绑定独立 event loop。
+
 ## [v1.73.6] — 2026-11-27
 
 ### 新增（飞书审批卡片内容丰富 + 卡片内直接审批）

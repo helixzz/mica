@@ -24,6 +24,17 @@ export interface Release {
 
 export const RELEASES: Release[] = [
   {
+    version: '1.73.7',
+    date: '2026-11-27',
+    items: [
+      {
+        kind: 'fix',
+        zh: '修复飞书长连接消费器在调度器进程中的事件循环冲突，确保卡片交互回调稳定在线。',
+        en: 'Fixed an event-loop conflict in the Feishu WebSocket consumer so interactive card callbacks stay online.',
+      },
+    ],
+  },
+  {
     version: '1.73.6',
     date: '2026-11-27',
     items: [
