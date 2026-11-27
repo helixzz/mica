@@ -168,6 +168,79 @@ def button(text: str, url: str, *, primary: bool = False) -> dict[str, Any]:
     return payload
 
 
+def callback_button(
+    text: str,
+    value: dict[str, Any],
+    *,
+    kind: str = "default",
+    name: str | None = None,
+    form_submit: bool = False,
+) -> dict[str, Any]:
+    """Card 2.0 interactive button that triggers a card.action.trigger callback."""
+    payload: dict[str, Any] = {
+        "tag": "button",
+        "text": _text(text),
+        "type": kind,
+        "behaviors": [{"type": "callback", "value": value}],
+    }
+    if name:
+        payload["name"] = name
+    if form_submit:
+        payload["form_action_type"] = "submit"
+    return payload
+
+
+def input_field(
+    name: str,
+    *,
+    placeholder: str = "",
+    label: str | None = None,
+    max_length: int = 300,
+) -> dict[str, Any]:
+    """Card 2.0 text input inside a form container."""
+    payload: dict[str, Any] = {
+        "tag": "input",
+        "name": name,
+        "width": "fill",
+        "max_length": max_length,
+        "placeholder": _text(placeholder),
+    }
+    if label:
+        payload["label"] = _text(label)
+        payload["label_position"] = "top"
+    return payload
+
+
+def button_row(buttons: list[dict[str, Any]], *, element_id: str | None = None) -> dict[str, Any]:
+    """Arrange buttons horizontally using Card 2.0 flow column_set."""
+    row: dict[str, Any] = {
+        "tag": "column_set",
+        "flex_mode": "flow",
+        "horizontal_spacing": "8px",
+        "columns": [
+            {
+                "tag": "column",
+                "width": "auto",
+                "vertical_align": "top",
+                "elements": [btn],
+            }
+            for btn in buttons
+        ],
+    }
+    if element_id:
+        row["element_id"] = element_id
+    return row
+
+
+def form(name: str, elements: list[dict[str, Any]]) -> dict[str, Any]:
+    """Card 2.0 form container so submit buttons carry input values back."""
+    return {
+        "tag": "form",
+        "name": name,
+        "elements": elements,
+    }
+
+
 def action_row(actions: list[dict[str, Any]]) -> dict[str, Any]:
     """1.0-style action container. Kept for older payloads; card 2.0 rejects it."""
     return {"tag": "action", "actions": actions}

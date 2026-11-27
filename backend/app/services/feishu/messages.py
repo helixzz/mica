@@ -32,6 +32,110 @@ def _button(locale: str, key: str, url: str, *, primary: bool = False) -> dict[s
     return cards.button(t(f"feishu.card.action.{key}", locale), url, primary=primary)
 
 
+def _truncate(text: str, limit: int = 160) -> str:
+    cleaned = " ".join(text.split())
+    if len(cleaned) <= limit:
+        return cleaned
+    return cleaned[: limit - 1].rstrip() + "…"
+
+
+def _pr_body_elements(
+    *,
+    pr_number: str,
+    title: str,
+    applicant: str,
+    department: str,
+    amount: str,
+    line_count: int,
+    item_count: int,
+    cost_center: str = "",
+    required_date: str = "",
+    business_reason: str = "",
+    items: list[dict[str, str]] | None = None,
+    stage_name: str = "",
+    stage_order: int | None = None,
+    total_stages: int | None = None,
+    prior_approvals: list[str] | None = None,
+    locale: str = "zh-CN",
+) -> list[dict[str, Any]]:
+    stage_caption = ""
+    if stage_name and stage_order and total_stages:
+        stage_caption = t(
+            "feishu.card.stage_progress",
+            locale,
+            current=stage_order,
+            total=total_stages,
+            name=stage_name,
+        )
+    elif stage_name:
+        stage_caption = stage_name
+
+    fields: list[tuple[str, str]] = [
+        (_label(locale, "amount"), amount),
+        (
+            _label(locale, "lines"),
+            t("feishu.card.lines_value", locale, lines=line_count, items=item_count),
+        ),
+        (_label(locale, "applicant"), applicant or "—"),
+        (_label(locale, "department"), department or "—"),
+    ]
+    if cost_center:
+        fields.append((_label(locale, "cost_center"), cost_center))
+    if required_date:
+        fields.append((_label(locale, "required_date"), required_date))
+
+    elements: list[dict[str, Any]] = [
+        cards.markdown(f"**{pr_number}**　{title}"),
+    ]
+    if stage_caption:
+        elements.append(cards.hero(amount, stage_caption))
+    elements.extend(cards.field_rows(fields))
+
+    if business_reason:
+        elements.append(
+            cards.markdown(
+                f"<font color='grey'>{_label(locale, 'reason')}</font>\n"
+                f"{_truncate(business_reason, 180)}"
+            )
+        )
+
+    if items:
+        rows: list[dict[str, str]] = []
+        for entry in items[:5]:
+            name = str(entry.get("name") or "")
+            spec = str(entry.get("spec") or "")
+            label = f"{name} ({_truncate(spec, 30)})" if spec else name
+            rows.append(
+                {
+                    "item": _truncate(label, 48),
+                    "qty": str(entry.get("qty") or ""),
+                    "subtotal": str(entry.get("amount") or ""),
+                }
+            )
+        elements.append(
+            cards.table(
+                [
+                    ("item", _label(locale, "item_name")),
+                    ("qty", _label(locale, "qty")),
+                    ("subtotal", _label(locale, "subtotal")),
+                ],
+                rows,
+                page_size=5,
+            )
+        )
+        if line_count > len(rows):
+            elements.append(
+                cards.meta_line([t("feishu.card.more_items", locale, total=line_count)])
+            )
+
+    if prior_approvals:
+        elements.append(
+            cards.meta_line([f"{_label(locale, 'prior_approvals')}: {' → '.join(prior_approvals)}"])
+        )
+
+    return elements
+
+
 def build_pr_submitted_card(
     *,
     pr_number: str,
@@ -46,6 +150,16 @@ def build_pr_submitted_card(
     task_url: str,
     pr_url: str,
     locale: str,
+    task_id: str = "",
+    interactive: bool = False,
+    cost_center: str = "",
+    required_date: str = "",
+    business_reason: str = "",
+    items: list[dict[str, str]] | None = None,
+    stage_name: str = "",
+    stage_order: int | None = None,
+    total_stages: int | None = None,
+    prior_approvals: list[str] | None = None,
 ) -> dict[str, Any]:
     subtitle_parts: list[str] = []
     if waiting_hours is not None:
@@ -53,34 +167,148 @@ def build_pr_submitted_card(
     if sla_hours is not None:
         subtitle_parts.append(t("feishu.card.sla", locale, hours=sla_hours))
 
-    fields = [
-        (_label(locale, "amount"), amount),
-        (
-            _label(locale, "lines"),
-            t("feishu.card.lines_value", locale, lines=line_count, items=item_count),
-        ),
-        (_label(locale, "applicant"), applicant),
-        (_label(locale, "department"), department or "—"),
-    ]
+    elements = _pr_body_elements(
+        pr_number=pr_number,
+        title=title,
+        applicant=applicant,
+        department=department,
+        amount=amount,
+        line_count=line_count,
+        item_count=item_count,
+        cost_center=cost_center,
+        required_date=required_date,
+        business_reason=business_reason,
+        items=items,
+        stage_name=stage_name,
+        stage_order=stage_order,
+        total_stages=total_stages,
+        prior_approvals=prior_approvals,
+        locale=locale,
+    )
 
-    elements: list[dict[str, Any]] = [
-        cards.markdown(f"**{pr_number}**　{title}"),
-        *cards.field_rows(fields),
-    ]
+    actions: list[dict[str, Any]] | None = None
+    if interactive and task_id:
+        form_buttons: list[dict[str, Any]] = [
+            cards.callback_button(
+                t("feishu.card.action.approve", locale),
+                {"action": "approve", "task_id": task_id},
+                kind="primary",
+                name="btn_approve",
+                form_submit=True,
+            ),
+            cards.callback_button(
+                t("feishu.card.action.return", locale),
+                {"action": "return", "task_id": task_id},
+                kind="default",
+                name="btn_return",
+                form_submit=True,
+            ),
+            cards.callback_button(
+                t("feishu.card.action.reject", locale),
+                {"action": "reject", "task_id": task_id},
+                kind="danger",
+                name="btn_reject",
+                form_submit=True,
+            ),
+        ]
+        view_btn = _button(locale, "view_pr", pr_url)
+        if view_btn is not None:
+            form_buttons.append(view_btn)
 
-    actions = [
-        button
-        for button in (
-            _button(locale, "review", task_url, primary=True),
-            _button(locale, "view_pr", pr_url),
+        elements.append(cards.divider())
+        elements.append(
+            cards.form(
+                "approval_form",
+                [
+                    cards.input_field(
+                        "comment",
+                        placeholder=t("feishu.card.comment_placeholder", locale),
+                    ),
+                    cards.button_row(form_buttons, element_id="actions"),
+                ],
+            )
         )
-        if button is not None
-    ]
+    else:
+        actions = [
+            btn
+            for btn in (
+                _button(locale, "review", task_url, primary=True),
+                _button(locale, "view_pr", pr_url),
+            )
+            if btn is not None
+        ]
 
     return cards.card(
         title=_headline(locale, "pr_submitted", applicant=applicant),
         subtitle=" · ".join(subtitle_parts) or None,
         status="action",
+        elements=elements,
+        actions=actions,
+        footer=_footer(locale),
+    )
+
+
+def build_pr_card_decided(
+    *,
+    pr_number: str,
+    title: str,
+    applicant: str,
+    department: str,
+    amount: str,
+    line_count: int,
+    item_count: int,
+    decider: str,
+    result: str,
+    comment: str,
+    decided_at: str,
+    pr_url: str,
+    locale: str,
+    cost_center: str = "",
+    required_date: str = "",
+    business_reason: str = "",
+    items: list[dict[str, str]] | None = None,
+) -> dict[str, Any]:
+    """In-place decided card returned directly in the Feishu card callback response."""
+    status = "success" if result == "approved" else "warning"
+    headline_key = {
+        "approved": "approved",
+        "rejected": "rejected",
+        "returned": "returned",
+    }.get(result, "approved")
+
+    elements = _pr_body_elements(
+        pr_number=pr_number,
+        title=title,
+        applicant=applicant,
+        department=department,
+        amount=amount,
+        line_count=line_count,
+        item_count=item_count,
+        cost_center=cost_center,
+        required_date=required_date,
+        business_reason=business_reason,
+        items=items,
+        locale=locale,
+    )
+    elements.append(cards.divider())
+    outcome_fields: list[tuple[str, str]] = [
+        (_label(locale, "result"), t(f"feishu.card.result.{result}", locale)),
+        (_label(locale, "decider"), decider or "—"),
+    ]
+    if decided_at:
+        outcome_fields.append((_label(locale, "decided_at"), decided_at))
+    elements.extend(cards.field_rows(outcome_fields))
+    if comment:
+        elements.append(
+            cards.markdown(f"<font color='grey'>{_label(locale, 'comment')}</font>\n{comment}")
+        )
+
+    view_btn = _button(locale, "view_pr", pr_url)
+    actions = [cards.button_row([view_btn])] if view_btn else None
+
+    return cards.card(
+        title=_headline(locale, headline_key),
+        status=status,
         elements=elements,
         actions=actions,
         footer=_footer(locale),

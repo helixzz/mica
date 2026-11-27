@@ -378,7 +378,12 @@ async def _maybe_send_feishu_card(
             return
 
         base_url = await _app_base_url(session)
-        card = _build_feishu_card(notification, user, base_url=base_url)
+        interactive_cards = await system_params.get_bool_or(
+            session, "feishu.card_callback_enabled", True
+        )
+        card = _build_feishu_card(
+            notification, user, base_url=base_url, interactive=interactive_cards
+        )
         if card is None:
             return
 
@@ -583,7 +588,12 @@ async def retry_failed_feishu_deliveries(session: AsyncSession) -> dict[str, int
             continue
 
         base_url = await _app_base_url(session)
-        card = _build_feishu_card(notification, user, base_url=base_url)
+        interactive_cards = await system_params.get_bool_or(
+            session, "feishu.card_callback_enabled", True
+        )
+        card = _build_feishu_card(
+            notification, user, base_url=base_url, interactive=interactive_cards
+        )
         if card is None:
             delivery.status = NotificationDeliveryStatus.SKIPPED.value
             delivery.last_error = "no card template for category"
@@ -737,6 +747,8 @@ def _build_feishu_card(
     notification: Notification,
     user: User,
     base_url: str = "",
+    *,
+    interactive: bool = False,
 ) -> dict | None:
     """Render the notification as a card 2.0 payload for this user's locale."""
     from app.core.dates import fmt_date
@@ -756,6 +768,15 @@ def _build_feishu_card(
                     or meta.get("department")
                     or ""
                 )
+                raw_items = meta.get("items")
+                items_list = (
+                    [entry for entry in raw_items if isinstance(entry, dict)]
+                    if isinstance(raw_items, list)
+                    else []
+                )
+                raw_prior = meta.get("prior_approvals")
+                prior_list = [str(x) for x in raw_prior if x] if isinstance(raw_prior, list) else []
+                required_date_raw = str(meta.get("required_date") or "")
                 return feishu_messages.build_pr_submitted_card(
                     pr_number=str(meta.get("pr_no")),
                     title=str(meta.get("pr_title") or notification.title),
@@ -769,6 +790,16 @@ def _build_feishu_card(
                     task_url=_absolute_url(f"/approvals?task={task_id}", base_url),
                     pr_url=_absolute_url(f"/purchase-requisitions/{meta.get('biz_id')}", base_url),
                     locale=locale,
+                    task_id=task_id,
+                    interactive=interactive,
+                    cost_center=str(meta.get("cost_center") or ""),
+                    required_date=fmt_date(required_date_raw, locale) if required_date_raw else "",
+                    business_reason=str(meta.get("business_reason") or ""),
+                    items=items_list,
+                    stage_name=str(meta.get("stage_name") or ""),
+                    stage_order=_int_or_none(meta.get("stage_order")),
+                    total_stages=_int_or_none(meta.get("total_stages")),
+                    prior_approvals=prior_list,
                 )
         elif kind == "decision":
             return feishu_messages.build_approval_decided_card(

@@ -279,6 +279,39 @@ def _notification_meta(
 ) -> dict[str, object]:
     submitter = getattr(instance, "submitter", None)
     items = list(pr.items) if pr is not None and pr.items else []
+    currency = getattr(pr, "currency", None) or "CNY"
+    item_summaries: list[dict[str, object]] = []
+    for item in items[:5]:
+        qty_val = float(item.qty or 0)
+        qty_str = str(int(qty_val)) if qty_val.is_integer() else f"{qty_val:g}"
+        item_summaries.append(
+            {
+                "name": str(item.item_name or ""),
+                "spec": str(item.specification or ""),
+                "qty": f"{qty_str} {item.uom or 'EA'}".strip(),
+                "amount": fmt_amount(item.amount, currency),
+            }
+        )
+
+    cost_center_obj = getattr(pr, "cost_center", None) if pr is not None else None
+    cost_center_name = ""
+    if cost_center_obj is not None:
+        code = getattr(cost_center_obj, "code", "") or ""
+        name = getattr(cost_center_obj, "name", "") or ""
+        cost_center_name = f"{code} {name}".strip() if code and name else (name or code)
+
+    required_date_val = getattr(pr, "required_date", None) if pr is not None else None
+    if required_date_val is None and pr is not None:
+        required_date_val = getattr(pr, "expected_delivery_date", None)
+
+    prior_approvals: list[str] = []
+    for prev_task in getattr(instance, "tasks", None) or []:
+        if prev_task.stage_order < task.stage_order and prev_task.status == "approved":
+            assignee_obj = getattr(prev_task, "assignee", None)
+            who = getattr(assignee_obj, "display_name", "") or prev_task.stage_name or ""
+            if who:
+                prior_approvals.append(who)
+
     meta: dict[str, object] = {
         "kind": "task",
         "task_id": str(task.id),
@@ -286,10 +319,14 @@ def _notification_meta(
         "pr_title": str(instance.title or ""),
         "biz_id": str(instance.biz_id),
         "amount": str(instance.amount) if instance.amount is not None else None,
-        "currency": getattr(pr, "currency", None) or "CNY",
+        "currency": currency,
         "applicant": getattr(submitter, "display_name", "") or "",
         "department": department.name_zh if department is not None else "",
         "department_en": (department.name_en if department is not None else "") or "",
+        "cost_center": cost_center_name,
+        "required_date": required_date_val.isoformat() if required_date_val is not None else "",
+        "business_reason": str(getattr(pr, "business_reason", "") or ""),
+        "items": item_summaries,
         "line_count": len(items),
         "item_count": int(sum(float(item.qty or 0) for item in items)) if items else 0,
         "waiting_hours": round(waiting_hours, 1) if waiting_hours is not None else None,
@@ -297,6 +334,8 @@ def _notification_meta(
         "approval_instance_id": str(instance.id),
         "stage_name": task.stage_name,
         "stage_order": task.stage_order,
+        "total_stages": instance.total_stages,
+        "prior_approvals": prior_approvals,
     }
     delegation = task.meta.get("delegation")
     if delegation:
@@ -314,13 +353,16 @@ async def _send_assignment_notification(
             return
 
         pr: PurchaseRequisition | None = None
-        if instance.biz_type == "pr" and instance.biz_id is not None:
+        if instance.biz_type in ("pr", "purchase_requisition") and instance.biz_id is not None:
             pr = (
                 (
                     await db.execute(
                         select(PurchaseRequisition)
                         .where(PurchaseRequisition.id == instance.biz_id)
-                        .options(selectinload(PurchaseRequisition.items))
+                        .options(
+                            selectinload(PurchaseRequisition.items),
+                            selectinload(PurchaseRequisition.cost_center),
+                        )
                     )
                 )
                 .scalars()

@@ -12,6 +12,7 @@ import signal
 
 from app.db import AsyncSessionLocal
 from app.scheduler import build_scheduler
+from app.services.feishu.ws_consumer import start_feishu_ws_consumer
 
 logging.basicConfig(level=logging.INFO, format="%(asctime)s [%(name)s] %(levelname)s: %(message)s")
 logger = logging.getLogger("mica.scheduler.main")
@@ -22,6 +23,8 @@ async def main():
     scheduler = build_scheduler(AsyncSessionLocal)
     scheduler.start()
     logger.info("Scheduler started with %d jobs", len(scheduler.get_jobs()))
+
+    await start_feishu_ws_consumer(AsyncSessionLocal, asyncio.get_running_loop())
 
     stop_event = asyncio.Event()
 
