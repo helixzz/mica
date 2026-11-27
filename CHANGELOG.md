@@ -7,6 +7,19 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [v1.73.6] — 2026-11-27
+
+### 新增（飞书审批卡片内容丰富 + 卡片内直接审批）
+
+- **审批提醒卡片内容丰富**：在飞书待审批卡片中直接展示当前审批节点（第 X/Y 阶）、成本中心、期望交付日、申请事由、前 5 行采购明细表格（物料/规格、数量、小计）与前置审批人轨迹，无需跳转 Web 即可一目了然。
+- **卡片内直接操作（Card 2.0 `form`）**：内置审批意见输入框与「同意 / 退回 / 拒绝」操作按钮；退回或拒绝时强制要求填写理由，同意时意见可选。点击后复用与 Web 端完全一致的审批服务与权限校验，并在回调响应中原地替换为终态卡片。
+- **飞书长连接回调消费器**：在 `mica-scheduler` 中集成 `lark-oapi` WebSocket 长连接消费器，主动外连飞书接收 `card.action.trigger` 回调，无需暴露公网端口或 Webhook。
+
+### 改进（CI 修复与流水线极致优化）
+
+- 修复连续失败的 `Tenant-name denylist`（替换 `CHANGELOG.md` 中的历史占位符）与前端覆盖率门禁问题。
+- 重构 `.github/workflows/ci.yml`：增加路径过滤、并发取消、`ruff-action`、`uv` 缓存、合并前端 job、Buildx GHA 镜像缓存复用、合并 E2E job（固定 `ubuntu-24.04`）与 Playwright 浏览器缓存。
+
 ## [v1.73.5] — 2026-11-11
 
 ### 修复（前端 i18n 变量与键路径解析）

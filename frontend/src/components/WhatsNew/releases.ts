@@ -24,6 +24,17 @@ export interface Release {
 
 export const RELEASES: Release[] = [
   {
+    version: '1.73.6',
+    date: '2026-11-27',
+    items: [
+      {
+        kind: 'new',
+        zh: '飞书审批提醒卡片现在会直接展示审批阶段、成本中心、申请事由与前 5 行采购明细，并支持在卡片内填写意见后直接同意、退回或拒绝。',
+        en: 'Feishu approval cards now display stage progress, cost center, justification, and top-5 line items, and let approvers approve, return, or reject directly inside the card.',
+      },
+    ],
+  },
+  {
     version: '1.73.5',
     date: '2026-11-11',
     items: [
