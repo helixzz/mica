@@ -110,10 +110,19 @@ async def start_feishu_ws_consumer(
 
     def _run_forever() -> None:
         logger.info("feishu ws: starting long-connection consumer")
+        ws_loop = asyncio.new_event_loop()
+        asyncio.set_event_loop(ws_loop)
         try:
+            import lark_oapi.ws.client as lark_ws_client
+
+            # lark_oapi caches a module-level `loop` at import time; point it at
+            # this thread's dedicated loop so it does not collide with main().
+            lark_ws_client.loop = ws_loop
             ws_client.start()
         except Exception:
             logger.exception("feishu ws: consumer exited unexpectedly")
+        finally:
+            ws_loop.close()
 
     thread = threading.Thread(target=_run_forever, name="feishu-ws-consumer", daemon=True)
     thread.start()
